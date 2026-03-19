@@ -1,38 +1,17 @@
 version: "2"
 linters:
-  # Project stance regarding linting - see also https://github.com/go-swagger/go-swagger/issues/3237:
-  #
-  # * we enable all linters by default
-  # * we disable explicitly linters which:
-  #   * do not correspond to our own views of go best practices (e.g. recvcheck, nonamedreturns)
-  #   * impose a lot of (cosmetic) changes for no real value AND do not provide an auto-fix (e.g. godox, nlreturn)
-  #   * impose a lot of not-cosmetic changes with no high value AND do not provide an auto-fix (e.g. err113)
-  #   * introduce breaking changes (normally, we should disable them sparingly with code hints, no globally)
-  #   * we overall agree with but are temporarily disabled: these issues would be addressed progressively
-  #
-  # This project has been living around for about 10 years now.
-  # It adopted golangci-lint as one of its early adopters.
-  # Since then, we've seen a lot of back and forth on how we should write good go code.
-  # So we pick every month's new doxa with a pinch of salt.
   default: all
   disable:
-    - dupl  # temporary => should be disabled sparingly
-    - err113 # temporary
-    - exhaustruct # temporary
-    - funlen # temporary
-    - gochecknoglobals  # agree, but breaking
-    - gochecknoinits # agree, but breaking
-    - godox # temporary
-    - ireturn # temporary
-    - lll # unclear added value
-    - nestif # temporary
-    - nonamedreturns # unclear added value
-    - nlreturn # unclear added value
-    - noinlineerr # unclear added value
-    - paralleltest # unclear added value
-    - recvcheck  # disagree
-    - tagliatelle # false positives, want to impose camel case everywhere => should be disabled sparingly only
-    - testpackage # disagree: we like test packages, just not for everything like the linter suggests
+    - depguard
+    - funlen
+    - godox
+    - exhaustruct
+    - nlreturn
+    - nonamedreturns
+    - noinlineerr
+    - paralleltest
+    - recvcheck
+    - testpackage
     - thelper
     - tparallel
     - varnamelen
@@ -41,65 +20,42 @@ linters:
     - wsl
     - wsl_v5
   settings:
-    depguard:
-      rules:
-        main:
-          list-mode: lax
-          deny:
-            - pkg: github.com/pkg/errors
-              desc: Use errors or fmt instead of github.com/pkg/errors
     dupl:
       threshold: 200
     goconst:
       min-len: 2
       min-occurrences: 3
     cyclop:
-      max-complexity: 32
+      max-complexity: 20
     gocyclo:
-      min-complexity: 32
-    gocognit:
-      min-complexity: 32
-    govet:
-      enable-all: true
-      disable:
-        - fieldalignment
+      min-complexity: 20
     exhaustive:
       default-signifies-exhaustive: true
       default-case-required: true
     lll:
       line-length: 180
   exclusions:
-    warn-unused: false
-    generated: lax  # enable linting on generated code (in examples, in generated code under test)
+    generated: lax
     presets:
       - comments
       - common-false-positives
       - legacy
       - std-error-handling
     paths:
-      - fixtures/
-    rules:
-      - path: 'generator/generated/'
-        linters:
-          - gofumpt # we don't run gofumpt on generated code (used during testing)
-      - path: _test.go
-        linters:
-          - unparam
+      - third_party$
+      - builtin$
+      - examples$
 formatters:
   enable:
     - gofmt
     - goimports
     - gofumpt
-  settings:
-    # local prefixes regroup imports from these packages
-    goimports:
-      local-prefixes:
-        - github.com/go-openapi
-        - github.com/go-swagger/go-swagger # this is for imports in generated examples
   exclusions:
     generated: lax
     paths:
-      - fixtures/
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   # Maximum issues count per one linter.
   # Set to 0 to disable.
@@ -109,4 +65,3 @@ issues:
   # Set to 0 to disable.
   # Default: 3
   max-same-issues: 0
-  new: false
