@@ -22,7 +22,6 @@ type ListPetParams struct {
 
 // ServeAPI serves the API for this record store
 func ServeAPI(host, basePath string, schemes []string) error {
-
 	// swagger:route GET /pets pets users listPets
 	//
 	// Lists pets filtered by some parameters.

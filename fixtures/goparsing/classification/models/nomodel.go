@@ -18,8 +18,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods"
+	"github.com/go-openapi/strfmt"
 )
 
 // NoModel is a struct without an annotation.

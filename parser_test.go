@@ -49,16 +49,17 @@ func (sap *schemaAnnotationParser) Parse(lines []string) error {
 }
 
 func TestSectionedParser_TitleDescription(t *testing.T) {
-	text := `This has a title, separated by a whitespace line
+	const (
+		text = `This has a title, separated by a whitespace line
 
 In this example the punctuation for the title should not matter for swagger.
 For go it will still make a difference though.
 `
-	text2 := `This has a title without whitespace.
+		text2 = `This has a title without whitespace.
 The punctuation here does indeed matter. But it won't for go.
 `
 
-	text3 := `This has a title, and markdown in the description
+		text3 = `This has a title, and markdown in the description
 
 See how markdown works now, we can have lists:
 
@@ -69,7 +70,7 @@ See how markdown works now, we can have lists:
 [Links works too](http://localhost)
 `
 
-	text4 := `This has whitespace sensitive markdown in the description
+		text4 = `This has whitespace sensitive markdown in the description
 
 |+ first item
 |    + nested item
@@ -80,6 +81,7 @@ Sample code block:
 |    fmt.Println("Hello World!")
 
 `
+	)
 
 	var err error
 
@@ -105,7 +107,11 @@ Sample code block:
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"This has a title, and markdown in the description"}, st.Title())
-	assert.Equal(t, []string{"See how markdown works now, we can have lists:", "", "+ first item", "+ second item", "+ third item", "", "[Links works too](http://localhost)"}, st.Description())
+	assert.Equal(t, []string{
+		"See how markdown works now, we can have lists:", "",
+		"+ first item", "+ second item", "+ third item", "",
+		"[Links works too](http://localhost)",
+	}, st.Description())
 
 	st = &sectionedParser{}
 	st.setTitle = func(_ []string) {}
@@ -121,17 +127,19 @@ func dummyBuilder() schemaValidations {
 }
 
 func TestSectionedParser_TagsDescription(t *testing.T) {
-	block := `This has a title without whitespace.
+	const (
+		block = `This has a title without whitespace.
 The punctuation here does indeed matter. But it won't for go.
 minimum: 10
 maximum: 20
 `
-	block2 := `This has a title without whitespace.
+		block2 = `This has a title without whitespace.
 The punctuation here does indeed matter. But it won't for go.
 
 minimum: 10
 maximum: 20
 `
+	)
 
 	var err error
 
@@ -173,7 +181,7 @@ maximum: 20
 }
 
 func TestSectionedParser_Empty(t *testing.T) {
-	block := `swagger:response someResponse`
+	const block = `swagger:response someResponse`
 
 	var err error
 
@@ -192,16 +200,13 @@ func TestSectionedParser_Empty(t *testing.T) {
 	assert.EqualT(t, "someResponse", ap.Name)
 }
 
-func TestSectionedParser_SkipSectionAnnotation(t *testing.T) {
-	block := `swagger:model someModel
-
-This has a title without whitespace.
-The punctuation here does indeed matter. But it won't for go.
-
-minimum: 10
-maximum: 20
-`
-	var err error
+func testSectionedParserWithBlock(
+	t *testing.T,
+	block string,
+	expectedMatchedCount int,
+	maximumExpected bool,
+) {
+	t.Helper()
 
 	st := &sectionedParser{}
 	st.setTitle = func(_ []string) {}
@@ -213,21 +218,33 @@ maximum: 20
 		{"MultipleOf", false, false, nil, &setMultipleOf{dummyBuilder(), regexp.MustCompile(fmt.Sprintf(rxMultipleOfFmt, ""))}},
 	}
 
-	err = st.Parse(ascg(block))
+	err := st.Parse(ascg(block))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"This has a title without whitespace."}, st.Title())
 	assert.Equal(t, []string{"The punctuation here does indeed matter. But it won't for go."}, st.Description())
-	assert.Len(t, st.matched, 2)
+	assert.Len(t, st.matched, expectedMatchedCount)
 	_, ok := st.matched["Maximum"]
-	assert.TrueT(t, ok)
+	assert.EqualT(t, maximumExpected, ok)
 	_, ok = st.matched["Minimum"]
 	assert.TrueT(t, ok)
 	assert.EqualT(t, "SomeModel", ap.GoName)
 	assert.EqualT(t, "someModel", ap.Name)
 }
 
+func TestSectionedParser_SkipSectionAnnotation(t *testing.T) {
+	const block = `swagger:model someModel
+
+This has a title without whitespace.
+The punctuation here does indeed matter. But it won't for go.
+
+minimum: 10
+maximum: 20
+`
+	testSectionedParserWithBlock(t, block, 2, true)
+}
+
 func TestSectionedParser_TerminateOnNewAnnotation(t *testing.T) {
-	block := `swagger:model someModel
+	const block = `swagger:model someModel
 
 This has a title without whitespace.
 The punctuation here does indeed matter. But it won't for go.
@@ -236,29 +253,7 @@ minimum: 10
 swagger:meta
 maximum: 20
 `
-	var err error
-
-	st := &sectionedParser{}
-	st.setTitle = func(_ []string) {}
-	ap := newSchemaAnnotationParser("SomeModel")
-	st.annotation = ap
-	st.taggers = []tagParser{
-		{"Maximum", false, false, nil, &setMaximum{dummyBuilder(), regexp.MustCompile(fmt.Sprintf(rxMaximumFmt, ""))}},
-		{"Minimum", false, false, nil, &setMinimum{dummyBuilder(), regexp.MustCompile(fmt.Sprintf(rxMinimumFmt, ""))}},
-		{"MultipleOf", false, false, nil, &setMultipleOf{dummyBuilder(), regexp.MustCompile(fmt.Sprintf(rxMultipleOfFmt, ""))}},
-	}
-
-	err = st.Parse(ascg(block))
-	require.NoError(t, err)
-	assert.Equal(t, []string{"This has a title without whitespace."}, st.Title())
-	assert.Equal(t, []string{"The punctuation here does indeed matter. But it won't for go."}, st.Description())
-	assert.Len(t, st.matched, 1)
-	_, ok := st.matched["Maximum"]
-	assert.FalseT(t, ok)
-	_, ok = st.matched["Minimum"]
-	assert.TrueT(t, ok)
-	assert.EqualT(t, "SomeModel", ap.GoName)
-	assert.EqualT(t, "someModel", ap.Name)
+	testSectionedParserWithBlock(t, block, 1, false)
 }
 
 func ascg(txt string) *ast.CommentGroup {

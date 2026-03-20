@@ -4,7 +4,7 @@
 package codescan
 
 import (
-	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,53 +13,56 @@ import (
 )
 
 const (
-	// ParamDescriptionKey indicates the tag used to define a parameter description in swagger:route.
-	ParamDescriptionKey = "description"
-	// ParamNameKey indicates the tag used to define a parameter name in swagger:route.
-	ParamNameKey = "name"
-	// ParamInKey indicates the tag used to define a parameter location in swagger:route.
-	ParamInKey = "in"
-	// ParamRequiredKey indicates the tag used to declare whether a parameter is required in swagger:route.
-	ParamRequiredKey = "required"
-	// ParamTypeKey indicates the tag used to define the parameter type in swagger:route.
-	ParamTypeKey = "type"
-	// ParamAllowEmptyKey indicates the tag used to indicate whether a parameter allows empty values in swagger:route.
-	ParamAllowEmptyKey = "allowempty"
+	// paramDescriptionKey indicates the tag used to define a parameter description in swagger:route.
+	paramDescriptionKey = "description"
+	// paramNameKey indicates the tag used to define a parameter name in swagger:route.
+	paramNameKey = "name"
+	// paramInKey indicates the tag used to define a parameter location in swagger:route.
+	paramInKey = "in"
+	// paramRequiredKey indicates the tag used to declare whether a parameter is required in swagger:route.
+	paramRequiredKey = "required"
+	// paramTypeKey indicates the tag used to define the parameter type in swagger:route.
+	paramTypeKey = "type"
+	// paramAllowEmptyKey indicates the tag used to indicate whether a parameter allows empty values in swagger:route.
+	paramAllowEmptyKey = "allowempty"
 
-	// SchemaMinKey indicates the tag used to indicate the minimum value allowed for this type in swagger:route.
-	SchemaMinKey = "min"
-	// SchemaMaxKey indicates the tag used to indicate the maximum value allowed for this type in swagger:route.
-	SchemaMaxKey = "max"
-	// SchemaEnumKey indicates the tag used to specify the allowed values for this type in swagger:route.
-	SchemaEnumKey = "enum"
-	// SchemaFormatKey indicates the expected format for this field in swagger:route.
-	SchemaFormatKey = "format"
-	// SchemaDefaultKey indicates the default value for this field in swagger:route.
-	SchemaDefaultKey = "default"
-	// SchemaMinLenKey indicates the minimum length this field in swagger:route.
-	SchemaMinLenKey = "minlength"
-	// SchemaMaxLenKey indicates the minimum length this field in swagger:route.
-	SchemaMaxLenKey = "maxlength"
+	// schemaMinKey indicates the tag used to indicate the minimum value allowed for this type in swagger:route.
+	schemaMinKey = "min"
+	// schemaMaxKey indicates the tag used to indicate the maximum value allowed for this type in swagger:route.
+	schemaMaxKey = "max"
+	// schemaEnumKey indicates the tag used to specify the allowed values for this type in swagger:route.
+	schemaEnumKey = "enum"
+	// schemaFormatKey indicates the expected format for this field in swagger:route.
+	schemaFormatKey = "format"
+	// schemaDefaultKey indicates the default value for this field in swagger:route.
+	schemaDefaultKey = "default"
+	// schemaMinLenKey indicates the minimum length this field in swagger:route.
+	schemaMinLenKey = "minlength"
+	// schemaMaxLenKey indicates the minimum length this field in swagger:route.
+	schemaMaxLenKey = "maxlength"
 
-	// TypeArray is the identifier for an array type in swagger:route.
-	TypeArray = "array"
-	// TypeNumber is the identifier for a number type in swagger:route.
-	TypeNumber = "number"
-	// TypeInteger is the identifier for an integer type in swagger:route.
-	TypeInteger = "integer"
-	// TypeBoolean is the identifier for a boolean type in swagger:route.
-	TypeBoolean = "boolean"
-	// TypeBool is the identifier for a boolean type in swagger:route.
-	TypeBool = "bool"
-	// TypeObject is the identifier for an object type in swagger:route.
-	TypeObject = "object"
-	// TypeString is the identifier for a string type in swagger:route.
-	TypeString = "string"
+	// paramInQuery is the default parameter location for query parameters.
+	paramInQuery = "query"
+
+	// typeArray is the identifier for an array type in swagger:route.
+	typeArray = "array"
+	// typeNumber is the identifier for a number type in swagger:route.
+	typeNumber = "number"
+	// typeInteger is the identifier for an integer type in swagger:route.
+	typeInteger = "integer"
+	// typeBoolean is the identifier for a boolean type in swagger:route.
+	typeBoolean = "boolean"
+	// typeBool is the identifier for a boolean type in swagger:route.
+	typeBool = "bool"
+	// typeObject is the identifier for an object type in swagger:route.
+	typeObject = "object"
+	// typeString is the identifier for a string type in swagger:route.
+	typeString = "string"
 )
 
 var (
-	validIn    = []string{"path", "query", "header", "body", "form"}
-	basicTypes = []string{TypeInteger, TypeNumber, TypeString, TypeBoolean, TypeBool, TypeArray}
+	validIn    = []string{"path", "query", "header", "body", "form"}                             //nolint:gochecknoglobals // immutable lookup table
+	basicTypes = []string{typeInteger, typeNumber, typeString, typeBoolean, typeBool, typeArray} //nolint:gochecknoglobals // immutable lookup table
 )
 
 func newSetParams(params []*spec.Parameter, setter func([]*spec.Parameter)) *setOpParams {
@@ -96,7 +99,7 @@ func (s *setOpParams) Parse(lines []string) error {
 			l = strings.TrimPrefix(l, "+")
 		}
 
-		kv := strings.SplitN(l, ":", 2)
+		kv := strings.SplitN(l, ":", kvParts)
 
 		if len(kv) <= 1 {
 			continue
@@ -106,49 +109,53 @@ func (s *setOpParams) Parse(lines []string) error {
 		value := strings.TrimSpace(kv[1])
 
 		if current == nil {
-			return errors.New("invalid route/operation schema provided")
+			return fmt.Errorf("invalid route/operation schema provided: %w", ErrCodeScan)
 		}
 
-		switch key {
-		case ParamDescriptionKey:
-			current.Description = value
-		case ParamNameKey:
-			current.Name = value
-		case ParamInKey:
-			v := strings.ToLower(value)
-			if contains(validIn, v) {
-				current.In = v
-			}
-		case ParamRequiredKey:
-			if v, err := strconv.ParseBool(value); err == nil {
-				current.Required = v
-			}
-		case ParamTypeKey:
-			if current.Schema == nil {
-				current.Schema = new(spec.Schema)
-			}
-			if contains(basicTypes, value) {
-				current.Type = strings.ToLower(value)
-				if current.Type == TypeBool {
-					current.Type = TypeBoolean
-				}
-			} else if ref, err := spec.NewRef("#/definitions/" + value); err == nil {
-				current.Type = TypeObject
-				current.Schema.Ref = ref
-			}
-			current.Schema.Type = spec.StringOrArray{current.Type}
-		case ParamAllowEmptyKey:
-			if v, err := strconv.ParseBool(value); err == nil {
-				current.AllowEmptyValue = v
-			}
-		default:
-			extraData[key] = value
-		}
+		applyParamField(current, extraData, key, value)
 	}
 
 	s.finalizeParam(current, extraData)
 	s.set(s.parameters)
 	return nil
+}
+
+func applyParamField(current *spec.Parameter, extraData map[string]string, key, value string) {
+	switch key {
+	case paramDescriptionKey:
+		current.Description = value
+	case paramNameKey:
+		current.Name = value
+	case paramInKey:
+		v := strings.ToLower(value)
+		if contains(validIn, v) {
+			current.In = v
+		}
+	case paramRequiredKey:
+		if v, err := strconv.ParseBool(value); err == nil {
+			current.Required = v
+		}
+	case paramTypeKey:
+		if current.Schema == nil {
+			current.Schema = new(spec.Schema)
+		}
+		if contains(basicTypes, value) {
+			current.Type = strings.ToLower(value)
+			if current.Type == typeBool {
+				current.Type = typeBoolean
+			}
+		} else if ref, err := spec.NewRef("#/definitions/" + value); err == nil {
+			current.Type = typeObject
+			current.Schema.Ref = ref
+		}
+		current.Schema.Type = spec.StringOrArray{current.Type}
+	case paramAllowEmptyKey:
+		if v, err := strconv.ParseBool(value); err == nil {
+			current.AllowEmptyValue = v
+		}
+	default:
+		extraData[key] = value
+	}
 }
 
 func (s *setOpParams) finalizeParam(param *spec.Parameter, data map[string]string) {
@@ -161,7 +168,7 @@ func (s *setOpParams) finalizeParam(param *spec.Parameter, data map[string]strin
 	// schema is only allowed for parameters in "body"
 	// see https://swagger.io/specification/v2/#parameterObject
 	switch {
-	case param.In == "body":
+	case param.In == bodyTag:
 		param.Type = ""
 
 	case param.Schema != nil:
@@ -184,31 +191,31 @@ func processSchema(data map[string]string, param *spec.Parameter) {
 
 	for key, value := range data {
 		switch key {
-		case SchemaMinKey:
-			if t := getType(param.Schema); t == TypeNumber || t == TypeInteger {
+		case schemaMinKey:
+			if t := getType(param.Schema); t == typeNumber || t == typeInteger {
 				v, _ := strconv.ParseFloat(value, 64)
 				param.Schema.Minimum = &v
 			}
-		case SchemaMaxKey:
-			if t := getType(param.Schema); t == TypeNumber || t == TypeInteger {
+		case schemaMaxKey:
+			if t := getType(param.Schema); t == typeNumber || t == typeInteger {
 				v, _ := strconv.ParseFloat(value, 64)
 				param.Schema.Maximum = &v
 			}
-		case SchemaMinLenKey:
-			if getType(param.Schema) == TypeArray {
+		case schemaMinLenKey:
+			if getType(param.Schema) == typeArray {
 				v, _ := strconv.ParseInt(value, 10, 64)
 				param.Schema.MinLength = &v
 			}
-		case SchemaMaxLenKey:
-			if getType(param.Schema) == TypeArray {
+		case schemaMaxLenKey:
+			if getType(param.Schema) == typeArray {
 				v, _ := strconv.ParseInt(value, 10, 64)
 				param.Schema.MaxLength = &v
 			}
-		case SchemaEnumKey:
+		case schemaEnumKey:
 			enumValues = strings.Split(value, ",")
-		case SchemaFormatKey:
+		case schemaFormatKey:
 			param.Schema.Format = value
-		case SchemaDefaultKey:
+		case schemaDefaultKey:
 			param.Schema.Default = convert(param.Type, value)
 		}
 	}
@@ -234,15 +241,15 @@ func convertEnum(schema *spec.Schema, enumValues []string) {
 
 func convert(typeStr, valueStr string) any {
 	switch typeStr {
-	case TypeInteger:
+	case typeInteger:
 		fallthrough
-	case TypeNumber:
+	case typeNumber:
 		if num, err := strconv.ParseFloat(valueStr, 64); err == nil {
 			return num
 		}
-	case TypeBoolean:
+	case typeBoolean:
 		fallthrough
-	case TypeBool:
+	case typeBool:
 		if b, err := strconv.ParseBool(valueStr); err == nil {
 			return b
 		}

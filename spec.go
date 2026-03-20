@@ -234,29 +234,31 @@ func (s *specBuilder) joinExtraModels() error {
 
 func collectOperationsFromInput(input *spec.Swagger) map[string]*spec.Operation {
 	operations := make(map[string]*spec.Operation)
-	if input != nil && input.Paths != nil {
-		for _, pth := range input.Paths.Paths {
-			if pth.Get != nil {
-				operations[pth.Get.ID] = pth.Get
-			}
-			if pth.Post != nil {
-				operations[pth.Post.ID] = pth.Post
-			}
-			if pth.Put != nil {
-				operations[pth.Put.ID] = pth.Put
-			}
-			if pth.Patch != nil {
-				operations[pth.Patch.ID] = pth.Patch
-			}
-			if pth.Delete != nil {
-				operations[pth.Delete.ID] = pth.Delete
-			}
-			if pth.Head != nil {
-				operations[pth.Head.ID] = pth.Head
-			}
-			if pth.Options != nil {
-				operations[pth.Options.ID] = pth.Options
-			}
+	if input == nil || input.Paths == nil {
+		return operations
+	}
+
+	for _, pth := range input.Paths.Paths {
+		if pth.Get != nil {
+			operations[pth.Get.ID] = pth.Get
+		}
+		if pth.Post != nil {
+			operations[pth.Post.ID] = pth.Post
+		}
+		if pth.Put != nil {
+			operations[pth.Put.ID] = pth.Put
+		}
+		if pth.Patch != nil {
+			operations[pth.Patch.ID] = pth.Patch
+		}
+		if pth.Delete != nil {
+			operations[pth.Delete.ID] = pth.Delete
+		}
+		if pth.Head != nil {
+			operations[pth.Head.ID] = pth.Head
+		}
+		if pth.Options != nil {
+			operations[pth.Options.ID] = pth.Options
 		}
 	}
 	return operations

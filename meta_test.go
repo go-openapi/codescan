@@ -85,7 +85,7 @@ func verifyMeta(t *testing.T, doc *spec.Swagger) {
 		},
 	}
 	expectedSecuritySchemaOAuth := spec.SecurityScheme{
-		SecuritySchemeProps: spec.SecuritySchemeProps{
+		SecuritySchemeProps: spec.SecuritySchemeProps{ //nolint:gosec // G101: false positive, test fixture not real credentials
 			Type:             "oauth2",
 			In:               "header",
 			AuthorizationURL: "/oauth2/auth",

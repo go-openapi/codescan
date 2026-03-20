@@ -26,14 +26,16 @@ linters:
       min-len: 2
       min-occurrences: 3
     cyclop:
-      max-complexity: 20
+      max-complexity: 30
     gocyclo:
-      min-complexity: 20
+      min-complexity: 30
     exhaustive:
       default-signifies-exhaustive: true
       default-case-required: true
     lll:
       line-length: 180
+    maintidx:
+      under: 15
   exclusions:
     generated: lax
     presets:

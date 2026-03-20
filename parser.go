@@ -5,7 +5,6 @@ package codescan
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/types"
@@ -20,6 +19,25 @@ import (
 
 	"github.com/go-openapi/loads/fmts"
 	"github.com/go-openapi/spec"
+)
+
+const (
+	// Go builtin type names used for type-to-schema mapping.
+	goTypeByte    = "byte"
+	goTypeFloat64 = "float64"
+	goTypeInt     = "int"
+	goTypeInt16   = "int16"
+	goTypeInt32   = "int32"
+	goTypeInt64   = "int64"
+
+	// kvParts is the number of parts when splitting key:value pairs.
+	kvParts = 2
+	// logCallerDepth is the caller depth for log.Output.
+	logCallerDepth = 2
+	// minAnnotationMatch is the minimum submatch count for an annotation regex.
+	minAnnotationMatch = 2
+	// routeTagsIndex is the regex submatch index where route tags begin.
+	routeTagsIndex = 3
 )
 
 func shouldAcceptTag(tags []string, includeTags map[string]bool, excludeTags map[string]bool) bool {
@@ -184,12 +202,12 @@ type swaggerTypable interface {
 // See https://golang.org/pkg/builtin/ and http://swagger.io/specification/
 func swaggerSchemaForType(typeName string, prop swaggerTypable) error {
 	switch typeName {
-	case "bool":
+	case typeBool:
 		prop.Typed("boolean", "")
-	case "byte":
+	case goTypeByte:
 		prop.Typed("integer", "uint8")
 	case "complex128", "complex64":
-		return fmt.Errorf("unsupported builtin %q (no JSON marshaller)", typeName)
+		return fmt.Errorf("unsupported builtin %q (no JSON marshaller): %w", typeName, ErrCodeScan)
 	case "error":
 		// TODO: error is often marshalled into a string but not always (e.g. errors package creates
 		// errors that are marshalled into an empty object), this could be handled the same way
@@ -197,21 +215,21 @@ func swaggerSchemaForType(typeName string, prop swaggerTypable) error {
 		prop.Typed("string", "")
 	case "float32":
 		prop.Typed("number", "float")
-	case "float64":
+	case goTypeFloat64:
 		prop.Typed("number", "double")
-	case "int":
-		prop.Typed("integer", "int64")
-	case "int16":
-		prop.Typed("integer", "int16")
-	case "int32":
-		prop.Typed("integer", "int32")
-	case "int64":
-		prop.Typed("integer", "int64")
+	case goTypeInt:
+		prop.Typed("integer", goTypeInt64)
+	case goTypeInt16:
+		prop.Typed("integer", goTypeInt16)
+	case goTypeInt32:
+		prop.Typed("integer", goTypeInt32)
+	case goTypeInt64:
+		prop.Typed("integer", goTypeInt64)
 	case "int8":
 		prop.Typed("integer", "int8")
 	case "rune":
-		prop.Typed("integer", "int32")
-	case "string":
+		prop.Typed("integer", goTypeInt32)
+	case typeString:
 		prop.Typed("string", "")
 	case "uint":
 		prop.Typed("integer", "uint64")
@@ -228,7 +246,7 @@ func swaggerSchemaForType(typeName string, prop swaggerTypable) error {
 	case "object":
 		prop.Typed("object", "")
 	default:
-		return fmt.Errorf("unsupported type %q", typeName)
+		return fmt.Errorf("unsupported type %q: %w", typeName, ErrCodeScan)
 	}
 	return nil
 }
@@ -284,7 +302,7 @@ func (y *yamlParser) Parse(lines []string) error {
 		return nil
 	}
 
-	var uncommented []string
+	uncommented := make([]string, 0, len(lines))
 	uncommented = append(uncommented, removeYamlIndent(lines)...)
 
 	yamlContent := strings.Join(uncommented, "\n")
@@ -371,11 +389,11 @@ COMMENTS:
 func (sp *yamlSpecScanner) UnmarshalSpec(u func([]byte) error) (err error) {
 	specYaml := cleanupScannerLines(sp.yamlSpec, rxUncommentYAML)
 	if len(specYaml) == 0 {
-		return errors.New("no spec available to unmarshal")
+		return fmt.Errorf("no spec available to unmarshal: %w", ErrCodeScan)
 	}
 
 	if !strings.Contains(specYaml[0], "---") {
-		return errors.New("yaml spec has to start with `---`")
+		return fmt.Errorf("yaml spec has to start with `---`: %w", ErrCodeScan)
 	}
 
 	// remove indentation
@@ -446,7 +464,7 @@ func removeIndent(spec []string) []string {
 			continue
 		}
 
-		s[i] = spec[i][loc[1]-1:]
+		s[i] = spec[i][loc[1]-1:] //nolint:gosec // G602: bounds already checked on line 445
 		start := rxNotIndent.FindStringIndex(s[i])
 		if len(start) < 2 || start[1] == 0 {
 			continue
@@ -512,70 +530,24 @@ func (st *sectionedParser) Parse(doc *ast.CommentGroup) error {
 	if doc == nil {
 		return nil
 	}
+
 COMMENTS:
 	for _, c := range doc.List {
 		for line := range strings.SplitSeq(c.Text, "\n") {
-			if rxSwaggerAnnotation.MatchString(line) {
-				if rxIgnoreOverride.MatchString(line) {
-					st.ignored = true
-					break COMMENTS // an explicit ignore terminates this parser
-				}
-				if st.annotation == nil || !st.annotation.Matches(line) {
-					break COMMENTS // a new swagger: annotation terminates this parser
-				}
-
-				_ = st.annotation.Parse([]string{line})
-				if len(st.header) > 0 {
-					st.seenTag = true
-				}
-				continue
-			}
-
-			var matched bool
-			for _, tg := range st.taggers {
-				tagger := tg
-				if tagger.Matches(line) {
-					st.seenTag = true
-					st.currentTagger = &tagger
-					matched = true
-					break
-				}
-			}
-
-			if st.currentTagger == nil {
-				if !st.skipHeader && !st.seenTag {
-					st.header = append(st.header, line)
-				}
-				// didn't match a tag, moving on
-				continue
-			}
-
-			if st.currentTagger.MultiLine && matched {
-				// the first line of a multiline tagger doesn't count
-				continue
-			}
-
-			ts, ok := st.matched[st.currentTagger.Name]
-			if !ok {
-				ts = *st.currentTagger
-			}
-			ts.Lines = append(ts.Lines, line)
-			if st.matched == nil {
-				st.matched = make(map[string]tagParser)
-			}
-			st.matched[st.currentTagger.Name] = ts
-
-			if !st.currentTagger.MultiLine {
-				st.currentTagger = nil
+			if st.parseLine(line) {
+				break COMMENTS
 			}
 		}
 	}
+
 	if st.setTitle != nil {
 		st.setTitle(st.Title())
 	}
+
 	if st.setDescription != nil {
 		st.setDescription(st.Description())
 	}
+
 	for _, mt := range st.matched {
 		if !mt.SkipCleanUp {
 			mt.Lines = cleanupScannerLines(mt.Lines, rxUncommentHeaders)
@@ -584,7 +556,66 @@ COMMENTS:
 			return err
 		}
 	}
+
 	return nil
+}
+
+// parseLine processes a single comment line. It returns true when the
+// caller should stop processing further comments (break COMMENTS).
+func (st *sectionedParser) parseLine(line string) (stop bool) {
+	if rxSwaggerAnnotation.MatchString(line) {
+		if rxIgnoreOverride.MatchString(line) {
+			st.ignored = true
+			return true // an explicit ignore terminates this parser
+		}
+		if st.annotation == nil || !st.annotation.Matches(line) {
+			return true // a new swagger: annotation terminates this parser
+		}
+
+		_ = st.annotation.Parse([]string{line})
+		if len(st.header) > 0 {
+			st.seenTag = true
+		}
+		return false
+	}
+
+	var matched bool
+	for _, tg := range st.taggers {
+		tagger := tg
+		if tagger.Matches(line) {
+			st.seenTag = true
+			st.currentTagger = &tagger
+			matched = true
+			break
+		}
+	}
+
+	if st.currentTagger == nil {
+		if !st.skipHeader && !st.seenTag {
+			st.header = append(st.header, line)
+		}
+		return false
+	}
+
+	if st.currentTagger.MultiLine && matched {
+		// the first line of a multiline tagger doesn't count
+		return false
+	}
+
+	ts, ok := st.matched[st.currentTagger.Name]
+	if !ok {
+		ts = *st.currentTagger
+	}
+	ts.Lines = append(ts.Lines, line)
+	if st.matched == nil {
+		st.matched = make(map[string]tagParser)
+	}
+	st.matched[st.currentTagger.Name] = ts
+
+	if !st.currentTagger.MultiLine {
+		st.currentTagger = nil
+	}
+	return false
 }
 
 func (st *sectionedParser) collectTitleDescription() {
@@ -600,7 +631,7 @@ func (st *sectionedParser) collectTitleDescription() {
 	st.title, st.header = collectScannerTitleDescription(st.header)
 }
 
-type validationBuilder interface {
+type validationBuilder interface { //nolint:interfacebloat // mirrors the full set of Swagger validation properties
 	SetMaximum(maxium float64, isExclusive bool)
 	SetMinimum(minimum float64, isExclusive bool)
 	SetMultipleOf(multiple float64)
@@ -892,15 +923,13 @@ func parseValueFromSchema(s string, schema *spec.SimpleSchema) (any, error) {
 		case "object":
 			var obj map[string]any
 			if err := json.Unmarshal([]byte(s), &obj); err != nil {
-				// If we can't parse it, just return the string.
-				return s, nil
+				return s, nil //nolint:nilerr // fallback: return raw string when JSON is invalid
 			}
 			return obj, nil
 		case "array":
 			var slice []any
 			if err := json.Unmarshal([]byte(s), &slice); err != nil {
-				// If we can't parse it, just return the string.
-				return s, nil
+				return s, nil //nolint:nilerr // fallback: return raw string when JSON is invalid
 			}
 			return slice, nil
 		default:
@@ -1085,25 +1114,27 @@ func (su *setRequiredSchema) Parse(lines []string) error {
 		return nil
 	}
 	matches := rxRequired.FindStringSubmatch(lines[0])
-	if len(matches) > 1 && len(matches[1]) > 0 {
-		req, err := strconv.ParseBool(matches[1])
-		if err != nil {
-			return err
+	if len(matches) <= 1 || len(matches[1]) == 0 {
+		return nil
+	}
+
+	req, err := strconv.ParseBool(matches[1])
+	if err != nil {
+		return err
+	}
+	midx := -1
+	for i, nm := range su.schema.Required {
+		if nm == su.field {
+			midx = i
+			break
 		}
-		midx := -1
-		for i, nm := range su.schema.Required {
-			if nm == su.field {
-				midx = i
-				break
-			}
+	}
+	if req {
+		if midx < 0 {
+			su.schema.Required = append(su.schema.Required, su.field)
 		}
-		if req {
-			if midx < 0 {
-				su.schema.Required = append(su.schema.Required, su.field)
-			}
-		} else if midx >= 0 {
-			su.schema.Required = append(su.schema.Required[:midx], su.schema.Required[midx+1:]...)
-		}
+	} else if midx >= 0 {
+		su.schema.Required = append(su.schema.Required[:midx], su.schema.Required[midx+1:]...)
 	}
 	return nil
 }
@@ -1188,7 +1219,7 @@ func (ss *setSecurity) Parse(lines []string) error {
 
 	var result []map[string][]string
 	for _, line := range lines {
-		kv := strings.SplitN(line, ":", 2)
+		kv := strings.SplitN(line, ":", kvParts)
 		scopes := []string{}
 		var key string
 
@@ -1231,21 +1262,21 @@ func (ss *setOpResponses) Matches(line string) bool {
 	return ss.rx.MatchString(line)
 }
 
-// ResponseTag used when specifying a response to point to a defined swagger:response.
-const ResponseTag = "response"
+// responseTag used when specifying a response to point to a defined swagger:response.
+const responseTag = "response"
 
-// BodyTag used when specifying a response to point to a model/schema.
-const BodyTag = "body"
+// bodyTag used when specifying a response to point to a model/schema.
+const bodyTag = "body"
 
-// DescriptionTag used when specifying a response that gives a description of the response.
-const DescriptionTag = "description"
+// descriptionTag used when specifying a response that gives a description of the response.
+const descriptionTag = "description"
 
 func parseTags(line string) (modelOrResponse string, arrays int, isDefinitionRef bool, description string, err error) {
 	tags := strings.Split(line, " ")
 	parsedModelOrResponse := false
 
 	for i, tagAndValue := range tags {
-		tagValList := strings.SplitN(tagAndValue, ":", 2)
+		tagValList := strings.SplitN(tagAndValue, ":", kvParts)
 		var tag, value string
 		if len(tagValList) > 1 {
 			tag = tagValList[0]
@@ -1254,20 +1285,20 @@ func parseTags(line string) (modelOrResponse string, arrays int, isDefinitionRef
 			// TODO: Print a warning, and in the long term, do not support not tagged values
 			// Add a default tag if none is supplied
 			if i == 0 {
-				tag = ResponseTag
+				tag = responseTag
 			} else {
-				tag = DescriptionTag
+				tag = descriptionTag
 			}
 			value = tagValList[0]
 		}
 
 		foundModelOrResponse := false
 		if !parsedModelOrResponse {
-			if tag == BodyTag {
+			if tag == bodyTag {
 				foundModelOrResponse = true
 				isDefinitionRef = true
 			}
-			if tag == ResponseTag {
+			if tag == responseTag {
 				foundModelOrResponse = true
 				isDefinitionRef = false
 			}
@@ -1283,32 +1314,48 @@ func parseTags(line string) (modelOrResponse string, arrays int, isDefinitionRef
 			}
 			// What's left over is the model name
 			modelOrResponse = value
-		} else {
-			foundDescription := false
-			if tag == DescriptionTag {
-				foundDescription = true
-			}
-			if foundDescription {
-				// Descriptions are special, they make they read the rest of the line
-				descriptionWords := []string{value}
-				if i < len(tags)-1 {
-					descriptionWords = append(descriptionWords, tags[i+1:]...)
-				}
-				description = strings.Join(descriptionWords, " ")
-				break
-			}
-			if tag == ResponseTag || tag == BodyTag || tag == DescriptionTag {
-				err = fmt.Errorf("valid tag %s, but not in a valid position", tag)
-			} else {
-				err = fmt.Errorf("invalid tag: %s", tag)
-			}
-			// return error
-			return modelOrResponse, arrays, isDefinitionRef, description, err
+			continue
 		}
+
+		if tag == descriptionTag {
+			// Descriptions are special, they read the rest of the line
+			descriptionWords := []string{value}
+			if i < len(tags)-1 {
+				descriptionWords = append(descriptionWords, tags[i+1:]...)
+			}
+			description = strings.Join(descriptionWords, " ")
+			break
+		}
+
+		if tag == responseTag || tag == bodyTag {
+			err = fmt.Errorf("valid tag %s, but not in a valid position: %w", tag, ErrCodeScan)
+		} else {
+			err = fmt.Errorf("invalid tag: %s: %w", tag, ErrCodeScan)
+		}
+		// return error
+		return modelOrResponse, arrays, isDefinitionRef, description, err
 	}
 
 	// TODO: Maybe do, if !parsedModelOrResponse {return some error}
 	return modelOrResponse, arrays, isDefinitionRef, description, err
+}
+
+func assignResponse(key string, resp spec.Response, def *spec.Response, scr map[int]spec.Response) (*spec.Response, map[int]spec.Response) {
+	if strings.EqualFold("default", key) {
+		if def == nil {
+			def = &resp
+		}
+		return def, scr
+	}
+
+	if sc, err := strconv.Atoi(key); err == nil {
+		if scr == nil {
+			scr = make(map[int]spec.Response)
+		}
+		scr[sc] = resp
+	}
+
+	return def, scr
 }
 
 func (ss *setOpResponses) Parse(lines []string) error {
@@ -1320,95 +1367,84 @@ func (ss *setOpResponses) Parse(lines []string) error {
 	var scr map[int]spec.Response
 
 	for _, line := range lines {
-		kv := strings.SplitN(line, ":", 2)
-		var key, value string
-
-		if len(kv) > 1 {
-			key = strings.TrimSpace(kv[0])
-			if key == "" {
-				// this must be some weird empty line
-				continue
-			}
-			value = strings.TrimSpace(kv[1])
-			if value == "" {
-				var resp spec.Response
-				if strings.EqualFold("default", key) {
-					if def == nil {
-						def = &resp
-					}
-				} else {
-					if sc, err := strconv.Atoi(key); err == nil {
-						if scr == nil {
-							scr = make(map[int]spec.Response)
-						}
-						scr[sc] = resp
-					}
-				}
-				continue
-			}
-			refTarget, arrays, isDefinitionRef, description, err := parseTags(value)
-			if err != nil {
-				return err
-			}
-			// A possible exception for having a definition
-			if _, ok := ss.responses[refTarget]; !ok {
-				if _, ok := ss.definitions[refTarget]; ok {
-					isDefinitionRef = true
-				}
-			}
-
-			var ref spec.Ref
-			if isDefinitionRef {
-				if description == "" {
-					description = refTarget
-				}
-				ref, err = spec.NewRef("#/definitions/" + refTarget)
-			} else {
-				ref, err = spec.NewRef("#/responses/" + refTarget)
-			}
-			if err != nil {
-				return err
-			}
-
-			// description should used on anyway.
-			resp := spec.Response{ResponseProps: spec.ResponseProps{Description: description}}
-
-			if isDefinitionRef {
-				resp.Schema = new(spec.Schema)
-				resp.Description = description
-				if arrays == 0 {
-					resp.Schema.Ref = ref
-				} else {
-					cs := resp.Schema
-					for range arrays {
-						cs.Typed("array", "")
-						cs.Items = new(spec.SchemaOrArray)
-						cs.Items.Schema = new(spec.Schema)
-						cs = cs.Items.Schema
-					}
-					cs.Ref = ref
-				}
-				// ref. could be empty while use description tag
-			} else if len(refTarget) > 0 {
-				resp.Ref = ref
-			}
-
-			if strings.EqualFold("default", key) {
-				if def == nil {
-					def = &resp
-				}
-			} else {
-				if sc, err := strconv.Atoi(key); err == nil {
-					if scr == nil {
-						scr = make(map[int]spec.Response)
-					}
-					scr[sc] = resp
-				}
-			}
+		var err error
+		def, scr, err = ss.parseResponseLine(line, def, scr)
+		if err != nil {
+			return err
 		}
 	}
+
 	ss.set(def, scr)
 	return nil
+}
+
+func (ss *setOpResponses) parseResponseLine(line string, def *spec.Response, scr map[int]spec.Response) (*spec.Response, map[int]spec.Response, error) {
+	kv := strings.SplitN(line, ":", kvParts)
+	if len(kv) <= 1 {
+		return def, scr, nil
+	}
+
+	key := strings.TrimSpace(kv[0])
+	if key == "" {
+		return def, scr, nil
+	}
+
+	value := strings.TrimSpace(kv[1])
+	if value == "" {
+		def, scr = assignResponse(key, spec.Response{}, def, scr)
+		return def, scr, nil
+	}
+
+	refTarget, arrays, isDefinitionRef, description, err := parseTags(value)
+	if err != nil {
+		return def, scr, err
+	}
+
+	// A possible exception for having a definition
+	if _, ok := ss.responses[refTarget]; !ok {
+		if _, ok := ss.definitions[refTarget]; ok {
+			isDefinitionRef = true
+		}
+	}
+
+	var ref spec.Ref
+	if isDefinitionRef {
+		if description == "" {
+			description = refTarget
+		}
+		ref, err = spec.NewRef("#/definitions/" + refTarget)
+	} else {
+		ref, err = spec.NewRef("#/responses/" + refTarget)
+	}
+	if err != nil {
+		return def, scr, err
+	}
+
+	// description should used on anyway.
+	resp := spec.Response{ResponseProps: spec.ResponseProps{Description: description}}
+
+	if isDefinitionRef {
+		resp.Schema = new(spec.Schema)
+		resp.Description = description
+		if arrays == 0 {
+			resp.Schema.Ref = ref
+		} else {
+			cs := resp.Schema
+			for range arrays {
+				cs.Typed("array", "")
+				cs.Items = new(spec.SchemaOrArray)
+				cs.Items.Schema = new(spec.Schema)
+				cs = cs.Items.Schema
+			}
+			cs.Ref = ref
+		}
+		// ref. could be empty while use description tag
+	} else if len(refTarget) > 0 {
+		resp.Ref = ref
+	}
+
+	def, scr = assignResponse(key, resp, def, scr)
+	return def, scr, nil
 }
 
 func parseEnumOld(val string, s *spec.SimpleSchema) []any {
@@ -1454,8 +1490,8 @@ func parseEnum(val string, s *spec.SimpleSchema) []any {
 	return interfaceSlice
 }
 
-// AlphaChars used when parsing for Vendor Extensions.
-const AlphaChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+// alphaChars used when parsing for Vendor Extensions.
+const alphaChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func newSetExtensions(setter func(*spec.Extensions)) *setOpExtensions {
 	return &setOpExtensions{
@@ -1478,23 +1514,25 @@ type extensionParsingStack []any
 
 // Helper function to walk back through extensions until the proper nest level is reached.
 func (stack *extensionParsingStack) walkBack(rawLines []string, lineIndex int) {
-	indent := strings.IndexAny(rawLines[lineIndex], AlphaChars)
-	nextIndent := strings.IndexAny(rawLines[lineIndex+1], AlphaChars)
-	if nextIndent < indent {
-		// Pop elements off the stack until we're back where we need to be
-		runbackIndex := 0
-		poppedIndent := 1000
-		for {
-			checkIndent := strings.IndexAny(rawLines[lineIndex-runbackIndex], AlphaChars)
-			if nextIndent == checkIndent {
-				break
-			}
-			if checkIndent < poppedIndent {
-				*stack = (*stack)[:len(*stack)-1]
-				poppedIndent = checkIndent
-			}
-			runbackIndex++
+	indent := strings.IndexAny(rawLines[lineIndex], alphaChars)
+	nextIndent := strings.IndexAny(rawLines[lineIndex+1], alphaChars)
+	if nextIndent >= indent {
+		return
+	}
+
+	// Pop elements off the stack until we're back where we need to be
+	runbackIndex := 0
+	poppedIndent := 1000
+	for {
+		checkIndent := strings.IndexAny(rawLines[lineIndex-runbackIndex], alphaChars)
+		if nextIndent == checkIndent {
+			break
 		}
+		if checkIndent < poppedIndent {
+			*stack = (*stack)[:len(*stack)-1]
+			poppedIndent = checkIndent
+		}
+		runbackIndex++
 	}
 }
 
@@ -1509,7 +1547,8 @@ func buildExtensionObjects(rawLines []string, cleanLines []string, lineIndex int
 		}
 		return
 	}
-	kv := strings.SplitN(cleanLines[lineIndex], ":", 2)
+
+	kv := strings.SplitN(cleanLines[lineIndex], ":", kvParts)
 	key := strings.TrimSpace(kv[0])
 	if key == "" {
 		// Some odd empty line
@@ -1518,104 +1557,130 @@ func buildExtensionObjects(rawLines []string, cleanLines []string, lineIndex int
 
 	nextIsList := false
 	if lineIndex < len(rawLines)-1 {
-		next := strings.SplitAfterN(cleanLines[lineIndex+1], ":", 2)
+		next := strings.SplitAfterN(cleanLines[lineIndex+1], ":", kvParts)
 		nextIsList = len(next) == 1
 	}
 
-	if len(kv) > 1 {
-		// Should be the start of a map or a key:value pair
-		value := strings.TrimSpace(kv[1])
-
-		if rxAllowedExtensions.MatchString(key) {
-			// New extension started
-			if stack != nil {
-				if ext, ok := (*stack)[0].(extensionObject); ok {
-					*extObjs = append(*extObjs, ext)
-				}
-			}
-
-			if value != "" {
-				ext := extensionObject{
-					Extension: key,
-				}
-				// Extension is simple key:value pair, no stack
-				rootMap := make(map[string]string)
-				rootMap[key] = value
-				ext.Root = rootMap
-				*extObjs = append(*extObjs, ext)
-				buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, nil)
-			} else {
-				ext := extensionObject{
-					Extension: key,
-				}
-				if nextIsList {
-					// Extension is an array
-					rootMap := make(map[string]*[]string)
-					rootList := make([]string, 0)
-					rootMap[key] = &rootList
-					ext.Root = rootMap
-					stack = &extensionParsingStack{}
-					*stack = append(*stack, ext)
-					*stack = append(*stack, ext.Root.(map[string]*[]string)[key])
-				} else {
-					// Extension is an object
-					rootMap := make(map[string]any)
-					innerMap := make(map[string]any)
-					rootMap[key] = innerMap
-					ext.Root = rootMap
-					stack = &extensionParsingStack{}
-					*stack = append(*stack, ext)
-					*stack = append(*stack, innerMap)
-				}
-				buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, stack)
-			}
-		} else if stack != nil && len(*stack) != 0 {
-			stackIndex := len(*stack) - 1
-			if value == "" {
-				if nextIsList {
-					// start of new list
-					newList := make([]string, 0)
-					asMap, ok := (*stack)[stackIndex].(map[string]any)
-					if !ok {
-						panic(fmt.Errorf("internal error: stack index expected to be map[string]any, but got %T", (*stack)[stackIndex]))
-					}
-					asMap[key] = &newList
-					*stack = append(*stack, &newList)
-				} else {
-					// start of new map
-					newMap := make(map[string]any)
-					asMap, ok := (*stack)[stackIndex].(map[string]any)
-					if !ok {
-						panic(fmt.Errorf("internal error: stack index expected to be map[string]any, but got %T", (*stack)[stackIndex]))
-					}
-					asMap[key] = newMap
-					*stack = append(*stack, newMap)
-				}
-			} else {
-				// key:value
-				if reflect.TypeOf((*stack)[stackIndex]).Kind() == reflect.Map {
-					asMap, ok := (*stack)[stackIndex].(map[string]any)
-					if !ok {
-						panic(fmt.Errorf("internal error: stack index expected to be map[string]any, but got %T", (*stack)[stackIndex]))
-					}
-					asMap[key] = value
-				}
-				if lineIndex < len(rawLines)-1 && !rxAllowedExtensions.MatchString(cleanLines[lineIndex+1]) {
-					stack.walkBack(rawLines, lineIndex)
-				}
-			}
-			buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, stack)
-		}
-	} else if stack != nil && len(*stack) != 0 {
+	if len(kv) <= 1 {
 		// Should be a list item
+		if stack == nil || len(*stack) == 0 {
+			return
+		}
 		stackIndex := len(*stack) - 1
-		list := (*stack)[stackIndex].(*[]string)
+		list, ok := (*stack)[stackIndex].(*[]string)
+		if !ok {
+			panic(fmt.Errorf("internal error: expected *[]string, got %T: %w", (*stack)[stackIndex], ErrCodeScan))
+		}
 		*list = append(*list, key)
 		(*stack)[stackIndex] = list
 		if lineIndex < len(rawLines)-1 && !rxAllowedExtensions.MatchString(cleanLines[lineIndex+1]) {
 			stack.walkBack(rawLines, lineIndex)
 		}
 		buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, stack)
+		return
+	}
+
+	// Should be the start of a map or a key:value pair
+	value := strings.TrimSpace(kv[1])
+
+	if rxAllowedExtensions.MatchString(key) {
+		buildNewExtension(key, value, nextIsList, stack, rawLines, cleanLines, lineIndex, extObjs)
+		return
+	}
+
+	if stack == nil || len(*stack) == 0 {
+		return
+	}
+
+	buildStackEntry(key, value, nextIsList, stack, rawLines, cleanLines, lineIndex)
+	buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, stack)
+}
+
+// buildNewExtension handles the start of a new x- extension key.
+func buildNewExtension(key, value string, nextIsList bool, stack *extensionParsingStack, rawLines, cleanLines []string, lineIndex int, extObjs *[]extensionObject) {
+	// Flush any previous extension on the stack
+	if stack != nil {
+		if ext, ok := (*stack)[0].(extensionObject); ok {
+			*extObjs = append(*extObjs, ext)
+		}
+	}
+
+	if value != "" {
+		ext := extensionObject{
+			Extension: key,
+		}
+		// Extension is simple key:value pair, no stack
+		rootMap := make(map[string]string)
+		rootMap[key] = value
+		ext.Root = rootMap
+		*extObjs = append(*extObjs, ext)
+		buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, nil)
+		return
+	}
+
+	ext := extensionObject{
+		Extension: key,
+	}
+	if nextIsList {
+		// Extension is an array
+		rootMap := make(map[string]*[]string)
+		rootList := make([]string, 0)
+		rootMap[key] = &rootList
+		ext.Root = rootMap
+		stack = &extensionParsingStack{}
+		*stack = append(*stack, ext)
+		rootListMap, ok := ext.Root.(map[string]*[]string)
+		if !ok {
+			panic(fmt.Errorf("internal error: expected map[string]*[]string, got %T: %w", ext.Root, ErrCodeScan))
+		}
+		*stack = append(*stack, rootListMap[key])
+	} else {
+		// Extension is an object
+		rootMap := make(map[string]any)
+		innerMap := make(map[string]any)
+		rootMap[key] = innerMap
+		ext.Root = rootMap
+		stack = &extensionParsingStack{}
+		*stack = append(*stack, ext)
+		*stack = append(*stack, innerMap)
+	}
+	buildExtensionObjects(rawLines, cleanLines, lineIndex+1, extObjs, stack)
+}
+
+func assertStackMap(stack *extensionParsingStack, index int) map[string]any {
+	asMap, ok := (*stack)[index].(map[string]any)
+	if !ok {
+		panic(fmt.Errorf("internal error: stack index expected to be map[string]any, but got %T: %w", (*stack)[index], ErrCodeScan))
+	}
+	return asMap
+}
+
+// buildStackEntry adds a key/value, nested list, or nested map to the current stack.
+func buildStackEntry(key, value string, nextIsList bool, stack *extensionParsingStack, rawLines, cleanLines []string, lineIndex int) {
+	stackIndex := len(*stack) - 1
+	if value == "" {
+		asMap := assertStackMap(stack, stackIndex)
+		if nextIsList {
+			// start of new list
+			newList := make([]string, 0)
+			asMap[key] = &newList
+			*stack = append(*stack, &newList)
+		} else {
+			// start of new map
+			newMap := make(map[string]any)
+			asMap[key] = newMap
+			*stack = append(*stack, newMap)
+		}
+		return
+	}
+
+	// key:value
+	if reflect.TypeOf((*stack)[stackIndex]).Kind() == reflect.Map {
+		asMap := assertStackMap(stack, stackIndex)
+		asMap[key] = value
+	}
+	if lineIndex < len(rawLines)-1 && !rxAllowedExtensions.MatchString(cleanLines[lineIndex+1]) {
+		stack.walkBack(rawLines, lineIndex)
 	}
 }
 
@@ -1639,12 +1704,12 @@ func (ss *setOpExtensions) Parse(lines []string) error {
 	// list/array
 	// object
 	for _, ext := range extList {
-		if _, ok := ext.Root.(map[string]string); ok {
-			exts.AddExtension(ext.Extension, ext.Root.(map[string]string)[ext.Extension])
-		} else if _, ok := ext.Root.(map[string]*[]string); ok {
-			exts.AddExtension(ext.Extension, *(ext.Root.(map[string]*[]string)[ext.Extension]))
-		} else if _, ok := ext.Root.(map[string]any); ok {
-			exts.AddExtension(ext.Extension, ext.Root.(map[string]any)[ext.Extension])
+		if m, ok := ext.Root.(map[string]string); ok {
+			exts.AddExtension(ext.Extension, m[ext.Extension])
+		} else if m, ok := ext.Root.(map[string]*[]string); ok {
+			exts.AddExtension(ext.Extension, *m[ext.Extension])
+		} else if m, ok := ext.Root.(map[string]any); ok {
+			exts.AddExtension(ext.Extension, m[ext.Extension])
 		} else {
 			debugLogf("Unknown Extension type: %s", fmt.Sprint(reflect.TypeOf(ext.Root)))
 		}
@@ -1654,7 +1719,7 @@ func (ss *setOpExtensions) Parse(lines []string) error {
 	return nil
 }
 
-var unsupportedTypes = map[string]struct{}{
+var unsupportedTypes = map[string]struct{}{ //nolint:gochecknoglobals // immutable lookup table
 	"complex64":  {},
 	"complex128": {},
 }

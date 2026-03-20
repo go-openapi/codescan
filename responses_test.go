@@ -24,7 +24,12 @@ func getResponse(sctx *scanCtx, nm string) *entityDecl {
 func TestParseResponses(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 	responses := make(map[string]spec.Response)
-	for _, rn := range []string{"ComplexerOne", "SimpleOnes", "SimpleOnesFunc", "ComplexerPointerOne", "SomeResponse", "ValidationError", "Resp", "FileResponse", "GenericError", "ValidationError"} {
+	responseNames := []string{
+		"ComplexerOne", "SimpleOnes", "SimpleOnesFunc", "ComplexerPointerOne",
+		"SomeResponse", "ValidationError", "Resp", "FileResponse",
+		"GenericError", "ValidationError",
+	}
+	for _, rn := range responseNames {
 		td := getResponse(sctx, rn)
 		prs := &responseBuilder{
 			ctx:  sctx,
@@ -34,12 +39,41 @@ func TestParseResponses(t *testing.T) {
 	}
 
 	require.Len(t, responses, 9)
+
+	t.Run("complexerOne headers", func(t *testing.T) {
+		assertComplexerOneHeaders(t, responses)
+	})
+
+	t.Run("complexerPointerOne headers", func(t *testing.T) {
+		assertComplexerPointerOneHeaders(t, responses)
+	})
+
+	sos, ok := responses["simpleOnes"]
+	assert.TrueT(t, ok)
+	assert.Len(t, sos.Headers, 1)
+
+	sosf, ok := responses["simpleOnesFunc"]
+	assert.TrueT(t, ok)
+	assert.Len(t, sosf.Headers, 1)
+
+	t.Run("someResponse headers and schema", func(t *testing.T) {
+		assertSomeResponseHeaders(t, responses)
+	})
+
+	res, ok := responses["resp"]
+	assert.TrueT(t, ok)
+	assert.NotNil(t, res.Schema)
+	assert.EqualT(t, "#/definitions/user", res.Schema.Ref.String())
+}
+
+func assertComplexerOneHeaders(t *testing.T, responses map[string]spec.Response) {
+	t.Helper()
 	cr, ok := responses["complexerOne"]
 	assert.TrueT(t, ok)
 	assert.Len(t, cr.Headers, 7)
 	for k, header := range cr.Headers {
 		switch k {
-		case "id":
+		case paramID:
 			assert.EqualT(t, "integer", header.Type)
 			assert.EqualT(t, "int64", header.Format)
 		case "name":
@@ -64,13 +98,16 @@ func TestParseResponses(t *testing.T) {
 			assert.Fail(t, "unknown header: "+k)
 		}
 	}
+}
 
+func assertComplexerPointerOneHeaders(t *testing.T, responses map[string]spec.Response) {
+	t.Helper()
 	cpr, ok := responses["complexerPointerOne"]
 	assert.TrueT(t, ok)
 	assert.Len(t, cpr.Headers, 4)
 	for k, header := range cpr.Headers {
 		switch k {
-		case "id":
+		case paramID:
 			assert.EqualT(t, "integer", header.Type)
 			assert.EqualT(t, "int64", header.Format)
 		case "name":
@@ -86,22 +123,17 @@ func TestParseResponses(t *testing.T) {
 			assert.Fail(t, "unknown header: "+k)
 		}
 	}
+}
 
-	sos, ok := responses["simpleOnes"]
-	assert.TrueT(t, ok)
-	assert.Len(t, sos.Headers, 1)
-
-	sosf, ok := responses["simpleOnesFunc"]
-	assert.TrueT(t, ok)
-	assert.Len(t, sosf.Headers, 1)
-
+func assertSomeResponseHeaders(t *testing.T, responses map[string]spec.Response) {
+	t.Helper()
 	res, ok := responses["someResponse"]
 	assert.TrueT(t, ok)
 	assert.Len(t, res.Headers, 7)
 
 	for k, header := range res.Headers {
 		switch k {
-		case "id":
+		case paramID:
 			assert.EqualT(t, "ID of this some response instance.\nids in this application start at 11 and are smaller than 1000", header.Description)
 			assert.EqualT(t, "integer", header.Type)
 			assert.EqualT(t, "int64", header.Format)
@@ -249,11 +281,6 @@ func TestParseResponses(t *testing.T) {
 	iprop, ok = itprop.Properties["notes"]
 	assert.TrueT(t, ok)
 	assert.EqualT(t, "Notes to add to this item.\nThis can be used to add special instructions.", iprop.Description)
-
-	res, ok = responses["resp"]
-	assert.TrueT(t, ok)
-	assert.NotNil(t, res.Schema)
-	assert.EqualT(t, "#/definitions/user", res.Schema.Ref.String())
 }
 
 func TestParseResponses_TransparentAliases(t *testing.T) {

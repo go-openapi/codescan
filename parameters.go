@@ -5,11 +5,8 @@ package codescan
 
 import (
 	"fmt"
-	"go/ast"
 	"go/types"
 	"strings"
-
-	"golang.org/x/tools/go/ast/astutil"
 
 	"github.com/go-openapi/spec"
 )
@@ -30,7 +27,7 @@ func (pt paramTypable) SetRef(ref spec.Ref) {
 	pt.param.Ref = ref
 }
 
-func (pt paramTypable) Items() swaggerTypable {
+func (pt paramTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic by design
 	bdt, schema := bodyTypable(pt.param.In, pt.param.Schema)
 	if bdt != nil {
 		pt.param.Schema = schema
@@ -40,12 +37,12 @@ func (pt paramTypable) Items() swaggerTypable {
 	if pt.param.Items == nil {
 		pt.param.Items = new(spec.Items)
 	}
-	pt.param.Type = "array"
+	pt.param.Type = typeArray
 	return itemsTypable{pt.param.Items, 1, pt.param.In}
 }
 
 func (pt paramTypable) Schema() *spec.Schema {
-	if pt.param.In != "body" {
+	if pt.param.In != bodyTag {
 		return nil
 	}
 	if pt.param.Schema == nil {
@@ -55,7 +52,7 @@ func (pt paramTypable) Schema() *spec.Schema {
 }
 
 func (pt paramTypable) AddExtension(key string, value any) {
-	if pt.param.In == "body" {
+	if pt.param.In == bodyTag {
 		pt.Schema().AddExtension(key, value)
 	} else {
 		pt.param.AddExtension(key, value)
@@ -95,11 +92,11 @@ func (pt itemsTypable) Schema() *spec.Schema {
 	return nil
 }
 
-func (pt itemsTypable) Items() swaggerTypable {
+func (pt itemsTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic by design
 	if pt.items.Items == nil {
 		pt.items.Items = new(spec.Items)
 	}
-	pt.items.Type = "array"
+	pt.items.Type = typeArray
 	return itemsTypable{pt.items.Items, pt.level + 1, pt.in}
 }
 
@@ -214,14 +211,14 @@ func (p *parameterBuilder) buildFromType(otpe types.Type, op *spec.Operation, se
 		debugLogf("alias(parameters.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
 		return p.buildAlias(tpe, op, seen)
 	default:
-		return fmt.Errorf("unhandled type (%T): %s", otpe, tpe.String())
+		return fmt.Errorf("unhandled type (%T): %s: %w", otpe, tpe.String(), ErrCodeScan)
 	}
 }
 
 func (p *parameterBuilder) buildNamedType(tpe *types.Named, op *spec.Operation, seen map[string]spec.Parameter) error {
 	o := tpe.Obj()
 	if isAny(o) || isStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameters section definition", o.Name())
+		return fmt.Errorf("%s type not supported in the context of a parameters section definition: %w", o.Name(), ErrCodeScan)
 	}
 	mustNotBeABuiltinType(o)
 
@@ -234,14 +231,14 @@ func (p *parameterBuilder) buildNamedType(tpe *types.Named, op *spec.Operation, 
 
 		return p.buildFromStruct(p.decl, stpe, op, seen)
 	default:
-		return fmt.Errorf("unhandled type (%T): %s", stpe, o.Type().Underlying().String())
+		return fmt.Errorf("unhandled type (%T): %s: %w", stpe, o.Type().Underlying().String(), ErrCodeScan)
 	}
 }
 
 func (p *parameterBuilder) buildAlias(tpe *types.Alias, op *spec.Operation, seen map[string]spec.Parameter) error {
 	o := tpe.Obj()
 	if isAny(o) || isStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameters section definition", o.Name())
+		return fmt.Errorf("%s type not supported in the context of a parameters section definition: %w", o.Name(), ErrCodeScan)
 	}
 	mustNotBeABuiltinType(o)
 	mustHaveRightHandSide(tpe)
@@ -255,7 +252,7 @@ func (p *parameterBuilder) buildAlias(tpe *types.Alias, op *spec.Operation, seen
 
 	decl, ok := p.ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v", tpe, rhs)
+		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrCodeScan)
 	}
 	p.postDecls = append(p.postDecls, decl) // mark the left-hand side as discovered
 
@@ -268,7 +265,7 @@ func (p *parameterBuilder) buildAlias(tpe *types.Alias, op *spec.Operation, seen
 		}
 		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v", tpe, rtpe)
+			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrCodeScan)
 		}
 		p.postDecls = append(p.postDecls, decl)
 	case *types.Alias:
@@ -278,7 +275,7 @@ func (p *parameterBuilder) buildAlias(tpe *types.Alias, op *spec.Operation, seen
 		}
 		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v", tpe, rtpe)
+			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrCodeScan)
 		}
 		p.postDecls = append(p.postDecls, decl)
 	}
@@ -310,7 +307,7 @@ func (p *parameterBuilder) buildFromField(fld *types.Var, tpe types.Type, typabl
 		debugLogf("alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs()) // TODO
 		return p.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
-		return fmt.Errorf("unknown type for %s: %T", fld.String(), fld.Type())
+		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrCodeScan)
 	}
 }
 
@@ -368,13 +365,13 @@ func (p *parameterBuilder) buildNamedField(ftpe *types.Named, typable swaggerTyp
 		return nil
 	}
 	if isStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameter definition", o.Name())
+		return fmt.Errorf("%s type not supported in the context of a parameter definition: %w", o.Name(), ErrCodeScan)
 	}
 	mustNotBeABuiltinType(o)
 
 	decl, found := p.ctx.DeclForType(o.Type())
 	if !found {
-		return fmt.Errorf("unable to find package and source file for: %s", ftpe.String())
+		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrCodeScan)
 	}
 
 	if isStdTime(o) {
@@ -407,7 +404,7 @@ func (p *parameterBuilder) buildFieldAlias(tpe *types.Alias, typable swaggerTypa
 		return nil // just leave an empty schema
 	}
 	if isStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameter definition", o.Name())
+		return fmt.Errorf("%s type not supported in the context of a parameter definition: %w", o.Name(), ErrCodeScan)
 	}
 	mustNotBeABuiltinType(o)
 	mustHaveRightHandSide(tpe)
@@ -429,11 +426,11 @@ func (p *parameterBuilder) buildFieldAlias(tpe *types.Alias, typable swaggerTypa
 
 	decl, ok := p.ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v", tpe, rhs)
+		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrCodeScan)
 	}
 	p.postDecls = append(p.postDecls, decl) // mark the left-hand side as discovered
 
-	if typable.In() != "body" || !p.ctx.app.refAliases {
+	if typable.In() != bodyTag || !p.ctx.app.refAliases {
 		// if ref option is disabled, and always for non-body parameters: just expand the alias
 		unaliased := types.Unalias(tpe)
 		return p.buildFromField(fld, unaliased, typable, seen)
@@ -450,7 +447,7 @@ func (p *parameterBuilder) buildFieldAlias(tpe *types.Alias, typable swaggerTypa
 
 		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v", tpe, rtpe)
+			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrCodeScan)
 		}
 
 		return p.makeRef(decl, typable)
@@ -462,7 +459,7 @@ func (p *parameterBuilder) buildFieldAlias(tpe *types.Alias, typable swaggerTypa
 
 		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v", tpe, rtpe)
+			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrCodeScan)
 		}
 
 		return p.makeRef(decl, typable)
@@ -498,197 +495,13 @@ func (p *parameterBuilder) buildFromStruct(decl *entityDecl, tpe *types.Struct, 
 			continue
 		}
 
-		if !fld.Exported() {
-			debugLogf("skipping field %s because it's not exported", fld.Name())
-			continue
-		}
-
-		tg := tpe.Tag(i)
-
-		var afld *ast.Field
-		ans, _ := astutil.PathEnclosingInterval(decl.File, fld.Pos(), fld.Pos())
-		for _, an := range ans {
-			at, valid := an.(*ast.Field)
-			if !valid {
-				continue
-			}
-
-			debugLogf("field %s: %s(%T) [%q] ==> %s", fld.Name(), fld.Type().String(), fld.Type(), tg, at.Doc.Text())
-			afld = at
-			break
-		}
-
-		if afld == nil {
-			debugLogf("can't find source associated with %s for %s", fld.String(), tpe.String())
-			continue
-		}
-
-		// if the field is annotated with swagger:ignore, ignore it
-		if ignored(afld.Doc) {
-			continue
-		}
-
-		name, ignore, _, _, err := parseJSONTag(afld)
+		name, err := p.processParamField(fld, decl, seen)
 		if err != nil {
 			return err
 		}
-		if ignore {
-			continue
+		if name != "" {
+			sequence = append(sequence, name)
 		}
-
-		in := "query"
-		// scan for param location first, this changes some behavior down the line
-		if afld.Doc != nil {
-			for _, cmt := range afld.Doc.List {
-				for line := range strings.SplitSeq(cmt.Text, "\n") {
-					matches := rxIn.FindStringSubmatch(line)
-					if len(matches) > 0 && len(strings.TrimSpace(matches[1])) > 0 {
-						in = strings.TrimSpace(matches[1])
-					}
-				}
-			}
-		}
-
-		ps := seen[name]
-		ps.In = in
-		var pty swaggerTypable = paramTypable{&ps}
-		if in == "body" {
-			pty = schemaTypable{pty.Schema(), 0}
-		}
-		if in == "formData" && afld.Doc != nil && fileParam(afld.Doc) {
-			pty.Typed("file", "")
-		} else if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
-			return err
-		}
-
-		if strfmtName, ok := strfmtName(afld.Doc); ok {
-			ps.Typed("string", strfmtName)
-			ps.Ref = spec.Ref{}
-			ps.Items = nil
-		}
-
-		sp := new(sectionedParser)
-		sp.setDescription = func(lines []string) {
-			ps.Description = joinDropLast(lines)
-			enumDesc := getEnumDesc(ps.Extensions)
-			if enumDesc != "" {
-				ps.Description += "\n" + enumDesc
-			}
-		}
-		if ps.Ref.String() == "" {
-			sp.taggers = []tagParser{
-				newSingleLineTagParser("in", &matchOnlyParam{&ps, rxIn}),
-				newSingleLineTagParser("maximum", &setMaximum{paramValidations{&ps}, rxf(rxMaximumFmt, "")}),
-				newSingleLineTagParser("minimum", &setMinimum{paramValidations{&ps}, rxf(rxMinimumFmt, "")}),
-				newSingleLineTagParser("multipleOf", &setMultipleOf{paramValidations{&ps}, rxf(rxMultipleOfFmt, "")}),
-				newSingleLineTagParser("minLength", &setMinLength{paramValidations{&ps}, rxf(rxMinLengthFmt, "")}),
-				newSingleLineTagParser("maxLength", &setMaxLength{paramValidations{&ps}, rxf(rxMaxLengthFmt, "")}),
-				newSingleLineTagParser("pattern", &setPattern{paramValidations{&ps}, rxf(rxPatternFmt, "")}),
-				newSingleLineTagParser("collectionFormat", &setCollectionFormat{paramValidations{&ps}, rxf(rxCollectionFormatFmt, "")}),
-				newSingleLineTagParser("minItems", &setMinItems{paramValidations{&ps}, rxf(rxMinItemsFmt, "")}),
-				newSingleLineTagParser("maxItems", &setMaxItems{paramValidations{&ps}, rxf(rxMaxItemsFmt, "")}),
-				newSingleLineTagParser("unique", &setUnique{paramValidations{&ps}, rxf(rxUniqueFmt, "")}),
-				newSingleLineTagParser("enum", &setEnum{paramValidations{&ps}, rxf(rxEnumFmt, "")}),
-				newSingleLineTagParser("default", &setDefault{&ps.SimpleSchema, paramValidations{&ps}, rxf(rxDefaultFmt, "")}),
-				newSingleLineTagParser("example", &setExample{&ps.SimpleSchema, paramValidations{&ps}, rxf(rxExampleFmt, "")}),
-				newSingleLineTagParser("required", &setRequiredParam{&ps}),
-				newMultiLineTagParser("Extensions", newSetExtensions(spExtensionsSetter(&ps)), true),
-			}
-
-			itemsTaggers := func(items *spec.Items, level int) []tagParser {
-				// the expression is 1-index based not 0-index
-				itemsPrefix := fmt.Sprintf(rxItemsPrefixFmt, level+1)
-
-				return []tagParser{
-					newSingleLineTagParser(fmt.Sprintf("items%dMaximum", level), &setMaximum{itemsValidations{items}, rxf(rxMaximumFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dMinimum", level), &setMinimum{itemsValidations{items}, rxf(rxMinimumFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dMultipleOf", level), &setMultipleOf{itemsValidations{items}, rxf(rxMultipleOfFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dMinLength", level), &setMinLength{itemsValidations{items}, rxf(rxMinLengthFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dMaxLength", level), &setMaxLength{itemsValidations{items}, rxf(rxMaxLengthFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dPattern", level), &setPattern{itemsValidations{items}, rxf(rxPatternFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dCollectionFormat", level), &setCollectionFormat{itemsValidations{items}, rxf(rxCollectionFormatFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dMinItems", level), &setMinItems{itemsValidations{items}, rxf(rxMinItemsFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dMaxItems", level), &setMaxItems{itemsValidations{items}, rxf(rxMaxItemsFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dUnique", level), &setUnique{itemsValidations{items}, rxf(rxUniqueFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dEnum", level), &setEnum{itemsValidations{items}, rxf(rxEnumFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dDefault", level), &setDefault{&items.SimpleSchema, itemsValidations{items}, rxf(rxDefaultFmt, itemsPrefix)}),
-					newSingleLineTagParser(fmt.Sprintf("items%dExample", level), &setExample{&items.SimpleSchema, itemsValidations{items}, rxf(rxExampleFmt, itemsPrefix)}),
-				}
-			}
-
-			var parseArrayTypes func(expr ast.Expr, items *spec.Items, level int) ([]tagParser, error)
-			parseArrayTypes = func(expr ast.Expr, items *spec.Items, level int) ([]tagParser, error) {
-				if items == nil {
-					return []tagParser{}, nil
-				}
-				switch iftpe := expr.(type) {
-				case *ast.ArrayType:
-					eleTaggers := itemsTaggers(items, level)
-					sp.taggers = append(eleTaggers, sp.taggers...)
-					otherTaggers, err := parseArrayTypes(iftpe.Elt, items.Items, level+1)
-					if err != nil {
-						return nil, err
-					}
-					return otherTaggers, nil
-				case *ast.SelectorExpr:
-					otherTaggers, err := parseArrayTypes(iftpe.Sel, items.Items, level+1)
-					if err != nil {
-						return nil, err
-					}
-					return otherTaggers, nil
-				case *ast.Ident:
-					taggers := []tagParser{}
-					if iftpe.Obj == nil {
-						taggers = itemsTaggers(items, level)
-					}
-					otherTaggers, err := parseArrayTypes(expr, items.Items, level+1)
-					if err != nil {
-						return nil, err
-					}
-					return append(taggers, otherTaggers...), nil
-				case *ast.StarExpr:
-					otherTaggers, err := parseArrayTypes(iftpe.X, items, level)
-					if err != nil {
-						return nil, err
-					}
-					return otherTaggers, nil
-				default:
-					return nil, fmt.Errorf("unknown field type ele for %q", name)
-				}
-			}
-
-			// check if this is a primitive, if so parse the validations from the
-			// doc comments of the slice declaration.
-			if ftped, ok := afld.Type.(*ast.ArrayType); ok {
-				taggers, err := parseArrayTypes(ftped.Elt, ps.Items, 0)
-				if err != nil {
-					return err
-				}
-				sp.taggers = append(taggers, sp.taggers...)
-			}
-		} else {
-			sp.taggers = []tagParser{
-				newSingleLineTagParser("in", &matchOnlyParam{&ps, rxIn}),
-				newSingleLineTagParser("required", &matchOnlyParam{&ps, rxRequired}),
-				newMultiLineTagParser("Extensions", newSetExtensions(spExtensionsSetter(&ps)), true),
-			}
-		}
-		if err := sp.Parse(afld.Doc); err != nil {
-			return err
-		}
-		if ps.In == "path" {
-			ps.Required = true
-		}
-
-		if ps.Name == "" {
-			ps.Name = name
-		}
-
-		if name != fld.Name() {
-			addExtension(&ps.VendorExtensible, "x-go-name", fld.Name())
-		}
-		seen[name] = ps
-		sequence = append(sequence, name)
 	}
 
 	for _, k := range sequence {
@@ -701,7 +514,102 @@ func (p *parameterBuilder) buildFromStruct(decl *entityDecl, tpe *types.Struct, 
 		}
 		op.Parameters = append(op.Parameters, p)
 	}
+
 	return nil
+}
+
+// processParamField processes a single non-embedded struct field for parameter building.
+// Returns the parameter name if the field was processed, or "" if it was skipped.
+func (p *parameterBuilder) processParamField(fld *types.Var, decl *entityDecl, seen map[string]spec.Parameter) (string, error) {
+	if !fld.Exported() {
+		debugLogf("skipping field %s because it's not exported", fld.Name())
+		return "", nil
+	}
+
+	afld := findASTField(decl.File, fld.Pos())
+	if afld == nil {
+		debugLogf("can't find source associated with %s", fld.String())
+		return "", nil
+	}
+
+	if ignored(afld.Doc) {
+		return "", nil
+	}
+
+	name, ignore, _, _, err := parseJSONTag(afld)
+	if err != nil {
+		return "", err
+	}
+	if ignore {
+		return "", nil
+	}
+
+	in := paramInQuery
+	// scan for param location first, this changes some behavior down the line
+	if afld.Doc != nil {
+		for _, cmt := range afld.Doc.List {
+			for line := range strings.SplitSeq(cmt.Text, "\n") {
+				matches := rxIn.FindStringSubmatch(line)
+				if len(matches) > 0 && len(strings.TrimSpace(matches[1])) > 0 {
+					in = strings.TrimSpace(matches[1])
+				}
+			}
+		}
+	}
+
+	ps := seen[name]
+	ps.In = in
+	var pty swaggerTypable = paramTypable{&ps}
+	if in == bodyTag {
+		pty = schemaTypable{pty.Schema(), 0}
+	}
+
+	if in == "formData" && afld.Doc != nil && fileParam(afld.Doc) {
+		pty.Typed("file", "")
+	} else if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
+		return "", err
+	}
+
+	if strfmtName, ok := strfmtName(afld.Doc); ok {
+		ps.Typed("string", strfmtName)
+		ps.Ref = spec.Ref{}
+		ps.Items = nil
+	}
+
+	sp := new(sectionedParser)
+	sp.setDescription = func(lines []string) {
+		ps.Description = joinDropLast(lines)
+		enumDesc := getEnumDesc(ps.Extensions)
+		if enumDesc != "" {
+			ps.Description += "\n" + enumDesc
+		}
+	}
+
+	if ps.Ref.String() != "" {
+		setupRefParamTaggers(sp, &ps)
+	} else {
+		if err := setupInlineParamTaggers(sp, &ps, name, afld); err != nil {
+			return "", err
+		}
+	}
+
+	if err := sp.Parse(afld.Doc); err != nil {
+		return "", err
+	}
+	if ps.In == "path" {
+		ps.Required = true
+	}
+
+	if ps.Name == "" {
+		ps.Name = name
+	}
+
+	if name != fld.Name() {
+		addExtension(&ps.VendorExtensible, "x-go-name", fld.Name())
+	}
+
+	seen[name] = ps
+	return name, nil
 }
 
 func (p *parameterBuilder) makeRef(decl *entityDecl, prop swaggerTypable) error {

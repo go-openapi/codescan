@@ -23,5 +23,4 @@ type ParamsAndModel struct {
 }
 
 func main() {
-
 }

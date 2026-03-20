@@ -40,5 +40,8 @@ The punctuation here does indeed matter. But it won't for go.
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"This has a title without whitespace."}, st.Title())
-	assert.Equal(t, []string{"The punctuation here does indeed matter. But it won't for go.", "", "# There is an inline header here that doesn't count for finding a title"}, st.Description())
+	assert.Equal(t, []string{
+		"The punctuation here does indeed matter. But it won't for go.", "",
+		"# There is an inline header here that doesn't count for finding a title",
+	}, st.Description())
 }

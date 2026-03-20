@@ -21,10 +21,8 @@ import (
 	"github.com/go-openapi/codescan/fixtures/goparsing/petstore/rest"
 )
 
-var (
-	// Version is a compile time constant, injected at build time
-	Version string
-)
+// Version is a compile time constant, injected at build time
+var Version string
 
 // This is an application that doesn't actually do anything,
 // it's used for testing the scanner

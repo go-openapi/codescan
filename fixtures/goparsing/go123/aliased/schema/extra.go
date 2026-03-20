@@ -86,6 +86,8 @@ type SliceOfStructsAlias = []struct{}
 // swagger:model
 type ShouldSee bool
 
-type ShouldNotSee bool
-type ShouldNotSeeSlice []int
-type ShouldNotSeeMap map[string]int
+type (
+	ShouldNotSee      bool
+	ShouldNotSeeSlice []int
+	ShouldNotSeeMap   map[string]int
+)

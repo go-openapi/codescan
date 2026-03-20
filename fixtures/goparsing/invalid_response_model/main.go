@@ -23,5 +23,4 @@ type ResponseAndModel struct {
 }
 
 func main() {
-
 }

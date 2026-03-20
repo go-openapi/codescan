@@ -5,10 +5,10 @@ package codescan
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/importer"
+	"go/token"
 	"go/types"
 	"log"
 	"os"
@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/go/packages"
 
 	"github.com/go-openapi/spec"
 )
@@ -48,7 +49,7 @@ func (st schemaTypable) Schema() *spec.Schema {
 	return st.schema
 }
 
-func (st schemaTypable) Items() swaggerTypable {
+func (st schemaTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic by design
 	if st.schema.Items == nil {
 		st.schema.Items = new(spec.SchemaOrArray)
 	}
@@ -60,7 +61,7 @@ func (st schemaTypable) Items() swaggerTypable {
 	return schemaTypable{st.schema.Items.Schema, st.level + 1}
 }
 
-func (st schemaTypable) AdditionalProperties() swaggerTypable {
+func (st schemaTypable) AdditionalProperties() swaggerTypable { //nolint:ireturn // polymorphic by design
 	if st.schema.AdditionalProperties == nil {
 		st.schema.AdditionalProperties = new(spec.SchemaOrBool)
 	}
@@ -264,7 +265,7 @@ func (s *schemaBuilder) buildDeclNamed(tpe *types.Named, schema *spec.Schema) er
 	ps := schemaTypable{schema, 0}
 	ti := s.decl.Pkg.TypesInfo.Types[s.decl.Spec.Type]
 	if !ti.IsType() {
-		return fmt.Errorf("declaration is not a type: %v", o)
+		return fmt.Errorf("declaration is not a type: %v: %w", o, ErrCodeScan)
 	}
 
 	return s.buildFromType(ti.Type, ps)
@@ -375,7 +376,7 @@ func (s *schemaBuilder) buildFromType(tpe types.Type, tgt swaggerTypable) error 
 		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", tpe)
 		return nil
 	default:
-		panic(fmt.Errorf("ERROR: can't determine refined type %[1]v (%[1]T): %w", titpe, ErrInternal))
+		panic(fmt.Errorf("ERROR: can't determine refined type %[1]v (%[1]T): %w", titpe, errInternal))
 	}
 }
 
@@ -385,6 +386,7 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 		log.Printf("WARNING: skipped unsupported builtin type: %v", titpe)
 		return nil
 	}
+
 	if isAny(tio) {
 		// e.g type X any or type X interface{}
 		_ = tgt.Schema()
@@ -445,123 +447,22 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 	// invariant: the Underlying cannot be an alias or named type
 	switch utitpe := titpe.Underlying().(type) {
 	case *types.Struct:
-		debugLogf("found struct: %s.%s", tio.Pkg().Path(), tio.Name())
-
-		decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
-		if !ok {
-			debugLogf("could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
-			return nil
-		}
-
-		o := decl.Obj()
-		if isStdTime(o) {
-			tgt.Typed("string", "date-time")
-			return nil
-		}
-
-		if sfnm, isf := strfmtName(cmt); isf {
-			tgt.Typed("string", sfnm)
-			return nil
-		}
-
-		if typeName, ok := typeName(cmt); ok {
-			_ = swaggerSchemaForType(typeName, tgt)
-			return nil
-		}
-
-		return s.makeRef(decl, tgt)
+		return s.buildNamedStruct(tio, cmt, tgt)
 	case *types.Interface:
 		debugLogf("found interface: %s.%s", tio.Pkg().Path(), tio.Name())
 
 		decl, found := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for type: %v", utitpe)
+			return fmt.Errorf("can't find source file for type: %v: %w", utitpe, ErrCodeScan)
 		}
 
 		return s.makeRef(decl, tgt)
 	case *types.Basic:
-		if unsupportedBuiltinType(utitpe) {
-			log.Printf("WARNING: skipped unsupported builtin type: %v", utitpe)
-			return nil
-		}
-
-		debugLogf("found primitive type: %s.%s", tio.Pkg().Path(), tio.Name())
-
-		if sfnm, isf := strfmtName(cmt); isf {
-			tgt.Typed("string", sfnm)
-			return nil
-		}
-
-		if enumName, ok := enumName(cmt); ok {
-			enumValues, enumDesces, _ := s.ctx.FindEnumValues(pkg, enumName)
-			if len(enumValues) > 0 {
-				tgt.WithEnum(enumValues...)
-				enumTypeName := reflect.TypeOf(enumValues[0]).String()
-				_ = swaggerSchemaForType(enumTypeName, tgt)
-			}
-			if len(enumDesces) > 0 {
-				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
-			}
-			return nil
-		}
-
-		if defaultName, ok := defaultName(cmt); ok {
-			debugLogf("default name: %s", defaultName)
-			return nil
-		}
-
-		if typeName, ok := typeName(cmt); ok {
-			_ = swaggerSchemaForType(typeName, tgt)
-			return nil
-		}
-
-		if isAliasParam(tgt) || aliasParam(cmt) {
-			err := swaggerSchemaForType(utitpe.Name(), tgt)
-			if err == nil {
-				return nil
-			}
-		}
-
-		if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
-			return s.makeRef(decl, tgt)
-		}
-
-		return swaggerSchemaForType(utitpe.String(), tgt)
+		return s.buildNamedBasic(tio, pkg, cmt, utitpe, tgt)
 	case *types.Array:
-		debugLogf("found array type: %s.%s", tio.Pkg().Path(), tio.Name())
-
-		if sfnm, isf := strfmtName(cmt); isf {
-			if sfnm == "byte" {
-				tgt.Typed("string", sfnm)
-				return nil
-			}
-			if sfnm == "bsonobjectid" {
-				tgt.Typed("string", sfnm)
-				return nil
-			}
-
-			tgt.Items().Typed("string", sfnm)
-			return nil
-		}
-		if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
-			return s.makeRef(decl, tgt)
-		}
-		return s.buildFromType(utitpe.Elem(), tgt.Items())
+		return s.buildNamedArray(tio, cmt, utitpe.Elem(), tgt)
 	case *types.Slice:
-		debugLogf("found slice type: %s.%s", tio.Pkg().Path(), tio.Name())
-
-		if sfnm, isf := strfmtName(cmt); isf {
-			if sfnm == "byte" {
-				tgt.Typed("string", sfnm)
-				return nil
-			}
-			tgt.Items().Typed("string", sfnm)
-			return nil
-		}
-		if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
-			return s.makeRef(decl, tgt)
-		}
-		return s.buildFromType(utitpe.Elem(), tgt.Items())
+		return s.buildNamedSlice(tio, cmt, utitpe.Elem(), tgt)
 	case *types.Map:
 		debugLogf("found map type: %s.%s", tio.Pkg().Path(), tio.Name())
 
@@ -586,6 +487,123 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 
 		return nil
 	}
+}
+
+func (s *schemaBuilder) buildNamedBasic(tio *types.TypeName, pkg *packages.Package, cmt *ast.CommentGroup, utitpe *types.Basic, tgt swaggerTypable) error {
+	if unsupportedBuiltinType(utitpe) {
+		log.Printf("WARNING: skipped unsupported builtin type: %v", utitpe)
+		return nil
+	}
+
+	debugLogf("found primitive type: %s.%s", tio.Pkg().Path(), tio.Name())
+
+	if sfnm, isf := strfmtName(cmt); isf {
+		tgt.Typed("string", sfnm)
+		return nil
+	}
+
+	if enumName, ok := enumName(cmt); ok {
+		enumValues, enumDesces, _ := s.ctx.FindEnumValues(pkg, enumName)
+		if len(enumValues) > 0 {
+			tgt.WithEnum(enumValues...)
+			enumTypeName := reflect.TypeOf(enumValues[0]).String()
+			_ = swaggerSchemaForType(enumTypeName, tgt)
+		}
+		if len(enumDesces) > 0 {
+			tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
+		}
+		return nil
+	}
+
+	if defaultName, ok := defaultName(cmt); ok {
+		debugLogf("default name: %s", defaultName)
+		return nil
+	}
+
+	if typeName, ok := typeName(cmt); ok {
+		_ = swaggerSchemaForType(typeName, tgt)
+		return nil
+	}
+
+	if isAliasParam(tgt) || aliasParam(cmt) {
+		err := swaggerSchemaForType(utitpe.Name(), tgt)
+		if err == nil {
+			return nil
+		}
+	}
+
+	if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
+		return s.makeRef(decl, tgt)
+	}
+
+	return swaggerSchemaForType(utitpe.String(), tgt)
+}
+
+func (s *schemaBuilder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, tgt swaggerTypable) error {
+	debugLogf("found struct: %s.%s", tio.Pkg().Path(), tio.Name())
+
+	decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
+	if !ok {
+		debugLogf("could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
+		return nil
+	}
+
+	o := decl.Obj()
+	if isStdTime(o) {
+		tgt.Typed("string", "date-time")
+		return nil
+	}
+
+	if sfnm, isf := strfmtName(cmt); isf {
+		tgt.Typed("string", sfnm)
+		return nil
+	}
+
+	if typeName, ok := typeName(cmt); ok {
+		_ = swaggerSchemaForType(typeName, tgt)
+		return nil
+	}
+
+	return s.makeRef(decl, tgt)
+}
+
+func (s *schemaBuilder) buildNamedArray(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt swaggerTypable) error {
+	debugLogf("found array type: %s.%s", tio.Pkg().Path(), tio.Name())
+
+	if sfnm, isf := strfmtName(cmt); isf {
+		if sfnm == goTypeByte {
+			tgt.Typed("string", sfnm)
+			return nil
+		}
+		if sfnm == "bsonobjectid" {
+			tgt.Typed("string", sfnm)
+			return nil
+		}
+
+		tgt.Items().Typed("string", sfnm)
+		return nil
+	}
+	if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
+		return s.makeRef(decl, tgt)
+	}
+	return s.buildFromType(elem, tgt.Items())
+}
+
+func (s *schemaBuilder) buildNamedSlice(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt swaggerTypable) error {
+	debugLogf("found slice type: %s.%s", tio.Pkg().Path(), tio.Name())
+
+	if sfnm, isf := strfmtName(cmt); isf {
+		if sfnm == goTypeByte {
+			tgt.Typed("string", sfnm)
+			return nil
+		}
+		tgt.Items().Typed("string", sfnm)
+		return nil
+	}
+	if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
+		return s.makeRef(decl, tgt)
+	}
+	return s.buildFromType(elem, tgt.Items())
 }
 
 // buildDeclAlias builds a top-level alias declaration.
@@ -621,7 +639,7 @@ func (s *schemaBuilder) buildDeclAlias(tpe *types.Alias, tgt swaggerTypable) err
 
 	decl, ok := s.ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v", tpe, rhs)
+		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrCodeScan)
 	}
 
 	s.postDecls = append(s.postDecls, decl) // mark the left-hand side as discovered
@@ -638,7 +656,7 @@ func (s *schemaBuilder) buildDeclAlias(tpe *types.Alias, tgt swaggerTypable) err
 		ro := rtpe.Obj()
 		rdecl, found := s.ctx.FindModel(ro.Pkg().Path(), ro.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v", tpe, rtpe)
+			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrCodeScan)
 		}
 
 		return s.makeRef(rdecl, tgt)
@@ -662,7 +680,7 @@ func (s *schemaBuilder) buildDeclAlias(tpe *types.Alias, tgt swaggerTypable) err
 
 		rdecl, found := s.ctx.FindModel(ro.Pkg().Path(), ro.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v", tpe, rtpe)
+			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrCodeScan)
 		}
 
 		return s.makeRef(rdecl, tgt)
@@ -676,88 +694,72 @@ func (s *schemaBuilder) buildAnonymousInterface(it *types.Interface, tgt swagger
 	tgt.Typed("object", "")
 
 	for fld := range it.ExplicitMethods() {
-		if !fld.Exported() {
-			continue
-		}
-		sig, isSignature := fld.Type().(*types.Signature)
-		if !isSignature {
-			continue
-		}
-		if sig.Params().Len() > 0 {
-			continue
-		}
-		if sig.Results() == nil || sig.Results().Len() != 1 {
-			continue
-		}
-
-		var afld *ast.Field
-		ans, _ := astutil.PathEnclosingInterval(decl.File, fld.Pos(), fld.Pos())
-		// debugLogf("got %d nodes (exact: %t)", len(ans), isExact)
-		for _, an := range ans {
-			at, valid := an.(*ast.Field)
-			if !valid {
-				continue
-			}
-
-			debugLogf("maybe interface field %s: %s(%T)", fld.Name(), fld.Type().String(), fld.Type())
-			afld = at
-			break
-		}
-
-		if afld == nil {
-			debugLogf("can't find source associated with %s for %s", fld.String(), it.String())
-			continue
-		}
-
-		// if the field is annotated with swagger:ignore, ignore it
-		if ignored(afld.Doc) {
-			continue
-		}
-
-		name := fld.Name()
-		if afld.Doc != nil {
-			for _, cmt := range afld.Doc.List {
-				for ln := range strings.SplitSeq(cmt.Text, "\n") {
-					matches := rxName.FindStringSubmatch(ln)
-					ml := len(matches)
-					if ml > 1 {
-						name = matches[ml-1]
-					}
-				}
-			}
-		}
-
-		if tgt.Schema().Properties == nil {
-			tgt.Schema().Properties = make(map[string]spec.Schema)
-		}
-		ps := tgt.Schema().Properties[name]
-		if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0}); err != nil {
+		if err := s.processAnonInterfaceMethod(fld, it, decl, tgt.Schema()); err != nil {
 			return err
 		}
-		if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
-			ps.Typed("string", sfName)
-			ps.Ref = spec.Ref{}
-			ps.Items = nil
-		}
-
-		if err := s.createParser(name, tgt.Schema(), &ps, afld).Parse(afld.Doc); err != nil {
-			return err
-		}
-
-		if ps.Ref.String() == "" && name != fld.Name() {
-			ps.AddExtension("x-go-name", fld.Name())
-		}
-
-		if s.ctx.app.setXNullableForPointers {
-			if _, isPointer := fld.Type().(*types.Signature).Results().At(0).Type().(*types.Pointer); isPointer && (ps.Extensions == nil || (ps.Extensions["x-nullable"] == nil && ps.Extensions["x-isnullable"] == nil)) {
-				ps.AddExtension("x-nullable", true)
-			}
-		}
-
-		// seen[name] = fld.Name()
-		tgt.Schema().Properties[name] = ps
 	}
 
+	return nil
+}
+
+func (s *schemaBuilder) processAnonInterfaceMethod(fld *types.Func, it *types.Interface, decl *entityDecl, schema *spec.Schema) error {
+	if !fld.Exported() {
+		return nil
+	}
+	sig, isSignature := fld.Type().(*types.Signature)
+	if !isSignature {
+		return nil
+	}
+	if sig.Params().Len() > 0 {
+		return nil
+	}
+	if sig.Results() == nil || sig.Results().Len() != 1 {
+		return nil
+	}
+
+	afld := findASTField(decl.File, fld.Pos())
+	if afld == nil {
+		debugLogf("can't find source associated with %s for %s", fld.String(), it.String())
+		return nil
+	}
+
+	if ignored(afld.Doc) {
+		return nil
+	}
+
+	name := nameOverride(fld.Name(), afld.Doc)
+
+	if schema.Properties == nil {
+		schema.Properties = make(map[string]spec.Schema)
+	}
+	ps := schema.Properties[name]
+	if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0}); err != nil {
+		return err
+	}
+	if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
+		ps.Typed("string", sfName)
+		ps.Ref = spec.Ref{}
+		ps.Items = nil
+	}
+
+	if err := s.createParser(name, schema, &ps, afld).Parse(afld.Doc); err != nil {
+		return err
+	}
+
+	if ps.Ref.String() == "" && name != fld.Name() {
+		ps.AddExtension("x-go-name", fld.Name())
+	}
+
+	if s.ctx.app.setXNullableForPointers {
+		_, isPointer := fld.Type().(*types.Signature).Results().At(0).Type().(*types.Pointer)
+		noNullableExt := ps.Extensions == nil ||
+			(ps.Extensions["x-nullable"] == nil && ps.Extensions["x-isnullable"] == nil)
+		if isPointer && noNullableExt {
+			ps.AddExtension("x-nullable", true)
+		}
+	}
+
+	schema.Properties[name] = ps
 	return nil
 }
 
@@ -783,7 +785,7 @@ func (s *schemaBuilder) buildAlias(tpe *types.Alias, tgt swaggerTypable) error {
 
 	decl, ok := s.ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v", tpe)
+		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrCodeScan)
 	}
 
 	return s.makeRef(decl, tgt)
@@ -797,7 +799,7 @@ func (s *schemaBuilder) buildFromMap(titpe *types.Map, tgt swaggerTypable) error
 
 	sch := tgt.Schema()
 	if sch == nil {
-		return errors.New("items doesn't support maps")
+		return fmt.Errorf("items doesn't support maps: %w", ErrCodeScan)
 	}
 
 	eleProp := schemaTypable{sch, tgt.Level()}
@@ -832,68 +834,14 @@ func (s *schemaBuilder) buildFromInterface(decl *entityDecl, it *types.Interface
 	//   1. the embedded interface is decorated with an allOf annotation
 	//   2. the embedded interface is an alias
 	for fld := range it.EmbeddedTypes() {
-		debugLogf("inspecting embedded type in interface: %v", fld)
-		var (
-			fieldHasAllOf bool
-			err           error
-		)
-
 		if tgt == nil {
 			tgt = &spec.Schema{}
 		}
 
-		switch ftpe := fld.(type) {
-		case *types.Named:
-			debugLogf("embedded named type (buildInterface): %v", ftpe)
-			o := ftpe.Obj()
-			if isAny(o) || isStdError(o) {
-				// ignore bultin interfaces
-				continue
-			}
-
-			if fieldHasAllOf, err = s.buildNamedInterface(ftpe, flist, decl, schema, seen); err != nil {
-				return err
-			}
-		case *types.Interface:
-			debugLogf("embedded anonymous interface type (buildInterface): %v", ftpe) // e.g. type X interface{ interface{Error() string}}
-			var aliasedSchema spec.Schema
-			ps := schemaTypable{schema: &aliasedSchema}
-			if err = s.buildAnonymousInterface(ftpe, ps, decl); err != nil {
-				return err
-			}
-
-			if aliasedSchema.Ref.String() != "" || len(aliasedSchema.Properties) > 0 || len(aliasedSchema.AllOf) > 0 {
-				schema.AddToAllOf(aliasedSchema)
-				fieldHasAllOf = true
-			}
-		case *types.Alias:
-			debugLogf("embedded alias (buildInterface): %v -> %v", ftpe, ftpe.Rhs())
-			var aliasedSchema spec.Schema
-			ps := schemaTypable{schema: &aliasedSchema}
-			if err = s.buildAlias(ftpe, ps); err != nil {
-				return err
-			}
-
-			if aliasedSchema.Ref.String() != "" || len(aliasedSchema.Properties) > 0 || len(aliasedSchema.AllOf) > 0 {
-				schema.AddToAllOf(aliasedSchema)
-				fieldHasAllOf = true
-			}
-		case *types.Union: // e.g. type X interface{ ~uint16 | ~float32 }
-			log.Printf("WARNING: union type constraints are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-		case *types.TypeParam:
-			log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-		case *types.Chan:
-			log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", ftpe)
-		case *types.Signature:
-			log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", ftpe)
-		default:
-			log.Printf(
-				"WARNING: can't figure out object type for allOf named type (%T): %v",
-				ftpe, ftpe.Underlying(),
-			)
+		fieldHasAllOf, err := s.processEmbeddedType(fld, flist, decl, schema, seen)
+		if err != nil {
+			return err
 		}
-
-		debugLogf("got embedded interface: %v {%T}, fieldHasAllOf: %t", fld, fld, fieldHasAllOf)
 		hasAllOf = hasAllOf || fieldHasAllOf
 	}
 
@@ -908,82 +856,9 @@ func (s *schemaBuilder) buildFromInterface(decl *entityDecl, it *types.Interface
 	tgt.Typed("object", "")
 
 	for fld := range it.ExplicitMethods() {
-		if !fld.Exported() {
-			continue
-		}
-		sig, isSignature := fld.Type().(*types.Signature)
-		if !isSignature {
-			continue
-		}
-		if sig.Params().Len() > 0 {
-			continue
-		}
-		if sig.Results() == nil || sig.Results().Len() != 1 {
-			continue
-		}
-
-		var afld *ast.Field
-		ans, _ := astutil.PathEnclosingInterval(decl.File, fld.Pos(), fld.Pos())
-		// debugLogf("got %d nodes (exact: %t)", len(ans), isExact)
-		for _, an := range ans {
-			at, valid := an.(*ast.Field)
-			if !valid {
-				continue
-			}
-
-			debugLogf("maybe interface field %s: %s(%T)", fld.Name(), fld.Type().String(), fld.Type())
-			afld = at
-			break
-		}
-
-		if afld == nil {
-			debugLogf("can't find source associated with %s for %s", fld.String(), it.String())
-			continue
-		}
-
-		// if the field is annotated with swagger:ignore, ignore it
-		if ignored(afld.Doc) {
-			continue
-		}
-
-		name := fld.Name()
-		if afld.Doc != nil {
-			for _, cmt := range afld.Doc.List {
-				for ln := range strings.SplitSeq(cmt.Text, "\n") {
-					matches := rxName.FindStringSubmatch(ln)
-					ml := len(matches)
-					if ml > 1 {
-						name = matches[ml-1]
-					}
-				}
-			}
-		}
-		ps := tgt.Properties[name]
-		if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0}); err != nil {
+		if err := s.processInterfaceMethod(fld, it, decl, tgt, seen); err != nil {
 			return err
 		}
-		if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
-			ps.Typed("string", sfName)
-			ps.Ref = spec.Ref{}
-			ps.Items = nil
-		}
-
-		if err := s.createParser(name, tgt, &ps, afld).Parse(afld.Doc); err != nil {
-			return err
-		}
-
-		if ps.Ref.String() == "" && name != fld.Name() {
-			ps.AddExtension("x-go-name", fld.Name())
-		}
-
-		if s.ctx.app.setXNullableForPointers {
-			if _, isPointer := fld.Type().(*types.Signature).Results().At(0).Type().(*types.Pointer); isPointer && (ps.Extensions == nil || (ps.Extensions["x-nullable"] == nil && ps.Extensions["x-isnullable"] == nil)) {
-				ps.AddExtension("x-nullable", true)
-			}
-		}
-
-		seen[name] = fld.Name()
-		tgt.Properties[name] = ps
 	}
 
 	if tgt == nil {
@@ -999,6 +874,142 @@ func (s *schemaBuilder) buildFromInterface(decl *entityDecl, it *types.Interface
 		}
 	}
 
+	return nil
+}
+
+func (s *schemaBuilder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *entityDecl, schema *spec.Schema, seen map[string]string) (fieldHasAllOf bool, err error) {
+	debugLogf("inspecting embedded type in interface: %v", fld)
+
+	switch ftpe := fld.(type) {
+	case *types.Named:
+		debugLogf("embedded named type (buildInterface): %v", ftpe)
+		o := ftpe.Obj()
+		if isAny(o) || isStdError(o) {
+			return false, nil
+		}
+		return s.buildNamedInterface(ftpe, flist, decl, schema, seen)
+	case *types.Interface:
+		debugLogf("embedded anonymous interface type (buildInterface): %v", ftpe)
+		var aliasedSchema spec.Schema
+		ps := schemaTypable{schema: &aliasedSchema}
+		if err = s.buildAnonymousInterface(ftpe, ps, decl); err != nil {
+			return false, err
+		}
+		if aliasedSchema.Ref.String() != "" || len(aliasedSchema.Properties) > 0 || len(aliasedSchema.AllOf) > 0 {
+			fieldHasAllOf = true
+			schema.AddToAllOf(aliasedSchema)
+		}
+	case *types.Alias:
+		debugLogf("embedded alias (buildInterface): %v -> %v", ftpe, ftpe.Rhs())
+		var aliasedSchema spec.Schema
+		ps := schemaTypable{schema: &aliasedSchema}
+		if err = s.buildAlias(ftpe, ps); err != nil {
+			return false, err
+		}
+		if aliasedSchema.Ref.String() != "" || len(aliasedSchema.Properties) > 0 || len(aliasedSchema.AllOf) > 0 {
+			fieldHasAllOf = true
+			schema.AddToAllOf(aliasedSchema)
+		}
+	case *types.Union:
+		log.Printf("WARNING: union type constraints are not supported yet %[1]v (%[1]T). Skipped", ftpe)
+	case *types.TypeParam:
+		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
+	case *types.Chan:
+		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", ftpe)
+	case *types.Signature:
+		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", ftpe)
+	default:
+		log.Printf(
+			"WARNING: can't figure out object type for allOf named type (%T): %v",
+			ftpe, ftpe.Underlying(),
+		)
+	}
+
+	debugLogf("got embedded interface: %v {%T}, fieldHasAllOf: %t", fld, fld, fieldHasAllOf)
+	return fieldHasAllOf, nil
+}
+
+func findASTField(file *ast.File, pos token.Pos) *ast.Field {
+	ans, _ := astutil.PathEnclosingInterval(file, pos, pos)
+	for _, an := range ans {
+		if at, valid := an.(*ast.Field); valid {
+			return at
+		}
+	}
+	return nil
+}
+
+func nameOverride(defaultName string, doc *ast.CommentGroup) string {
+	name := defaultName
+	if doc != nil {
+		for _, cmt := range doc.List {
+			for ln := range strings.SplitSeq(cmt.Text, "\n") {
+				matches := rxName.FindStringSubmatch(ln)
+				if ml := len(matches); ml > 1 {
+					name = matches[ml-1]
+				}
+			}
+		}
+	}
+	return name
+}
+
+func (s *schemaBuilder) processInterfaceMethod(fld *types.Func, it *types.Interface, decl *entityDecl, tgt *spec.Schema, seen map[string]string) error {
+	if !fld.Exported() {
+		return nil
+	}
+	sig, isSignature := fld.Type().(*types.Signature)
+	if !isSignature {
+		return nil
+	}
+	if sig.Params().Len() > 0 {
+		return nil
+	}
+	if sig.Results() == nil || sig.Results().Len() != 1 {
+		return nil
+	}
+
+	afld := findASTField(decl.File, fld.Pos())
+	if afld == nil {
+		debugLogf("can't find source associated with %s for %s", fld.String(), it.String())
+		return nil
+	}
+
+	// if the field is annotated with swagger:ignore, ignore it
+	if ignored(afld.Doc) {
+		return nil
+	}
+
+	name := nameOverride(fld.Name(), afld.Doc)
+	ps := tgt.Properties[name]
+	if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0}); err != nil {
+		return err
+	}
+	if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
+		ps.Typed("string", sfName)
+		ps.Ref = spec.Ref{}
+		ps.Items = nil
+	}
+
+	if err := s.createParser(name, tgt, &ps, afld).Parse(afld.Doc); err != nil {
+		return err
+	}
+
+	if ps.Ref.String() == "" && name != fld.Name() {
+		ps.AddExtension("x-go-name", fld.Name())
+	}
+
+	if s.ctx.app.setXNullableForPointers {
+		_, isPointer := fld.Type().(*types.Signature).Results().At(0).Type().(*types.Pointer)
+		noNullableExt := ps.Extensions == nil ||
+			(ps.Extensions["x-nullable"] == nil && ps.Extensions["x-isnullable"] == nil)
+		if isPointer && noNullableExt {
+			ps.AddExtension("x-nullable", true)
+		}
+	}
+
+	seen[name] = fld.Name()
+	tgt.Properties[name] = ps
 	return nil
 }
 
@@ -1074,8 +1085,23 @@ func (s *schemaBuilder) buildNamedInterface(ftpe *types.Named, flist []*ast.Fiel
 	return hasAllOf, nil
 }
 
+func extractAllOfClass(doc *ast.CommentGroup, schema *spec.Schema) {
+	if doc == nil {
+		return
+	}
+	for _, cmt := range doc.List {
+		for ln := range strings.SplitSeq(cmt.Text, "\n") {
+			matches := rxAllOf.FindStringSubmatch(ln)
+			if ml := len(matches); ml > 1 {
+				if mv := matches[ml-1]; mv != "" {
+					schema.AddExtension("x-class", mv)
+				}
+			}
+		}
+	}
+}
+
 func (s *schemaBuilder) buildFromStruct(decl *entityDecl, st *types.Struct, schema *spec.Schema, seen map[string]string) error {
-	s.ctx.FindComments(decl.Pkg, decl.Obj().Name())
 	cmt, hasComments := s.ctx.FindComments(decl.Pkg, decl.Obj().Name())
 	if !hasComments {
 		cmt = new(ast.CommentGroup)
@@ -1085,102 +1111,11 @@ func (s *schemaBuilder) buildFromStruct(decl *entityDecl, st *types.Struct, sche
 		_ = swaggerSchemaForType(name, schemaTypable{schema: schema})
 		return nil
 	}
-	// First check for all of schemas
-	var tgt *spec.Schema
-	hasAllOf := false
-
-	for i := range st.NumFields() {
-		fld := st.Field(i)
-		if !fld.Anonymous() {
-			// e.g. struct {  _ struct{} }
-			debugLogf("skipping field %q for allOf scan because not anonymous", fld.Name())
-			continue
-		}
-		tg := st.Tag(i)
-
-		debugLogf(
-			"maybe allof field(%t) %s: %s (%T) [%q](anon: %t, embedded: %t)",
-			fld.IsField(), fld.Name(), fld.Type().String(), fld.Type(), tg, fld.Anonymous(), fld.Embedded(),
-		)
-		var afld *ast.Field
-		ans, _ := astutil.PathEnclosingInterval(decl.File, fld.Pos(), fld.Pos())
-		// debugLogf("got %d nodes (exact: %t)", len(ans), isExact)
-		for _, an := range ans {
-			at, valid := an.(*ast.Field)
-			if !valid {
-				continue
-			}
-
-			debugLogf("maybe allof field %s: %s(%T) [%q]", fld.Name(), fld.Type().String(), fld.Type(), tg)
-			afld = at
-			break
-		}
-
-		if afld == nil {
-			debugLogf("can't find source associated with %s for %s", fld.String(), st.String())
-			continue
-		}
-
-		// if the field is annotated with swagger:ignore, ignore it
-		if ignored(afld.Doc) {
-			continue
-		}
-
-		_, ignore, _, _, err := parseJSONTag(afld)
-		if err != nil {
-			return err
-		}
-		if ignore {
-			continue
-		}
-
-		_, isAliased := fld.Type().(*types.Alias)
-
-		if !allOfMember(afld.Doc) && !isAliased {
-			if tgt == nil {
-				tgt = schema
-			}
-			if err := s.buildEmbedded(fld.Type(), tgt, seen); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if isAliased {
-			debugLogf("alias member in struct: %v", fld)
-		}
-
-		// if this created an allOf property then we have to rejig the schema var
-		// because all the fields collected that aren't from embedded structs should go in
-		// their own proper schema
-		// first process embedded structs in order of embedding
-		hasAllOf = true
-		if tgt == nil {
-			tgt = &spec.Schema{}
-		}
-		var newSch spec.Schema
-		// when the embedded struct is annotated with swagger:allOf it will be used as allOf property
-		// otherwise the fields will just be included as normal properties
-		if err := s.buildAllOf(fld.Type(), &newSch); err != nil {
-			return err
-		}
-
-		if afld.Doc != nil {
-			for _, cmt := range afld.Doc.List {
-				for ln := range strings.SplitSeq(cmt.Text, "\n") {
-					matches := rxAllOf.FindStringSubmatch(ln)
-					ml := len(matches)
-					if ml > 1 {
-						mv := matches[ml-1]
-						if mv != "" {
-							schema.AddExtension("x-class", mv)
-						}
-					}
-				}
-			}
-		}
-
-		schema.AllOf = append(schema.AllOf, newSch)
+	// First pass: scan anonymous/embedded fields for allOf composition.
+	// Returns the target schema for properties (may differ from schema when allOf is used).
+	tgt, hasAllOf, err := s.scanEmbeddedFields(decl, st, schema, seen)
+	if err != nil {
+		return err
 	}
 
 	if tgt == nil {
@@ -1190,98 +1125,14 @@ func (s *schemaBuilder) buildFromStruct(decl *entityDecl, st *types.Struct, sche
 			tgt = &spec.Schema{}
 		}
 	}
-	// We can finally build the actual schema for the struct
 	if tgt.Properties == nil {
 		tgt.Properties = make(map[string]spec.Schema)
 	}
 	tgt.Typed("object", "")
 
-	for i := range st.NumFields() {
-		fld := st.Field(i)
-		tg := st.Tag(i)
-
-		if fld.Embedded() {
-			continue
-		}
-
-		if !fld.Exported() {
-			debugLogf("skipping field %s because it's not exported", fld.Name())
-			continue
-		}
-
-		var afld *ast.Field
-		ans, _ := astutil.PathEnclosingInterval(decl.File, fld.Pos(), fld.Pos())
-		for _, an := range ans {
-			at, valid := an.(*ast.Field)
-			if !valid {
-				continue
-			}
-
-			debugLogf("field %s: %s(%T) [%q] ==> %s", fld.Name(), fld.Type().String(), fld.Type(), tg, at.Doc.Text())
-			afld = at
-			break
-		}
-
-		if afld == nil {
-			debugLogf("can't find source associated with %s", fld.String())
-			continue
-		}
-
-		// if the field is annotated with swagger:ignore, ignore it
-		if ignored(afld.Doc) {
-			continue
-		}
-
-		name, ignore, isString, omitEmpty, err := parseJSONTag(afld)
-		if err != nil {
-			return err
-		}
-		if ignore {
-			for seenTagName, seenFieldName := range seen {
-				if seenFieldName == fld.Name() {
-					delete(tgt.Properties, seenTagName)
-					break
-				}
-			}
-			continue
-		}
-
-		ps := tgt.Properties[name]
-		if err = s.buildFromType(fld.Type(), schemaTypable{&ps, 0}); err != nil {
-			return err
-		}
-		if isString {
-			ps.Typed("string", ps.Format)
-			ps.Ref = spec.Ref{}
-			ps.Items = nil
-		}
-		if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
-			ps.Typed("string", sfName)
-			ps.Ref = spec.Ref{}
-			ps.Items = nil
-		}
-
-		if err = s.createParser(name, tgt, &ps, afld).Parse(afld.Doc); err != nil {
-			return err
-		}
-
-		if ps.Ref.String() == "" && name != fld.Name() {
-			addExtension(&ps.VendorExtensible, "x-go-name", fld.Name())
-		}
-
-		if s.ctx.app.setXNullableForPointers {
-			if _, isPointer := fld.Type().(*types.Pointer); isPointer && !omitEmpty &&
-				(ps.Extensions == nil || (ps.Extensions["x-nullable"] == nil && ps.Extensions["x-isnullable"] == nil)) {
-				ps.AddExtension("x-nullable", true)
-			}
-		}
-
-		// we have 2 cases:
-		// 1. field with different name override tag
-		// 2. field with different name removes tag
-		// so we need to save both tag&name
-		seen[name] = fld.Name()
-		tgt.Properties[name] = ps
+	// Second pass: build properties from non-embedded exported fields.
+	if err := s.buildStructFields(decl, st, tgt, seen); err != nil {
+		return err
 	}
 
 	if tgt == nil {
@@ -1295,6 +1146,155 @@ func (s *schemaBuilder) buildFromStruct(decl *entityDecl, st *types.Struct, sche
 			delete(tgt.Properties, k)
 		}
 	}
+	return nil
+}
+
+// scanEmbeddedFields iterates over anonymous struct fields to detect allOf composition.
+// It returns:
+//   - tgt: the schema that should receive properties (nil if no embedded fields were processed,
+//     schema itself for plain embeds, or a new schema when allOf is detected)
+//   - hasAllOf: whether any allOf member was found
+func (s *schemaBuilder) scanEmbeddedFields(decl *entityDecl, st *types.Struct, schema *spec.Schema, seen map[string]string) (tgt *spec.Schema, hasAllOf bool, err error) {
+	for i := range st.NumFields() {
+		fld := st.Field(i)
+		if !fld.Anonymous() {
+			debugLogf("skipping field %q for allOf scan because not anonymous", fld.Name())
+			continue
+		}
+		tg := st.Tag(i)
+
+		debugLogf(
+			"maybe allof field(%t) %s: %s (%T) [%q](anon: %t, embedded: %t)",
+			fld.IsField(), fld.Name(), fld.Type().String(), fld.Type(), tg, fld.Anonymous(), fld.Embedded(),
+		)
+		afld := findASTField(decl.File, fld.Pos())
+		if afld == nil {
+			debugLogf("can't find source associated with %s for %s", fld.String(), st.String())
+			continue
+		}
+
+		if ignored(afld.Doc) {
+			continue
+		}
+
+		_, ignore, _, _, err := parseJSONTag(afld)
+		if err != nil {
+			return nil, false, err
+		}
+		if ignore {
+			continue
+		}
+
+		_, isAliased := fld.Type().(*types.Alias)
+
+		if !allOfMember(afld.Doc) && !isAliased {
+			// Plain embed: merge fields into the main schema
+			if tgt == nil {
+				tgt = schema
+			}
+			if err := s.buildEmbedded(fld.Type(), tgt, seen); err != nil {
+				return nil, false, err
+			}
+			continue
+		}
+
+		if isAliased {
+			debugLogf("alias member in struct: %v", fld)
+		}
+
+		// allOf member: fields go into a separate schema, embedded struct becomes an allOf entry
+		hasAllOf = true
+		if tgt == nil {
+			tgt = &spec.Schema{}
+		}
+		var newSch spec.Schema
+		if err := s.buildAllOf(fld.Type(), &newSch); err != nil {
+			return nil, false, err
+		}
+
+		extractAllOfClass(afld.Doc, schema)
+		schema.AllOf = append(schema.AllOf, newSch)
+	}
+
+	return tgt, hasAllOf, nil
+}
+
+func (s *schemaBuilder) buildStructFields(decl *entityDecl, st *types.Struct, tgt *spec.Schema, seen map[string]string) error {
+	for fld := range st.Fields() {
+		if err := s.processStructField(fld, decl, tgt, seen); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *schemaBuilder) processStructField(fld *types.Var, decl *entityDecl, tgt *spec.Schema, seen map[string]string) error {
+	if fld.Embedded() || !fld.Exported() {
+		return nil
+	}
+
+	afld := findASTField(decl.File, fld.Pos())
+	if afld == nil {
+		debugLogf("can't find source associated with %s", fld.String())
+		return nil
+	}
+
+	if ignored(afld.Doc) {
+		return nil
+	}
+
+	name, ignore, isString, omitEmpty, err := parseJSONTag(afld)
+	if err != nil {
+		return err
+	}
+
+	if ignore {
+		for seenTagName, seenFieldName := range seen {
+			if seenFieldName == fld.Name() {
+				delete(tgt.Properties, seenTagName)
+				break
+			}
+		}
+		return nil
+	}
+
+	ps := tgt.Properties[name]
+	if err = s.buildFromType(fld.Type(), schemaTypable{&ps, 0}); err != nil {
+		return err
+	}
+	if isString {
+		ps.Typed("string", ps.Format)
+		ps.Ref = spec.Ref{}
+		ps.Items = nil
+	}
+
+	if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
+		ps.Typed("string", sfName)
+		ps.Ref = spec.Ref{}
+		ps.Items = nil
+	}
+
+	if err = s.createParser(name, tgt, &ps, afld).Parse(afld.Doc); err != nil {
+		return err
+	}
+
+	if ps.Ref.String() == "" && name != fld.Name() {
+		addExtension(&ps.VendorExtensible, "x-go-name", fld.Name())
+	}
+
+	if s.ctx.app.setXNullableForPointers {
+		if _, isPointer := fld.Type().(*types.Pointer); isPointer && !omitEmpty &&
+			(ps.Extensions == nil || (ps.Extensions["x-nullable"] == nil && ps.Extensions["x-isnullable"] == nil)) {
+			ps.AddExtension("x-nullable", true)
+		}
+	}
+
+	// we have 2 cases:
+	// 1. field with different name override tag
+	// 2. field with different name removes tag
+	// so we need to save both tag&name
+	seen[name] = fld.Name()
+	tgt.Properties[name] = ps
 	return nil
 }
 
@@ -1321,7 +1321,7 @@ func (s *schemaBuilder) buildAllOf(tpe types.Type, schema *spec.Schema) error {
 		return nil
 	default:
 		log.Printf("WARNING: missing allOf parser for a %T, skipping field", ftpe)
-		return fmt.Errorf("unable to resolve allOf member for: %v", ftpe)
+		return fmt.Errorf("unable to resolve allOf member for: %v: %w", ftpe, ErrCodeScan)
 	}
 }
 
@@ -1330,7 +1330,7 @@ func (s *schemaBuilder) buildNamedAllOf(ftpe *types.Named, schema *spec.Schema) 
 	case *types.Struct:
 		decl, found := s.ctx.FindModel(ftpe.Obj().Pkg().Path(), ftpe.Obj().Name())
 		if !found {
-			return fmt.Errorf("can't find source file for struct: %s", ftpe.String())
+			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrCodeScan)
 		}
 
 		if isStdTime(ftpe.Obj()) {
@@ -1351,7 +1351,7 @@ func (s *schemaBuilder) buildNamedAllOf(ftpe *types.Named, schema *spec.Schema) 
 	case *types.Interface:
 		decl, found := s.ctx.FindModel(ftpe.Obj().Pkg().Path(), ftpe.Obj().Name())
 		if !found {
-			return fmt.Errorf("can't find source file for interface: %s", ftpe.String())
+			return fmt.Errorf("can't find source file for interface: %s: %w", ftpe.String(), ErrCodeScan)
 		}
 
 		if sfnm, isf := strfmtName(decl.Comments); isf {
@@ -1378,8 +1378,8 @@ func (s *schemaBuilder) buildNamedAllOf(ftpe *types.Named, schema *spec.Schema) 
 			"WARNING: can't figure out object type for allOf named type (%T): %v",
 			ftpe, utpe,
 		)
-		return fmt.Errorf("unable to locate source file for allOf (%T): %v",
-			ftpe, utpe,
+		return fmt.Errorf("unable to locate source file for allOf (%T): %v: %w",
+			ftpe, utpe, ErrCodeScan,
 		)
 	}
 }
@@ -1426,7 +1426,7 @@ func (s *schemaBuilder) buildNamedEmbedded(ftpe *types.Named, schema *spec.Schem
 	case *types.Struct:
 		decl, found := s.ctx.FindModel(ftpe.Obj().Pkg().Path(), ftpe.Obj().Name())
 		if !found {
-			return fmt.Errorf("can't find source file for struct: %s", ftpe.String())
+			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrCodeScan)
 		}
 
 		return s.buildFromStruct(decl, utpe, schema, seen)
@@ -1447,7 +1447,7 @@ func (s *schemaBuilder) buildNamedEmbedded(ftpe *types.Named, schema *spec.Schem
 
 		decl, found := s.ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
-			return fmt.Errorf("can't find source file for struct: %s", ftpe.String())
+			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrCodeScan)
 		}
 		return s.buildFromInterface(decl, utpe, schema, seen)
 	case *types.Union: // e.g. type X interface{ ~uint16 | ~float32 }
@@ -1544,8 +1544,10 @@ func (s *schemaBuilder) createParser(nm string, schema, ps *spec.Schema, fld *as
 			newSingleLineTagParser(fmt.Sprintf("items%dMaxItems", level), &setMaxItems{schemaValidations{items}, rxf(rxMaxItemsFmt, itemsPrefix)}),
 			newSingleLineTagParser(fmt.Sprintf("items%dUnique", level), &setUnique{schemaValidations{items}, rxf(rxUniqueFmt, itemsPrefix)}),
 			newSingleLineTagParser(fmt.Sprintf("items%dEnum", level), &setEnum{schemaValidations{items}, rxf(rxEnumFmt, itemsPrefix)}),
-			newSingleLineTagParser(fmt.Sprintf("items%dDefault", level), &setDefault{&spec.SimpleSchema{Type: string(schemeType)}, schemaValidations{items}, rxf(rxDefaultFmt, itemsPrefix)}),
-			newSingleLineTagParser(fmt.Sprintf("items%dExample", level), &setExample{&spec.SimpleSchema{Type: string(schemeType)}, schemaValidations{items}, rxf(rxExampleFmt, itemsPrefix)}),
+			newSingleLineTagParser(fmt.Sprintf("items%dDefault", level),
+				&setDefault{&spec.SimpleSchema{Type: string(schemeType)}, schemaValidations{items}, rxf(rxDefaultFmt, itemsPrefix)}),
+			newSingleLineTagParser(fmt.Sprintf("items%dExample", level),
+				&setExample{&spec.SimpleSchema{Type: string(schemeType)}, schemaValidations{items}, rxf(rxExampleFmt, itemsPrefix)}),
 		}
 	}
 
@@ -1580,7 +1582,7 @@ func (s *schemaBuilder) createParser(nm string, schema, ps *spec.Schema, fld *as
 			}
 			return otherTaggers, nil
 		default:
-			return nil, fmt.Errorf("unknown field type element for %q", nm)
+			return nil, fmt.Errorf("unknown field type element for %q: %w", nm, ErrCodeScan)
 		}
 	}
 
@@ -1612,7 +1614,7 @@ func schemaVendorExtensibleSetter(meta *spec.Schema) func(json.RawMessage) error
 		}
 		for k := range jsonData {
 			if !rxAllowedExtensions.MatchString(k) {
-				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s", k)
+				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s: %w", k, ErrCodeScan)
 			}
 		}
 		meta.Extensions = jsonData
@@ -1678,9 +1680,9 @@ func parseJSONTag(field *ast.Field) (name string, ignore, isString, omitEmpty bo
 func isFieldStringable(tpe ast.Expr) bool {
 	if ident, ok := tpe.(*ast.Ident); ok {
 		switch ident.Name {
-		case "int", "int8", "int16", "int32", "int64",
+		case goTypeInt, "int8", goTypeInt16, goTypeInt32, goTypeInt64,
 			"uint", "uint8", "uint16", "uint32", "uint64",
-			"float64", "string", "bool":
+			goTypeFloat64, typeString, typeBool:
 			return true
 		}
 	} else if starExpr, ok := tpe.(*ast.StarExpr); ok {
