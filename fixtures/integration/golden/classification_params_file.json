@@ -1,0 +1,677 @@
+{
+  "anotherOperation": {
+    "operationId": "anotherOperation",
+    "parameters": [
+      {
+        "maximum": 1000,
+        "exclusiveMaximum": true,
+        "minimum": 10,
+        "exclusiveMinimum": true,
+        "type": "integer",
+        "format": "int64",
+        "default": 1,
+        "x-go-name": "ID",
+        "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+        "name": "id",
+        "in": "path",
+        "required": true
+      },
+      {
+        "maximum": 45,
+        "minimum": 3,
+        "multipleOf": 3,
+        "type": "integer",
+        "format": "int32",
+        "default": 2,
+        "example": 27,
+        "x-go-name": "Score",
+        "description": "The Score of this model",
+        "name": "score",
+        "in": "query",
+        "required": true
+      },
+      {
+        "maxLength": 50,
+        "minLength": 4,
+        "pattern": "[A-Za-z0-9-.]*",
+        "type": "string",
+        "x-go-name": "Name",
+        "description": "Name of this no model instance",
+        "name": "x-hdr-name",
+        "in": "header",
+        "required": true
+      },
+      {
+        "type": "string",
+        "format": "date-time",
+        "x-go-name": "Created",
+        "description": "Created holds the time when this entry was created",
+        "name": "created",
+        "in": "query"
+      },
+      {
+        "enum": [
+          "foo",
+          "bar",
+          "none"
+        ],
+        "type": "string",
+        "default": "bar",
+        "x-go-name": "CategoryOld",
+        "description": "The Category of this model (old enum format)",
+        "name": "category_old",
+        "in": "query",
+        "required": true
+      },
+      {
+        "enum": [
+          "foo",
+          "bar",
+          "none"
+        ],
+        "type": "string",
+        "default": "bar",
+        "x-go-name": "Category",
+        "description": "The Category of this model",
+        "name": "category",
+        "in": "query",
+        "required": true
+      },
+      {
+        "enum": [
+          1,
+          3,
+          5
+        ],
+        "type": "integer",
+        "format": "int64",
+        "default": 1,
+        "x-go-name": "TypeOld",
+        "description": "Type of this model (old enum format)",
+        "name": "type_old",
+        "in": "query"
+      },
+      {
+        "enum": [
+          1,
+          3,
+          5
+        ],
+        "type": "integer",
+        "format": "int64",
+        "default": 1,
+        "x-go-name": "Type",
+        "description": "Type of this model",
+        "name": "type",
+        "in": "query"
+      },
+      {
+        "enum": [
+          1,
+          "rsq",
+          "qaz"
+        ],
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "BadEnum",
+        "description": "This is mix in enum. And actually on output should be valid form where int will be int and\nstring will also be presented.",
+        "name": "bad_enum",
+        "in": "query"
+      },
+      {
+        "maxItems": 10,
+        "minItems": 3,
+        "uniqueItems": true,
+        "type": "array",
+        "items": {
+          "maxLength": 10,
+          "minLength": 3,
+          "pattern": "\\w+",
+          "type": "string",
+          "default": "bar"
+        },
+        "collectionFormat": "pipe",
+        "x-go-name": "FooSlice",
+        "description": "a FooSlice has foos which are strings",
+        "name": "foo_slice",
+        "in": "query"
+      },
+      {
+        "maxItems": 10,
+        "minItems": 3,
+        "uniqueItems": true,
+        "type": "array",
+        "items": {
+          "maxItems": 9,
+          "minItems": 4,
+          "enum": [
+            "bar1",
+            "bar2",
+            "bar3"
+          ],
+          "type": "array",
+          "items": {
+            "maxItems": 8,
+            "minItems": 5,
+            "type": "array",
+            "items": {
+              "maxLength": 10,
+              "minLength": 3,
+              "pattern": "\\w+",
+              "type": "string"
+            }
+          },
+          "default": "bar2"
+        },
+        "collectionFormat": "pipe",
+        "x-go-name": "BarSlice",
+        "description": "a BarSlice has bars which are strings",
+        "name": "bar_slice",
+        "in": "query"
+      },
+      {
+        "maxItems": 20,
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "maximum": 100,
+          "minimum": 5,
+          "uniqueItems": true,
+          "multipleOf": 5,
+          "type": "integer",
+          "format": "int32",
+          "collectionFormat": "csv"
+        },
+        "x-go-name": "NumSlice",
+        "description": "a NumSlice has numeric items with item-level validation",
+        "name": "num_slice",
+        "in": "query"
+      },
+      {
+        "x-go-name": "Items",
+        "description": "the items for this order",
+        "name": "items",
+        "in": "body",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "pet",
+              "quantity"
+            ],
+            "properties": {
+              "id": {
+                "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+                "type": "integer",
+                "format": "int32",
+                "default": 3,
+                "maximum": 1000,
+                "exclusiveMaximum": true,
+                "minimum": 10,
+                "exclusiveMinimum": true,
+                "x-go-name": "ID"
+              },
+              "notes": {
+                "description": "Notes to add to this item.\nThis can be used to add special instructions.",
+                "type": "string",
+                "x-go-name": "Notes"
+              },
+              "pet": {
+                "$ref": "#/definitions/pet"
+              },
+              "quantity": {
+                "description": "The amount of pets to add to this bucket.",
+                "type": "integer",
+                "format": "int16",
+                "maximum": 10,
+                "minimum": 1,
+                "x-go-name": "Quantity"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "createOrder": {
+    "operationId": "createOrder",
+    "parameters": [
+      {
+        "x-go-name": "Order",
+        "description": "The order to submit.",
+        "name": "order",
+        "in": "body",
+        "required": true,
+        "schema": {
+          "$ref": "#/definitions/order"
+        }
+      }
+    ]
+  },
+  "getOrders": {
+    "operationId": "getOrders",
+    "parameters": [
+      {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/OrderBodyParams"
+        },
+        "x-go-name": "Orders",
+        "description": "The orders",
+        "name": "orders",
+        "in": "query",
+        "required": true
+      },
+      {
+        "x-go-name": "Another",
+        "description": "And another thing",
+        "name": "another",
+        "in": "body",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "that": {
+                "type": "string",
+                "x-go-name": "That"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "myFuncOperation": {
+    "operationId": "myFuncOperation",
+    "parameters": [
+      {
+        "type": "file",
+        "x-go-name": "MyFormFile",
+        "description": "MyFormFile desc.",
+        "name": "myFormFile",
+        "in": "formData"
+      }
+    ]
+  },
+  "myOperation": {
+    "operationId": "myOperation",
+    "parameters": [
+      {
+        "type": "file",
+        "x-go-name": "MyFormFile",
+        "description": "MyFormFile desc.",
+        "name": "myFormFile",
+        "in": "formData"
+      }
+    ]
+  },
+  "myOtherOperation": {
+    "operationId": "myOtherOperation",
+    "parameters": [
+      {
+        "type": "file",
+        "x-go-name": "MyFormFile",
+        "description": "MyFormFile desc.",
+        "name": "myFormFile",
+        "in": "formData"
+      },
+      {
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "ExtraParam",
+        "description": "ExtraParam desc.",
+        "name": "extraParam",
+        "in": "formData",
+        "required": true
+      }
+    ]
+  },
+  "someAliasOperation": {
+    "operationId": "someAliasOperation",
+    "parameters": [
+      {
+        "maximum": 10,
+        "minimum": 1,
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "IntAlias",
+        "description": "default \"in\" is \"query\" =\u003e this params should be aliased",
+        "name": "intAlias",
+        "in": "query",
+        "required": true
+      },
+      {
+        "type": "string",
+        "x-go-name": "StringAlias",
+        "name": "stringAlias",
+        "in": "query"
+      },
+      {
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "IntAliasPath",
+        "name": "intAliasPath",
+        "in": "path",
+        "required": true
+      },
+      {
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "IntAliasForm",
+        "name": "intAliasForm",
+        "in": "formData"
+      }
+    ]
+  },
+  "someOperation": {
+    "operationId": "someOperation",
+    "parameters": [
+      {
+        "maximum": 1000,
+        "exclusiveMaximum": true,
+        "minimum": 10,
+        "exclusiveMinimum": true,
+        "type": "integer",
+        "format": "int64",
+        "default": 1,
+        "x-go-name": "ID",
+        "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+        "name": "id",
+        "in": "path",
+        "required": true
+      },
+      {
+        "maximum": 45,
+        "minimum": 3,
+        "multipleOf": 3,
+        "type": "integer",
+        "format": "int32",
+        "default": 2,
+        "example": 27,
+        "x-go-name": "Score",
+        "description": "The Score of this model",
+        "name": "score",
+        "in": "query",
+        "required": true
+      },
+      {
+        "maxLength": 50,
+        "minLength": 4,
+        "pattern": "[A-Za-z0-9-.]*",
+        "type": "string",
+        "x-go-name": "Name",
+        "description": "Name of this no model instance",
+        "name": "x-hdr-name",
+        "in": "header",
+        "required": true
+      },
+      {
+        "type": "string",
+        "format": "date-time",
+        "x-go-name": "Created",
+        "description": "Created holds the time when this entry was created",
+        "name": "created",
+        "in": "query"
+      },
+      {
+        "enum": [
+          "foo",
+          "bar",
+          "none"
+        ],
+        "type": "string",
+        "default": "bar",
+        "x-go-name": "CategoryOld",
+        "description": "The Category of this model (old enum format)",
+        "name": "category_old",
+        "in": "query",
+        "required": true
+      },
+      {
+        "enum": [
+          "foo",
+          "bar",
+          "none"
+        ],
+        "type": "string",
+        "default": "bar",
+        "x-go-name": "Category",
+        "description": "The Category of this model",
+        "name": "category",
+        "in": "query",
+        "required": true
+      },
+      {
+        "enum": [
+          1,
+          3,
+          5
+        ],
+        "type": "integer",
+        "format": "int64",
+        "default": 1,
+        "x-go-name": "TypeOld",
+        "description": "Type of this model (old enum format)",
+        "name": "type_old",
+        "in": "query"
+      },
+      {
+        "enum": [
+          1,
+          3,
+          5
+        ],
+        "type": "integer",
+        "format": "int64",
+        "default": 1,
+        "x-go-name": "Type",
+        "description": "Type of this model",
+        "name": "type",
+        "in": "query"
+      },
+      {
+        "enum": [
+          1,
+          "rsq",
+          "qaz"
+        ],
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "BadEnum",
+        "description": "This is mix in enum. And actually on output should be valid form where int will be int and\nstring will also be presented.",
+        "name": "bad_enum",
+        "in": "query"
+      },
+      {
+        "maxItems": 10,
+        "minItems": 3,
+        "uniqueItems": true,
+        "type": "array",
+        "items": {
+          "maxLength": 10,
+          "minLength": 3,
+          "pattern": "\\w+",
+          "type": "string",
+          "default": "bar"
+        },
+        "collectionFormat": "pipe",
+        "x-go-name": "FooSlice",
+        "description": "a FooSlice has foos which are strings",
+        "name": "foo_slice",
+        "in": "query"
+      },
+      {
+        "maxItems": 10,
+        "minItems": 3,
+        "uniqueItems": true,
+        "type": "array",
+        "items": {
+          "maxItems": 9,
+          "minItems": 4,
+          "enum": [
+            "bar1",
+            "bar2",
+            "bar3"
+          ],
+          "type": "array",
+          "items": {
+            "maxItems": 8,
+            "minItems": 5,
+            "type": "array",
+            "items": {
+              "maxLength": 10,
+              "minLength": 3,
+              "pattern": "\\w+",
+              "type": "string"
+            }
+          },
+          "default": "bar2"
+        },
+        "collectionFormat": "pipe",
+        "x-go-name": "BarSlice",
+        "description": "a BarSlice has bars which are strings",
+        "name": "bar_slice",
+        "in": "query"
+      },
+      {
+        "maxItems": 20,
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "maximum": 100,
+          "minimum": 5,
+          "uniqueItems": true,
+          "multipleOf": 5,
+          "type": "integer",
+          "format": "int32",
+          "collectionFormat": "csv"
+        },
+        "x-go-name": "NumSlice",
+        "description": "a NumSlice has numeric items with item-level validation",
+        "name": "num_slice",
+        "in": "query"
+      },
+      {
+        "x-go-name": "Items",
+        "description": "the items for this order",
+        "name": "items",
+        "in": "body",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "pet",
+              "quantity"
+            ],
+            "properties": {
+              "id": {
+                "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+                "type": "integer",
+                "format": "int32",
+                "default": 3,
+                "maximum": 1000,
+                "exclusiveMaximum": true,
+                "minimum": 10,
+                "exclusiveMinimum": true,
+                "x-go-name": "ID"
+              },
+              "notes": {
+                "description": "Notes to add to this item.\nThis can be used to add special instructions.",
+                "type": "string",
+                "x-go-name": "Notes"
+              },
+              "pet": {
+                "$ref": "#/definitions/pet"
+              },
+              "quantity": {
+                "description": "The amount of pets to add to this bucket.",
+                "type": "integer",
+                "format": "int16",
+                "maximum": 10,
+                "minimum": 1,
+                "x-go-name": "Quantity"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "updateOrder": {
+    "operationId": "updateOrder",
+    "parameters": [
+      {
+        "x-go-name": "Order",
+        "description": "The order to submit.",
+        "name": "order",
+        "in": "body",
+        "required": true,
+        "schema": {
+          "$ref": "#/definitions/order"
+        }
+      }
+    ]
+  },
+  "yetAnotherOperation": {
+    "operationId": "yetAnotherOperation",
+    "parameters": [
+      {
+        "type": "integer",
+        "format": "int32",
+        "x-go-name": "Age",
+        "name": "age",
+        "in": "query"
+      },
+      {
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "ID",
+        "description": "ID the id of this not selected model",
+        "name": "id",
+        "in": "query"
+      },
+      {
+        "type": "string",
+        "x-go-name": "Name",
+        "description": "Name the name of this not selected model",
+        "name": "name",
+        "in": "query"
+      },
+      {
+        "type": "string",
+        "x-go-name": "Notes",
+        "name": "notes",
+        "in": "query"
+      },
+      {
+        "type": "string",
+        "x-go-name": "Extra",
+        "name": "extra",
+        "in": "query"
+      },
+      {
+        "type": "string",
+        "format": "date-time",
+        "x-go-name": "CreatedAt",
+        "name": "createdAt",
+        "in": "query"
+      },
+      {
+        "type": "string",
+        "x-go-name": "Informity",
+        "name": "informity",
+        "in": "formData"
+      },
+      {
+        "type": "string",
+        "name": "NoTagName",
+        "in": "query"
+      }
+    ]
+  }
+}

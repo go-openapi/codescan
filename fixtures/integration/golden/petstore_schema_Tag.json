@@ -1,0 +1,26 @@
+{
+  "tag": {
+    "description": "It is used to describe the animals available in the store.",
+    "type": "object",
+    "title": "A Tag is an extra piece of data to provide more information about a pet.",
+    "required": [
+      "id",
+      "value"
+    ],
+    "properties": {
+      "id": {
+        "description": "The id of the tag.",
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "ID"
+      },
+      "value": {
+        "description": "The value of the tag.",
+        "type": "string",
+        "x-go-name": "Value"
+      }
+    },
+    "x-go-name": "Tag",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/petstore/models"
+  }
+}

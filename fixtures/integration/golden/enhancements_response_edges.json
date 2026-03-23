@@ -1,0 +1,60 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Body": {
+      "type": "object",
+      "title": "Body is the canonical body for the full response.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "payload": {
+          "type": "string",
+          "x-go-name": "Payload"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-edges"
+    }
+  },
+  "responses": {
+    "fullResponse": {
+      "description": "FullResponse carries headers (embedded + inline) and a body field so\nthat buildFromStruct, processResponseField and buildNamedField are all\nexercised in a single scan.",
+      "schema": {
+        "$ref": "#/definitions/Body"
+      },
+      "headers": {
+        "X-Rate-Limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The request rate-limit window.\n\nin: header"
+        },
+        "X-Timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The server-side timestamp for this response.\n\nin: header"
+        },
+        "X-Trace-ID": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The request trace identifier.\n\nin: header"
+        }
+      }
+    },
+    "idsResponse": {
+      "description": "IDs is a named slice so that responseBuilder.buildNamedType walks its\nnon-struct default branch.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    }
+  }
+}

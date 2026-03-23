@@ -1,0 +1,60 @@
+{
+  "Item": {
+    "type": "object",
+    "properties": {
+      "Value1": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "Value2": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "Value3": {
+        "type": "integer",
+        "format": "int64",
+        "x-nullable": false
+      },
+      "Value4": {
+        "type": "integer",
+        "format": "int64",
+        "x-isnullable": false
+      },
+      "Value5": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pointers-nullable-by-default"
+  },
+  "ItemInterface": {
+    "type": "object",
+    "properties": {
+      "Value1": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "Value2": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "Value3": {
+        "description": "Value3 is a nullable value",
+        "type": "integer",
+        "format": "int64",
+        "x-nullable": false
+      },
+      "Value4": {
+        "description": "Value4 is a non-nullable value",
+        "type": "integer",
+        "format": "int64",
+        "x-isnullable": false
+      },
+      "Value5": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pointers-nullable-by-default"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "animal": {
+    "description": "it should deserialize into one of the struct types that\nenlist for being implementations of this struct",
+    "type": "object",
+    "title": "A BaseStruct is a struct that has subtypes.",
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "id": {
+        "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+        "type": "integer",
+        "format": "int64",
+        "maximum": 1000,
+        "exclusiveMaximum": true,
+        "minimum": 10,
+        "exclusiveMinimum": true,
+        "x-go-name": "ID"
+      },
+      "jsonClass": {
+        "description": "StructType the type of this polymorphic model",
+        "type": "string",
+        "x-go-name": "StructType"
+      },
+      "name": {
+        "description": "Name of this no model instance",
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 4,
+        "pattern": "[A-Za-z0-9-.]*",
+        "x-go-name": "Name"
+      }
+    },
+    "x-go-name": "BaseStruct",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+    "discriminator": "jsonClass"
+  },
+  "gazelle": {
+    "description": "The struct includes the BaseStruct and that embedded value\nis annotated with the discriminator value annotation so it\nwhere it only requires 1 argument because it knows which\ndiscriminator type this belongs to",
+    "title": "A Gazelle is a struct is discriminated for BaseStruct.",
+    "allOf": [
+      {
+        "$ref": "#/definitions/animal"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "hornSize": {
+            "description": "The size of the horns",
+            "type": "number",
+            "format": "float",
+            "x-go-name": "HornSize"
+          }
+        }
+      }
+    ],
+    "x-class": "a.b.c.d.E",
+    "x-go-name": "Gazelle",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "giraffe": {
+    "description": "the annotation is not necessary here because of inclusion\nof a discriminated type\nit infers the name of the x-class value from its context",
+    "title": "A Giraffe is a struct that embeds BaseStruct",
+    "allOf": [
+      {
+        "$ref": "#/definitions/animal"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "neckSize": {
+            "description": "NeckSize the size of the neck of this giraffe",
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "NeckSize"
+          }
+        }
+      }
+    ],
+    "x-go-name": "Giraffe",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  }
+}

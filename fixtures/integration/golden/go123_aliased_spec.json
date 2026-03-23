@@ -1,0 +1,318 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Anything": {
+      "title": "Anything should be discovered through dependency analysis.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "Empty": {
+      "type": "object",
+      "title": "Empty should be discovered through dependency analysis.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "ExtendedID": {
+      "title": "ExtendedID should be discovered through dependency analysis.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Empty"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "EvenMore": {},
+            "StillMore": {},
+            "more": {
+              "type": "string",
+              "x-go-name": "More"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "ShouldSee": {
+      "type": "boolean",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "UUID": {
+      "type": "integer",
+      "format": "int64",
+      "title": "UUID should be discovered through dependency analysis.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "aliased_id": {
+      "$ref": "#/definitions/ExtendedID"
+    },
+    "anonymous_iface": {
+      "type": "object",
+      "properties": {
+        "String": {
+          "type": "string"
+        }
+      },
+      "x-go-name": "AnonymousIface",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "anonymous_iface_alias": {
+      "$ref": "#/definitions/anonymous_iface"
+    },
+    "anonymous_struct": {
+      "type": "object",
+      "properties": {
+        "A": {
+          "type": "object",
+          "properties": {
+            "B": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      },
+      "x-go-name": "AnonymousStruct",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "embedded_with_alias": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Anything"
+        },
+        {
+          "$ref": "#/definitions/UUID"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "EvenMore": {},
+            "StillMore": {},
+            "more": {
+              "type": "string",
+              "x-go-name": "More"
+            }
+          }
+        }
+      ],
+      "x-go-name": "EmbeddedWithAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "empty_redefinition": {
+      "type": "object",
+      "x-go-name": "EmptyRedefinition",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "iface": {
+      "type": "object",
+      "properties": {
+        "Get": {
+          "type": "string"
+        }
+      },
+      "x-go-name": "Iface",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "iface_alias": {
+      "$ref": "#/definitions/iface"
+    },
+    "iface_embedded": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Get": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Dump": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8"
+              }
+            }
+          }
+        }
+      ],
+      "x-go-name": "IfaceEmbedded",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "iface_embedded_anonymous": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "String": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Error": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "x-go-name": "IfaceEmbeddedAnonymous",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "iface_embedded_empty": {
+      "x-go-name": "IfaceEmpty",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "iface_embedded_with_alias": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/iface_alias"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "String": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Dump": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8"
+              }
+            }
+          }
+        }
+      ],
+      "x-go-name": "IfaceEmbeddedWithAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "iface_redefinition": {
+      "$ref": "#/definitions/iface"
+    },
+    "order": {
+      "description": "An order can either be created, processed or completed.",
+      "type": "object",
+      "title": "StoreOrder represents an order in this application.",
+      "required": [
+        "id",
+        "userId",
+        "category"
+      ],
+      "properties": {
+        "DeliveryOption": {
+          "$ref": "#/definitions/Anything"
+        },
+        "Extras": {},
+        "MoreExtras": {},
+        "category": {
+          "description": "the category of this user",
+          "type": "string",
+          "default": "bar",
+          "enum": [
+            "foo",
+            "bar",
+            "none"
+          ],
+          "x-go-name": "Category"
+        },
+        "extended_id": {
+          "$ref": "#/definitions/ExtendedID"
+        },
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "items": {
+          "description": "the items for this order",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "extra_options": {
+                "x-go-name": "ExtraOptions"
+              },
+              "id": {
+                "type": "integer",
+                "format": "int32",
+                "x-go-name": "ID"
+              },
+              "quantity": {
+                "type": "integer",
+                "format": "int16",
+                "x-go-name": "Quantity"
+              }
+            }
+          },
+          "x-go-name": "Items"
+        },
+        "userId": {
+          "description": "the name for this user",
+          "type": "integer",
+          "format": "int64",
+          "minLength": 3,
+          "x-go-name": "UserID"
+        }
+      },
+      "x-go-name": "StoreOrder",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "slice_alias": {
+      "type": "array",
+      "items": {},
+      "x-go-name": "SliceAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "slice_of_structs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "x-go-name": "SliceOfStructs",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "slice_of_structs_alias": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "x-go-name": "SliceOfStructsAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "slice_to_slice": {
+      "$ref": "#/definitions/slice_type"
+    },
+    "slice_type": {
+      "type": "array",
+      "items": {},
+      "x-go-name": "Slice",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "void": {
+      "$ref": "#/definitions/Empty"
+    },
+    "whatnot": {
+      "x-go-name": "WhatNot",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "whatnot2": {
+      "x-go-name": "WhatNot2",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "whatnot2_alias": {
+      "x-go-name": "WhatNot2Alias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "whatnot_alias": {
+      "x-go-name": "WhatNotAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "AllOfModel": {
+    "description": "An AllOfModel is composed out of embedded structs but it should build\nan allOf property",
+    "allOf": [
+      {
+        "type": "object",
+        "properties": {
+          "age": {
+            "type": "integer",
+            "format": "int32",
+            "x-go-name": "Age"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "ID"
+          },
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          }
+        }
+      },
+      {
+        "$ref": "#/definitions/withNotes"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "cat": {
+            "type": "string",
+            "x-go-name": "Cat"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "CreatedAt"
+          },
+          "did": {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "DID"
+          }
+        }
+      }
+    ],
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  }
+}

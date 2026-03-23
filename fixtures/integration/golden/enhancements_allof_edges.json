@@ -1,0 +1,100 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AllOfInterface": {
+      "description": "AllOfInterface composes an allOf member whose underlying type is an\ninterface.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Tagger"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Count"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    },
+    "AllOfPointer": {
+      "title": "AllOfPointer composes a pointer allOf member.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/SimpleBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "extra": {
+              "type": "string",
+              "x-go-name": "Extra"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    },
+    "AllOfStdTime": {
+      "type": "string",
+      "title": "AllOfStdTime composes an allOf member that is time.Time.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    },
+    "AllOfStrfmt": {
+      "allOf": [
+        {
+          "type": "string",
+          "format": "ulid"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "type": "string",
+              "x-go-name": "Note"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    },
+    "SimpleBase": {
+      "type": "object",
+      "title": "SimpleBase is a plain struct used as an allOf member.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    },
+    "Tagger": {
+      "type": "object",
+      "title": "Tagger is a non-empty named interface used as an allOf member.",
+      "properties": {
+        "Tag": {
+          "description": "Tag returns an identifier.",
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    },
+    "ULID": {
+      "description": "ULID is a named struct formatted as a swagger strfmt. Using a struct\nunderlying type exercises the strfmt branch of buildNamedAllOf for\nstruct members.",
+      "type": "object",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
+    }
+  }
+}

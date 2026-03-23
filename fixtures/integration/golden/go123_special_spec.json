@@ -1,0 +1,297 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "ChanDir": {
+      "type": "integer",
+      "format": "int64",
+      "title": "ChanDir represents a channel type's direction.",
+      "x-go-package": "reflect"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "GoStruct": {
+      "type": "object",
+      "properties": {
+        "A": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "Kind": {
+      "description": "The zero Kind is not a valid kind.",
+      "type": "integer",
+      "format": "uint64",
+      "title": "A Kind represents the specific kind of type that a [Type] represents.",
+      "x-go-package": "reflect"
+    },
+    "Type": {
+      "description": "Not all methods apply to all kinds of types. Restrictions,\nif any, are noted in the documentation for each method.\nUse the Kind method to find out the kind of type before\ncalling kind-specific methods. Calling a method\ninappropriate to the kind of type causes a run-time panic.\n\nType values are comparable, such as with the == operator,\nso they can be used as map keys.\nTwo Type values are equal if they represent identical types.",
+      "type": "object",
+      "title": "Type is the representation of a Go type.",
+      "properties": {
+        "Align": {
+          "description": "Align returns the alignment in bytes of a value of\nthis type when allocated in memory.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "Bits": {
+          "description": "Bits returns the size of the type in bits.\nIt panics if the type's Kind is not one of the\nsized or unsized Int, Uint, Float, or Complex kinds.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "CanSeq": {
+          "description": "CanSeq reports whether a [Value] with this type can be iterated over using [Value.Seq].",
+          "type": "boolean"
+        },
+        "CanSeq2": {
+          "description": "CanSeq2 reports whether a [Value] with this type can be iterated over using [Value.Seq2].",
+          "type": "boolean"
+        },
+        "ChanDir": {
+          "$ref": "#/definitions/ChanDir"
+        },
+        "Comparable": {
+          "description": "Comparable reports whether values of this type are comparable.\nEven if Comparable returns true, the comparison may still panic.\nFor example, values of interface type are comparable,\nbut the comparison will panic if their dynamic type is not comparable.",
+          "type": "boolean"
+        },
+        "Elem": {
+          "$ref": "#/definitions/Type"
+        },
+        "FieldAlign": {
+          "description": "FieldAlign returns the alignment in bytes of a value of\nthis type when used as a field in a struct.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "Fields": {
+          "description": "Fields returns an iterator over each struct field for struct type t. The sequence is\nequivalent to calling Field successively for each index i in the range [0, NumField()).\nIt panics if the type's Kind is not Struct."
+        },
+        "Ins": {
+          "description": "Ins returns an iterator over each input parameter of function type t. The sequence\nis equivalent to calling In successively for each index i in the range [0, NumIn()).\nIt panics if the type's Kind is not Func."
+        },
+        "IsVariadic": {
+          "description": "IsVariadic reports whether a function type's final input parameter\nis a \"...\" parameter. If so, t.In(t.NumIn() - 1) returns the parameter's\nimplicit actual type []T.\n\nFor concreteness, if t represents func(x int, y ... float64), then\n\nt.NumIn() == 2\nt.In(0) is the reflect.Type for \"int\"\nt.In(1) is the reflect.Type for \"[]float64\"\nt.IsVariadic() == true\n\nIsVariadic panics if the type's Kind is not Func.",
+          "type": "boolean"
+        },
+        "Key": {
+          "$ref": "#/definitions/Type"
+        },
+        "Kind": {
+          "$ref": "#/definitions/Kind"
+        },
+        "Len": {
+          "description": "Len returns an array type's length.\nIt panics if the type's Kind is not Array.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "Methods": {
+          "description": "Methods returns an iterator over each method in the type's method set. The sequence is\nequivalent to calling Method successively for each index i in the range [0, NumMethod())."
+        },
+        "Name": {
+          "description": "Name returns the type's name within its package for a defined type.\nFor other (non-defined) types it returns the empty string.",
+          "type": "string"
+        },
+        "NumField": {
+          "description": "NumField returns a struct type's field count.\nIt panics if the type's Kind is not Struct.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "NumIn": {
+          "description": "NumIn returns a function type's input parameter count.\nIt panics if the type's Kind is not Func.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "NumMethod": {
+          "description": "NumMethod returns the number of methods accessible using Method.\n\nFor a non-interface type, it returns the number of exported methods.\n\nFor an interface type, it returns the number of exported and unexported methods.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "NumOut": {
+          "description": "NumOut returns a function type's output parameter count.\nIt panics if the type's Kind is not Func.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "Outs": {
+          "description": "Outs returns an iterator over each output parameter of function type t. The sequence\nis equivalent to calling Out successively for each index i in the range [0, NumOut()).\nIt panics if the type's Kind is not Func."
+        },
+        "PkgPath": {
+          "description": "PkgPath returns a defined type's package path, that is, the import path\nthat uniquely identifies the package, such as \"encoding/base64\".\nIf the type was predeclared (string, error) or not defined (*T, struct{},\n[]int, or A where A is an alias for a non-defined type), the package path\nwill be the empty string.",
+          "type": "string"
+        },
+        "Size": {
+          "description": "Size returns the number of bytes needed to store\na value of the given type; it is analogous to unsafe.Sizeof.",
+          "type": "integer",
+          "format": "uint64"
+        },
+        "String": {
+          "description": "String returns a string representation of the type.\nThe string representation may use shortened package names\n(e.g., base64 instead of \"encoding/base64\") and is not\nguaranteed to be unique among types. To test for type identity,\ncompare the Types directly.",
+          "type": "string"
+        }
+      },
+      "x-go-package": "reflect"
+    },
+    "Value": {
+      "description": "Not all methods apply to all kinds of values. Restrictions,\nif any, are noted in the documentation for each method.\nUse the Kind method to find out the kind of value before\ncalling kind-specific methods. Calling a method\ninappropriate to the kind of type causes a run time panic.\n\nThe zero Value represents no value.\nIts [Value.IsValid] method returns false, its Kind method returns [Invalid],\nits String method returns \"\u003cinvalid Value\u003e\", and all other methods panic.\nMost functions and methods never return an invalid value.\nIf one does, its documentation states the conditions explicitly.\n\nA Value can be used concurrently by multiple goroutines provided that\nthe underlying Go value can be used concurrently for the equivalent\ndirect operations.\n\nTo compare two Values, compare the results of the Interface method.\nUsing == on two Values does not compare the underlying values\nthey represent.",
+      "type": "object",
+      "title": "Value is the reflection interface to a Go value.",
+      "x-go-package": "reflect"
+    },
+    "generic_constraint": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Uint": {
+              "type": "integer",
+              "format": "uint16"
+            }
+          }
+        }
+      ],
+      "x-go-name": "Constraint",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_indirect": {
+      "$ref": "#/definitions/generic_map_alias"
+    },
+    "generic_map": {
+      "x-go-name": "GenericMap",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_map_alias": {
+      "x-go-name": "GenericMapAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_slice": {
+      "type": "array",
+      "items": {},
+      "x-go-name": "GenericSlice",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "go_array": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "x-go-name": "GoArray",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "go_error": {
+      "type": "string",
+      "x-go-name": "Error",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special",
+      "x-go-type": "error"
+    },
+    "go_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint16"
+      },
+      "x-go-name": "GoMap",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "index_map": {
+      "x-go-name": "UnsupportedMap",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "numerical_constraint": {
+      "x-go-name": "Numerical",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "primitive": {
+      "type": "string",
+      "x-go-name": "Primitive",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "special_types": {
+      "type": "object",
+      "properties": {
+        "Duration": {
+          "$ref": "#/definitions/Duration"
+        },
+        "Err": {
+          "type": "string",
+          "x-go-type": "error"
+        },
+        "Error": {
+          "type": "string",
+          "x-go-type": "error"
+        },
+        "FormatDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "FormatTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "FormatUUID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "Map": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/GoStruct"
+          }
+        },
+        "Marshaler": {
+          "type": "string",
+          "x-go-type": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special.IsATextMarshaler"
+        },
+        "Message": {
+          "type": "object"
+        },
+        "NamedArray": {
+          "$ref": "#/definitions/go_array"
+        },
+        "PtrFormatUUID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "PtrStruct": {
+          "$ref": "#/definitions/GoStruct"
+        },
+        "ShouldAlsoBeStringTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ShouldBeStringTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "WhatNot": {
+          "description": "and what not",
+          "type": "object"
+        }
+      },
+      "x-go-name": "SpecialTypes",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "unexported": {
+      "type": "object",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "union_alias": {
+      "$ref": "#/definitions/numerical_constraint"
+    },
+    "unsafe_pointer_alias": {
+      "x-go-name": "Unsafe",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "upointer_alias": {
+      "type": "integer",
+      "format": "uint64",
+      "x-go-name": "UIntPtr",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "GetConfiguration": {
+    "description": "Success",
+    "schema": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

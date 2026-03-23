@@ -1,0 +1,206 @@
+{
+  "/pets": {
+    "get": {
+      "description": "List all pets",
+      "consumes": [
+        "application/json",
+        "application/xml"
+      ],
+      "produces": [
+        "application/xml",
+        "application/json"
+      ],
+      "tags": [
+        "pets"
+      ],
+      "operationId": "getPet",
+      "parameters": [
+        {
+          "type": "integer",
+          "format": "int32",
+          "description": "How many items to return at one time (max 100)",
+          "name": "limit",
+          "in": "query"
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "An paged array of pets",
+          "schema": {
+            "type": "array",
+            "items": {
+              "schema": {
+                "properties": {
+                  "id": {
+                    "format": "int64",
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "headers": {
+            "x-next": {
+              "type": "string",
+              "description": "A link to the next page of responses"
+            }
+          }
+        },
+        "default": {
+          "description": "unexpected error",
+          "schema": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "security": [
+        {
+          "petstore_auth": [
+            "write:pets",
+            "read:pets"
+          ]
+        }
+      ]
+    }
+  },
+  "/pets/{id}": {
+    "put": {
+      "description": "Some long explanation,\nspanning over multipele lines,\nAKA the description.",
+      "consumes": [
+        "application/json",
+        "application/xml"
+      ],
+      "produces": [
+        "application/xml",
+        "application/json"
+      ],
+      "tags": [
+        "pets"
+      ],
+      "summary": "Updates the details for a pet.",
+      "operationId": "updatePet",
+      "parameters": [
+        {
+          "description": "Pet object that needs to be added to the store",
+          "name": "body",
+          "in": "body",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "age": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "description": "Pet object that needs to be added to the store",
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "[A-Z]{3}-[0-9]{3}"
+          }
+        }
+      ],
+      "responses": {
+        "400": {
+          "description": "Invalid ID supplied"
+        },
+        "404": {
+          "description": "Pet not found"
+        },
+        "405": {
+          "description": "Validation exception"
+        }
+      },
+      "security": [
+        {
+          "petstore_auth": [
+            "write:pets",
+            "read:pets"
+          ]
+        }
+      ]
+    }
+  },
+  "/v1/events": {
+    "get": {
+      "description": "Mitigation Events",
+      "consumes": [
+        "application/json",
+        "application/xml"
+      ],
+      "produces": [
+        "application/xml",
+        "application/json"
+      ],
+      "tags": [
+        "Events"
+      ],
+      "summary": "Events",
+      "operationId": "getEvents",
+      "parameters": [
+        {
+          "type": "boolean",
+          "description": "(boolean) Filters",
+          "name": "running",
+          "in": "query"
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "200",
+          "schema": {
+            "$ref": "#/definitions/ListResponse"
+          }
+        },
+        "400": {
+          "description": "400",
+          "schema": {
+            "$ref": "#/definitions/ErrorResponse"
+          }
+        }
+      },
+      "security": [
+        {
+          "petstore_auth": [
+            "write:pets",
+            "read:pets"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -27,3 +27,4 @@ profile.cov
 # .idea/
 # .vscode/
 .mcp.json
+.worktrees

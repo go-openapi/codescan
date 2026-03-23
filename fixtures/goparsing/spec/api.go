@@ -79,4 +79,5 @@ type BookingResponse struct {
 // Responses:
 // 200: BookingResponse
 func bookings(w http.ResponseWriter, r *http.Request) {
+
 }

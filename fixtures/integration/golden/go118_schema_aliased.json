@@ -1,0 +1,8 @@
+{
+  "SomeObject": {
+    "description": "SomeObject is a type that refines an untyped map",
+    "type": "object",
+    "additionalProperties": {},
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go118"
+  }
+}

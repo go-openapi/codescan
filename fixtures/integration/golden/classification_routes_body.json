@@ -1,0 +1,535 @@
+{
+  "/orders": {
+    "get": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "lists orders filtered by some parameters.",
+      "operationId": "listOrders",
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "orders:read",
+            "https://www.googleapis.com/auth/userinfo.email"
+          ]
+        }
+      ],
+      "x-some-flag": "false",
+      "x-some-list": [
+        "item1",
+        "item2",
+        "item3"
+      ],
+      "x-some-object": {
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3",
+        "subobject": {
+          "subkey1": "subvalue1",
+          "subkey2": "subvalue2"
+        }
+      }
+    },
+    "post": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "create an order based on the parameters.",
+      "operationId": "createOrder",
+      "parameters": [
+        {
+          "description": "The order id",
+          "name": "id",
+          "allowEmptyValue": true
+        },
+        {
+          "description": "The request model.",
+          "name": "request",
+          "in": "body",
+          "schema": {
+            "description": "The request model.",
+            "type": "object",
+            "$ref": "#/definitions/orderModel"
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  },
+  "/orders/{id}": {
+    "get": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "gets the details for an order.",
+      "operationId": "orderDetails",
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    },
+    "put": {
+      "description": "When the order doesn't exist this will return an error.",
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "Update the details for an order.",
+      "operationId": "updateOrder",
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "summary": "delete a particular order.",
+      "operationId": "deleteOrder",
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  },
+  "/param-test": {
+    "post": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "params"
+      ],
+      "summary": "Allow some params with constraints.",
+      "operationId": "testParams",
+      "parameters": [
+        {
+          "maximum": 20,
+          "minimum": 10,
+          "type": "number",
+          "default": 15,
+          "description": "some number",
+          "name": "someNumber",
+          "in": "path",
+          "required": true,
+          "allowEmptyValue": true
+        },
+        {
+          "maxLength": 20,
+          "minLength": 5,
+          "type": "array",
+          "description": "some query values",
+          "name": "someQuery",
+          "in": "query"
+        },
+        {
+          "type": "boolean",
+          "default": true,
+          "description": "some boolean",
+          "name": "someBoolean",
+          "in": "path"
+        },
+        {
+          "type": "boolean",
+          "format": "abcde",
+          "default": false,
+          "description": "test constraints on invalid types",
+          "name": "constraintsOnInvalidType",
+          "in": "query"
+        },
+        {
+          "description": "test no type",
+          "name": "noType"
+        },
+        {
+          "description": "The request model.",
+          "name": "request",
+          "in": "body",
+          "schema": {
+            "description": "The request model.",
+            "type": "string",
+            "default": "orange",
+            "enum": [
+              "apple",
+              "orange",
+              "pineapple",
+              "peach",
+              "plum"
+            ]
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  },
+  "/pets": {
+    "get": {
+      "description": "This will show all available pets by default.\nYou can get the pets that are out of stock",
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "pets",
+        "users"
+      ],
+      "summary": "Lists pets filtered by some parameters.",
+      "operationId": "listPets",
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ],
+      "x-some-flag": "true"
+    },
+    "post": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "pets",
+        "users"
+      ],
+      "summary": "Create a pet based on the parameters.",
+      "operationId": "createPet",
+      "parameters": [
+        {
+          "description": "The request model.",
+          "name": "request",
+          "in": "body",
+          "schema": {
+            "description": "The request model.",
+            "type": "object",
+            "$ref": "#/definitions/petModel"
+          }
+        },
+        {
+          "description": "The pet id",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "someResponse",
+          "schema": {
+            "$ref": "#/definitions/someResponse"
+          }
+        },
+        "422": {
+          "description": "validationError",
+          "schema": {
+            "$ref": "#/definitions/validationError"
+          }
+        },
+        "default": {
+          "description": "genericError",
+          "schema": {
+            "$ref": "#/definitions/genericError"
+          }
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  }
+}

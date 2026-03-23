@@ -1,0 +1,15 @@
+{
+  "transparentAliasResponse": {
+    "description": "TransparentAliasResponse is an exported alias annotated as swagger response.",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "description": "Payload uses an alias that should resolve transparently.",
+          "type": "object",
+          "x-go-name": "Payload"
+        }
+      }
+    }
+  }
+}

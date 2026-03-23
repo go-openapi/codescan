@@ -1,0 +1,251 @@
+{
+  "complexerOne": {
+    "description": "A ComplexerOne is composed of a SimpleOne and some extra fields.",
+    "headers": {
+      "NoTagName": {
+        "type": "string"
+      },
+      "age": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "extra": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer",
+        "format": "int64",
+        "description": "ID the id of this not selected model"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name the name of this not selected model"
+      },
+      "notes": {
+        "type": "string"
+      }
+    }
+  },
+  "complexerPointerOne": {
+    "description": "A ComplexerPointerOne is composed of a *SimpleOne and some extra fields.",
+    "headers": {
+      "age": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "extra": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "id": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "name": {
+        "type": "string"
+      }
+    }
+  },
+  "fileResponse": {
+    "description": "File response",
+    "schema": {
+      "type": "file"
+    }
+  },
+  "genericError": {
+    "description": "A GenericError is an error that is used when no other error is appropriate",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "Message": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "resp": {
+    "description": "Resp a response for testing",
+    "schema": {
+      "$ref": "#/definitions/user"
+    },
+    "headers": {
+      "UUID": {
+        "type": "string",
+        "format": "uuid"
+      }
+    }
+  },
+  "simpleOnes": {
+    "description": "SimpleOnes is a collection of SimpleOne",
+    "headers": {
+      "ones": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/SimpleOne"
+        }
+      }
+    }
+  },
+  "simpleOnesFunc": {
+    "description": "SimpleOnesFunc is a collection of SimpleOne",
+    "headers": {
+      "ones": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/SimpleOne"
+        }
+      }
+    }
+  },
+  "someResponse": {
+    "description": "A SomeResponse is a dummy response object to test parsing.\n\nThe properties are the same as the other structs used to test parsing.",
+    "schema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "pet",
+          "quantity"
+        ],
+        "properties": {
+          "id": {
+            "description": "ID of this some response instance.\nids in this application start at 11 and are smaller than 1000",
+            "type": "integer",
+            "format": "int32",
+            "maximum": 1000,
+            "exclusiveMaximum": true,
+            "minimum": 10,
+            "exclusiveMinimum": true,
+            "x-go-name": "ID"
+          },
+          "notes": {
+            "description": "Notes to add to this item.\nThis can be used to add special instructions.",
+            "type": "string",
+            "x-go-name": "Notes"
+          },
+          "pet": {
+            "$ref": "#/definitions/pet"
+          },
+          "quantity": {
+            "description": "The amount of pets to add to this bucket.",
+            "type": "integer",
+            "format": "int16",
+            "maximum": 10,
+            "minimum": 1,
+            "x-go-name": "Quantity"
+          }
+        }
+      }
+    },
+    "headers": {
+      "active": {
+        "type": "boolean",
+        "default": true,
+        "description": "Active state of the record"
+      },
+      "bar_slice": {
+        "maxItems": 10,
+        "minItems": 3,
+        "uniqueItems": true,
+        "type": "array",
+        "items": {
+          "maxItems": 9,
+          "minItems": 4,
+          "type": "array",
+          "items": {
+            "maxItems": 8,
+            "minItems": 5,
+            "type": "array",
+            "items": {
+              "maxLength": 10,
+              "minLength": 3,
+              "pattern": "\\w+",
+              "type": "string"
+            }
+          }
+        },
+        "collectionFormat": "pipe",
+        "description": "a BarSlice has bars which are strings"
+      },
+      "created": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Created holds the time when this entry was created"
+      },
+      "foo_slice": {
+        "maxItems": 10,
+        "minItems": 3,
+        "uniqueItems": true,
+        "type": "array",
+        "items": {
+          "maxLength": 10,
+          "minLength": 3,
+          "pattern": "\\w+",
+          "type": "string",
+          "example": "foo"
+        },
+        "collectionFormat": "pipe",
+        "description": "a FooSlice has foos which are strings"
+      },
+      "id": {
+        "maximum": 1000,
+        "exclusiveMaximum": true,
+        "minimum": 10,
+        "exclusiveMinimum": true,
+        "type": "integer",
+        "format": "int64",
+        "default": 11,
+        "description": "ID of this some response instance.\nids in this application start at 11 and are smaller than 1000"
+      },
+      "score": {
+        "maximum": 45,
+        "minimum": 3,
+        "multipleOf": 3,
+        "type": "integer",
+        "format": "int32",
+        "example": 27,
+        "description": "The Score of this model"
+      },
+      "x-hdr-name": {
+        "maxLength": 50,
+        "minLength": 4,
+        "pattern": "[A-Za-z0-9-.]*",
+        "type": "string",
+        "description": "Name of this some response instance"
+      }
+    }
+  },
+  "validationError": {
+    "description": "A ValidationError is an error that is used when the required input fails validation.",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "FieldName": {
+          "description": "An optional field name to which this validation applies",
+          "type": "string"
+        },
+        "Message": {
+          "description": "The validation message",
+          "type": "string"
+        }
+      }
+    },
+    "headers": {
+      "code": {
+        "enum": [
+          "foo",
+          "bar"
+        ],
+        "type": "integer",
+        "format": "int64",
+        "default": 400,
+        "description": "in: header"
+      }
+    }
+  }
+}

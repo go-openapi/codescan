@@ -1,0 +1,17 @@
+{
+  "getConfiguration": {
+    "operationId": "getConfiguration",
+    "parameters": [
+      {
+        "name": "Value",
+        "in": "body",
+        "schema": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    ]
+  }
+}

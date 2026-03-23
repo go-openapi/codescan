@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Device": {
+      "description": "Device aggregates all three text-marshalable fields so that a full scan\nwalks buildFromTextMarshal for each.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "data": {
+          "type": "string",
+          "x-go-name": "Data",
+          "x-go-type": "github.com/go-openapi/codescan/fixtures/enhancements/text-marshal.Opaque"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "ID"
+        },
+        "mac": {
+          "type": "string",
+          "format": "so",
+          "x-go-name": "MAC"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/text-marshal"
+    }
+  }
+}
