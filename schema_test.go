@@ -971,8 +971,6 @@ func TestAliasedTopLevelModels(t *testing.T) {
 }
 
 func TestAliasedSchemas(t *testing.T) {
-	t.Setenv("SWAGGER_GENERATE_EXTENSION", "true")
-
 	fixturesPath := filepath.Join("fixtures", "goparsing", "go123", "aliased", "schema")
 	var sp *spec.Swagger
 	t.Run("end-to-end source scan should succeed", func(t *testing.T) {
@@ -1505,8 +1503,6 @@ func testAliasedEmbeddedTypes(t *testing.T, sp *spec.Swagger) {
 }
 
 func TestSpecialSchemas(t *testing.T) {
-	t.Setenv("SWAGGER_GENERATE_EXTENSION", "true")
-
 	fixturesPath := filepath.Join("fixtures", "goparsing", "go123", "special")
 	var sp *spec.Swagger
 
@@ -2221,23 +2217,21 @@ func TestAddExtension(t *testing.T) {
 
 	key := "x-go-name"
 	value := "Name"
-	addExtension(ve, key, value)
+	addExtension(ve, key, value, false)
 	veStr, ok := ve.Extensions[key].(string)
 	require.TrueT(t, ok)
 	assert.EqualT(t, value, veStr)
 
 	key2 := "x-go-package"
 	value2 := "schema"
-	t.Setenv("SWAGGER_GENERATE_EXTENSION", "true")
-	addExtension(ve, key2, value2)
+	addExtension(ve, key2, value2, false)
 	veStr2, ok := ve.Extensions[key2].(string)
 	require.TrueT(t, ok)
 	assert.EqualT(t, value2, veStr2)
 
 	key3 := "x-go-class"
 	value3 := "Spec"
-	t.Setenv("SWAGGER_GENERATE_EXTENSION", "false")
-	addExtension(ve, key3, value3)
+	addExtension(ve, key3, value3, true)
 	assert.Nil(t, ve.Extensions[key3])
 }
 
@@ -2523,13 +2517,13 @@ func TestIssue2540(t *testing.T) {
 
 func testIssue2540(descWithRef bool, expectedJSON string) func(*testing.T) {
 	return func(t *testing.T) {
-		t.Setenv("SWAGGER_GENERATE_EXTENSION", "false")
 		packagePattern := "./bugs/2540/foo"
 		packagePath := fixturesModule + "/bugs/2540/foo"
 		sctx, err := newScanCtx(&Options{
-			Packages:    []string{packagePattern},
-			WorkDir:     "fixtures",
-			DescWithRef: descWithRef,
+			Packages:       []string{packagePattern},
+			WorkDir:        "fixtures",
+			DescWithRef:    descWithRef,
+			SkipExtensions: true,
 		})
 		require.NoError(t, err)
 

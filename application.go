@@ -59,6 +59,7 @@ type Options struct {
 	RefAliases              bool // aliases result in $ref, otherwise aliases are expanded
 	TransparentAliases      bool // aliases are completely transparent, never creating definitions
 	DescWithRef             bool // allow overloaded descriptions together with $ref, otherwise jsonschema draft4 $ref predates everything
+	SkipExtensions          bool // skip generating x-go-* vendor extensions in the spec
 }
 
 type scanCtx struct {

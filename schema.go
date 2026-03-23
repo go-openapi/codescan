@@ -11,7 +11,6 @@ import (
 	"go/token"
 	"go/types"
 	"log"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -22,8 +21,8 @@ import (
 	"github.com/go-openapi/spec"
 )
 
-func addExtension(ve *spec.VendorExtensible, key string, value any) {
-	if os.Getenv("SWAGGER_GENERATE_EXTENSION") == "false" {
+func addExtension(ve *spec.VendorExtensible, key string, value any, skip bool) {
+	if skip {
 		return
 	}
 
@@ -31,8 +30,9 @@ func addExtension(ve *spec.VendorExtensible, key string, value any) {
 }
 
 type schemaTypable struct {
-	schema *spec.Schema
-	level  int
+	schema  *spec.Schema
+	level   int
+	skipExt bool
 }
 
 func (st schemaTypable) In() string { return "body" }
@@ -58,7 +58,7 @@ func (st schemaTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic
 	}
 
 	st.schema.Typed("array", "")
-	return schemaTypable{st.schema.Items.Schema, st.level + 1}
+	return schemaTypable{st.schema.Items.Schema, st.level + 1, st.skipExt}
 }
 
 func (st schemaTypable) AdditionalProperties() swaggerTypable { //nolint:ireturn // polymorphic by design
@@ -70,13 +70,13 @@ func (st schemaTypable) AdditionalProperties() swaggerTypable { //nolint:ireturn
 	}
 
 	st.schema.Typed("object", "")
-	return schemaTypable{st.schema.AdditionalProperties.Schema, st.level + 1}
+	return schemaTypable{st.schema.AdditionalProperties.Schema, st.level + 1, st.skipExt}
 }
 
 func (st schemaTypable) Level() int { return st.level }
 
 func (st schemaTypable) AddExtension(key string, value any) {
-	addExtension(&st.schema.VendorExtensible, key, value)
+	addExtension(&st.schema.VendorExtensible, key, value, st.skipExt)
 }
 
 func (st schemaTypable) WithEnum(values ...any) {
@@ -199,9 +199,9 @@ func (s *schemaBuilder) buildFromDecl(_ *entityDecl, schema *spec.Schema) error 
 		if schema.Ref.String() == "" {
 			// unless this is a $ref, we add traceability of the origin of this schema in source
 			if s.Name != s.GoName {
-				addExtension(&schema.VendorExtensible, "x-go-name", s.GoName)
+				addExtension(&schema.VendorExtensible, "x-go-name", s.GoName, s.ctx.opts.SkipExtensions)
 			}
-			addExtension(&schema.VendorExtensible, "x-go-package", s.decl.Obj().Pkg().Path())
+			addExtension(&schema.VendorExtensible, "x-go-package", s.decl.Obj().Pkg().Path(), s.ctx.opts.SkipExtensions)
 		}
 	}()
 
@@ -228,7 +228,7 @@ func (s *schemaBuilder) buildFromDecl(_ *entityDecl, schema *spec.Schema) error 
 		return s.buildDeclNamed(tpe, schema)
 	case *types.Alias:
 		debugLogf("alias: %v -> %v", tpe, tpe.Rhs())
-		tgt := schemaTypable{schema, 0}
+		tgt := schemaTypable{schema, 0, s.ctx.opts.SkipExtensions}
 
 		return s.buildDeclAlias(tpe, tgt)
 	case *types.TypeParam:
@@ -262,7 +262,7 @@ func (s *schemaBuilder) buildDeclNamed(tpe *types.Named, schema *spec.Schema) er
 		return nil
 	}
 
-	ps := schemaTypable{schema, 0}
+	ps := schemaTypable{schema, 0, s.ctx.opts.SkipExtensions}
 	ti := s.decl.Pkg.TypesInfo.Types[s.decl.Spec.Type]
 	if !ti.IsType() {
 		return fmt.Errorf("declaration is not a type: %v: %w", o, ErrCodeScan)
@@ -733,7 +733,7 @@ func (s *schemaBuilder) processAnonInterfaceMethod(fld *types.Func, it *types.In
 		schema.Properties = make(map[string]spec.Schema)
 	}
 	ps := schema.Properties[name]
-	if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0}); err != nil {
+	if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0, s.ctx.opts.SkipExtensions}); err != nil {
 		return err
 	}
 	if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
@@ -802,7 +802,7 @@ func (s *schemaBuilder) buildFromMap(titpe *types.Map, tgt swaggerTypable) error
 		return fmt.Errorf("items doesn't support maps: %w", ErrCodeScan)
 	}
 
-	eleProp := schemaTypable{sch, tgt.Level()}
+	eleProp := schemaTypable{sch, tgt.Level(), s.ctx.opts.SkipExtensions}
 	key := titpe.Key()
 	if key.Underlying().String() == "string" || isTextMarshaler(key) {
 		return s.buildFromType(titpe.Elem(), eleProp.AdditionalProperties())
@@ -891,7 +891,7 @@ func (s *schemaBuilder) processEmbeddedType(fld types.Type, flist []*ast.Field, 
 	case *types.Interface:
 		debugLogf("embedded anonymous interface type (buildInterface): %v", ftpe)
 		var aliasedSchema spec.Schema
-		ps := schemaTypable{schema: &aliasedSchema}
+		ps := schemaTypable{schema: &aliasedSchema, skipExt: s.ctx.opts.SkipExtensions}
 		if err = s.buildAnonymousInterface(ftpe, ps, decl); err != nil {
 			return false, err
 		}
@@ -902,7 +902,7 @@ func (s *schemaBuilder) processEmbeddedType(fld types.Type, flist []*ast.Field, 
 	case *types.Alias:
 		debugLogf("embedded alias (buildInterface): %v -> %v", ftpe, ftpe.Rhs())
 		var aliasedSchema spec.Schema
-		ps := schemaTypable{schema: &aliasedSchema}
+		ps := schemaTypable{schema: &aliasedSchema, skipExt: s.ctx.opts.SkipExtensions}
 		if err = s.buildAlias(ftpe, ps); err != nil {
 			return false, err
 		}
@@ -982,7 +982,7 @@ func (s *schemaBuilder) processInterfaceMethod(fld *types.Func, it *types.Interf
 
 	name := nameOverride(fld.Name(), afld.Doc)
 	ps := tgt.Properties[name]
-	if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0}); err != nil {
+	if err := s.buildFromType(sig.Results().At(0).Type(), schemaTypable{&ps, 0, s.ctx.opts.SkipExtensions}); err != nil {
 		return err
 	}
 	if sfName, isStrfmt := strfmtName(afld.Doc); isStrfmt {
@@ -1108,7 +1108,7 @@ func (s *schemaBuilder) buildFromStruct(decl *entityDecl, st *types.Struct, sche
 	}
 	name, ok := typeName(cmt)
 	if ok {
-		_ = swaggerSchemaForType(name, schemaTypable{schema: schema})
+		_ = swaggerSchemaForType(name, schemaTypable{schema: schema, skipExt: s.ctx.opts.SkipExtensions})
 		return nil
 	}
 	// First pass: scan anonymous/embedded fields for allOf composition.
@@ -1259,7 +1259,7 @@ func (s *schemaBuilder) processStructField(fld *types.Var, decl *entityDecl, tgt
 	}
 
 	ps := tgt.Properties[name]
-	if err = s.buildFromType(fld.Type(), schemaTypable{&ps, 0}); err != nil {
+	if err = s.buildFromType(fld.Type(), schemaTypable{&ps, 0, s.ctx.opts.SkipExtensions}); err != nil {
 		return err
 	}
 	if isString {
@@ -1279,7 +1279,7 @@ func (s *schemaBuilder) processStructField(fld *types.Var, decl *entityDecl, tgt
 	}
 
 	if ps.Ref.String() == "" && name != fld.Name() {
-		addExtension(&ps.VendorExtensible, "x-go-name", fld.Name())
+		addExtension(&ps.VendorExtensible, "x-go-name", fld.Name(), s.ctx.opts.SkipExtensions)
 	}
 
 	if s.ctx.app.setXNullableForPointers {
@@ -1308,7 +1308,7 @@ func (s *schemaBuilder) buildAllOf(tpe types.Type, schema *spec.Schema) error {
 		return s.buildNamedAllOf(ftpe, schema)
 	case *types.Alias:
 		debugLogf("allOf member is alias %v => %v", ftpe, ftpe.Rhs())
-		tgt := schemaTypable{schema: schema}
+		tgt := schemaTypable{schema: schema, skipExt: s.ctx.opts.SkipExtensions}
 		return s.buildAlias(ftpe, tgt)
 	case *types.TypeParam:
 		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
@@ -1344,7 +1344,7 @@ func (s *schemaBuilder) buildNamedAllOf(ftpe *types.Named, schema *spec.Schema) 
 		}
 
 		if decl.HasModelAnnotation() {
-			return s.makeRef(decl, schemaTypable{schema, 0})
+			return s.makeRef(decl, schemaTypable{schema, 0, s.ctx.opts.SkipExtensions})
 		}
 
 		return s.buildFromStruct(decl, utpe, schema, make(map[string]string))
@@ -1360,7 +1360,7 @@ func (s *schemaBuilder) buildNamedAllOf(ftpe *types.Named, schema *spec.Schema) 
 		}
 
 		if decl.HasModelAnnotation() {
-			return s.makeRef(decl, schemaTypable{schema, 0})
+			return s.makeRef(decl, schemaTypable{schema, 0, s.ctx.opts.SkipExtensions})
 		}
 
 		return s.buildFromInterface(decl, utpe, schema, make(map[string]string))
@@ -1394,7 +1394,7 @@ func (s *schemaBuilder) buildEmbedded(tpe types.Type, schema *spec.Schema, seen 
 		return s.buildNamedEmbedded(ftpe, schema, seen)
 	case *types.Alias:
 		debugLogf("embedded alias %v => %v", ftpe, ftpe.Rhs())
-		tgt := schemaTypable{schema, 0}
+		tgt := schemaTypable{schema, 0, s.ctx.opts.SkipExtensions}
 		return s.buildAlias(ftpe, tgt)
 	case *types.Union: // e.g. type X interface{ ~uint16 | ~float32 }
 		log.Printf("WARNING: union type constraints are not supported yet %[1]v (%[1]T). Skipped", ftpe)
@@ -1439,7 +1439,7 @@ func (s *schemaBuilder) buildNamedEmbedded(ftpe *types.Named, schema *spec.Schem
 			return nil
 		}
 		if isStdError(o) {
-			tgt := schemaTypable{schema: schema}
+			tgt := schemaTypable{schema: schema, skipExt: s.ctx.opts.SkipExtensions}
 			tgt.AddExtension("x-go-type", o.Name())
 			return swaggerSchemaForType(o.Name(), tgt)
 		}

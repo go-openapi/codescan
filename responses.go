@@ -15,6 +15,7 @@ type responseTypable struct {
 	in       string
 	header   *spec.Header
 	response *spec.Response
+	skipExt  bool
 }
 
 func (ht responseTypable) In() string { return ht.in }
@@ -25,7 +26,7 @@ func (ht responseTypable) Typed(tpe, format string) {
 	ht.header.Typed(tpe, format)
 }
 
-func bodyTypable(in string, schema *spec.Schema) (swaggerTypable, *spec.Schema) { //nolint:ireturn // polymorphic by design
+func bodyTypable(in string, schema *spec.Schema, skipExt bool) (swaggerTypable, *spec.Schema) { //nolint:ireturn // polymorphic by design
 	if in == bodyTag {
 		// get the schema for items on the schema property
 		if schema == nil {
@@ -38,13 +39,13 @@ func bodyTypable(in string, schema *spec.Schema) (swaggerTypable, *spec.Schema) 
 			schema.Items.Schema = new(spec.Schema)
 		}
 		schema.Typed("array", "")
-		return schemaTypable{schema.Items.Schema, 1}, schema
+		return schemaTypable{schema.Items.Schema, 1, skipExt}, schema
 	}
 	return nil, nil
 }
 
 func (ht responseTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic by design
-	bdt, schema := bodyTypable(ht.in, ht.response.Schema)
+	bdt, schema := bodyTypable(ht.in, ht.response.Schema, ht.skipExt)
 	if bdt != nil {
 		ht.response.Schema = schema
 		return bdt
@@ -234,7 +235,7 @@ func (r *responseBuilder) buildFromFieldMap(ftpe *types.Map, typable swaggerTypa
 		ctx:  r.ctx,
 	}
 
-	if err := sb.buildFromType(ftpe.Elem(), schemaTypable{schema, typable.Level() + 1}); err != nil {
+	if err := sb.buildFromType(ftpe.Elem(), schemaTypable{schema, typable.Level() + 1, r.ctx.opts.SkipExtensions}); err != nil {
 		return err
 	}
 
@@ -289,7 +290,7 @@ func (r *responseBuilder) buildNamedType(tpe *types.Named, resp *spec.Response, 
 	default:
 		if decl, found := r.ctx.DeclForType(o.Type()); found {
 			var schema spec.Schema
-			typable := schemaTypable{schema: &schema, level: 0}
+			typable := schemaTypable{schema: &schema, level: 0, skipExt: r.ctx.opts.SkipExtensions}
 
 			d := decl.Obj()
 			if isStdTime(d) {
@@ -350,7 +351,7 @@ func (r *responseBuilder) buildAlias(tpe *types.Alias, resp *spec.Response, seen
 			break // builtin
 		}
 
-		typable := schemaTypable{schema: &spec.Schema{}, level: 0}
+		typable := schemaTypable{schema: &spec.Schema{}, level: 0, skipExt: r.ctx.opts.SkipExtensions}
 		return r.makeRef(decl, typable)
 	case *types.Alias:
 		o := rtpe.Obj()
@@ -358,7 +359,7 @@ func (r *responseBuilder) buildAlias(tpe *types.Alias, resp *spec.Response, seen
 			break // builtin
 		}
 
-		typable := schemaTypable{schema: &spec.Schema{}, level: 0}
+		typable := schemaTypable{schema: &spec.Schema{}, level: 0, skipExt: r.ctx.opts.SkipExtensions}
 
 		return r.makeRef(decl, typable)
 	}
@@ -504,7 +505,7 @@ func (r *responseBuilder) processResponseField(fld *types.Var, decl *entityDecl,
 		resp.Schema.Typed("file", "")
 	} else {
 		debugLogf("build response %v (%v) (not a file)", fld, fld.Type())
-		if err := r.buildFromField(fld, fld.Type(), responseTypable{in, &ps, resp}, seen); err != nil {
+		if err := r.buildFromField(fld, fld.Type(), responseTypable{in, &ps, resp, r.ctx.opts.SkipExtensions}, seen); err != nil {
 			return err
 		}
 	}

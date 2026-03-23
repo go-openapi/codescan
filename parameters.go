@@ -12,7 +12,8 @@ import (
 )
 
 type paramTypable struct {
-	param *spec.Parameter
+	param   *spec.Parameter
+	skipExt bool
 }
 
 func (pt paramTypable) In() string { return pt.param.In }
@@ -28,7 +29,7 @@ func (pt paramTypable) SetRef(ref spec.Ref) {
 }
 
 func (pt paramTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic by design
-	bdt, schema := bodyTypable(pt.param.In, pt.param.Schema)
+	bdt, schema := bodyTypable(pt.param.In, pt.param.Schema, pt.skipExt)
 	if bdt != nil {
 		pt.param.Schema = schema
 		return bdt
@@ -336,7 +337,7 @@ func (p *parameterBuilder) buildFromFieldMap(ftpe *types.Map, typable swaggerTyp
 		ctx:  p.ctx,
 	}
 
-	if err := sb.buildFromType(ftpe.Elem(), schemaTypable{schema, typable.Level() + 1}); err != nil {
+	if err := sb.buildFromType(ftpe.Elem(), schemaTypable{schema, typable.Level() + 1, p.ctx.opts.SkipExtensions}); err != nil {
 		return err
 	}
 
@@ -469,10 +470,10 @@ func (p *parameterBuilder) buildFieldAlias(tpe *types.Alias, typable swaggerTypa
 	return p.buildFromField(fld, rhs, typable, seen)
 }
 
-func spExtensionsSetter(ps *spec.Parameter) func(*spec.Extensions) {
+func spExtensionsSetter(ps *spec.Parameter, skipExt bool) func(*spec.Extensions) {
 	return func(exts *spec.Extensions) {
 		for name, value := range *exts {
-			addExtension(&ps.VendorExtensible, name, value)
+			addExtension(&ps.VendorExtensible, name, value, skipExt)
 		}
 	}
 }
@@ -559,9 +560,9 @@ func (p *parameterBuilder) processParamField(fld *types.Var, decl *entityDecl, s
 
 	ps := seen[name]
 	ps.In = in
-	var pty swaggerTypable = paramTypable{&ps}
+	var pty swaggerTypable = paramTypable{&ps, p.ctx.opts.SkipExtensions}
 	if in == bodyTag {
-		pty = schemaTypable{pty.Schema(), 0}
+		pty = schemaTypable{pty.Schema(), 0, p.ctx.opts.SkipExtensions}
 	}
 
 	if in == "formData" && afld.Doc != nil && fileParam(afld.Doc) {
@@ -586,9 +587,9 @@ func (p *parameterBuilder) processParamField(fld *types.Var, decl *entityDecl, s
 	}
 
 	if ps.Ref.String() != "" {
-		setupRefParamTaggers(sp, &ps)
+		setupRefParamTaggers(sp, &ps, p.ctx.opts.SkipExtensions)
 	} else {
-		if err := setupInlineParamTaggers(sp, &ps, name, afld); err != nil {
+		if err := setupInlineParamTaggers(sp, &ps, name, afld, p.ctx.opts.SkipExtensions); err != nil {
 			return "", err
 		}
 	}
@@ -605,7 +606,7 @@ func (p *parameterBuilder) processParamField(fld *types.Var, decl *entityDecl, s
 	}
 
 	if name != fld.Name() {
-		addExtension(&ps.VendorExtensible, "x-go-name", fld.Name())
+		addExtension(&ps.VendorExtensible, "x-go-name", fld.Name(), p.ctx.opts.SkipExtensions)
 	}
 
 	seen[name] = ps
