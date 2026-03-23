@@ -8,14 +8,14 @@ import (
 	"go/types"
 )
 
-type Error string
+type testError string
 
-func (e Error) Error() string {
+func (e testError) Error() string {
 	return string(e)
 }
 
 const (
-	ErrInternal Error = "internal error due to a bug or a mishandling of go types AST. This usually indicates a bug in the scanner"
+	errInternal testError = "internal error due to a bug or a mishandling of go types AST. This usually indicates a bug in the scanner"
 )
 
 // code assertions to be explicit about the various expectations when entering a function
@@ -25,7 +25,7 @@ func mustNotBeABuiltinType(o *types.TypeName) {
 		return
 	}
 
-	panic(fmt.Errorf("type %q expected not to be a builtin: %w", o.Name(), ErrInternal))
+	panic(fmt.Errorf("type %q expected not to be a builtin: %w", o.Name(), errInternal))
 }
 
 func mustHaveRightHandSide(a *types.Alias) {
@@ -33,5 +33,5 @@ func mustHaveRightHandSide(a *types.Alias) {
 		return
 	}
 
-	panic(fmt.Errorf("type alias %q expected to declare a right-hand-side: %w", a.Obj().Name(), ErrInternal))
+	panic(fmt.Errorf("type alias %q expected to declare a right-hand-side: %w", a.Obj().Name(), errInternal))
 }

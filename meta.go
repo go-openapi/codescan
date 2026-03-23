@@ -61,7 +61,7 @@ func metaVendorExtensibleSetter(meta *spec.Swagger) func(json.RawMessage) error 
 		}
 		for k := range jsonData {
 			if !rxAllowedExtensions.MatchString(k) {
-				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s", k)
+				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s: %w", k, ErrCodeScan)
 			}
 		}
 		meta.Extensions = jsonData
@@ -78,7 +78,7 @@ func infoVendorExtensibleSetter(meta *spec.Swagger) func(json.RawMessage) error 
 		}
 		for k := range jsonData {
 			if !rxAllowedExtensions.MatchString(k) {
-				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s", k)
+				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s: %w", k, ErrCodeScan)
 			}
 		}
 		meta.Info.Extensions = jsonData

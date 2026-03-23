@@ -70,14 +70,15 @@ func TestSchemaValueExtractors(t *testing.T) {
 		"date-time",
 		"long-combo-1-with-combo-2-and-a-3rd-one-too",
 	}
-	invalidParams := []string{
+	invalidParams := make([]string, 0, 9)
+	invalidParams = append(invalidParams,
 		"1-yada-3",
 		"1-2-3",
 		"-yada-3",
 		"-2-3",
 		"*blah",
 		"blah*",
-	}
+	)
 
 	verifySwaggerOneArgSwaggerTag(t, rxStrFmt, strfmts, validParams, append(invalidParams, "", "  ", " "))
 	verifySwaggerOneArgSwaggerTag(t, rxModelOverride, models, append(validParams, "", "  ", " "), invalidParams)
@@ -95,26 +96,15 @@ func TestSchemaValueExtractors(t *testing.T) {
 
 	verifyIntegerMinMaxManyWords(t, rxf(rxMinLengthFmt, ""), "min", []string{"len", "length"})
 	// pattern
-	extraSpaces := []string{"", " ", "  ", "     "}
-	prefixes := []string{"//", "*", ""}
-	patArgs := []string{"^\\w+$", "[A-Za-z0-9-.]*"}
-	patNames := []string{"pattern", "Pattern"}
-	for _, pref := range prefixes {
-		for _, es1 := range extraSpaces {
-			for _, nm := range patNames {
-				for _, es2 := range extraSpaces {
-					for _, es3 := range extraSpaces {
-						for _, arg := range patArgs {
-							line := strings.Join([]string{pref, es1, nm, es2, ":", es3, arg}, "")
-							matches := rxf(rxPatternFmt, "").FindStringSubmatch(line)
-							assert.Len(t, matches, 2)
-							assert.EqualT(t, arg, matches[1])
-						}
-					}
-				}
-			}
-		}
-	}
+	patPrefixes := cartesianJoin(
+		[]string{"//", "*", ""},
+		[]string{"", " ", "  ", "     "},
+		[]string{"pattern", "Pattern"},
+		[]string{"", " ", "  ", "     "},
+		[]string{":"},
+		[]string{"", " ", "  ", "     "},
+	)
+	verifyRegexpArgs(t, rxf(rxPatternFmt, ""), patPrefixes, []string{"^\\w+$", "[A-Za-z0-9-.]*"}, nil, 2, 1)
 
 	verifyIntegerMinMaxManyWords(t, rxf(rxMinItemsFmt, ""), "min", []string{"items"})
 	verifyBoolean(t, rxf(rxUniqueFmt, ""), []string{"unique"}, nil)
@@ -127,7 +117,57 @@ func makeMinMax(lower string) (res []string) {
 	for _, a := range []string{"", "imum"} {
 		res = append(res, lower+a, strings.Title(lower)+a) //nolint:staticcheck // Title is deprecated, yet still useful here. The replacement is bit heavy for just this test
 	}
+
 	return res
+}
+
+// cartesianJoin returns all concatenations formed by picking one element from each slot.
+func cartesianJoin(slots ...[]string) []string {
+	result := []string{""}
+	for _, slot := range slots {
+		next := make([]string, 0, len(result)*len(slot))
+		for _, prefix := range result {
+			for _, s := range slot {
+				next = append(next, prefix+s)
+			}
+		}
+		result = next
+	}
+
+	return result
+}
+
+// titleCaseVariants returns each name paired with its Title-cased form.
+func titleCaseVariants(names []string) []string {
+	result := make([]string, 0, len(names)*2)
+	for _, nm := range names {
+		result = append(result, nm, strings.Title(nm)) //nolint:staticcheck // Title is deprecated, yet still useful here
+	}
+
+	return result
+}
+
+// verifyRegexpArgs tests that matcher matches lines formed by each prefix+validArg
+// (expecting expectedMatchLen matches with the value at matchIdx) and rejects prefix+invalidArg.
+func verifyRegexpArgs(t *testing.T, matcher *regexp.Regexp, prefixes, validArgs, invalidArgs []string, expectedMatchLen, matchIdx int) int {
+	t.Helper()
+	cnt := 0
+	for _, prefix := range prefixes {
+		for _, vv := range validArgs {
+			matches := matcher.FindStringSubmatch(prefix + vv)
+			assert.Len(t, matches, expectedMatchLen)
+			assert.EqualT(t, vv, matches[matchIdx])
+			cnt++
+		}
+
+		for _, iv := range invalidArgs {
+			matches := matcher.FindStringSubmatch(prefix + iv)
+			assert.Empty(t, matches)
+			cnt++
+		}
+	}
+
+	return cnt
 }
 
 func verifyBoolean(t *testing.T, matcher *regexp.Regexp, names, names2 []string) {
@@ -137,23 +177,17 @@ func verifyBoolean(t *testing.T, matcher *regexp.Regexp, names, names2 []string)
 	prefixes := []string{"//", "*", ""}
 	validArgs := []string{"true", "false"}
 	invalidArgs := []string{"TRUE", "FALSE", "t", "f", "1", "0", "True", "False", "true*", "false*"}
-	nms := make([]string, 0, len(names))
 
-	for _, nm := range names {
-		nms = append(nms, nm, strings.Title(nm)) //nolint:staticcheck
-	}
-
-	nms2 := make([]string, 0, len(names2))
-	for _, nm := range names2 {
-		nms2 = append(nms2, nm, strings.Title(nm)) //nolint:staticcheck
-	}
+	nms := titleCaseVariants(names)
 
 	var rnms []string
-	if len(nms2) > 0 {
+	if len(names2) > 0 {
+		nms2 := titleCaseVariants(names2)
+		spacesAndDash := []string{"", " ", "  ", "     ", "-"}
 		for _, nm := range nms {
-			for _, es := range append(extraSpaces, "-") {
+			for _, sep := range spacesAndDash {
 				for _, nm2 := range nms2 {
-					rnms = append(rnms, strings.Join([]string{nm, es, nm2}, ""))
+					rnms = append(rnms, nm+sep+nm2)
 				}
 			}
 		}
@@ -161,36 +195,13 @@ func verifyBoolean(t *testing.T, matcher *regexp.Regexp, names, names2 []string)
 		rnms = nms
 	}
 
-	var cnt int
-	for _, pref := range prefixes {
-		for _, es1 := range extraSpaces {
-			for _, nm := range rnms {
-				for _, es2 := range extraSpaces {
-					for _, es3 := range extraSpaces {
-						for _, vv := range validArgs {
-							line := strings.Join([]string{pref, es1, nm, es2, ":", es3, vv}, "")
-							matches := matcher.FindStringSubmatch(line)
-							assert.Len(t, matches, 2)
-							assert.EqualT(t, vv, matches[1])
-							cnt++
-						}
-						for _, iv := range invalidArgs {
-							line := strings.Join([]string{pref, es1, nm, es2, ":", es3, iv}, "")
-							matches := matcher.FindStringSubmatch(line)
-							assert.Empty(t, matches)
-							cnt++
-						}
-					}
-				}
-			}
-		}
-	}
+	linePrefixes := cartesianJoin(prefixes, extraSpaces, rnms, extraSpaces, []string{":"}, extraSpaces)
+	cnt := verifyRegexpArgs(t, matcher, linePrefixes, validArgs, invalidArgs, 2, 1)
 
 	var nm2 string
 	if len(names2) > 0 {
 		nm2 = " " + names2[0]
 	}
-
 	t.Logf("tested %d %s%s combinations\n", cnt, names[0], nm2)
 }
 
@@ -199,47 +210,18 @@ func verifyIntegerMinMaxManyWords(t *testing.T, matcher *regexp.Regexp, name1 st
 
 	extraSpaces := []string{"", " ", "  ", "     "}
 	prefixes := []string{"//", "*", ""}
-	validNumericArgs := []string{"0", "1234"}
-	invalidNumericArgs := []string{"1A3F", "2e10", "*12", "12*", "-1235", "0.0", "1234.0394", "-2948.484"}
+	validArgs := []string{"0", "1234"}
+	invalidArgs := []string{"1A3F", "2e10", "*12", "12*", "-1235", "0.0", "1234.0394", "-2948.484"}
 
-	names := make([]string, 0, len(words))
-	for _, w := range words {
-		names = append(names, w, strings.Title(w)) //nolint:staticcheck
-	}
+	wordVariants := titleCaseVariants(words)
+	spacesAndDash := []string{"", " ", "  ", "     ", "-"}
+	linePrefixes := cartesianJoin(prefixes, extraSpaces, makeMinMax(name1), spacesAndDash, wordVariants, extraSpaces, []string{":"}, extraSpaces)
+	cnt := verifyRegexpArgs(t, matcher, linePrefixes, validArgs, invalidArgs, 2, 1)
 
-	var cnt int
-	for _, pref := range prefixes {
-		for _, es1 := range extraSpaces {
-			for _, nm1 := range makeMinMax(name1) {
-				for _, es2 := range append(extraSpaces, "-") {
-					for _, nm2 := range names {
-						for _, es3 := range extraSpaces {
-							for _, es4 := range extraSpaces {
-								for _, vv := range validNumericArgs {
-									line := strings.Join([]string{pref, es1, nm1, es2, nm2, es3, ":", es4, vv}, "")
-									matches := matcher.FindStringSubmatch(line)
-									assert.Len(t, matches, 2)
-									assert.EqualT(t, vv, matches[1])
-									cnt++
-								}
-								for _, iv := range invalidNumericArgs {
-									line := strings.Join([]string{pref, es1, nm1, es2, nm2, es3, ":", es4, iv}, "")
-									matches := matcher.FindStringSubmatch(line)
-									assert.Empty(t, matches)
-									cnt++
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
 	var nm2 string
 	if len(words) > 0 {
 		nm2 = " " + words[0]
 	}
-
 	t.Logf("tested %d %s%s combinations\n", cnt, name1, nm2)
 }
 
@@ -248,48 +230,23 @@ func verifyNumeric2Words(t *testing.T, matcher *regexp.Regexp, name1, name2 stri
 
 	extraSpaces := []string{"", " ", "  ", "     "}
 	prefixes := []string{"//", "*", ""}
-	validNumericArgs := []string{"0", "1234", "-1235", "0.0", "1234.0394", "-2948.484"}
-	invalidNumericArgs := []string{"1A3F", "2e10", "*12", "12*"}
+	validArgs := []string{"0", "1234", "-1235", "0.0", "1234.0394", "-2948.484"}
+	invalidArgs := []string{"1A3F", "2e10", "*12", "12*"}
 
-	var cnt int
-	for _, pref := range prefixes {
-		for _, es1 := range extraSpaces {
-			for _, es2 := range extraSpaces {
-				for _, es3 := range extraSpaces {
-					for _, es4 := range extraSpaces {
-						for _, vv := range validNumericArgs {
-							lines := []string{
-								strings.Join([]string{pref, es1, name1, es2, name2, es3, ":", es4, vv}, ""),
-								strings.Join([]string{pref, es1, strings.Title(name1), es2, strings.Title(name2), es3, ":", es4, vv}, ""), //nolint:staticcheck
-								strings.Join([]string{pref, es1, strings.Title(name1), es2, name2, es3, ":", es4, vv}, ""),                //nolint:staticcheck
-								strings.Join([]string{pref, es1, name1, es2, strings.Title(name2), es3, ":", es4, vv}, ""),                //nolint:staticcheck
-							}
-							for _, line := range lines {
-								matches := matcher.FindStringSubmatch(line)
-								assert.Len(t, matches, 2)
-								assert.EqualT(t, vv, matches[1])
-								cnt++
-							}
-						}
-						for _, iv := range invalidNumericArgs {
-							lines := []string{
-								strings.Join([]string{pref, es1, name1, es2, name2, es3, ":", es4, iv}, ""),
-								strings.Join([]string{pref, es1, strings.Title(name1), es2, strings.Title(name2), es3, ":", es4, iv}, ""), //nolint:staticcheck
-								strings.Join([]string{pref, es1, strings.Title(name1), es2, name2, es3, ":", es4, iv}, ""),                //nolint:staticcheck
-								strings.Join([]string{pref, es1, name1, es2, strings.Title(name2), es3, ":", es4, iv}, ""),                //nolint:staticcheck
-							}
-							for _, line := range lines {
-								matches := matcher.FindStringSubmatch(line)
-								assert.Empty(t, matches)
-								cnt++
-							}
-						}
-					}
-				}
-			}
-		}
+	titleName1 := strings.Title(name1) //nolint:staticcheck // Title is deprecated, yet still useful here
+	titleName2 := strings.Title(name2) //nolint:staticcheck // Title is deprecated, yet still useful here
+	nameVariants := make([]string, 0, 4*len(extraSpaces))
+	for _, es := range extraSpaces {
+		nameVariants = append(nameVariants,
+			name1+es+name2,
+			titleName1+es+titleName2,
+			titleName1+es+name2,
+			name1+es+titleName2,
+		)
 	}
 
+	linePrefixes := cartesianJoin(prefixes, extraSpaces, nameVariants, extraSpaces, []string{":"}, extraSpaces)
+	cnt := verifyRegexpArgs(t, matcher, linePrefixes, validArgs, invalidArgs, 2, 1)
 	t.Logf("tested %d %s %s combinations\n", cnt, name1, name2)
 }
 
@@ -298,39 +255,11 @@ func verifyMinMax(t *testing.T, matcher *regexp.Regexp, name string, operators [
 
 	extraSpaces := []string{"", " ", "  ", "     "}
 	prefixes := []string{"//", "*", ""}
-	validNumericArgs := []string{"0", "1234", "-1235", "0.0", "1234.0394", "-2948.484"}
-	invalidNumericArgs := []string{"1A3F", "2e10", "*12", "12*"}
+	validArgs := []string{"0", "1234", "-1235", "0.0", "1234.0394", "-2948.484"}
+	invalidArgs := []string{"1A3F", "2e10", "*12", "12*"}
 
-	var cnt int
-	for _, pref := range prefixes {
-		for _, es1 := range extraSpaces {
-			for _, wrd := range makeMinMax(name) {
-				for _, es2 := range extraSpaces {
-					for _, es3 := range extraSpaces {
-						for _, op := range operators {
-							for _, es4 := range extraSpaces {
-								for _, vv := range validNumericArgs {
-									line := strings.Join([]string{pref, es1, wrd, es2, ":", es3, op, es4, vv}, "")
-									matches := matcher.FindStringSubmatch(line)
-									// fmt.Printf("matching %q with %q, matches (%d): %v\n", line, matcher, len(matches), matches)
-									assert.Len(t, matches, 3)
-									assert.EqualT(t, vv, matches[2])
-									cnt++
-								}
-								for _, iv := range invalidNumericArgs {
-									line := strings.Join([]string{pref, es1, wrd, es2, ":", es3, op, es4, iv}, "")
-									matches := matcher.FindStringSubmatch(line)
-									assert.Empty(t, matches)
-									cnt++
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
+	linePrefixes := cartesianJoin(prefixes, extraSpaces, makeMinMax(name), extraSpaces, []string{":"}, extraSpaces, operators, extraSpaces)
+	cnt := verifyRegexpArgs(t, matcher, linePrefixes, validArgs, invalidArgs, 3, 2)
 	t.Logf("tested %d %s combinations\n", cnt, name)
 }
 
@@ -365,7 +294,7 @@ func verifySwaggerMultiArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefi
 	for i := range validParams {
 		vp = vp[:0]
 		for j := range i + 1 {
-			vp = append(vp, validParams[j])
+			vp = append(vp, validParams[j]) //nolint:gosec // G602: j is bounded by i+1 which is bounded by len(validParams)
 		}
 
 		actualParams = append(actualParams, strings.Join(vp, " "))

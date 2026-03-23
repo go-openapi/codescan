@@ -13,7 +13,15 @@ import (
 )
 
 const (
-	gcBadEnum = "bad_enum"
+	gcBadEnum     = "bad_enum"
+	paramID       = "id"
+	paramAge      = "age"
+	paramExtra    = "extra"
+	paramScore    = "score"
+	paramHdrName  = "x-hdr-name"
+	paramCreated  = "created"
+	paramFooSlice = "foo_slice"
+	paramBarSlice = "bar_slice"
 )
 
 func getParameter(sctx *scanCtx, nm string) *entityDecl {
@@ -29,7 +37,11 @@ func getParameter(sctx *scanCtx, nm string) *entityDecl {
 func TestScanFileParam(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 	operations := make(map[string]*spec.Operation)
-	for _, rn := range []string{"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams", "NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams"} {
+	paramNames := []string{
+		"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams",
+		"NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams",
+	}
+	for _, rn := range paramNames {
 		td := getParameter(sctx, rn)
 
 		prs := &parameterBuilder{
@@ -76,7 +88,11 @@ func TestScanFileParam(t *testing.T) {
 func TestParamsParser(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 	operations := make(map[string]*spec.Operation)
-	for _, rn := range []string{"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams", "NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams"} {
+	paramNames := []string{
+		"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams",
+		"NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams",
+	}
+	for _, rn := range paramNames {
 		td := getParameter(sctx, rn)
 
 		prs := &parameterBuilder{
@@ -87,39 +103,10 @@ func TestParamsParser(t *testing.T) {
 	}
 
 	assert.Len(t, operations, 10)
-	cr, okParam := operations["yetAnotherOperation"]
-	require.TrueT(t, okParam)
-	assert.Len(t, cr.Parameters, 8)
-	for _, param := range cr.Parameters {
-		switch param.Name {
-		case "id":
-			assert.EqualT(t, "integer", param.Type)
-			assert.EqualT(t, "int64", param.Format)
-		case "name":
-			assert.EqualT(t, "string", param.Type)
-			assert.Empty(t, param.Format)
-		case "age":
-			assert.EqualT(t, "integer", param.Type)
-			assert.EqualT(t, "int32", param.Format)
-		case "notes":
-			assert.EqualT(t, "string", param.Type)
-			assert.Empty(t, param.Format)
-		case "extra":
-			assert.EqualT(t, "string", param.Type)
-			assert.Empty(t, param.Format)
-		case "createdAt":
-			assert.EqualT(t, "string", param.Type)
-			assert.EqualT(t, "date-time", param.Format)
-		case "informity":
-			assert.EqualT(t, "string", param.Type)
-			assert.EqualT(t, "formData", param.In)
-		case "NoTagName":
-			assert.EqualT(t, "string", param.Type)
-			assert.Empty(t, param.Format)
-		default:
-			assert.Fail(t, "unknown property: "+param.Name)
-		}
-	}
+
+	t.Run("yetAnotherOperation", func(t *testing.T) {
+		assertYetAnotherOperationParams(t, operations)
+	})
 
 	ob, okParam := operations["updateOrder"]
 	assert.TrueT(t, okParam)
@@ -140,13 +127,65 @@ func TestParamsParser(t *testing.T) {
 	otherParam := mop.Parameters[1]
 	assert.EqualT(t, "And another thing", otherParam.Description)
 
+	t.Run("someOperation", func(t *testing.T) {
+		assertSomeOperationParams(t, operations)
+	})
+
+	t.Run("anotherOperation parameter order", func(t *testing.T) {
+		assertAnotherOperationParamOrder(t, operations)
+	})
+
+	t.Run("someAliasOperation", func(t *testing.T) {
+		assertSomeAliasOperationParams(t, operations)
+	})
+}
+
+func assertYetAnotherOperationParams(t *testing.T, operations map[string]*spec.Operation) {
+	t.Helper()
+	cr, okParam := operations["yetAnotherOperation"]
+	require.TrueT(t, okParam)
+	assert.Len(t, cr.Parameters, 8)
+	for _, param := range cr.Parameters {
+		switch param.Name {
+		case paramID:
+			assert.EqualT(t, "integer", param.Type)
+			assert.EqualT(t, "int64", param.Format)
+		case paramNameKey:
+			assert.EqualT(t, "string", param.Type)
+			assert.Empty(t, param.Format)
+		case paramAge:
+			assert.EqualT(t, "integer", param.Type)
+			assert.EqualT(t, "int32", param.Format)
+		case "notes":
+			assert.EqualT(t, "string", param.Type)
+			assert.Empty(t, param.Format)
+		case paramExtra:
+			assert.EqualT(t, "string", param.Type)
+			assert.Empty(t, param.Format)
+		case "createdAt":
+			assert.EqualT(t, "string", param.Type)
+			assert.EqualT(t, "date-time", param.Format)
+		case "informity":
+			assert.EqualT(t, "string", param.Type)
+			assert.EqualT(t, "formData", param.In)
+		case "NoTagName":
+			assert.EqualT(t, "string", param.Type)
+			assert.Empty(t, param.Format)
+		default:
+			assert.Fail(t, "unknown property: "+param.Name)
+		}
+	}
+}
+
+func assertSomeOperationParams(t *testing.T, operations map[string]*spec.Operation) {
+	t.Helper()
 	op, okParam := operations["someOperation"]
 	assert.TrueT(t, okParam)
 	assert.Len(t, op.Parameters, 12)
 
 	for _, param := range op.Parameters {
 		switch param.Name {
-		case "id":
+		case paramID:
 			assert.EqualT(t, "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000", param.Description)
 			assert.EqualT(t, "path", param.In)
 			assert.EqualT(t, "integer", param.Type)
@@ -161,7 +200,7 @@ func TestParamsParser(t *testing.T) {
 			assert.TrueT(t, param.ExclusiveMinimum)
 			assert.Equal(t, 1, param.Default, "%s default value is incorrect", param.Name)
 
-		case "score":
+		case paramScore:
 			assert.EqualT(t, "The Score of this model", param.Description)
 			assert.EqualT(t, "query", param.In)
 			assert.EqualT(t, "integer", param.Type)
@@ -177,7 +216,7 @@ func TestParamsParser(t *testing.T) {
 			assert.EqualValues(t, 2, param.Default, "%s default value is incorrect", param.Name)
 			assert.EqualValues(t, 27, param.Example)
 
-		case "x-hdr-name":
+		case paramHdrName:
 			assert.EqualT(t, "Name of this no model instance", param.Description)
 			assert.EqualT(t, "header", param.In)
 			assert.EqualT(t, "string", param.Type)
@@ -189,7 +228,7 @@ func TestParamsParser(t *testing.T) {
 			assert.EqualT(t, int64(50), *param.MaxLength)
 			assert.EqualT(t, "[A-Za-z0-9-.]*", param.Pattern)
 
-		case "created":
+		case paramCreated:
 			assert.EqualT(t, "Created holds the time when this entry was created", param.Description)
 			assert.EqualT(t, "query", param.In)
 			assert.EqualT(t, "string", param.Type)
@@ -218,7 +257,7 @@ func TestParamsParser(t *testing.T) {
 			assert.EqualT(t, "query", param.In)
 			assert.EqualT(t, "integer", param.Type)
 			assert.Equal(t, []any{1, 3, 5}, param.Enum, "%s enum values are incorrect", param.Name)
-		case "type":
+		case paramTypeKey:
 			assert.EqualT(t, "Type of this model", param.Description)
 			assert.EqualT(t, "query", param.In)
 			assert.EqualT(t, "integer", param.Type)
@@ -227,7 +266,7 @@ func TestParamsParser(t *testing.T) {
 			assert.EqualT(t, "query", param.In)
 			assert.EqualT(t, "integer", param.Type)
 			assert.Equal(t, []any{1, "rsq", "qaz"}, param.Enum, "%s enum values are incorrect", param.Name)
-		case "foo_slice":
+		case paramFooSlice:
 			assert.EqualT(t, "a FooSlice has foos which are strings", param.Description)
 			assert.Equal(t, "FooSlice", param.Extensions["x-go-name"])
 			assert.EqualT(t, "query", param.In)
@@ -293,7 +332,7 @@ func TestParamsParser(t *testing.T) {
 			assert.TrueT(t, ok)
 			assert.EqualT(t, "Notes to add to this item.\nThis can be used to add special instructions.", iprop.Description)
 
-		case "bar_slice":
+		case paramBarSlice:
 			assert.EqualT(t, "a BarSlice has bars which are strings", param.Description)
 			assert.Equal(t, "BarSlice", param.Extensions["x-go-name"])
 			assert.EqualT(t, "query", param.In)
@@ -333,21 +372,24 @@ func TestParamsParser(t *testing.T) {
 			assert.Fail(t, "unknown property: "+param.Name)
 		}
 	}
+}
 
-	// assert that the order of the parameters is maintained
+func assertAnotherOperationParamOrder(t *testing.T, operations map[string]*spec.Operation) {
+	t.Helper()
+
 	order, ok := operations["anotherOperation"]
 	assert.TrueT(t, ok)
 	assert.Len(t, order.Parameters, 12)
 
 	for index, param := range order.Parameters {
 		switch param.Name {
-		case "id":
+		case paramID:
 			assert.EqualT(t, 0, index, "%s index incorrect", param.Name)
-		case "score":
+		case paramScore:
 			assert.EqualT(t, 1, index, "%s index incorrect", param.Name)
-		case "x-hdr-name":
+		case paramHdrName:
 			assert.EqualT(t, 2, index, "%s index incorrect", param.Name)
-		case "created":
+		case paramCreated:
 			assert.EqualT(t, 3, index, "%s index incorrect", param.Name)
 		case "category_old":
 			assert.EqualT(t, 4, index, "%s index incorrect", param.Name)
@@ -355,13 +397,13 @@ func TestParamsParser(t *testing.T) {
 			assert.EqualT(t, 5, index, "%s index incorrect", param.Name)
 		case "type_old":
 			assert.EqualT(t, 6, index, "%s index incorrect", param.Name)
-		case "type":
+		case paramTypeKey:
 			assert.EqualT(t, 7, index, "%s index incorrect", param.Name)
 		case gcBadEnum:
 			assert.EqualT(t, 8, index, "%s index incorrect", param.Name)
-		case "foo_slice":
+		case paramFooSlice:
 			assert.EqualT(t, 9, index, "%s index incorrect", param.Name)
-		case "bar_slice":
+		case paramBarSlice:
 			assert.EqualT(t, 10, index, "%s index incorrect", param.Name)
 		case "items":
 			assert.EqualT(t, 11, index, "%s index incorrect", param.Name)
@@ -369,8 +411,11 @@ func TestParamsParser(t *testing.T) {
 			assert.Fail(t, "unknown property: "+param.Name)
 		}
 	}
+}
 
-	// check that aliases work correctly
+func assertSomeAliasOperationParams(t *testing.T, operations map[string]*spec.Operation) {
+	t.Helper()
+
 	aliasOp, ok := operations["someAliasOperation"]
 	assert.TrueT(t, ok)
 	assert.Len(t, aliasOp.Parameters, 4)

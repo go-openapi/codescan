@@ -19,16 +19,16 @@ import (
 )
 
 var (
-	petstoreCtx       *scanCtx
-	classificationCtx *scanCtx
+	petstoreCtx       *scanCtx //nolint:gochecknoglobals // test package cache shared across test functions
+	classificationCtx *scanCtx //nolint:gochecknoglobals // test package cache shared across test functions
 )
 
 var (
-	enableSpecOutput bool
-	enableDebug      bool
+	enableSpecOutput bool //nolint:gochecknoglobals // test flag registered in init
+	enableDebug      bool //nolint:gochecknoglobals // test flag registered in init
 )
 
-func init() {
+func init() { //nolint:gochecknoinits // registers test flags before TestMain
 	flag.BoolVar(&enableSpecOutput, "enable-spec-output", false, "enable spec gen test to write output to a file")
 	flag.BoolVar(&enableDebug, "enable-debug", false, "enable debug output in tests")
 }
@@ -108,7 +108,7 @@ func loadPetstorePkgsCtx(t *testing.T) *scanCtx {
 	return petstoreCtx
 }
 
-func loadClassificationPkgsCtx(t *testing.T, extra ...string) *scanCtx {
+func loadClassificationPkgsCtx(t *testing.T) *scanCtx {
 	t.Helper()
 
 	if classificationCtx != nil {
@@ -116,11 +116,11 @@ func loadClassificationPkgsCtx(t *testing.T, extra ...string) *scanCtx {
 	}
 
 	sctx, err := newScanCtx(&Options{
-		Packages: append([]string{
+		Packages: []string{
 			"./goparsing/classification",
 			"./goparsing/classification/models",
 			"./goparsing/classification/operations",
-		}, extra...),
+		},
 		WorkDir: "fixtures",
 	})
 	require.NoError(t, err)

@@ -17,8 +17,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/go-openapi/runtime/middleware/denco"
 	"github.com/go-openapi/codescan/fixtures/goparsing/petstore/models"
+	"github.com/go-openapi/runtime/middleware/denco"
 )
 
 // An OrderID parameter model.

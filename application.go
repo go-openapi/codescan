@@ -10,10 +10,11 @@ import (
 	"go/types"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -21,7 +22,7 @@ import (
 const pkgLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
 func safeConvert(str string) bool {
-	b, err := swag.ConvertBool(str)
+	b, err := conv.ConvertBool(str)
 	if err != nil {
 		return false
 	}
@@ -29,7 +30,7 @@ func safeConvert(str string) bool {
 }
 
 // Debug is true when process is run with DEBUG=1 env var.
-var Debug = safeConvert(os.Getenv("DEBUG"))
+var Debug = safeConvert(os.Getenv("DEBUG")) //nolint:gochecknoglobals // package-level configuration from environment
 
 type node uint32
 
@@ -286,49 +287,51 @@ func (d *entityDecl) HasParameterAnnotation() bool {
 }
 
 func (s *scanCtx) FindDecl(pkgPath, name string) (*entityDecl, bool) {
-	if pkg, ok := s.app.AllPackages[pkgPath]; ok {
-		for _, file := range pkg.Syntax {
-			for _, d := range file.Decls {
-				gd, ok := d.(*ast.GenDecl)
-				if !ok {
+	pkg, ok := s.app.AllPackages[pkgPath]
+	if !ok {
+		return nil, false
+	}
+
+	for _, file := range pkg.Syntax {
+		for _, d := range file.Decls {
+			gd, ok := d.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+
+			for _, sp := range gd.Specs {
+				ts, ok := sp.(*ast.TypeSpec)
+				if !ok || ts.Name.Name != name {
 					continue
 				}
 
-				for _, sp := range gd.Specs {
-					if ts, ok := sp.(*ast.TypeSpec); ok && ts.Name.Name == name {
-						def, ok := pkg.TypesInfo.Defs[ts.Name]
-						if !ok {
-							debugLogf("couldn't find type info for %s", ts.Name)
-
-							continue
-						}
-
-						nt, isNamed := def.Type().(*types.Named)
-						at, isAliased := def.Type().(*types.Alias)
-						if !isNamed && !isAliased {
-							debugLogf("%s is not a named or an aliased type but a %T", ts.Name, def.Type())
-
-							continue
-						}
-
-						comments := ts.Doc // type ( /* doc */ Foo struct{} )
-						if comments == nil {
-							comments = gd.Doc // /* doc */  type ( Foo struct{} )
-						}
-
-						decl := &entityDecl{
-							Comments: comments,
-							Type:     nt,
-							Alias:    at,
-							Ident:    ts.Name,
-							Spec:     ts,
-							File:     file,
-							Pkg:      pkg,
-						}
-
-						return decl, true
-					}
+				def, ok := pkg.TypesInfo.Defs[ts.Name]
+				if !ok {
+					debugLogf("couldn't find type info for %s", ts.Name)
+					continue
 				}
+
+				nt, isNamed := def.Type().(*types.Named)
+				at, isAliased := def.Type().(*types.Alias)
+				if !isNamed && !isAliased {
+					debugLogf("%s is not a named or an aliased type but a %T", ts.Name, def.Type())
+					continue
+				}
+
+				comments := ts.Doc // type ( /* doc */ Foo struct{} )
+				if comments == nil {
+					comments = gd.Doc // /* doc */  type ( Foo struct{} )
+				}
+
+				return &entityDecl{
+					Comments: comments,
+					Type:     nt,
+					Alias:    at,
+					Ident:    ts.Name,
+					Spec:     ts,
+					File:     file,
+					Pkg:      pkg,
+				}, true
 			}
 		}
 	}
@@ -612,64 +615,72 @@ func (a *typeIndex) processPackage(pkg *packages.Package) error {
 	}
 
 	for _, file := range pkg.Syntax {
-		n, err := a.detectNodes(file)
-		if err != nil {
+		if err := a.processFile(pkg, file); err != nil {
 			return err
 		}
+	}
 
-		if n&metaNode != 0 {
-			a.Meta = append(a.Meta, metaSection{Comments: file.Doc})
+	return nil
+}
+
+func (a *typeIndex) processFile(pkg *packages.Package, file *ast.File) error {
+	n, err := a.detectNodes(file)
+	if err != nil {
+		return err
+	}
+
+	if n&metaNode != 0 {
+		a.Meta = append(a.Meta, metaSection{Comments: file.Doc})
+	}
+
+	if n&operationNode != 0 {
+		a.Operations = a.collectPathAnnotations(rxOperation, file.Comments, a.Operations)
+	}
+
+	if n&routeNode != 0 {
+		a.Routes = a.collectPathAnnotations(rxRoute, file.Comments, a.Routes)
+	}
+
+	a.processFileDecls(pkg, file, n)
+
+	return nil
+}
+
+func (a *typeIndex) collectPathAnnotations(rx *regexp.Regexp, comments []*ast.CommentGroup, dst []parsedPathContent) []parsedPathContent {
+	for _, cmts := range comments {
+		pp := parsePathAnnotation(rx, cmts.List)
+		if pp.Method == "" {
+			continue
 		}
-
-		if n&operationNode != 0 {
-			for _, cmts := range file.Comments {
-				pp := parsePathAnnotation(rxOperation, cmts.List)
-				if pp.Method == "" {
-					continue // not a valid operation
-				}
-				if !shouldAcceptTag(pp.Tags, a.includeTags, a.excludeTags) {
-					debugLogf("operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
-					continue
-				}
-				a.Operations = append(a.Operations, pp)
-			}
+		if !shouldAcceptTag(pp.Tags, a.includeTags, a.excludeTags) {
+			debugLogf("operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
+			continue
 		}
+		dst = append(dst, pp)
+	}
+	return dst
+}
 
-		if n&routeNode != 0 {
-			for _, cmts := range file.Comments {
-				pp := parsePathAnnotation(rxRoute, cmts.List)
-				if pp.Method == "" {
-					continue // not a valid operation
-				}
-				if !shouldAcceptTag(pp.Tags, a.includeTags, a.excludeTags) {
-					debugLogf("operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
-					continue
-				}
-				a.Routes = append(a.Routes, pp)
-			}
-		}
-
-		for _, dt := range file.Decls {
-			switch fd := dt.(type) {
-			case *ast.BadDecl:
+func (a *typeIndex) processFileDecls(pkg *packages.Package, file *ast.File, n node) {
+	for _, dt := range file.Decls {
+		switch fd := dt.(type) {
+		case *ast.BadDecl:
+			continue
+		case *ast.FuncDecl:
+			if fd.Body == nil {
 				continue
-			case *ast.FuncDecl:
-				if fd.Body == nil {
-					continue
-				}
-				for _, stmt := range fd.Body.List {
-					if dstm, ok := stmt.(*ast.DeclStmt); ok {
-						if gd, isGD := dstm.Decl.(*ast.GenDecl); isGD {
-							a.processDecl(pkg, file, n, gd)
-						}
+			}
+			for _, stmt := range fd.Body.List {
+				if dstm, ok := stmt.(*ast.DeclStmt); ok {
+					if gd, isGD := dstm.Decl.(*ast.GenDecl); isGD {
+						a.processDecl(pkg, file, n, gd)
 					}
 				}
-			case *ast.GenDecl:
-				a.processDecl(pkg, file, n, fd)
 			}
+		case *ast.GenDecl:
+			a.processDecl(pkg, file, n, fd)
 		}
 	}
-	return nil
 }
 
 func (a *typeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, gd *ast.GenDecl) {
@@ -748,10 +759,23 @@ func (a *typeIndex) walkImports(pkg *packages.Package) error {
 	return nil
 }
 
+func checkStructConflict(seenStruct *string, annotation string, text string) error {
+	if *seenStruct != "" && *seenStruct != annotation {
+		return fmt.Errorf("classifier: already annotated as %s, can't also be %q - %s: %w", *seenStruct, annotation, text, ErrCodeScan)
+	}
+	*seenStruct = annotation
+	return nil
+}
+
+// detectNodes scans all comment groups in a file and returns a bitmask of
+// detected swagger annotation types. Node types like route, operation, and
+// meta accumulate freely across comment groups. Struct-level annotations
+// (model, parameters, response) are mutually exclusive within a single
+// comment group — mixing them is an error.
 func (a *typeIndex) detectNodes(file *ast.File) (node, error) {
 	var n node
 	for _, comments := range file.Comments {
-		var seenStruct string
+		var seenStruct string // tracks the struct annotation for this comment group
 		for _, cline := range comments.List {
 			if cline == nil {
 				continue
@@ -764,7 +788,7 @@ func (a *typeIndex) detectNodes(file *ast.File) (node, error) {
 			}
 
 			matches := rxSwaggerAnnotation.FindStringSubmatch(cline.Text)
-			if len(matches) < 2 {
+			if len(matches) < minAnnotationMatch {
 				continue
 			}
 
@@ -775,41 +799,36 @@ func (a *typeIndex) detectNodes(file *ast.File) (node, error) {
 				n |= operationNode
 			case "model":
 				n |= modelNode
-				if seenStruct == "" || seenStruct == matches[1] {
-					seenStruct = matches[1]
-				} else {
-					return 0, fmt.Errorf("classifier: already annotated as %s, can't also be %q - %s", seenStruct, matches[1], cline.Text)
+				if err := checkStructConflict(&seenStruct, matches[1], cline.Text); err != nil {
+					return 0, err
 				}
 			case "meta":
 				n |= metaNode
 			case "parameters":
 				n |= parametersNode
-				if seenStruct == "" || seenStruct == matches[1] {
-					seenStruct = matches[1]
-				} else {
-					return 0, fmt.Errorf("classifier: already annotated as %s, can't also be %q - %s", seenStruct, matches[1], cline.Text)
+				if err := checkStructConflict(&seenStruct, matches[1], cline.Text); err != nil {
+					return 0, err
 				}
 			case "response":
 				n |= responseNode
-				if seenStruct == "" || seenStruct == matches[1] {
-					seenStruct = matches[1]
-				} else {
-					return 0, fmt.Errorf("classifier: already annotated as %s, can't also be %q - %s", seenStruct, matches[1], cline.Text)
+				if err := checkStructConflict(&seenStruct, matches[1], cline.Text); err != nil {
+					return 0, err
 				}
-			case "strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type":
+			case "strfmt", paramNameKey, "discriminated", "file", "enum", "default", "alias", "type":
 				// TODO: perhaps collect these and pass along to avoid lookups later on
 			case "allOf":
 			case "ignore":
 			default:
-				return 0, fmt.Errorf("classifier: unknown swagger annotation %q", matches[1])
+				return 0, fmt.Errorf("classifier: unknown swagger annotation %q: %w", matches[1], ErrCodeScan)
 			}
 		}
 	}
+
 	return n, nil
 }
 
 func debugLogf(format string, args ...any) {
 	if Debug {
-		_ = log.Output(2, fmt.Sprintf(format, args...))
+		_ = log.Output(logCallerDepth, fmt.Sprintf(format, args...))
 	}
 }

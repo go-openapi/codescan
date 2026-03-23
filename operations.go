@@ -59,29 +59,46 @@ func parsePathAnnotation(annotation *regexp.Regexp, lines []*ast.Comment) (cnt p
 		txt := cmt.Text
 		for line := range strings.SplitSeq(txt, "\n") {
 			matches := annotation.FindStringSubmatch(line)
-			if len(matches) > 3 {
+			if len(matches) > routeTagsIndex {
 				cnt.Method, cnt.Path, cnt.ID = matches[1], matches[2], matches[len(matches)-1]
 				cnt.Tags = rxSpace.Split(matches[3], -1)
 				if len(matches[3]) == 0 {
 					cnt.Tags = nil
 				}
 				justMatched = true
-			} else if cnt.Method != "" {
-				if cnt.Remaining == nil {
-					cnt.Remaining = new(ast.CommentGroup)
-				}
-				if !justMatched || strings.TrimSpace(rxStripComments.ReplaceAllString(line, "")) != "" {
-					cc := new(ast.Comment)
-					cc.Slash = cmt.Slash
-					cc.Text = line
-					cnt.Remaining.List = append(cnt.Remaining.List, cc)
-					justMatched = false
-				}
+
+				continue
+			}
+
+			if cnt.Method == "" {
+				continue
+			}
+
+			if cnt.Remaining == nil {
+				cnt.Remaining = new(ast.CommentGroup)
+			}
+
+			if !justMatched || strings.TrimSpace(rxStripComments.ReplaceAllString(line, "")) != "" {
+				cc := new(ast.Comment)
+				cc.Slash = cmt.Slash
+				cc.Text = line
+				cnt.Remaining.List = append(cnt.Remaining.List, cc)
+				justMatched = false
 			}
 		}
 	}
 
 	return cnt
+}
+
+// assignOrReuse either reuses an existing operation (if the ID matches)
+// or assigns op to the slot.
+func assignOrReuse(slot **spec.Operation, op *spec.Operation, id string) *spec.Operation {
+	if *slot != nil && id == (*slot).ID {
+		return *slot
+	}
+	*slot = op
+	return op
 }
 
 func setPathOperation(method, id string, pthObj *spec.PathItem, op *spec.Operation) *spec.Operation {
@@ -92,81 +109,19 @@ func setPathOperation(method, id string, pthObj *spec.PathItem, op *spec.Operati
 
 	switch strings.ToUpper(method) {
 	case "GET":
-		if pthObj.Get != nil {
-			if id == pthObj.Get.ID {
-				op = pthObj.Get
-			} else {
-				pthObj.Get = op
-			}
-		} else {
-			pthObj.Get = op
-		}
-
+		op = assignOrReuse(&pthObj.Get, op, id)
 	case "POST":
-		if pthObj.Post != nil {
-			if id == pthObj.Post.ID {
-				op = pthObj.Post
-			} else {
-				pthObj.Post = op
-			}
-		} else {
-			pthObj.Post = op
-		}
-
+		op = assignOrReuse(&pthObj.Post, op, id)
 	case "PUT":
-		if pthObj.Put != nil {
-			if id == pthObj.Put.ID {
-				op = pthObj.Put
-			} else {
-				pthObj.Put = op
-			}
-		} else {
-			pthObj.Put = op
-		}
-
+		op = assignOrReuse(&pthObj.Put, op, id)
 	case "PATCH":
-		if pthObj.Patch != nil {
-			if id == pthObj.Patch.ID {
-				op = pthObj.Patch
-			} else {
-				pthObj.Patch = op
-			}
-		} else {
-			pthObj.Patch = op
-		}
-
+		op = assignOrReuse(&pthObj.Patch, op, id)
 	case "HEAD":
-		if pthObj.Head != nil {
-			if id == pthObj.Head.ID {
-				op = pthObj.Head
-			} else {
-				pthObj.Head = op
-			}
-		} else {
-			pthObj.Head = op
-		}
-
+		op = assignOrReuse(&pthObj.Head, op, id)
 	case "DELETE":
-		if pthObj.Delete != nil {
-			if id == pthObj.Delete.ID {
-				op = pthObj.Delete
-			} else {
-				pthObj.Delete = op
-			}
-		} else {
-			pthObj.Delete = op
-		}
-
+		op = assignOrReuse(&pthObj.Delete, op, id)
 	case "OPTIONS":
-		if pthObj.Options != nil {
-			if id == pthObj.Options.ID {
-				op = pthObj.Options
-			} else {
-				pthObj.Options = op
-			}
-		} else {
-			pthObj.Options = op
-		}
+		op = assignOrReuse(&pthObj.Options, op, id)
 	}
 
 	return op

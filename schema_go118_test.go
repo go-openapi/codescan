@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/spec"
 )
 
-var go118ClassificationCtx *scanCtx
+var go118ClassificationCtx *scanCtx //nolint:gochecknoglobals // test package cache shared across test functions
 
-func loadGo118ClassificationPkgsCtx(t *testing.T, extra ...string) *scanCtx {
+func loadGo118ClassificationPkgsCtx(t *testing.T) *scanCtx {
 	t.Helper()
 
 	if go118ClassificationCtx != nil {
@@ -22,9 +22,9 @@ func loadGo118ClassificationPkgsCtx(t *testing.T, extra ...string) *scanCtx {
 	}
 
 	sctx, err := newScanCtx(&Options{
-		Packages: append([]string{
+		Packages: []string{
 			"./goparsing/go118",
-		}, extra...),
+		},
 		WorkDir: "fixtures",
 	})
 	require.NoError(t, err)

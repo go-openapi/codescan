@@ -37,7 +37,6 @@ type Order struct {
 	// the items for this order
 	// minimum items: 1
 	Items []struct {
-
 		// the id of the pet to order
 		//
 		// required: true

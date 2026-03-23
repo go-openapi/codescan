@@ -18,8 +18,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods"
+	"github.com/go-openapi/strfmt"
 )
 
 // A Something struct is used by other structs

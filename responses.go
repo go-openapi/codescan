@@ -4,13 +4,9 @@
 package codescan
 
 import (
-	"errors"
 	"fmt"
-	"go/ast"
 	"go/types"
 	"strings"
-
-	"golang.org/x/tools/go/ast/astutil"
 
 	"github.com/go-openapi/spec"
 )
@@ -29,8 +25,8 @@ func (ht responseTypable) Typed(tpe, format string) {
 	ht.header.Typed(tpe, format)
 }
 
-func bodyTypable(in string, schema *spec.Schema) (swaggerTypable, *spec.Schema) {
-	if in == "body" {
+func bodyTypable(in string, schema *spec.Schema) (swaggerTypable, *spec.Schema) { //nolint:ireturn // polymorphic by design
+	if in == bodyTag {
 		// get the schema for items on the schema property
 		if schema == nil {
 			schema = new(spec.Schema)
@@ -47,7 +43,7 @@ func bodyTypable(in string, schema *spec.Schema) (swaggerTypable, *spec.Schema) 
 	return nil, nil
 }
 
-func (ht responseTypable) Items() swaggerTypable {
+func (ht responseTypable) Items() swaggerTypable { //nolint:ireturn // polymorphic by design
 	bdt, schema := bodyTypable(ht.in, ht.response.Schema)
 	if bdt != nil {
 		ht.response.Schema = schema
@@ -208,7 +204,7 @@ func (r *responseBuilder) buildFromField(fld *types.Var, tpe types.Type, typable
 		debugLogf("alias(responses.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs())
 		return r.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
-		return fmt.Errorf("unknown type for %s: %T", fld.String(), fld.Type())
+		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrCodeScan)
 	}
 }
 
@@ -270,14 +266,14 @@ func (r *responseBuilder) buildFromType(otpe types.Type, resp *spec.Response, se
 		debugLogf("alias(responses.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
 		return r.buildAlias(tpe, resp, seen)
 	default:
-		return errors.New("anonymous types are currently not supported for responses")
+		return fmt.Errorf("anonymous types are currently not supported for responses: %w", ErrCodeScan)
 	}
 }
 
 func (r *responseBuilder) buildNamedType(tpe *types.Named, resp *spec.Response, seen map[string]bool) error {
 	o := tpe.Obj()
 	if isAny(o) || isStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a responses section definition", o.Name())
+		return fmt.Errorf("%s type not supported in the context of a responses section definition: %w", o.Name(), ErrCodeScan)
 	}
 	mustNotBeABuiltinType(o)
 	// ICI
@@ -313,7 +309,7 @@ func (r *responseBuilder) buildNamedType(tpe *types.Named, resp *spec.Response, 
 			r.postDecls = append(r.postDecls, sb.postDecls...)
 			return nil
 		}
-		return fmt.Errorf("responses can only be structs, did you mean for %s to be the response body?", tpe.String())
+		return fmt.Errorf("responses can only be structs, did you mean for %s to be the response body?: %w", tpe.String(), ErrCodeScan)
 	}
 }
 
@@ -322,7 +318,7 @@ func (r *responseBuilder) buildAlias(tpe *types.Alias, resp *spec.Response, seen
 	o := tpe.Obj()
 	if isAny(o) || isStdError(o) {
 		// wrong: TODO(fred): see what object exactly we want to build here - figure out with specific tests
-		return fmt.Errorf("%s type not supported in the context of a responses section definition", o.Name())
+		return fmt.Errorf("%s type not supported in the context of a responses section definition: %w", o.Name(), ErrCodeScan)
 	}
 	mustNotBeABuiltinType(o)
 	mustHaveRightHandSide(tpe)
@@ -336,7 +332,7 @@ func (r *responseBuilder) buildAlias(tpe *types.Alias, resp *spec.Response, seen
 
 	decl, ok := r.ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v", tpe, rhs)
+		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrCodeScan)
 	}
 	r.postDecls = append(r.postDecls, decl) // mark the left-hand side as discovered
 
@@ -373,7 +369,7 @@ func (r *responseBuilder) buildAlias(tpe *types.Alias, resp *spec.Response, seen
 func (r *responseBuilder) buildNamedField(ftpe *types.Named, typable swaggerTypable) error {
 	decl, found := r.ctx.DeclForType(ftpe.Obj().Type())
 	if !found {
-		return fmt.Errorf("unable to find package and source file for: %s", ftpe.String())
+		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrCodeScan)
 	}
 
 	d := decl.Obj()
@@ -424,7 +420,7 @@ func (r *responseBuilder) buildFieldAlias(tpe *types.Alias, typable swaggerTypab
 
 	decl, ok := r.ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v", tpe)
+		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrCodeScan)
 	}
 	r.postDecls = append(r.postDecls, decl) // mark the left-hand side as discovered
 
@@ -436,8 +432,7 @@ func (r *responseBuilder) buildFromStruct(decl *entityDecl, tpe *types.Struct, r
 		return nil
 	}
 
-	for i := range tpe.NumFields() {
-		fld := tpe.Field(i)
+	for fld := range tpe.Fields() {
 		if fld.Embedded() {
 			if err := r.buildFromType(fld.Type(), resp, seen); err != nil {
 				return err
@@ -449,170 +444,8 @@ func (r *responseBuilder) buildFromStruct(decl *entityDecl, tpe *types.Struct, r
 			continue
 		}
 
-		tg := tpe.Tag(i)
-
-		var afld *ast.Field
-		ans, _ := astutil.PathEnclosingInterval(decl.File, fld.Pos(), fld.Pos())
-		for _, an := range ans {
-			at, valid := an.(*ast.Field)
-			if !valid {
-				continue
-			}
-
-			debugLogf("field %s: %s(%T) [%q] ==> %s", fld.Name(), fld.Type().String(), fld.Type(), tg, at.Doc.Text())
-			afld = at
-			break
-		}
-
-		if afld == nil {
-			debugLogf("can't find source associated with %s for %s", fld.String(), tpe.String())
-			continue
-		}
-
-		// if the field is annotated with swagger:ignore, ignore it
-		if ignored(afld.Doc) {
-			debugLogf("field %v of type %v is deliberately ignored", fld, tpe)
-			continue
-		}
-
-		name, ignore, _, _, err := parseJSONTag(afld)
-		if err != nil {
+		if err := r.processResponseField(fld, decl, resp, seen); err != nil {
 			return err
-		}
-		if ignore {
-			continue
-		}
-
-		var in string
-		// scan for param location first, this changes some behavior down the line
-		if afld.Doc != nil {
-			for _, cmt := range afld.Doc.List {
-				for line := range strings.SplitSeq(cmt.Text, "\n") {
-					matches := rxIn.FindStringSubmatch(line)
-					if len(matches) > 0 && len(strings.TrimSpace(matches[1])) > 0 {
-						in = strings.TrimSpace(matches[1])
-					}
-				}
-			}
-		}
-
-		ps := resp.Headers[name]
-
-		// support swagger:file for response
-		// An API operation can return a file, such as an image or PDF. In this case,
-		// define the response schema with type: file and specify the appropriate MIME types in the produces section.
-		if afld.Doc != nil && fileParam(afld.Doc) {
-			resp.Schema = &spec.Schema{}
-			resp.Schema.Typed("file", "")
-		} else {
-			debugLogf("build response %v (%v) (not a file)", fld, fld.Type())
-			if err := r.buildFromField(fld, fld.Type(), responseTypable{in, &ps, resp}, seen); err != nil {
-				return err
-			}
-		}
-
-		if strfmtName, ok := strfmtName(afld.Doc); ok {
-			ps.Typed("string", strfmtName)
-		}
-
-		sp := new(sectionedParser)
-		sp.setDescription = func(lines []string) { ps.Description = joinDropLast(lines) }
-		sp.taggers = []tagParser{
-			newSingleLineTagParser("maximum", &setMaximum{headerValidations{&ps}, rxf(rxMaximumFmt, "")}),
-			newSingleLineTagParser("minimum", &setMinimum{headerValidations{&ps}, rxf(rxMinimumFmt, "")}),
-			newSingleLineTagParser("multipleOf", &setMultipleOf{headerValidations{&ps}, rxf(rxMultipleOfFmt, "")}),
-			newSingleLineTagParser("minLength", &setMinLength{headerValidations{&ps}, rxf(rxMinLengthFmt, "")}),
-			newSingleLineTagParser("maxLength", &setMaxLength{headerValidations{&ps}, rxf(rxMaxLengthFmt, "")}),
-			newSingleLineTagParser("pattern", &setPattern{headerValidations{&ps}, rxf(rxPatternFmt, "")}),
-			newSingleLineTagParser("collectionFormat", &setCollectionFormat{headerValidations{&ps}, rxf(rxCollectionFormatFmt, "")}),
-			newSingleLineTagParser("minItems", &setMinItems{headerValidations{&ps}, rxf(rxMinItemsFmt, "")}),
-			newSingleLineTagParser("maxItems", &setMaxItems{headerValidations{&ps}, rxf(rxMaxItemsFmt, "")}),
-			newSingleLineTagParser("unique", &setUnique{headerValidations{&ps}, rxf(rxUniqueFmt, "")}),
-			newSingleLineTagParser("enum", &setEnum{headerValidations{&ps}, rxf(rxEnumFmt, "")}),
-			newSingleLineTagParser("default", &setDefault{&ps.SimpleSchema, headerValidations{&ps}, rxf(rxDefaultFmt, "")}),
-			newSingleLineTagParser("example", &setExample{&ps.SimpleSchema, headerValidations{&ps}, rxf(rxExampleFmt, "")}),
-		}
-		itemsTaggers := func(items *spec.Items, level int) []tagParser {
-			// the expression is 1-index based not 0-index
-			itemsPrefix := fmt.Sprintf(rxItemsPrefixFmt, level+1)
-
-			return []tagParser{
-				newSingleLineTagParser(fmt.Sprintf("items%dMaximum", level), &setMaximum{itemsValidations{items}, rxf(rxMaximumFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dMinimum", level), &setMinimum{itemsValidations{items}, rxf(rxMinimumFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dMultipleOf", level), &setMultipleOf{itemsValidations{items}, rxf(rxMultipleOfFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dMinLength", level), &setMinLength{itemsValidations{items}, rxf(rxMinLengthFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dMaxLength", level), &setMaxLength{itemsValidations{items}, rxf(rxMaxLengthFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dPattern", level), &setPattern{itemsValidations{items}, rxf(rxPatternFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dCollectionFormat", level), &setCollectionFormat{itemsValidations{items}, rxf(rxCollectionFormatFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dMinItems", level), &setMinItems{itemsValidations{items}, rxf(rxMinItemsFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dMaxItems", level), &setMaxItems{itemsValidations{items}, rxf(rxMaxItemsFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dUnique", level), &setUnique{itemsValidations{items}, rxf(rxUniqueFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dEnum", level), &setEnum{itemsValidations{items}, rxf(rxEnumFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dDefault", level), &setDefault{&items.SimpleSchema, itemsValidations{items}, rxf(rxDefaultFmt, itemsPrefix)}),
-				newSingleLineTagParser(fmt.Sprintf("items%dExample", level), &setExample{&items.SimpleSchema, itemsValidations{items}, rxf(rxExampleFmt, itemsPrefix)}),
-			}
-		}
-
-		var parseArrayTypes func(expr ast.Expr, items *spec.Items, level int) ([]tagParser, error)
-		parseArrayTypes = func(expr ast.Expr, items *spec.Items, level int) ([]tagParser, error) {
-			if items == nil {
-				return []tagParser{}, nil
-			}
-			switch iftpe := expr.(type) {
-			case *ast.ArrayType:
-				eleTaggers := itemsTaggers(items, level)
-				sp.taggers = append(eleTaggers, sp.taggers...)
-				otherTaggers, err := parseArrayTypes(iftpe.Elt, items.Items, level+1)
-				if err != nil {
-					return nil, err
-				}
-				return otherTaggers, nil
-			case *ast.Ident:
-				taggers := []tagParser{}
-				if iftpe.Obj == nil {
-					taggers = itemsTaggers(items, level)
-				}
-				otherTaggers, err := parseArrayTypes(expr, items.Items, level+1)
-				if err != nil {
-					return nil, err
-				}
-				return append(taggers, otherTaggers...), nil
-			case *ast.SelectorExpr:
-				otherTaggers, err := parseArrayTypes(iftpe.Sel, items.Items, level+1)
-				if err != nil {
-					return nil, err
-				}
-				return otherTaggers, nil
-			case *ast.StarExpr:
-				otherTaggers, err := parseArrayTypes(iftpe.X, items, level)
-				if err != nil {
-					return nil, err
-				}
-				return otherTaggers, nil
-			default:
-				return nil, fmt.Errorf("unknown field type ele for %q", name)
-			}
-		}
-		// check if this is a primitive, if so parse the validations from the
-		// doc comments of the slice declaration.
-		if ftped, ok := afld.Type.(*ast.ArrayType); ok {
-			taggers, err := parseArrayTypes(ftped.Elt, ps.Items, 0)
-			if err != nil {
-				return err
-			}
-			sp.taggers = append(taggers, sp.taggers...)
-		}
-
-		if err := sp.Parse(afld.Doc); err != nil {
-			return err
-		}
-
-		if in != "body" {
-			seen[name] = true
-			if resp.Headers == nil {
-				resp.Headers = make(map[string]spec.Header)
-			}
-			resp.Headers[name] = ps
 		}
 	}
 
@@ -620,6 +453,82 @@ func (r *responseBuilder) buildFromStruct(decl *entityDecl, tpe *types.Struct, r
 		if !seen[k] {
 			delete(resp.Headers, k)
 		}
+	}
+	return nil
+}
+
+func (r *responseBuilder) processResponseField(fld *types.Var, decl *entityDecl, resp *spec.Response, seen map[string]bool) error {
+	if !fld.Exported() {
+		return nil
+	}
+
+	afld := findASTField(decl.File, fld.Pos())
+	if afld == nil {
+		debugLogf("can't find source associated with %s", fld.String())
+		return nil
+	}
+
+	if ignored(afld.Doc) {
+		debugLogf("field %v is deliberately ignored", fld)
+		return nil
+	}
+
+	name, ignore, _, _, err := parseJSONTag(afld)
+	if err != nil {
+		return err
+	}
+	if ignore {
+		return nil
+	}
+
+	var in string
+	// scan for param location first, this changes some behavior down the line
+	if afld.Doc != nil {
+		for _, cmt := range afld.Doc.List {
+			for line := range strings.SplitSeq(cmt.Text, "\n") {
+				matches := rxIn.FindStringSubmatch(line)
+				if len(matches) > 0 && len(strings.TrimSpace(matches[1])) > 0 {
+					in = strings.TrimSpace(matches[1])
+				}
+			}
+		}
+	}
+
+	ps := resp.Headers[name]
+
+	// support swagger:file for response
+	// An API operation can return a file, such as an image or PDF. In this case,
+	// define the response schema with type: file and specify the appropriate MIME types in the produces section.
+	if afld.Doc != nil && fileParam(afld.Doc) {
+		resp.Schema = &spec.Schema{}
+		resp.Schema.Typed("file", "")
+	} else {
+		debugLogf("build response %v (%v) (not a file)", fld, fld.Type())
+		if err := r.buildFromField(fld, fld.Type(), responseTypable{in, &ps, resp}, seen); err != nil {
+			return err
+		}
+	}
+
+	if strfmtName, ok := strfmtName(afld.Doc); ok {
+		ps.Typed("string", strfmtName)
+	}
+
+	sp := new(sectionedParser)
+	sp.setDescription = func(lines []string) { ps.Description = joinDropLast(lines) }
+	if err := setupResponseHeaderTaggers(sp, &ps, name, afld); err != nil {
+		return err
+	}
+
+	if err := sp.Parse(afld.Doc); err != nil {
+		return err
+	}
+
+	if in != bodyTag {
+		seen[name] = true
+		if resp.Headers == nil {
+			resp.Headers = make(map[string]spec.Header)
+		}
+		resp.Headers[name] = ps
 	}
 	return nil
 }

@@ -45,7 +45,8 @@ func TestYamlParser(t *testing.T) {
 			require.NoError(t, parser.Parse(lines))
 			require.EqualT(t, 1, setterCalled)
 
-			const expectedJSON = `{"SecurityDefinitions":{"api_key":{"name":"X-API-KEY","type":"apiKey"},"petstore_auth":{"scopes":{"read:pets":"read your pets","write:pets":"modify pets in your account"},"type":"oauth2"}}}`
+			const expectedJSON = `{"SecurityDefinitions":{"api_key":{"name":"X-API-KEY","type":"apiKey"},` +
+				`"petstore_auth":{"scopes":{"read:pets":"read your pets","write:pets":"modify pets in your account"},"type":"oauth2"}}}`
 
 			require.JSONEqT(t, expectedJSON, actualJSON)
 		})
