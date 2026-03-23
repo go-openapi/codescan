@@ -62,16 +62,16 @@ func parseArrayTypes(sp *sectionedParser, name string, expr ast.Expr, items *spe
 }
 
 // setupRefParamTaggers configures taggers for a parameter that is a $ref.
-func setupRefParamTaggers(sp *sectionedParser, ps *spec.Parameter, skipExt bool) {
+func setupRefParamTaggers(sp *sectionedParser, ps *spec.Parameter, skipExt, debug bool) {
 	sp.taggers = []tagParser{
 		newSingleLineTagParser("in", &matchOnlyParam{ps, rxIn}),
 		newSingleLineTagParser("required", &matchOnlyParam{ps, rxRequired}),
-		newMultiLineTagParser("Extensions", newSetExtensions(spExtensionsSetter(ps, skipExt)), true),
+		newMultiLineTagParser("Extensions", newSetExtensions(spExtensionsSetter(ps, skipExt), debug), true),
 	}
 }
 
 // setupInlineParamTaggers configures taggers for a fully-defined inline parameter.
-func setupInlineParamTaggers(sp *sectionedParser, ps *spec.Parameter, name string, afld *ast.Field, skipExt bool) error {
+func setupInlineParamTaggers(sp *sectionedParser, ps *spec.Parameter, name string, afld *ast.Field, skipExt, debug bool) error {
 	sp.taggers = []tagParser{
 		newSingleLineTagParser("in", &matchOnlyParam{ps, rxIn}),
 		newSingleLineTagParser("maximum", &setMaximum{paramValidations{ps}, rxf(rxMaximumFmt, "")}),
@@ -88,7 +88,7 @@ func setupInlineParamTaggers(sp *sectionedParser, ps *spec.Parameter, name strin
 		newSingleLineTagParser("default", &setDefault{&ps.SimpleSchema, paramValidations{ps}, rxf(rxDefaultFmt, "")}),
 		newSingleLineTagParser("example", &setExample{&ps.SimpleSchema, paramValidations{ps}, rxf(rxExampleFmt, "")}),
 		newSingleLineTagParser("required", &setRequiredParam{ps}),
-		newMultiLineTagParser("Extensions", newSetExtensions(spExtensionsSetter(ps, skipExt)), true),
+		newMultiLineTagParser("Extensions", newSetExtensions(spExtensionsSetter(ps, skipExt), debug), true),
 	}
 
 	// check if this is a primitive, if so parse the validations from the

@@ -208,26 +208,26 @@ func (s *schemaBuilder) buildFromDecl(_ *entityDecl, schema *spec.Schema) error 
 	switch tpe := s.decl.ObjType().(type) {
 	// TODO(fredbi): we may safely remove all the cases here that are not Named or Alias
 	case *types.Basic:
-		debugLogf("basic: %v", tpe.Name())
+		debugLogf(s.ctx.debug, "basic: %v", tpe.Name())
 		return nil
 	case *types.Struct:
 		return s.buildFromStruct(s.decl, tpe, schema, make(map[string]string))
 	case *types.Interface:
 		return s.buildFromInterface(s.decl, tpe, schema, make(map[string]string))
 	case *types.Array:
-		debugLogf("array: %v -> %v", s.decl.Ident.Name, tpe.Elem().String())
+		debugLogf(s.ctx.debug, "array: %v -> %v", s.decl.Ident.Name, tpe.Elem().String())
 		return nil
 	case *types.Slice:
-		debugLogf("slice: %v -> %v", s.decl.Ident.Name, tpe.Elem().String())
+		debugLogf(s.ctx.debug, "slice: %v -> %v", s.decl.Ident.Name, tpe.Elem().String())
 		return nil
 	case *types.Map:
-		debugLogf("map: %v -> [%v]%v", s.decl.Ident.Name, tpe.Key().String(), tpe.Elem().String())
+		debugLogf(s.ctx.debug, "map: %v -> [%v]%v", s.decl.Ident.Name, tpe.Key().String(), tpe.Elem().String())
 		return nil
 	case *types.Named:
-		debugLogf("named: %v", tpe)
+		debugLogf(s.ctx.debug, "named: %v", tpe)
 		return s.buildDeclNamed(tpe, schema)
 	case *types.Alias:
-		debugLogf("alias: %v -> %v", tpe, tpe.Rhs())
+		debugLogf(s.ctx.debug, "alias: %v -> %v", tpe, tpe.Rhs())
 		tgt := schemaTypable{schema, 0, s.ctx.opts.SkipExtensions}
 
 		return s.buildDeclAlias(tpe, tgt)
@@ -256,7 +256,7 @@ func (s *schemaBuilder) buildDeclNamed(tpe *types.Named, schema *spec.Schema) er
 
 	mustNotBeABuiltinType(o)
 
-	debugLogf("got the named type object: %s.%s | isAlias: %t | exported: %t", o.Pkg().Path(), o.Name(), o.IsAlias(), o.Exported())
+	debugLogf(s.ctx.debug, "got the named type object: %s.%s | isAlias: %t | exported: %t", o.Pkg().Path(), o.Name(), o.IsAlias(), o.Exported())
 	if isStdTime(o) {
 		schema.Typed("string", "date-time")
 		return nil
@@ -289,7 +289,7 @@ func (s *schemaBuilder) buildFromTextMarshal(tpe types.Type, tgt swaggerTypable)
 		return swaggerSchemaForType(tio.Name(), tgt)
 	}
 
-	debugLogf("named refined type %s.%s", tio.Pkg().Path(), tio.Name())
+	debugLogf(s.ctx.debug, "named refined type %s.%s", tio.Pkg().Path(), tio.Name())
 	pkg, found := s.ctx.PkgForType(tpe)
 
 	if strings.ToLower(tio.Name()) == "uuid" {
@@ -299,7 +299,7 @@ func (s *schemaBuilder) buildFromTextMarshal(tpe types.Type, tgt swaggerTypable)
 
 	if !found {
 		// this must be a builtin
-		debugLogf("skipping because package is nil: %v", tpe)
+		debugLogf(s.ctx.debug, "skipping because package is nil: %v", tpe)
 		return nil
 	}
 
@@ -332,7 +332,7 @@ func (s *schemaBuilder) buildFromTextMarshal(tpe types.Type, tgt swaggerTypable)
 func (s *schemaBuilder) buildFromType(tpe types.Type, tgt swaggerTypable) error {
 	// check if the type implements encoding.TextMarshaler interface
 	// if so, the type is rendered as a string.
-	debugLogf("schema buildFromType %v (%T)", tpe, tpe)
+	debugLogf(s.ctx.debug, "schema buildFromType %v (%T)", tpe, tpe)
 
 	if isTextMarshaler(tpe) {
 		return s.buildFromTextMarshal(tpe, tgt)
@@ -364,7 +364,7 @@ func (s *schemaBuilder) buildFromType(tpe types.Type, tgt swaggerTypable) error 
 		return s.buildNamedType(titpe, tgt)
 	case *types.Alias:
 		// a named alias, e.g. type X = {RHS type}.
-		debugLogf("alias(schema.buildFromType): got alias %v to %v", titpe, titpe.Rhs())
+		debugLogf(s.ctx.debug, "alias(schema.buildFromType): got alias %v to %v", titpe, titpe.Rhs())
 		return s.buildAlias(titpe, tgt)
 	case *types.TypeParam:
 		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", titpe)
@@ -413,13 +413,13 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 	}
 
 	pkg, found := s.ctx.PkgForType(titpe)
-	debugLogf("named refined type %s.%s", pkg, tio.Name())
+	debugLogf(s.ctx.debug, "named refined type %s.%s", pkg, tio.Name())
 	if !found {
 		// this must be a builtin
 		//
 		// This could happen for example when using unsupported types such as complex64, complex128, uintptr,
 		// or type constraints such as comparable.
-		debugLogf("skipping because package is nil (builtin type): %v", tio)
+		debugLogf(s.ctx.debug, "skipping because package is nil (builtin type): %v", tio)
 
 		return nil
 	}
@@ -436,7 +436,7 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 	}
 
 	if s.decl.Spec.Assign.IsValid() {
-		debugLogf("found assignment: %s.%s", tio.Pkg().Path(), tio.Name())
+		debugLogf(s.ctx.debug, "found assignment: %s.%s", tio.Pkg().Path(), tio.Name())
 		return s.buildFromType(titpe.Underlying(), tgt)
 	}
 
@@ -449,7 +449,7 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 	case *types.Struct:
 		return s.buildNamedStruct(tio, cmt, tgt)
 	case *types.Interface:
-		debugLogf("found interface: %s.%s", tio.Pkg().Path(), tio.Name())
+		debugLogf(s.ctx.debug, "found interface: %s.%s", tio.Pkg().Path(), tio.Name())
 
 		decl, found := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
 		if !found {
@@ -464,7 +464,7 @@ func (s *schemaBuilder) buildNamedType(titpe *types.Named, tgt swaggerTypable) e
 	case *types.Slice:
 		return s.buildNamedSlice(tio, cmt, utitpe.Elem(), tgt)
 	case *types.Map:
-		debugLogf("found map type: %s.%s", tio.Pkg().Path(), tio.Name())
+		debugLogf(s.ctx.debug, "found map type: %s.%s", tio.Pkg().Path(), tio.Name())
 
 		if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
 			return s.makeRef(decl, tgt)
@@ -495,7 +495,7 @@ func (s *schemaBuilder) buildNamedBasic(tio *types.TypeName, pkg *packages.Packa
 		return nil
 	}
 
-	debugLogf("found primitive type: %s.%s", tio.Pkg().Path(), tio.Name())
+	debugLogf(s.ctx.debug, "found primitive type: %s.%s", tio.Pkg().Path(), tio.Name())
 
 	if sfnm, isf := strfmtName(cmt); isf {
 		tgt.Typed("string", sfnm)
@@ -516,7 +516,7 @@ func (s *schemaBuilder) buildNamedBasic(tio *types.TypeName, pkg *packages.Packa
 	}
 
 	if defaultName, ok := defaultName(cmt); ok {
-		debugLogf("default name: %s", defaultName)
+		debugLogf(s.ctx.debug, "default name: %s", defaultName)
 		return nil
 	}
 
@@ -540,11 +540,11 @@ func (s *schemaBuilder) buildNamedBasic(tio *types.TypeName, pkg *packages.Packa
 }
 
 func (s *schemaBuilder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, tgt swaggerTypable) error {
-	debugLogf("found struct: %s.%s", tio.Pkg().Path(), tio.Name())
+	debugLogf(s.ctx.debug, "found struct: %s.%s", tio.Pkg().Path(), tio.Name())
 
 	decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
 	if !ok {
-		debugLogf("could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
+		debugLogf(s.ctx.debug, "could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
 		return nil
 	}
 
@@ -568,7 +568,7 @@ func (s *schemaBuilder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGr
 }
 
 func (s *schemaBuilder) buildNamedArray(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt swaggerTypable) error {
-	debugLogf("found array type: %s.%s", tio.Pkg().Path(), tio.Name())
+	debugLogf(s.ctx.debug, "found array type: %s.%s", tio.Pkg().Path(), tio.Name())
 
 	if sfnm, isf := strfmtName(cmt); isf {
 		if sfnm == goTypeByte {
@@ -590,7 +590,7 @@ func (s *schemaBuilder) buildNamedArray(tio *types.TypeName, cmt *ast.CommentGro
 }
 
 func (s *schemaBuilder) buildNamedSlice(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt swaggerTypable) error {
-	debugLogf("found slice type: %s.%s", tio.Pkg().Path(), tio.Name())
+	debugLogf(s.ctx.debug, "found slice type: %s.%s", tio.Pkg().Path(), tio.Name())
 
 	if sfnm, isf := strfmtName(cmt); isf {
 		if sfnm == goTypeByte {
@@ -719,7 +719,7 @@ func (s *schemaBuilder) processAnonInterfaceMethod(fld *types.Func, it *types.In
 
 	afld := findASTField(decl.File, fld.Pos())
 	if afld == nil {
-		debugLogf("can't find source associated with %s for %s", fld.String(), it.String())
+		debugLogf(s.ctx.debug, "can't find source associated with %s for %s", fld.String(), it.String())
 		return nil
 	}
 
@@ -878,18 +878,18 @@ func (s *schemaBuilder) buildFromInterface(decl *entityDecl, it *types.Interface
 }
 
 func (s *schemaBuilder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *entityDecl, schema *spec.Schema, seen map[string]string) (fieldHasAllOf bool, err error) {
-	debugLogf("inspecting embedded type in interface: %v", fld)
+	debugLogf(s.ctx.debug, "inspecting embedded type in interface: %v", fld)
 
 	switch ftpe := fld.(type) {
 	case *types.Named:
-		debugLogf("embedded named type (buildInterface): %v", ftpe)
+		debugLogf(s.ctx.debug, "embedded named type (buildInterface): %v", ftpe)
 		o := ftpe.Obj()
 		if isAny(o) || isStdError(o) {
 			return false, nil
 		}
 		return s.buildNamedInterface(ftpe, flist, decl, schema, seen)
 	case *types.Interface:
-		debugLogf("embedded anonymous interface type (buildInterface): %v", ftpe)
+		debugLogf(s.ctx.debug, "embedded anonymous interface type (buildInterface): %v", ftpe)
 		var aliasedSchema spec.Schema
 		ps := schemaTypable{schema: &aliasedSchema, skipExt: s.ctx.opts.SkipExtensions}
 		if err = s.buildAnonymousInterface(ftpe, ps, decl); err != nil {
@@ -900,7 +900,7 @@ func (s *schemaBuilder) processEmbeddedType(fld types.Type, flist []*ast.Field, 
 			schema.AddToAllOf(aliasedSchema)
 		}
 	case *types.Alias:
-		debugLogf("embedded alias (buildInterface): %v -> %v", ftpe, ftpe.Rhs())
+		debugLogf(s.ctx.debug, "embedded alias (buildInterface): %v -> %v", ftpe, ftpe.Rhs())
 		var aliasedSchema spec.Schema
 		ps := schemaTypable{schema: &aliasedSchema, skipExt: s.ctx.opts.SkipExtensions}
 		if err = s.buildAlias(ftpe, ps); err != nil {
@@ -925,7 +925,7 @@ func (s *schemaBuilder) processEmbeddedType(fld types.Type, flist []*ast.Field, 
 		)
 	}
 
-	debugLogf("got embedded interface: %v {%T}, fieldHasAllOf: %t", fld, fld, fieldHasAllOf)
+	debugLogf(s.ctx.debug, "got embedded interface: %v {%T}, fieldHasAllOf: %t", fld, fld, fieldHasAllOf)
 	return fieldHasAllOf, nil
 }
 
@@ -971,7 +971,7 @@ func (s *schemaBuilder) processInterfaceMethod(fld *types.Func, it *types.Interf
 
 	afld := findASTField(decl.File, fld.Pos())
 	if afld == nil {
-		debugLogf("can't find source associated with %s for %s", fld.String(), it.String())
+		debugLogf(s.ctx.debug, "can't find source associated with %s for %s", fld.String(), it.String())
 		return nil
 	}
 
@@ -1028,13 +1028,13 @@ func (s *schemaBuilder) buildNamedInterface(ftpe *types.Named, flist []*ast.Fiel
 		}
 
 		// decl.
-		debugLogf("maybe interface field %s: %s(%T)", o.Name(), o.Type().String(), o.Type())
+		debugLogf(s.ctx.debug, "maybe interface field %s: %s(%T)", o.Name(), o.Type().String(), o.Type())
 		afld = an
 		break
 	}
 
 	if afld == nil {
-		debugLogf("can't find source associated with %s", ftpe.String())
+		debugLogf(s.ctx.debug, "can't find source associated with %s", ftpe.String())
 		return hasAllOf, nil
 	}
 
@@ -1158,18 +1158,18 @@ func (s *schemaBuilder) scanEmbeddedFields(decl *entityDecl, st *types.Struct, s
 	for i := range st.NumFields() {
 		fld := st.Field(i)
 		if !fld.Anonymous() {
-			debugLogf("skipping field %q for allOf scan because not anonymous", fld.Name())
+			debugLogf(s.ctx.debug, "skipping field %q for allOf scan because not anonymous", fld.Name())
 			continue
 		}
 		tg := st.Tag(i)
 
-		debugLogf(
+		debugLogf(s.ctx.debug,
 			"maybe allof field(%t) %s: %s (%T) [%q](anon: %t, embedded: %t)",
 			fld.IsField(), fld.Name(), fld.Type().String(), fld.Type(), tg, fld.Anonymous(), fld.Embedded(),
 		)
 		afld := findASTField(decl.File, fld.Pos())
 		if afld == nil {
-			debugLogf("can't find source associated with %s for %s", fld.String(), st.String())
+			debugLogf(s.ctx.debug, "can't find source associated with %s for %s", fld.String(), st.String())
 			continue
 		}
 
@@ -1199,7 +1199,7 @@ func (s *schemaBuilder) scanEmbeddedFields(decl *entityDecl, st *types.Struct, s
 		}
 
 		if isAliased {
-			debugLogf("alias member in struct: %v", fld)
+			debugLogf(s.ctx.debug, "alias member in struct: %v", fld)
 		}
 
 		// allOf member: fields go into a separate schema, embedded struct becomes an allOf entry
@@ -1235,7 +1235,7 @@ func (s *schemaBuilder) processStructField(fld *types.Var, decl *entityDecl, tgt
 
 	afld := findASTField(decl.File, fld.Pos())
 	if afld == nil {
-		debugLogf("can't find source associated with %s", fld.String())
+		debugLogf(s.ctx.debug, "can't find source associated with %s", fld.String())
 		return nil
 	}
 
@@ -1299,7 +1299,7 @@ func (s *schemaBuilder) processStructField(fld *types.Var, decl *entityDecl, tgt
 }
 
 func (s *schemaBuilder) buildAllOf(tpe types.Type, schema *spec.Schema) error {
-	debugLogf("allOf %s", tpe.Underlying())
+	debugLogf(s.ctx.debug, "allOf %s", tpe.Underlying())
 
 	switch ftpe := tpe.(type) {
 	case *types.Pointer:
@@ -1307,7 +1307,7 @@ func (s *schemaBuilder) buildAllOf(tpe types.Type, schema *spec.Schema) error {
 	case *types.Named:
 		return s.buildNamedAllOf(ftpe, schema)
 	case *types.Alias:
-		debugLogf("allOf member is alias %v => %v", ftpe, ftpe.Rhs())
+		debugLogf(s.ctx.debug, "allOf member is alias %v => %v", ftpe, ftpe.Rhs())
 		tgt := schemaTypable{schema: schema, skipExt: s.ctx.opts.SkipExtensions}
 		return s.buildAlias(ftpe, tgt)
 	case *types.TypeParam:
@@ -1385,7 +1385,7 @@ func (s *schemaBuilder) buildNamedAllOf(ftpe *types.Named, schema *spec.Schema) 
 }
 
 func (s *schemaBuilder) buildEmbedded(tpe types.Type, schema *spec.Schema, seen map[string]string) error {
-	debugLogf("embedded %v", tpe.Underlying())
+	debugLogf(s.ctx.debug, "embedded %v", tpe.Underlying())
 
 	switch ftpe := tpe.(type) {
 	case *types.Pointer:
@@ -1393,7 +1393,7 @@ func (s *schemaBuilder) buildEmbedded(tpe types.Type, schema *spec.Schema, seen 
 	case *types.Named:
 		return s.buildNamedEmbedded(ftpe, schema, seen)
 	case *types.Alias:
-		debugLogf("embedded alias %v => %v", ftpe, ftpe.Rhs())
+		debugLogf(s.ctx.debug, "embedded alias %v => %v", ftpe, ftpe.Rhs())
 		tgt := schemaTypable{schema, 0, s.ctx.opts.SkipExtensions}
 		return s.buildAlias(ftpe, tgt)
 	case *types.Union: // e.g. type X interface{ ~uint16 | ~float32 }
@@ -1415,7 +1415,7 @@ func (s *schemaBuilder) buildEmbedded(tpe types.Type, schema *spec.Schema, seen 
 }
 
 func (s *schemaBuilder) buildNamedEmbedded(ftpe *types.Named, schema *spec.Schema, seen map[string]string) error {
-	debugLogf("embedded named type: %T", ftpe.Underlying())
+	debugLogf(s.ctx.debug, "embedded named type: %T", ftpe.Underlying())
 	if unsupportedBuiltin(ftpe) {
 		log.Printf("WARNING: skipped unsupported builtin type: %v", ftpe)
 

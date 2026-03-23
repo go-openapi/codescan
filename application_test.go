@@ -41,7 +41,6 @@ func TestMain(m *testing.M) {
 		log.SetOutput(io.Discard)
 	} else {
 		// enable full debug when test is run with -enable-debug arg
-		Debug = true
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
 		log.SetOutput(os.Stderr)
 	}
@@ -101,6 +100,7 @@ func loadPetstorePkgsCtx(t *testing.T) *scanCtx {
 	sctx, err := newScanCtx(&Options{
 		Packages: []string{"./goparsing/petstore/..."},
 		WorkDir:  "fixtures",
+		Debug:    enableDebug,
 	})
 	require.NoError(t, err)
 	petstoreCtx = sctx
@@ -122,6 +122,7 @@ func loadClassificationPkgsCtx(t *testing.T) *scanCtx {
 			"./goparsing/classification/operations",
 		},
 		WorkDir: "fixtures",
+		Debug:   enableDebug,
 	})
 	require.NoError(t, err)
 	classificationCtx = sctx

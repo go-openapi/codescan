@@ -185,7 +185,7 @@ func (p *parameterBuilder) Build(operations map[string]*spec.Operation) error {
 			operations[opid] = operation
 			operation.ID = opid
 		}
-		debugLogf("building parameters for: %s", opid)
+		debugLogf(p.ctx.debug, "building parameters for: %s", opid)
 
 		// analyze struct body for fields etc
 		// each exported struct field:
@@ -209,7 +209,7 @@ func (p *parameterBuilder) buildFromType(otpe types.Type, op *spec.Operation, se
 	case *types.Named:
 		return p.buildNamedType(tpe, op, seen)
 	case *types.Alias:
-		debugLogf("alias(parameters.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
+		debugLogf(p.ctx.debug, "alias(parameters.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
 		return p.buildAlias(tpe, op, seen)
 	default:
 		return fmt.Errorf("unhandled type (%T): %s: %w", otpe, tpe.String(), ErrCodeScan)
@@ -225,7 +225,7 @@ func (p *parameterBuilder) buildNamedType(tpe *types.Named, op *spec.Operation, 
 
 	switch stpe := o.Type().Underlying().(type) {
 	case *types.Struct:
-		debugLogf("build from named type %s: %T", o.Name(), tpe)
+		debugLogf(p.ctx.debug, "build from named type %s: %T", o.Name(), tpe)
 		if decl, found := p.ctx.DeclForType(o.Type()); found {
 			return p.buildFromStruct(decl, stpe, op, seen)
 		}
@@ -285,7 +285,7 @@ func (p *parameterBuilder) buildAlias(tpe *types.Alias, op *spec.Operation, seen
 }
 
 func (p *parameterBuilder) buildFromField(fld *types.Var, tpe types.Type, typable swaggerTypable, seen map[string]spec.Parameter) error {
-	debugLogf("build from field %s: %T", fld.Name(), tpe)
+	debugLogf(p.ctx.debug, "build from field %s: %T", fld.Name(), tpe)
 
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
@@ -305,7 +305,7 @@ func (p *parameterBuilder) buildFromField(fld *types.Var, tpe types.Type, typabl
 	case *types.Named:
 		return p.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		debugLogf("alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs()) // TODO
+		debugLogf(p.ctx.debug, "alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs()) // TODO
 		return p.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrCodeScan)
@@ -523,13 +523,13 @@ func (p *parameterBuilder) buildFromStruct(decl *entityDecl, tpe *types.Struct, 
 // Returns the parameter name if the field was processed, or "" if it was skipped.
 func (p *parameterBuilder) processParamField(fld *types.Var, decl *entityDecl, seen map[string]spec.Parameter) (string, error) {
 	if !fld.Exported() {
-		debugLogf("skipping field %s because it's not exported", fld.Name())
+		debugLogf(p.ctx.debug, "skipping field %s because it's not exported", fld.Name())
 		return "", nil
 	}
 
 	afld := findASTField(decl.File, fld.Pos())
 	if afld == nil {
-		debugLogf("can't find source associated with %s", fld.String())
+		debugLogf(p.ctx.debug, "can't find source associated with %s", fld.String())
 		return "", nil
 	}
 
@@ -587,9 +587,9 @@ func (p *parameterBuilder) processParamField(fld *types.Var, decl *entityDecl, s
 	}
 
 	if ps.Ref.String() != "" {
-		setupRefParamTaggers(sp, &ps, p.ctx.opts.SkipExtensions)
+		setupRefParamTaggers(sp, &ps, p.ctx.opts.SkipExtensions, p.ctx.debug)
 	} else {
-		if err := setupInlineParamTaggers(sp, &ps, name, afld, p.ctx.opts.SkipExtensions); err != nil {
+		if err := setupInlineParamTaggers(sp, &ps, name, afld, p.ctx.opts.SkipExtensions, p.ctx.debug); err != nil {
 			return "", err
 		}
 	}

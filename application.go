@@ -9,28 +9,15 @@ import (
 	"go/token"
 	"go/types"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
-	"github.com/go-openapi/swag/conv"
 
 	"golang.org/x/tools/go/packages"
 )
 
 const pkgLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
-
-func safeConvert(str string) bool {
-	b, err := conv.ConvertBool(str)
-	if err != nil {
-		return false
-	}
-	return b
-}
-
-// Debug is true when process is run with DEBUG=1 env var.
-var Debug = safeConvert(os.Getenv("DEBUG")) //nolint:gochecknoglobals // package-level configuration from environment
 
 type node uint32
 
@@ -60,11 +47,13 @@ type Options struct {
 	TransparentAliases      bool // aliases are completely transparent, never creating definitions
 	DescWithRef             bool // allow overloaded descriptions together with $ref, otherwise jsonschema draft4 $ref predates everything
 	SkipExtensions          bool // skip generating x-go-* vendor extensions in the spec
+	Debug                   bool // enable verbose debug logging during scanning
 }
 
 type scanCtx struct {
-	pkgs []*packages.Package
-	app  *typeIndex
+	pkgs  []*packages.Package
+	app   *typeIndex
+	debug bool
 
 	opts *Options
 }
@@ -111,15 +100,17 @@ func newScanCtx(opts *Options) (*scanCtx, error) {
 		withXNullableForPointers(opts.SetXNullableForPointers),
 		withRefAliases(opts.RefAliases),
 		withTransparentAliases(opts.TransparentAliases),
+		withDebug(opts.Debug),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &scanCtx{
-		pkgs: pkgs,
-		app:  app,
-		opts: opts,
+		pkgs:  pkgs,
+		app:   app,
+		debug: opts.Debug,
+		opts:  opts,
 	}, nil
 }
 
@@ -308,14 +299,14 @@ func (s *scanCtx) FindDecl(pkgPath, name string) (*entityDecl, bool) {
 
 				def, ok := pkg.TypesInfo.Defs[ts.Name]
 				if !ok {
-					debugLogf("couldn't find type info for %s", ts.Name)
+					debugLogf(s.debug, "couldn't find type info for %s", ts.Name)
 					continue
 				}
 
 				nt, isNamed := def.Type().(*types.Named)
 				at, isAliased := def.Type().(*types.Alias)
 				if !isNamed && !isAliased {
-					debugLogf("%s is not a named or an aliased type but a %T", ts.Name, def.Type())
+					debugLogf(s.debug, "%s is not a named or an aliased type but a %T", ts.Name, def.Type())
 					continue
 				}
 
@@ -557,6 +548,12 @@ func withTransparentAliases(enabled bool) typeIndexOption {
 	}
 }
 
+func withDebug(enabled bool) typeIndexOption {
+	return func(a *typeIndex) {
+		a.debug = enabled
+	}
+}
+
 func newTypeIndex(pkgs []*packages.Package, opts ...typeIndexOption) (*typeIndex, error) {
 	ac := &typeIndex{
 		AllPackages: make(map[string]*packages.Package),
@@ -590,6 +587,7 @@ type typeIndex struct {
 	setXNullableForPointers bool
 	refAliases              bool
 	transparentAliases      bool
+	debug                   bool
 }
 
 func (a *typeIndex) build(pkgs []*packages.Package) error {
@@ -611,7 +609,7 @@ func (a *typeIndex) build(pkgs []*packages.Package) error {
 
 func (a *typeIndex) processPackage(pkg *packages.Package) error {
 	if !shouldAcceptPkg(pkg.PkgPath, a.includePkgs, a.excludePkgs) {
-		debugLogf("package %s is ignored due to rules", pkg.Name)
+		debugLogf(a.debug, "package %s is ignored due to rules", pkg.Name)
 		return nil
 	}
 
@@ -654,7 +652,7 @@ func (a *typeIndex) collectPathAnnotations(rx *regexp.Regexp, comments []*ast.Co
 			continue
 		}
 		if !shouldAcceptTag(pp.Tags, a.includeTags, a.excludeTags) {
-			debugLogf("operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
+			debugLogf(a.debug, "operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
 			continue
 		}
 		dst = append(dst, pp)
@@ -688,21 +686,21 @@ func (a *typeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 	for _, sp := range gd.Specs {
 		switch ts := sp.(type) {
 		case *ast.ValueSpec:
-			debugLogf("saw value spec: %v", ts.Names)
+			debugLogf(a.debug, "saw value spec: %v", ts.Names)
 			return
 		case *ast.ImportSpec:
-			debugLogf("saw import spec: %v", ts.Name)
+			debugLogf(a.debug, "saw import spec: %v", ts.Name)
 			return
 		case *ast.TypeSpec:
 			def, ok := pkg.TypesInfo.Defs[ts.Name]
 			if !ok {
-				debugLogf("couldn't find type info for %s", ts.Name)
+				debugLogf(a.debug, "couldn't find type info for %s", ts.Name)
 				continue
 			}
 			nt, isNamed := def.Type().(*types.Named)
 			at, isAliased := def.Type().(*types.Alias)
 			if !isNamed && !isAliased {
-				debugLogf("%s is not a named or aliased type but a %T", ts.Name, def.Type())
+				debugLogf(a.debug, "%s is not a named or aliased type but a %T", ts.Name, def.Type())
 
 				continue
 			}
@@ -730,7 +728,7 @@ func (a *typeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 			case n&responseNode != 0 && decl.HasResponseAnnotation():
 				a.Responses = append(a.Responses, decl)
 			default:
-				debugLogf(
+				debugLogf(a.debug,
 					"type %q skipped because it is not tagged as a model, a parameter or a response. %s",
 					decl.Obj().Name(),
 					"It may reenter the scope because it is a discovered dependency",
@@ -828,8 +826,8 @@ func (a *typeIndex) detectNodes(file *ast.File) (node, error) {
 	return n, nil
 }
 
-func debugLogf(format string, args ...any) {
-	if Debug {
+func debugLogf(debug bool, format string, args ...any) {
+	if debug {
 		_ = log.Output(logCallerDepth, fmt.Sprintf(format, args...))
 	}
 }

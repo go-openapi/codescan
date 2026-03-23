@@ -1493,16 +1493,18 @@ func parseEnum(val string, s *spec.SimpleSchema) []any {
 // alphaChars used when parsing for Vendor Extensions.
 const alphaChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func newSetExtensions(setter func(*spec.Extensions)) *setOpExtensions {
+func newSetExtensions(setter func(*spec.Extensions), debug bool) *setOpExtensions {
 	return &setOpExtensions{
-		set: setter,
-		rx:  rxExtensions,
+		set:   setter,
+		rx:    rxExtensions,
+		debug: debug,
 	}
 }
 
 type setOpExtensions struct {
-	set func(*spec.Extensions)
-	rx  *regexp.Regexp
+	set   func(*spec.Extensions)
+	rx    *regexp.Regexp
+	debug bool
 }
 
 type extensionObject struct {
@@ -1711,7 +1713,7 @@ func (ss *setOpExtensions) Parse(lines []string) error {
 		} else if m, ok := ext.Root.(map[string]any); ok {
 			exts.AddExtension(ext.Extension, m[ext.Extension])
 		} else {
-			debugLogf("Unknown Extension type: %s", fmt.Sprint(reflect.TypeOf(ext.Root)))
+			debugLogf(ss.debug, "Unknown Extension type: %s", fmt.Sprint(reflect.TypeOf(ext.Root)))
 		}
 	}
 
