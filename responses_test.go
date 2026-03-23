@@ -158,6 +158,8 @@ func assertSomeResponseHeaders(t *testing.T, responses map[string]spec.Response)
 			assert.InDeltaT(t, 3.00, *header.Minimum, epsilon)
 			assert.FalseT(t, header.ExclusiveMinimum)
 			assert.EqualValues(t, 27, header.Example)
+			require.NotNil(t, header.MultipleOf, "'score' should have had a multipleOf")
+			assert.InDeltaT(t, 3.00, *header.MultipleOf, epsilon, "'score' should have had multipleOf 3")
 
 		case "x-hdr-name":
 			assert.EqualT(t, "Name of this some response instance", header.Description)

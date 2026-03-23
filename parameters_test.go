@@ -181,7 +181,7 @@ func assertSomeOperationParams(t *testing.T, operations map[string]*spec.Operati
 	t.Helper()
 	op, okParam := operations["someOperation"]
 	assert.TrueT(t, okParam)
-	assert.Len(t, op.Parameters, 12)
+	assert.Len(t, op.Parameters, 13)
 
 	for _, param := range op.Parameters {
 		switch param.Name {
@@ -215,6 +215,8 @@ func assertSomeOperationParams(t *testing.T, operations map[string]*spec.Operati
 			assert.FalseT(t, param.ExclusiveMinimum)
 			assert.EqualValues(t, 2, param.Default, "%s default value is incorrect", param.Name)
 			assert.EqualValues(t, 27, param.Example)
+			require.NotNil(t, param.MultipleOf)
+			assert.InDeltaT(t, 3.00, *param.MultipleOf, epsilon)
 
 		case paramHdrName:
 			assert.EqualT(t, "Name of this no model instance", param.Description)
@@ -368,6 +370,26 @@ func assertSomeOperationParams(t *testing.T, operations map[string]*spec.Operati
 			assert.EqualT(t, int64(10), *itprop3.MaxLength, "'bar_slice.items.items.items.maxLength' should have been 10")
 			assert.EqualT(t, "\\w+", itprop3.Pattern, "'bar_slice.items.items.items.pattern' should have \\w+")
 
+		case "num_slice":
+			assert.EqualT(t, "a NumSlice has numeric items with item-level validation", param.Description)
+			assert.EqualT(t, "query", param.In)
+			assert.EqualT(t, "array", param.Type)
+			require.NotNil(t, param.MinItems)
+			assert.EqualT(t, int64(1), *param.MinItems)
+			require.NotNil(t, param.MaxItems)
+			assert.EqualT(t, int64(20), *param.MaxItems)
+
+			itprop := param.Items
+			require.NotNil(t, itprop)
+			require.NotNil(t, itprop.Minimum)
+			assert.InDeltaT(t, 5.00, *itprop.Minimum, epsilon, "'num_slice.items.minimum' should have been 5")
+			require.NotNil(t, itprop.Maximum)
+			assert.InDeltaT(t, 100.00, *itprop.Maximum, epsilon, "'num_slice.items.maximum' should have been 100")
+			require.NotNil(t, itprop.MultipleOf)
+			assert.InDeltaT(t, 5.00, *itprop.MultipleOf, epsilon, "'num_slice.items.multipleOf' should have been 5")
+			assert.TrueT(t, itprop.UniqueItems, "'num_slice.items' should have been unique")
+			assert.EqualT(t, "csv", itprop.CollectionFormat, "'num_slice.items.collectionFormat' should have been csv")
+
 		default:
 			assert.Fail(t, "unknown property: "+param.Name)
 		}
@@ -379,7 +401,7 @@ func assertAnotherOperationParamOrder(t *testing.T, operations map[string]*spec.
 
 	order, ok := operations["anotherOperation"]
 	assert.TrueT(t, ok)
-	assert.Len(t, order.Parameters, 12)
+	assert.Len(t, order.Parameters, 13)
 
 	for index, param := range order.Parameters {
 		switch param.Name {
@@ -405,8 +427,10 @@ func assertAnotherOperationParamOrder(t *testing.T, operations map[string]*spec.
 			assert.EqualT(t, 9, index, "%s index incorrect", param.Name)
 		case paramBarSlice:
 			assert.EqualT(t, 10, index, "%s index incorrect", param.Name)
-		case "items":
+		case "num_slice":
 			assert.EqualT(t, 11, index, "%s index incorrect", param.Name)
+		case "items":
+			assert.EqualT(t, 12, index, "%s index incorrect", param.Name)
 		default:
 			assert.Fail(t, "unknown property: "+param.Name)
 		}

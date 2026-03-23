@@ -63,6 +63,7 @@ type SpecialTypes struct {
 	PtrFormatUUID          *strfmt.UUID
 	Err                    error
 	Map                    map[string]*GoStruct
+	NamedArray             GoArray
 
 	// and what not
 	WhatNot struct {

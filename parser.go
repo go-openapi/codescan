@@ -721,7 +721,7 @@ func (sm *setMultipleOf) Parse(lines []string) error {
 		return nil
 	}
 	matches := sm.rx.FindStringSubmatch(lines[0])
-	if len(matches) > 2 && len(matches[1]) > 0 {
+	if len(matches) > 1 && len(matches[1]) > 0 {
 		multipleOf, err := strconv.ParseFloat(matches[1], 64)
 		if err != nil {
 			return err

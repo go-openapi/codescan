@@ -59,6 +59,26 @@ func TestApplication_LoadCode(t *testing.T) {
 	require.Len(t, sctx.app.Responses, 11)
 }
 
+func TestApplication_DebugLogging(t *testing.T) {
+	// Exercises the debugLogf code path with Debug: true.
+	_, err := Run(&Options{
+		Packages:   []string{"./goparsing/petstore/..."},
+		WorkDir:    "fixtures",
+		ScanModels: true,
+		Debug:      true,
+	})
+	require.NoError(t, err)
+}
+
+func TestRun_InvalidWorkDir(t *testing.T) {
+	// Exercises the Run() error path when package loading fails.
+	_, err := Run(&Options{
+		Packages: []string{"./..."},
+		WorkDir:  "/nonexistent/directory",
+	})
+	require.Error(t, err)
+}
+
 func TestAppScanner_NewSpec(t *testing.T) {
 	doc, err := Run(&Options{
 		Packages: []string{"./goparsing/petstore/..."},

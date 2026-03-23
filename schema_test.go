@@ -161,6 +161,8 @@ func TestSchemaBuilder(t *testing.T) {
 	assert.InDeltaT(t, 3.00, *prop.Minimum, epsilon)
 	assert.FalseT(t, prop.ExclusiveMinimum, "'score' should not have had an exclusive minimum")
 	assert.EqualValues(t, 27, prop.Example)
+	require.NotNil(t, prop.MultipleOf, "'score' should have had a multipleOf")
+	assert.InDeltaT(t, 3.00, *prop.MultipleOf, epsilon, "'score' should have had multipleOf 3")
 
 	expectedNameExtensions := spec.Extensions{
 		"x-go-name": "Name",
@@ -1763,6 +1765,12 @@ func testSpecialTypesStruct(t *testing.T, sp *spec.Swagger) {
 			mapSchema := mm.AdditionalProperties.Schema
 			require.NotNil(t, mapSchema)
 			assertIsRef(t, mapSchema, "#/definitions/GoStruct")
+		})
+
+		t.Run("a property which is a named array type should render as a ref", func(t *testing.T) {
+			na, ok := props["NamedArray"]
+			require.TrueT(t, ok)
+			assertIsRef(t, &na, "#/definitions/go_array")
 		})
 
 		testSpecialTypesWhatNot(t, sp, props)

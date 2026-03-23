@@ -226,6 +226,18 @@ type NoParams struct {
 	// in: query
 	BarSlice [][][]string `json:"bar_slice"`
 
+	// a NumSlice has numeric items with item-level validation
+	//
+	// min items: 1
+	// max items: 20
+	// items.minimum: 5
+	// items.maximum: 100
+	// items.multiple of: 5
+	// items.unique: true
+	// items.collection format: csv
+	// in: query
+	NumSlice []int32 `json:"num_slice"`
+
 	// the items for this order
 	//
 	// in: body
