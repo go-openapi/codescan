@@ -31,6 +31,7 @@
 | @Pungyeon | 2 | <https://github.com/go-openapi/codescan/commits?author=Pungyeon> |
 | @zasran | 2 | <https://github.com/go-openapi/codescan/commits?author=zasran> |
 | @bfirsh | 2 | <https://github.com/go-openapi/codescan/commits?author=bfirsh> |
+| @iamtheddrman | 1 | <https://github.com/go-openapi/codescan/commits?author=iamtheddrman> |
 | @seanbrant | 1 | <https://github.com/go-openapi/codescan/commits?author=seanbrant> |
 | @thaJeztah | 1 | <https://github.com/go-openapi/codescan/commits?author=thaJeztah> |
 | @tzneal | 1 | <https://github.com/go-openapi/codescan/commits?author=tzneal> |
@@ -46,7 +47,6 @@
 | @tptpp | 1 | <https://github.com/go-openapi/codescan/commits?author=tptpp> |
 | @wych42 | 1 | <https://github.com/go-openapi/codescan/commits?author=wych42> |
 | @youyuanwu | 1 | <https://github.com/go-openapi/codescan/commits?author=youyuanwu> |
-| @iamtheddrman | 1 | <https://github.com/go-openapi/codescan/commits?author=iamtheddrman> |
 | @afagundes | 1 | <https://github.com/go-openapi/codescan/commits?author=afagundes> |
 | @bjyoungblood | 1 | <https://github.com/go-openapi/codescan/commits?author=bjyoungblood> |
 | @ethantkoenig | 1 | <https://github.com/go-openapi/codescan/commits?author=ethantkoenig> |
