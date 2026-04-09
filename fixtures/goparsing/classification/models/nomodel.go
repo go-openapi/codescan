@@ -799,3 +799,52 @@ type NamedMapOfStoreOrderSlices GenericMap[string, GenericSlice[StoreOrder]]
 //
 // End of models related to named types with type arguments
 //
+
+// SomeStringSlice is a named slice type with swagger:type array.
+// swagger:type array
+type SomeStringSlice []string
+
+// swagger:model namedWithArrayType
+type NamedWithArrayType struct {
+	// Tags for this item.
+	Tags SomeStringSlice `json:"tags"`
+}
+
+// SomeFixedArray is a named fixed-length array type with swagger:type array.
+// swagger:type array
+type SomeFixedArray [5]string
+
+// swagger:model namedWithFixedArrayType
+type NamedWithFixedArrayType struct {
+	// Labels for this item.
+	Labels SomeFixedArray `json:"labels"`
+}
+
+// SomeStructWithBadType is a struct type with an unsupported swagger:type value.
+// The unsupported value should be ignored and the type should fall through to $ref.
+//
+// swagger:type badvalue
+// swagger:model someStructWithBadType
+type SomeStructWithBadType struct {
+	Name string `json:"name"`
+}
+
+// swagger:model namedWithBadStructType
+type NamedWithBadStructType struct {
+	// The nested struct with an unsupported swagger:type.
+	Nested SomeStructWithBadType `json:"nested"`
+}
+
+// SomeObjectType is a struct with swagger:type object.
+// swagger:type object
+// swagger:model someObjectType
+type SomeObjectType struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// swagger:model namedWithObjectStructType
+type NamedWithObjectStructType struct {
+	// Headers for this request.
+	Headers SomeObjectType `json:"headers"`
+}
