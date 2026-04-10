@@ -2582,3 +2582,80 @@ func TestSetEnumDoesNotPanic(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestSwaggerTypeNamedArray(t *testing.T) {
+	sctx := loadClassificationPkgsCtx(t)
+	decl := getClassificationModel(sctx, "NamedWithArrayType")
+	require.NotNil(t, decl)
+	prs := &schemaBuilder{
+		ctx:  sctx,
+		decl: decl,
+	}
+	models := make(map[string]spec.Schema)
+	require.NoError(t, prs.Build(models))
+	schema := models["namedWithArrayType"]
+
+	// swagger:type array on a named []string type should produce
+	// an inlined array with string items, not a $ref.
+	assertArrayProperty(t, &schema, "string", "tags", "", "Tags")
+}
+
+func TestSwaggerTypeNamedFixedArray(t *testing.T) {
+	sctx := loadClassificationPkgsCtx(t)
+	decl := getClassificationModel(sctx, "NamedWithFixedArrayType")
+	require.NotNil(t, decl)
+	prs := &schemaBuilder{
+		ctx:  sctx,
+		decl: decl,
+	}
+	models := make(map[string]spec.Schema)
+	require.NoError(t, prs.Build(models))
+	schema := models["namedWithFixedArrayType"]
+
+	// swagger:type array on a named [5]string type should produce
+	// an inlined array with string items via buildNamedArray.
+	assertArrayProperty(t, &schema, "string", "labels", "", "Labels")
+}
+
+func TestSwaggerTypeBadValueOnStruct(t *testing.T) {
+	sctx := loadClassificationPkgsCtx(t)
+	decl := getClassificationModel(sctx, "NamedWithBadStructType")
+	require.NotNil(t, decl)
+	prs := &schemaBuilder{
+		ctx:  sctx,
+		decl: decl,
+	}
+	models := make(map[string]spec.Schema)
+	require.NoError(t, prs.Build(models))
+	schema := models["namedWithBadStructType"]
+
+	// swagger:type with an unsupported value on a struct should not
+	// produce an empty schema — it should either inline the struct
+	// or create a $ref. The key assertion is that the property exists
+	// and is not empty (i.e., the error was not silently swallowed).
+	prop := schema.Properties["nested"]
+	hasType := len(prop.Type) > 0
+	hasRef := prop.Ref.String() != ""
+	hasProps := len(prop.Properties) > 0
+	assert.TrueT(t, hasType || hasRef || hasProps,
+		"expected nested property to have type, $ref, or properties — not an empty schema")
+}
+
+func TestSwaggerTypeObjectOnStruct(t *testing.T) {
+	sctx := loadClassificationPkgsCtx(t)
+	decl := getClassificationModel(sctx, "NamedWithObjectStructType")
+	require.NotNil(t, decl)
+	prs := &schemaBuilder{
+		ctx:  sctx,
+		decl: decl,
+	}
+	models := make(map[string]spec.Schema)
+	require.NoError(t, prs.Build(models))
+	schema := models["namedWithObjectStructType"]
+
+	// swagger:type object on a struct should inline as type:object,
+	// preserving the field's description.
+	prop := schema.Properties["headers"]
+	assert.TrueT(t, prop.Type.Contains("object"))
+	assert.Empty(t, prop.Ref.String(), "should not have $ref when swagger:type object is set")
+}

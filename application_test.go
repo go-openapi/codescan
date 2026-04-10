@@ -51,7 +51,7 @@ func TestMain(m *testing.M) {
 func TestApplication_LoadCode(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 	require.NotNil(t, sctx)
-	require.Len(t, sctx.app.Models, 39)
+	require.Len(t, sctx.app.Models, 45)
 	require.Len(t, sctx.app.Meta, 1)
 	require.Len(t, sctx.app.Routes, 7)
 	require.Empty(t, sctx.app.Operations)
