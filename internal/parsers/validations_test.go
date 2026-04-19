@@ -4,8 +4,11 @@
 package parsers
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/go-openapi/codescan/internal/ifaces"
+	"github.com/go-openapi/codescan/internal/scantest/mocks"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 
@@ -605,4 +608,143 @@ func TestSetRequiredSchema_Matches(t *testing.T) {
 	assert.TrueT(t, su.Matches("required: true"))
 	assert.TrueT(t, su.Matches("Required: false"))
 	assert.FalseT(t, su.Matches("something else"))
+}
+
+// strictMockValidationBuilder returns a MockValidationBuilder whose Set* methods
+// fail the test if called. Use this in tests that assert no mutation happened
+// (empty-input tolerance, overflow errors, etc.).
+func strictMockValidationBuilder(t *testing.T) *mocks.MockValidationBuilder {
+	t.Helper()
+	fail := func(name string) func(...any) {
+		return func(args ...any) { t.Fatalf("%s should not be called (args: %v)", name, args) }
+	}
+	m := &mocks.MockValidationBuilder{}
+	m.SetMaximumFunc = func(v float64, exclusive bool) { fail("SetMaximum")(v, exclusive) }
+	m.SetMinimumFunc = func(v float64, exclusive bool) { fail("SetMinimum")(v, exclusive) }
+	m.SetMultipleOfFunc = func(v float64) { fail("SetMultipleOf")(v) }
+	m.SetMaxItemsFunc = func(v int64) { fail("SetMaxItems")(v) }
+	m.SetMinItemsFunc = func(v int64) { fail("SetMinItems")(v) }
+	m.SetMaxLengthFunc = func(v int64) { fail("SetMaxLength")(v) }
+	m.SetMinLengthFunc = func(v int64) { fail("SetMinLength")(v) }
+	m.SetPatternFunc = func(v string) { fail("SetPattern")(v) }
+	m.SetUniqueFunc = func(v bool) { fail("SetUnique")(v) }
+	m.SetEnumFunc = func(v string) { fail("SetEnum")(v) }
+	m.SetDefaultFunc = func(v any) { fail("SetDefault")(v) }
+	m.SetExampleFunc = func(v any) { fail("SetExample")(v) }
+	return m
+}
+
+// TestValidationParsers_EmptyInputTolerance pins the defensive-guard
+// contract documented in the D.5 post-mortem: every Parse(lines) tolerates
+// nil / empty-slice / single-empty-string input without panic and without
+// mutating its target. Uses MockValidationBuilder (Set* funcs fail on call)
+// to prove no side effect.
+func TestValidationParsers_EmptyInputTolerance(t *testing.T) {
+	t.Parallel()
+
+	emptyInputs := [][]string{nil, {}, {""}}
+
+	cases := []struct {
+		name    string
+		factory func(*testing.T) ifaces.ValueParser
+	}{
+		{"SetMaximum", func(t *testing.T) ifaces.ValueParser { return NewSetMaximum(strictMockValidationBuilder(t)) }},
+		{"SetMinimum", func(t *testing.T) ifaces.ValueParser { return NewSetMinimum(strictMockValidationBuilder(t)) }},
+		{"SetMultipleOf", func(t *testing.T) ifaces.ValueParser { return NewSetMultipleOf(strictMockValidationBuilder(t)) }},
+		{"SetMaxItems", func(t *testing.T) ifaces.ValueParser { return NewSetMaxItems(strictMockValidationBuilder(t)) }},
+		{"SetMinItems", func(t *testing.T) ifaces.ValueParser { return NewSetMinItems(strictMockValidationBuilder(t)) }},
+		{"SetMaxLength", func(t *testing.T) ifaces.ValueParser { return NewSetMaxLength(strictMockValidationBuilder(t)) }},
+		{"SetMinLength", func(t *testing.T) ifaces.ValueParser { return NewSetMinLength(strictMockValidationBuilder(t)) }},
+		{"SetPattern", func(t *testing.T) ifaces.ValueParser { return NewSetPattern(strictMockValidationBuilder(t)) }},
+		{"SetUnique", func(t *testing.T) ifaces.ValueParser { return NewSetUnique(strictMockValidationBuilder(t)) }},
+		{"SetExample", func(t *testing.T) ifaces.ValueParser {
+			scheme := &oaispec.SimpleSchema{Type: "string"}
+			return NewSetExample(scheme, strictMockValidationBuilder(t))
+		}},
+		{"SetCollectionFormat", func(t *testing.T) ifaces.ValueParser {
+			// OperationValidationBuilder — use the op-variant mock, fail-all.
+			m := &mocks.MockOperationValidationBuilder{
+				SetCollectionFormatFunc: func(v string) { t.Fatalf("SetCollectionFormat should not be called (arg: %s)", v) },
+			}
+			return NewSetCollectionFormat(m)
+		}},
+		{"SetReadOnlySchema", func(_ *testing.T) ifaces.ValueParser { return NewSetReadOnlySchema(new(oaispec.Schema)) }},
+		{"SetDiscriminator", func(_ *testing.T) ifaces.ValueParser { return NewSetDiscriminator(new(oaispec.Schema), "kind") }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := tc.factory(t)
+			for _, in := range emptyInputs {
+				require.NoError(t, p.Parse(in))
+			}
+		})
+	}
+}
+
+// TestValidationParsers_NumericOverflow pins the overflow defence we kept
+// in D.5: the regex captures \p{N}+ (any-length digit string), which matches
+// values beyond int64 / float64 range. strconv.ParseInt / ParseFloat returns
+// ErrRange in those cases, and the parser must propagate the error without
+// invoking the target builder. See .claude/plans/dead-code-cleanup.md D.5
+// post-mortem for the rationale.
+func TestValidationParsers_NumericOverflow(t *testing.T) {
+	t.Parallel()
+
+	// int64 max is 9223372036854775807 (19 digits); 20+ 9's overflows.
+	intOverflow := strings.Repeat("9", 25)
+	// float64 max is ~1.8e308 in magnitude; 400 9's in decimal notation
+	// overflows ParseFloat (returns +Inf, ErrRange).
+	floatOverflow := strings.Repeat("9", 400)
+
+	cases := []struct {
+		name string
+		line string
+		newP func(*testing.T) ifaces.ValueParser
+	}{
+		{
+			name: "SetMaximum float overflow",
+			line: "maximum: " + floatOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMaximum(strictMockValidationBuilder(t)) },
+		},
+		{
+			name: "SetMinimum float overflow",
+			line: "minimum: " + floatOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMinimum(strictMockValidationBuilder(t)) },
+		},
+		{
+			name: "SetMultipleOf float overflow",
+			line: "multiple of: " + floatOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMultipleOf(strictMockValidationBuilder(t)) },
+		},
+		{
+			name: "SetMaxItems int overflow",
+			line: "max items: " + intOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMaxItems(strictMockValidationBuilder(t)) },
+		},
+		{
+			name: "SetMinItems int overflow",
+			line: "min items: " + intOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMinItems(strictMockValidationBuilder(t)) },
+		},
+		{
+			name: "SetMaxLength int overflow",
+			line: "max length: " + intOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMaxLength(strictMockValidationBuilder(t)) },
+		},
+		{
+			name: "SetMinLength int overflow",
+			line: "min length: " + intOverflow,
+			newP: func(t *testing.T) ifaces.ValueParser { return NewSetMinLength(strictMockValidationBuilder(t)) },
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := tc.newP(t)
+			require.TrueT(t, p.Matches(tc.line), "regex must match overflow input; otherwise the guard we're testing is dead")
+			err := p.Parse([]string{tc.line})
+			require.Error(t, err, "expected ParseInt/ParseFloat ErrRange")
+		})
+	}
 }

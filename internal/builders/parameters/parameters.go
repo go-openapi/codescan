@@ -167,7 +167,7 @@ func (p *ParameterBuilder) buildFromField(fld *types.Var, tpe types.Type, typabl
 	case *types.Named:
 		return p.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		logger.DebugLogf(p.ctx.Debug(), "alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs()) // TODO
+		logger.DebugLogf(p.ctx.Debug(), "alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs())
 		return p.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrParameters)

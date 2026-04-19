@@ -22,7 +22,7 @@ func NewTypable(items *oaispec.Items, level int, in string) Typable {
 	}
 }
 
-func (pt Typable) In() string { return pt.in } // TODO(fred): inherit from param
+func (pt Typable) In() string { return pt.in }
 
 func (pt Typable) Level() int { return pt.level }
 

@@ -144,7 +144,8 @@ func parseTags(line string) (modelOrResponse string, arrays int, isDefinitionRef
 			tag = tagValList[0]
 			value = tagValList[1]
 		} else {
-			// TODO: Print a warning, and in the long term, do not support not tagged values
+			// Proposal for enhancement: print a warning, and in the long term, do not support untagged values
+			//
 			// Add a default tag if none is supplied
 			if i == 0 {
 				tag = responseTag
@@ -194,11 +195,13 @@ func parseTags(line string) (modelOrResponse string, arrays int, isDefinitionRef
 		} else {
 			err = fmt.Errorf("invalid tag: %s: %w", tag, ErrParser)
 		}
-		// return error
+
+		// Error case
 		return modelOrResponse, arrays, isDefinitionRef, description, err
 	}
 
-	// TODO: Maybe do, if !parsedModelOrResponse {return some error}
+	// Proposal for enhancement: maybe do, if !parsedModelOrResponse {return some error}
+
 	return modelOrResponse, arrays, isDefinitionRef, description, err
 }
 

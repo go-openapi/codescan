@@ -27,6 +27,7 @@ const (
 )
 
 // SwaggerSchemaForType maps all Go builtin types that have Json representation to Swagger/Json types.
+//
 // See https://golang.org/pkg/builtin/ and http://swagger.io/specification/
 func SwaggerSchemaForType(typeName string, prop ifaces.SwaggerTypable) error {
 	switch typeName {
@@ -37,9 +38,9 @@ func SwaggerSchemaForType(typeName string, prop ifaces.SwaggerTypable) error {
 	case "complex128", "complex64":
 		return fmt.Errorf("unsupported builtin %q (no JSON marshaller): %w", typeName, ErrResolver)
 	case "error":
-		// TODO: error is often marshalled into a string but not always (e.g. errors package creates
+		// Proposal for enhancement: error is often marshalled into a string but not always (e.g. errors package creates
 		// errors that are marshalled into an empty object), this could be handled the same way
-		// custom JSON marshallers are handled (in future)
+		// custom JSON marshallers are handled (future)
 		prop.Typed("string", "")
 	case "float32":
 		prop.Typed("number", "float")

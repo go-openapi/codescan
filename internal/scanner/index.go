@@ -342,7 +342,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 					return 0, err
 				}
 			case "strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type":
-				// TODO: perhaps collect these and pass along to avoid lookups later on
+				// Proposal for enhancement: perhaps collect these and pass along to avoid lookups later on
 			case "allOf":
 			case "ignore":
 			default:

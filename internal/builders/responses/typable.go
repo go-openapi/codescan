@@ -57,14 +57,6 @@ func (ht responseTypable) Schema() *oaispec.Schema {
 	return ht.response.Schema
 }
 
-func (ht responseTypable) SetSchema(schema *oaispec.Schema) {
-	ht.response.Schema = schema
-}
-
-func (ht responseTypable) CollectionOf(items *oaispec.Items, format string) {
-	ht.header.CollectionOf(items, format)
-}
-
 func (ht responseTypable) AddExtension(key string, value any) {
 	ht.response.AddExtension(key, value)
 }

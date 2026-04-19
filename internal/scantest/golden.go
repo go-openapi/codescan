@@ -20,7 +20,7 @@ import (
 //
 // This is the regression-testing harness used to detect any behavior change
 // in the go-openapi/spec objects produced by the scanner, compared against
-// a captured baseline. See .claude/plans/regression-strategy.md.
+// a captured baseline.
 //
 // Golden files are named by content (fixture bundle + object kind + entity),
 // not by test name, so they survive test reshuffling.

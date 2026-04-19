@@ -34,7 +34,7 @@ func WithItemsPrefixLevel(level int) PrefixRxOption {
 	// the expression is 1-index based not 0-index
 	itemsPrefix := fmt.Sprintf(rxItemsPrefixFmt, level+1)
 	return func(expr string) *regexp.Regexp {
-		return Rxf(expr, itemsPrefix) // TODO(fred): cache
+		return Rxf(expr, itemsPrefix) // Proposal for enhancement(fred): cache
 	}
 }
 

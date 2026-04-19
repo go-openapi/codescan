@@ -123,23 +123,6 @@ func (s *Builder) buildFromDecl(_ *scanner.EntityDecl, schema *oaispec.Schema) e
 	}()
 
 	switch tpe := s.decl.ObjType().(type) {
-	// TODO(fredbi): we may safely remove all the cases here that are not Named or Alias
-	case *types.Basic:
-		logger.DebugLogf(s.ctx.Debug(), "basic: %v", tpe.Name())
-		return nil
-	case *types.Struct:
-		return s.buildFromStruct(s.decl, tpe, schema, make(map[string]string))
-	case *types.Interface:
-		return s.buildFromInterface(s.decl, tpe, schema, make(map[string]string))
-	case *types.Array:
-		logger.DebugLogf(s.ctx.Debug(), "array: %v -> %v", s.decl.Ident.Name, tpe.Elem().String())
-		return nil
-	case *types.Slice:
-		logger.DebugLogf(s.ctx.Debug(), "slice: %v -> %v", s.decl.Ident.Name, tpe.Elem().String())
-		return nil
-	case *types.Map:
-		logger.DebugLogf(s.ctx.Debug(), "map: %v -> [%v]%v", s.decl.Ident.Name, tpe.Key().String(), tpe.Elem().String())
-		return nil
 	case *types.Named:
 		logger.DebugLogf(s.ctx.Debug(), "named: %v", tpe)
 		return s.buildDeclNamed(tpe, schema)
@@ -148,17 +131,8 @@ func (s *Builder) buildFromDecl(_ *scanner.EntityDecl, schema *oaispec.Schema) e
 		tgt := Typable{schema, 0, s.ctx.SkipExtensions()}
 
 		return s.buildDeclAlias(tpe, tgt)
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", tpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", tpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", tpe)
-		return nil
 	default:
-		log.Printf("WARNING: missing parser for type %T, skipping model: %s\n", tpe, s.Name)
+		logger.UnsupportedTypeKind("buildFromDecl", tpe)
 		return nil
 	}
 }
@@ -283,17 +257,13 @@ func (s *Builder) buildFromType(tpe types.Type, tgt ifaces.SwaggerTypable) error
 		// a named alias, e.g. type X = {RHS type}.
 		logger.DebugLogf(s.ctx.Debug(), "alias(schema.buildFromType): got alias %v to %v", titpe, titpe.Rhs())
 		return s.buildAlias(titpe, tgt)
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", titpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", tpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", tpe)
-		return nil
 	default:
-		panic(fmt.Errorf("ERROR: can't determine refined type %[1]v (%[1]T): %w", titpe, resolvers.ErrInternal))
+		// Warn-and-skip for unsupported kinds (TypeParam, Chan, Signature,
+		// Union, or future go/types additions). The scanner runs on user
+		// code in uncontrolled environments, so panicking here would be a
+		// worse experience than producing a partial spec.
+		logger.UnsupportedTypeKind("buildFromType", titpe)
+		return nil
 	}
 }
 
@@ -392,21 +362,8 @@ func (s *Builder) buildNamedType(titpe *types.Named, tgt ifaces.SwaggerTypable) 
 			return s.makeRef(decl, tgt)
 		}
 		return nil
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", utitpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", utitpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", utitpe)
-		return nil
 	default:
-		log.Printf(
-			"WARNING: can't figure out object type for named type (%T): %v [alias: %t]",
-			titpe.Underlying(), titpe.Underlying(), titpe.Obj().IsAlias(),
-		)
-
+		logger.UnsupportedTypeKind("buildNamedType", utitpe)
 		return nil
 	}
 }
@@ -463,6 +420,18 @@ func (s *Builder) buildNamedBasic(tio *types.TypeName, pkg *packages.Package, cm
 	return resolvers.SwaggerSchemaForType(utitpe.String(), tgt)
 }
 
+// buildNamedStruct emits a $ref to a named struct definition (or a strfmt
+// override when `swagger:strfmt` is set on the type's doc).
+//
+// Preconditions established by the sole caller buildNamedType and not
+// re-checked here:
+//   - tio is never time.Time — IsStdTime(tio) short-circuits upstream to
+//     {string, date-time} before the Underlying() switch runs.
+//   - parsers.TypeName(cmt) is never set — the upstream TypeName branch
+//     either resolves via SwaggerSchemaForType or delegates to
+//     buildFromType(Underlying), so neither outcome reaches this function.
+//
+// Re-adding either check here would be dead code.
 func (s *Builder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, tgt ifaces.SwaggerTypable) error {
 	logger.DebugLogf(s.ctx.Debug(), "found struct: %s.%s", tio.Pkg().Path(), tio.Name())
 
@@ -472,23 +441,9 @@ func (s *Builder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, t
 		return nil
 	}
 
-	o := decl.Obj()
-	if resolvers.IsStdTime(o) {
-		tgt.Typed("string", "date-time")
-		return nil
-	}
-
 	if sfnm, isf := parsers.StrfmtName(cmt); isf {
 		tgt.Typed("string", sfnm)
 		return nil
-	}
-
-	if tn, ok := parsers.TypeName(cmt); ok {
-		if err := resolvers.SwaggerSchemaForType(tn, tgt); err == nil {
-			return nil
-		}
-		// For unsupported swagger:type values, fall through to makeRef
-		// rather than silently returning an empty schema.
 	}
 
 	return s.makeRef(decl, tgt)
@@ -552,6 +507,20 @@ func (s *Builder) buildNamedSlice(tio *types.TypeName, cmt *ast.CommentGroup, el
 }
 
 // buildDeclAlias builds a top-level alias declaration.
+//
+// Note on LHS checks NOT performed here: IsAny(o) / IsStdError(o) /
+// IsStdTime(o) on o := tpe.Obj() would all be false. o is the user's
+// declared name (e.g. "X" in `type X = any`), so o.Pkg() is always the
+// user's package and o.Name() is the user's identifier — neither
+// matches the predeclared any/error (Pkg()==nil) nor stdlib time.Time
+// (pkg "time", name "Time"). The live equivalents IsAny(ro) /
+// IsStdError(ro) inside the `case *types.Alias:` branch of the RHS
+// switch below do fire: they inspect the alias target, which for
+// `type X = any` resolves to the predeclared any TypeName.
+//
+// For `type Timestamp = time.Time` the date-time format is currently
+// lost — see Q3 in .claude/plans/observed-quirks.md. Any fix belongs
+// in the RHS switch, not here.
 func (s *Builder) buildDeclAlias(tpe *types.Alias, tgt ifaces.SwaggerTypable) error {
 	if resolvers.UnsupportedBuiltinType(tpe) {
 		log.Printf("WARNING: skipped unsupported builtin type: %v", tpe)
@@ -559,21 +528,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, tgt ifaces.SwaggerTypable) er
 	}
 
 	o := tpe.Obj()
-	if resolvers.IsAny(o) {
-		_ = tgt.Schema() // this is mutating tgt to create an empty schema
-		return nil
-	}
-	if resolvers.IsStdError(o) {
-		tgt.AddExtension("x-go-type", o.Name())
-		return resolvers.SwaggerSchemaForType(o.Name(), tgt)
-	}
 	resolvers.MustNotBeABuiltinType(o)
-
-	if resolvers.IsStdTime(o) {
-		tgt.Typed("string", "date-time")
-		return nil
-	}
-
 	resolvers.MustHaveRightHandSide(tpe)
 	rhs := tpe.Rhs()
 
@@ -865,19 +820,8 @@ func (s *Builder) processEmbeddedType(
 			fieldHasAllOf = true
 			schema.AddToAllOf(aliasedSchema)
 		}
-	case *types.Union:
-		log.Printf("WARNING: union type constraints are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", ftpe)
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", ftpe)
 	default:
-		log.Printf(
-			"WARNING: can't figure out object type for allOf named type (%T): %v",
-			ftpe, ftpe.Underlying(),
-		)
+		logger.UnsupportedTypeKind("buildNamedInterface.allOf", ftpe)
 	}
 
 	logger.DebugLogf(s.ctx.Debug(), "got embedded interface: %v {%T}, fieldHasAllOf: %t", fld, fld, fieldHasAllOf)
@@ -1222,18 +1166,9 @@ func (s *Builder) buildAllOf(tpe types.Type, schema *oaispec.Schema) error {
 		logger.DebugLogf(s.ctx.Debug(), "allOf member is alias %v => %v", ftpe, ftpe.Rhs())
 		tgt := Typable{schema: schema, skipExt: s.ctx.SkipExtensions()}
 		return s.buildAlias(ftpe, tgt)
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", ftpe)
-		return nil
 	default:
-		log.Printf("WARNING: missing allOf parser for a %T, skipping field", ftpe)
-		return fmt.Errorf("unable to resolve allOf member for: %v: %w", ftpe, ErrSchema)
+		logger.UnsupportedTypeKind("buildAllOf", ftpe)
+		return nil
 	}
 }
 
@@ -1276,23 +1211,9 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 		}
 
 		return s.buildFromInterface(decl, utpe, schema, make(map[string]string))
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", ftpe)
-		return nil
 	default:
-		log.Printf(
-			"WARNING: can't figure out object type for allOf named type (%T): %v",
-			ftpe, utpe,
-		)
-		return fmt.Errorf("unable to locate source file for allOf (%T): %v: %w",
-			ftpe, utpe, ErrSchema,
-		)
+		logger.UnsupportedTypeKind("buildNamedAllOf", utpe)
+		return nil
 	}
 }
 
@@ -1308,20 +1229,8 @@ func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, seen map
 		logger.DebugLogf(s.ctx.Debug(), "embedded alias %v => %v", ftpe, ftpe.Rhs())
 		tgt := Typable{schema, 0, s.ctx.SkipExtensions()}
 		return s.buildAlias(ftpe, tgt)
-	case *types.Union: // e.g. type X interface{ ~uint16 | ~float32 }
-		log.Printf("WARNING: union type constraints are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", ftpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", ftpe)
-		return nil
 	default:
-		log.Printf("WARNING: Missing embedded parser for a %T, skipping model\n", ftpe)
+		logger.UnsupportedTypeKind("buildEmbedded", ftpe)
 		return nil
 	}
 }
@@ -1362,22 +1271,8 @@ func (s *Builder) buildNamedEmbedded(ftpe *types.Named, schema *oaispec.Schema, 
 			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrSchema)
 		}
 		return s.buildFromInterface(decl, utpe, schema, seen)
-	case *types.Union: // e.g. type X interface{ ~uint16 | ~float32 }
-		log.Printf("WARNING: union type constraints are not supported yet %[1]v (%[1]T). Skipped", utpe)
-		return nil
-	case *types.TypeParam:
-		log.Printf("WARNING: generic type parameters are not supported yet %[1]v (%[1]T). Skipped", utpe)
-		return nil
-	case *types.Chan:
-		log.Printf("WARNING: channels are not supported %[1]v (%[1]T). Skipped", utpe)
-		return nil
-	case *types.Signature:
-		log.Printf("WARNING: functions are not supported %[1]v (%[1]T). Skipped", utpe)
-		return nil
 	default:
-		log.Printf("WARNING: can't figure out object type for embedded named type (%T): %v",
-			ftpe, utpe,
-		)
+		logger.UnsupportedTypeKind("buildNamedEmbedded", utpe)
 		return nil
 	}
 }

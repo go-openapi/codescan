@@ -194,3 +194,71 @@ func TestSetOpExtensions_Parse(t *testing.T) {
 		assert.EqualT(t, "1", obj["a"])
 	})
 }
+
+// TestSetOpExtensions_Parse_Malformed exercises the defensive guards in
+// buildExtensionObjects against malformed extension blocks. Each case
+// covers a branch that would otherwise be silently skipped with no test
+// witness — losing data without warning would be a nasty silent-bug class.
+// The contract these tests pin: malformed lines never panic, never
+// corrupt prior extensions, and are simply dropped from the output.
+func TestSetOpExtensions_Parse_Malformed(t *testing.T) {
+	t.Parallel()
+
+	t.Run("line with empty key is skipped", func(t *testing.T) {
+		// Covers the `if key == "" { return }` guard in buildExtensionObjects:
+		// a line whose colon-prefix produces an empty trimmed key (e.g. leading
+		// colon). Must not panic; nothing should land in the output.
+		var got oaispec.Extensions
+		se := NewSetExtensions(func(ext *oaispec.Extensions) { got = *ext }, false)
+
+		lines := []string{":just-a-value"}
+		require.NoError(t, se.Parse(lines))
+		assert.Empty(t, got)
+	})
+
+	t.Run("list item at top level with no prior extension is dropped", func(t *testing.T) {
+		// Covers `if stack == nil || len(*stack) == 0 { return }` in the
+		// `len(kv) <= 1` branch — a bare word (no colon) with no preceding
+		// x- extension to attach it to.
+		var got oaispec.Extensions
+		se := NewSetExtensions(func(ext *oaispec.Extensions) { got = *ext }, false)
+
+		lines := []string{"orphan-item"}
+		require.NoError(t, se.Parse(lines))
+		assert.Empty(t, got)
+	})
+
+	t.Run("non-x key:value at top level with no prior extension is dropped", func(t *testing.T) {
+		// Covers the second `if stack == nil || len(*stack) == 0 { return }`
+		// guard further down: a plain key:value line whose key isn't an x-
+		// extension and there's no open extension to nest under.
+		var got oaispec.Extensions
+		se := NewSetExtensions(func(ext *oaispec.Extensions) { got = *ext }, false)
+
+		lines := []string{"plain-key: plain-value"}
+		require.NoError(t, se.Parse(lines))
+		assert.Empty(t, got)
+	})
+
+	t.Run("valid extension followed by malformed lines keeps valid output", func(t *testing.T) {
+		// Composition check: a good x- extension followed by each malformed
+		// shape. The good extension must survive; the junk lines must be
+		// dropped without disturbing it.
+		var got oaispec.Extensions
+		se := NewSetExtensions(func(ext *oaispec.Extensions) { got = *ext }, false)
+
+		lines := []string{
+			"x-good: keeper",
+			":empty-key",
+			"orphan-item",
+			"plain-key: plain-value",
+		}
+		require.NoError(t, se.Parse(lines))
+
+		val, ok := got.GetString("x-good")
+		require.TrueT(t, ok)
+		assert.EqualT(t, "keeper", val)
+		_, hasPlain := got["plain-key"]
+		assert.FalseT(t, hasPlain, "non-x- key must not leak into output")
+	})
+}

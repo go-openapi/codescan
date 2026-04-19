@@ -13,20 +13,13 @@ import (
 )
 
 func setupParamTaggers(param *oaispec.Parameter, name string, afld *ast.Field, skipExt, debug bool) ([]parsers.TagParser, error) {
-	if param.Ref.String() != "" {
-		return setupRefParamTaggers(param, skipExt, debug), nil
-	}
-
+	// Parameter-level $ref (e.g. {$ref: "#/parameters/X"}) is not emitted by
+	// the scanner today — named struct fields become body params with a
+	// schema-level ref (ps.Schema.Ref), never ps.Ref. To support
+	// operation-level parameter refs, branch here on
+	// `param.Ref.String() != ""` and dispatch to a narrower tagger set
+	// (in, required, extensions only).
 	return setupInlineParamTaggers(param, name, afld, skipExt, debug)
-}
-
-// setupRefParamTaggers configures taggers for a parameter that is a $ref.
-func setupRefParamTaggers(param *oaispec.Parameter, skipExt, debug bool) []parsers.TagParser {
-	return []parsers.TagParser{
-		parsers.NewSingleLineTagParser("in", parsers.NewMatchParamIn(param)),
-		parsers.NewSingleLineTagParser("required", parsers.NewMatchParamRequired(param)),
-		parsers.NewMultiLineTagParser("Extensions", parsers.NewSetExtensions(spExtensionsSetter(param, skipExt), debug), true),
-	}
 }
 
 // baseInlineParamTaggers configures taggers for a fully-defined inline parameter.
