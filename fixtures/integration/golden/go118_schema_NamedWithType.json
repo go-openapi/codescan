@@ -1,0 +1,13 @@
+{
+  "namedWithType": {
+    "type": "object",
+    "properties": {
+      "some_map": {
+        "type": "object",
+        "x-go-name": "SomeMap"
+      }
+    },
+    "x-go-name": "NamedWithType",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go118"
+  }
+}

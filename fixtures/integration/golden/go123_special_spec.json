@@ -1,0 +1,173 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "GoStruct": {
+      "type": "object",
+      "properties": {
+        "A": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_constraint": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Uint": {
+              "type": "integer",
+              "format": "uint16"
+            }
+          }
+        }
+      ],
+      "x-go-name": "Constraint",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_indirect": {
+      "$ref": "#/definitions/generic_map_alias"
+    },
+    "generic_map": {
+      "x-go-name": "GenericMap",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_map_alias": {
+      "x-go-name": "GenericMapAlias",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "generic_slice": {
+      "type": "array",
+      "items": {},
+      "x-go-name": "GenericSlice",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "go_array": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "x-go-name": "GoArray",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "go_error": {
+      "type": "string",
+      "x-go-name": "Error",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special",
+      "x-go-type": "error"
+    },
+    "go_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint16"
+      },
+      "x-go-name": "GoMap",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "index_map": {
+      "x-go-name": "UnsupportedMap",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "numerical_constraint": {
+      "x-go-name": "Numerical",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "primitive": {
+      "type": "string",
+      "x-go-name": "Primitive",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "special_types": {
+      "type": "object",
+      "properties": {
+        "Duration": {
+          "$ref": "#/definitions/Duration"
+        },
+        "Err": {
+          "type": "string",
+          "x-go-type": "error"
+        },
+        "Error": {
+          "type": "string",
+          "x-go-type": "error"
+        },
+        "FormatDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "FormatTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "FormatUUID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "Map": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/GoStruct"
+          }
+        },
+        "Marshaler": {
+          "type": "string",
+          "x-go-type": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special.IsATextMarshaler"
+        },
+        "Message": {
+          "type": "object"
+        },
+        "NamedArray": {
+          "$ref": "#/definitions/go_array"
+        },
+        "PtrFormatUUID": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "PtrStruct": {
+          "$ref": "#/definitions/GoStruct"
+        },
+        "ShouldAlsoBeStringTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ShouldBeStringTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "WhatNot": {
+          "description": "and what not",
+          "type": "object"
+        }
+      },
+      "x-go-name": "SpecialTypes",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "unexported": {
+      "type": "object",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "union_alias": {
+      "$ref": "#/definitions/numerical_constraint"
+    },
+    "unsafe_pointer_alias": {
+      "x-go-name": "Unsafe",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    },
+    "upointer_alias": {
+      "type": "integer",
+      "format": "uint64",
+      "x-go-name": "UIntPtr",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
+    }
+  }
+}

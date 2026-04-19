@@ -1,0 +1,12 @@
+{
+  "Interfaced": {
+    "description": "An Interfaced struct contains objects with interface definitions",
+    "type": "object",
+    "properties": {
+      "custom_data": {
+        "x-go-name": "CustomData"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go118"
+  }
+}

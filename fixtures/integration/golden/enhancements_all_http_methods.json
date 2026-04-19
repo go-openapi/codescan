@@ -1,0 +1,91 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Get an item by id.",
+        "operationId": "getItem",
+        "responses": {
+          "200": {
+            "description": " OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Replace an item.",
+        "operationId": "putItem",
+        "responses": {
+          "200": {
+            "description": " OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Create an item.",
+        "operationId": "postItem",
+        "responses": {
+          "201": {
+            "description": " Created"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Delete an item.",
+        "operationId": "deleteItem",
+        "responses": {
+          "204": {
+            "description": " No Content"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Describe the supported HTTP methods.",
+        "operationId": "optionsItem",
+        "responses": {
+          "200": {
+            "description": " OK"
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Probe an item.",
+        "operationId": "headItem",
+        "responses": {
+          "200": {
+            "description": " OK"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Apply a partial update.",
+        "operationId": "patchItem",
+        "responses": {
+          "200": {
+            "description": " OK"
+          }
+        }
+      }
+    }
+  }
+}

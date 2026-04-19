@@ -1,0 +1,42 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Notification": {
+      "description": "Notification holds both enums so that the scanner emits schemas with\nthe enriched descriptions produced by findEnumValue.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "channel": {
+          "description": "The delivery channel.\nemail ChannelEmail ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
+          "type": "string",
+          "enum": [
+            "email",
+            "push"
+          ],
+          "x-go-enum-desc": "email ChannelEmail ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
+          "x-go-name": "Channel"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "priority": {
+          "description": "The priority level.\nlow PriorityLow  PriorityLow is a low-priority level.\nmedium PriorityMed  PriorityMed is a medium-priority level.\nhigh PriorityHigh  PriorityHigh is a high-priority level.",
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "x-go-enum-desc": "low PriorityLow  PriorityLow is a low-priority level.\nmedium PriorityMed  PriorityMed is a medium-priority level.\nhigh PriorityHigh  PriorityHigh is a high-priority level.",
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-docs"
+    }
+  }
+}

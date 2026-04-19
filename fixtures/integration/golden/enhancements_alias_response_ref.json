@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AliasedTopResponse": {
+      "description": "AliasedTopResponse annotates an alias as the response: the scanner\nresolves it via responseBuilder.buildAlias under RefAliases=true.",
+      "$ref": "#/definitions/exportedResponse"
+    },
+    "AliasedTopResponse2": {
+      "title": "AliasedTopResponse2 chains AliasedTopResponse through a second alias.",
+      "$ref": "#/definitions/AliasedTopResponse"
+    },
+    "Envelope": {
+      "type": "object",
+      "title": "Envelope is the canonical response body type.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response"
+    },
+    "exportedResponse": {
+      "type": "object",
+      "title": "exportedResponse is the backing struct for the aliased response.",
+      "properties": {
+        "body": {
+          "$ref": "#/definitions/Envelope"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response"
+    }
+  },
+  "responses": {
+    "aliasedTopResponse": {
+      "description": "AliasedTopResponse annotates an alias as the response: the scanner\nresolves it via responseBuilder.buildAlias under RefAliases=true."
+    },
+    "aliasedTopResponse2": {
+      "description": "AliasedTopResponse2 chains AliasedTopResponse through a second alias."
+    }
+  }
+}

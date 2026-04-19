@@ -1,0 +1,59 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "IgnoredModel": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"
+    },
+    "MyArray": {
+      "type": "array",
+      "title": "MyArray is a top-level named array.",
+      "items": {
+        "type": "string"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"
+    },
+    "MyInt": {
+      "type": "integer",
+      "format": "int64",
+      "title": "MyInt is a top-level named basic integer type.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"
+    },
+    "MyInterface": {
+      "type": "object",
+      "title": "MyInterface is a top-level named interface.",
+      "properties": {
+        "Identify": {
+          "description": "Identify returns the name of this object.",
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"
+    },
+    "MyMap": {
+      "type": "object",
+      "title": "MyMap is a top-level named map.",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"
+    },
+    "MySlice": {
+      "type": "array",
+      "title": "MySlice is a top-level named slice.",
+      "items": {
+        "type": "string"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"
+    }
+  }
+}

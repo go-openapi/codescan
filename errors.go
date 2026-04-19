@@ -3,7 +3,13 @@
 
 package codescan
 
-import "errors"
+type codescanError string
 
-// ErrCodeScan is the sentinel error for all errors originating from the codescan package.
-var ErrCodeScan = errors.New("codescan")
+func (e codescanError) Error() string {
+	return string(e)
+}
+
+const (
+	// ErrCodeScan is the sentinel error for all errors originating from the codescan package.
+	ErrCodeScan codescanError = "codescan error"
+)

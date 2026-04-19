@@ -1,0 +1,58 @@
+{
+  "/api/v1/somefunc": {
+    "post": {
+      "description": "Do something",
+      "operationId": "someFunc",
+      "responses": {
+        "200": {
+          "description": "Some func",
+          "examples": {
+            "application/json": {
+              "key": "value"
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/responses/ErrorResponse"
+        },
+        "503": {
+          "$ref": "#/responses/ErrorResponse"
+        }
+      },
+      "x-codeSamples": [
+        {
+          "lang": "curl",
+          "source": "curl -u \"${LOGIN}:${PASSWORD}\" -d '{\"key\": \"value\"}' -X POST   \"https://{host}/api/v1/somefunc\"\ncurl -u \"${LOGIN}:${PASSWORD}\" -d '{\"key2\": \"value2\"}' -X POST   \"https://{host}/api/v1/somefunc\"\n"
+        }
+      ]
+    }
+  },
+  "/api/v1/somefuncTabs": {
+    "post": {
+      "description": "Do something",
+      "operationId": "someFuncTabs",
+      "responses": {
+        "200": {
+          "description": "Some func",
+          "examples": {
+            "application/json": {
+              "key": "value"
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/responses/ErrorResponse"
+        },
+        "503": {
+          "$ref": "#/responses/ErrorResponse"
+        }
+      },
+      "x-codeSamples": [
+        {
+          "lang": "curl",
+          "source": "curl -u \"${LOGIN}:${PASSWORD}\" -d '{\"key\": \"value\"}' -X POST   \"https://{host}/api/v1/somefunc\"\ncurl -u \"${LOGIN}:${PASSWORD}\" -d '{\"key2\": \"value2\"}' -X POST   \"https://{host}/api/v1/somefunc\"\n"
+        }
+      ]
+    }
+  }
+}

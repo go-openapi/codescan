@@ -1,0 +1,11 @@
+{
+  "GetProductsResponse": {
+    "description": "",
+    "schema": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Product"
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "transparentAlias": {
+    "operationId": "transparentAlias",
+    "parameters": [
+      {
+        "x-go-name": "AliasBody",
+        "description": "AliasBody exercises alias handling for body parameters.",
+        "name": "aliasBody",
+        "in": "body",
+        "required": true,
+        "schema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "description": "ID of the payload.",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "ID"
+            },
+            "name": {
+              "description": "Name of the payload.",
+              "type": "string",
+              "x-go-name": "Name"
+            }
+          }
+        }
+      },
+      {
+        "type": "string",
+        "x-go-name": "AliasQuery",
+        "description": "AliasQuery exercises alias handling for non-body parameters.",
+        "name": "aliasQuery",
+        "in": "query"
+      }
+    ]
+  }
+}

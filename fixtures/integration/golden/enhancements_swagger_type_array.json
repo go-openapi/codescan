@@ -1,0 +1,54 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "objectStruct": {
+      "type": "object",
+      "x-go-name": "ObjectStruct",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/swagger-type-array"
+    },
+    "payload": {
+      "type": "object",
+      "title": "Payload aggregates all four cases so a full scan walks every branch.",
+      "properties": {
+        "headers": {
+          "description": "Headers for this request.",
+          "type": "object",
+          "x-go-name": "Headers"
+        },
+        "labels": {
+          "description": "Labels for this item.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Labels"
+        },
+        "nested": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "x-go-name": "Name"
+            }
+          },
+          "x-go-name": "Nested"
+        },
+        "tags": {
+          "description": "Tags for this item.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Tags"
+        }
+      },
+      "x-go-name": "Payload",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/swagger-type-array"
+    },
+    "structWithBadType": {
+      "x-go-name": "StructWithBadType",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/swagger-type-array"
+    }
+  }
+}

@@ -1,0 +1,229 @@
+{
+  "Identifiable": {
+    "description": "Identifiable is an interface for things that have an ID",
+    "type": "object",
+    "required": [
+      "id"
+    ],
+    "properties": {
+      "id": {
+        "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+        "type": "integer",
+        "format": "int64",
+        "maximum": 1000,
+        "exclusiveMaximum": true,
+        "minimum": 10,
+        "exclusiveMinimum": true,
+        "x-go-name": "ID"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "TeslaCar": {
+    "description": "TeslaCar is a tesla car",
+    "type": "object",
+    "properties": {
+      "autoPilot": {
+        "description": "AutoPilot returns true when it supports autopilot",
+        "type": "boolean",
+        "x-go-name": "AutoPilot"
+      },
+      "model": {
+        "description": "The model of tesla car\n\ndiscriminated: true",
+        "type": "string",
+        "x-go-name": "Model"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "animal": {
+    "description": "it should deserialize into one of the struct types that\nenlist for being implementations of this struct",
+    "type": "object",
+    "title": "A BaseStruct is a struct that has subtypes.",
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "id": {
+        "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+        "type": "integer",
+        "format": "int64",
+        "maximum": 1000,
+        "exclusiveMaximum": true,
+        "minimum": 10,
+        "exclusiveMinimum": true,
+        "x-go-name": "ID"
+      },
+      "jsonClass": {
+        "description": "StructType the type of this polymorphic model",
+        "type": "string",
+        "x-go-name": "StructType"
+      },
+      "name": {
+        "description": "Name of this no model instance",
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 4,
+        "pattern": "[A-Za-z0-9-.]*",
+        "x-go-name": "Name"
+      }
+    },
+    "x-go-name": "BaseStruct",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+    "discriminator": "jsonClass"
+  },
+  "cars": {
+    "description": "Cars is a collection of cars",
+    "type": "object",
+    "properties": {
+      "cars": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        "x-go-name": "Cars"
+      }
+    },
+    "x-go-name": "Cars",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "fish": {
+    "description": "Fish represents a base type implemented as interface\nthe nullary methods of this interface will be included as",
+    "allOf": [
+      {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+            "type": "integer",
+            "format": "int64",
+            "maximum": 1000,
+            "exclusiveMaximum": true,
+            "minimum": 10,
+            "exclusiveMinimum": true,
+            "x-go-name": "ID"
+          }
+        }
+      },
+      {
+        "$ref": "#/definitions/water"
+      },
+      {
+        "$ref": "#/definitions/extra"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "colorName": {
+            "type": "string",
+            "x-go-name": "ColorName"
+          }
+        }
+      },
+      {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "jsonClass": {
+            "description": "StructType the type of this polymorphic model",
+            "type": "string",
+            "x-go-name": "StructType"
+          },
+          "name": {
+            "description": "Name of this no model instance",
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 4,
+            "pattern": "[A-Za-z0-9-.]*",
+            "x-go-name": "Name"
+          }
+        },
+        "discriminator": "jsonClass"
+      }
+    ],
+    "x-go-name": "Fish",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "modelA": {
+    "description": "The ModelA version of the tesla car",
+    "type": "object",
+    "properties": {
+      "Tesla": {
+        "$ref": "#/definitions/TeslaCar"
+      },
+      "doors": {
+        "description": "The number of doors on this Model A",
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "Doors"
+      }
+    },
+    "x-go-name": "ModelA",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "modelS": {
+    "description": "The ModelS version of the tesla car",
+    "allOf": [
+      {
+        "$ref": "#/definitions/TeslaCar"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "edition": {
+            "description": "The edition of this Model S",
+            "type": "string",
+            "x-go-name": "Edition"
+          }
+        }
+      }
+    ],
+    "x-class": "com.tesla.models.ModelS",
+    "x-go-name": "ModelS",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "modelX": {
+    "description": "The ModelX version of the tesla car",
+    "allOf": [
+      {
+        "$ref": "#/definitions/TeslaCar"
+      },
+      {
+        "type": "object",
+        "properties": {
+          "doors": {
+            "description": "The number of doors on this Model X",
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Doors"
+          }
+        }
+      }
+    ],
+    "x-class": "com.tesla.models.ModelX",
+    "x-go-name": "ModelX",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  },
+  "water": {
+    "description": "WaterType is an interface describing a water type",
+    "type": "object",
+    "properties": {
+      "saltWater": {
+        "type": "boolean",
+        "x-go-name": "SaltWater"
+      },
+      "sweetWater": {
+        "type": "boolean",
+        "x-go-name": "SweetWater"
+      }
+    },
+    "x-go-name": "WaterType",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+  }
+}

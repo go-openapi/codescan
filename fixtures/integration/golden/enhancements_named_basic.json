@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "User": {
+      "description": "User embeds the three named basic types above so that the full scan\nwalks buildNamedBasic for each field.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "colour": {
+          "type": "string",
+          "x-go-name": "Colour"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "x-go-name": "Email"
+        },
+        "grade": {
+          "x-go-name": "Grade"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/named-basic"
+    }
+  }
+}

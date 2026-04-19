@@ -1,0 +1,63 @@
+{
+  "pet": {
+    "description": "It is used to describe the animals available in the store.",
+    "type": "object",
+    "title": "A Pet is the main product in the store.",
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "birthday": {
+        "description": "The pet's birthday",
+        "type": "string",
+        "format": "date",
+        "x-go-name": "Birthday"
+      },
+      "id": {
+        "description": "The id of the pet.",
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "ID"
+      },
+      "name": {
+        "description": "The name of the pet.",
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 3,
+        "pattern": "\\w[\\w-]+",
+        "x-go-name": "Name"
+      },
+      "photoUrls": {
+        "description": "The photo urls for the pet.\nThis only accepts jpeg or png images.",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "\\.(jpe?g|png)$"
+        },
+        "x-go-name": "PhotoURLs"
+      },
+      "status": {
+        "description": "The current status of the pet in the store.\navailable STATUS_AVAILABLE\npending STATUS_PENDING\nsold STATUS_SOLD",
+        "type": "string",
+        "enum": [
+          "available",
+          "pending",
+          "sold"
+        ],
+        "x-go-enum-desc": "available STATUS_AVAILABLE\npending STATUS_PENDING\nsold STATUS_SOLD",
+        "x-go-name": "Status"
+      },
+      "tags": {
+        "description": "Extra bits of information attached to this pet.",
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/tag"
+        },
+        "x-go-name": "Tags"
+      }
+    },
+    "x-go-name": "Pet",
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/petstore/models"
+  }
+}

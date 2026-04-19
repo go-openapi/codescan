@@ -1,0 +1,187 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AliasedTopParams": {
+      "description": "AliasedTopParams annotates an alias as the parameters set: the scanner\nmust resolve the alias via parameterBuilder.buildAlias.",
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "description": "in: body",
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "ID"
+            },
+            "name": {
+              "type": "string",
+              "x-go-name": "Name"
+            }
+          },
+          "x-go-name": "Data"
+        },
+        "search": {
+          "description": "in: query",
+          "type": "string",
+          "x-go-name": "Search"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "AliasedTopParams2": {
+      "type": "object",
+      "title": "AliasedTopParams2 chains AliasedTopParams through a second alias layer.",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "description": "in: body",
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "ID"
+            },
+            "name": {
+              "type": "string",
+              "x-go-name": "Name"
+            }
+          },
+          "x-go-name": "Data"
+        },
+        "search": {
+          "description": "in: query",
+          "type": "string",
+          "x-go-name": "Search"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "EnvelopeAlias2": {
+      "type": "object",
+      "title": "EnvelopeAlias2 aliases EnvelopeAlias (alias-of-alias).",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/PayloadAlias"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "Payload": {
+      "type": "object",
+      "title": "Payload is the canonical struct referenced by aliases.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "PayloadAlias": {
+      "type": "object",
+      "title": "PayloadAlias aliases Payload once.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "PayloadAlias2": {
+      "type": "object",
+      "title": "PayloadAlias2 aliases PayloadAlias (alias-of-alias chain).",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "QueryIDAlias": {
+      "type": "string",
+      "title": "QueryIDAlias aliases QueryID for a non-body parameter field.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "ResponseEnvelope": {
+      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses.",
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/PayloadAlias"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "exportedParams": {
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/Payload"
+        },
+        "search": {
+          "description": "in: query",
+          "type": "string",
+          "x-go-name": "Search"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    }
+  },
+  "responses": {
+    "aliasedResponse": {
+      "description": "AliasedResponse has a body field whose type is an alias chain.",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAlias2"
+      }
+    },
+    "namedTopResponse": {
+      "description": "NamedTopResponse is a plain struct annotated as a response — used to\nkeep a deterministic response in the expand-mode fixture even though\nresponse-level aliasing is deferred to the alias-response fixture.",
+      "schema": {
+        "$ref": "#/definitions/ResponseEnvelope"
+      }
+    }
+  }
+}

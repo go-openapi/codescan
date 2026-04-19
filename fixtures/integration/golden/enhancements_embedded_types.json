@@ -1,0 +1,112 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Base": {
+      "type": "object",
+      "title": "Base is a plain struct used as the right-hand side of an alias.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
+    },
+    "BaseAlias": {
+      "description": "BaseAlias aliases Base so that embedding it exercises the alias branch\nof buildEmbedded.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
+    },
+    "EmbedsAlias": {
+      "title": "EmbedsAlias embeds an aliased named struct.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseAlias"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "extra": {
+              "type": "string",
+              "x-go-name": "Extra"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
+    },
+    "EmbedsEmptyNamedInterface": {
+      "type": "object",
+      "title": "EmbedsEmptyNamedInterface embeds a named empty interface.",
+      "properties": {
+        "value": {
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
+    },
+    "EmbedsError": {
+      "description": "EmbedsError embeds the predeclared error interface, exercising the\nisStdError branch of buildNamedEmbedded.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Code"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types",
+      "x-go-type": "error"
+    },
+    "EmbedsNamedInterface": {
+      "type": "object",
+      "title": "EmbedsNamedInterface embeds a non-empty, non-error named interface.",
+      "properties": {
+        "Handle": {
+          "description": "Handle is a unary method exposed as a schema property.",
+          "type": "string"
+        },
+        "tag": {
+          "type": "string",
+          "x-go-name": "Tag"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
+    },
+    "Handler": {
+      "type": "object",
+      "title": "Handler is a non-empty named interface with a single exported method.",
+      "properties": {
+        "Handle": {
+          "description": "Handle is a unary method exposed as a schema property.",
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
+    }
+  }
+}

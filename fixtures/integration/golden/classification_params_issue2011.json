@@ -1,0 +1,13 @@
+{
+  "putNumPlate": {
+    "operationId": "putNumPlate",
+    "parameters": [
+      {
+        "x-go-name": "NumPlates",
+        "name": "num_plates",
+        "in": "body",
+        "schema": {}
+      }
+    ]
+  }
+}

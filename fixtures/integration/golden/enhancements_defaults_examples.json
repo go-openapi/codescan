@@ -1,0 +1,80 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Metrics": {
+      "description": "Metrics aggregates fields that carry default and example tags for the\nnumeric, array and object branches of parseValueFromSchema.",
+      "type": "object",
+      "properties": {
+        "counts": {
+          "description": "Counts is a slice of integers with a JSON-array default.",
+          "type": "array",
+          "default": [
+            1,
+            2,
+            3
+          ],
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Counts",
+          "example": [
+            4,
+            5
+          ]
+        },
+        "props": {
+          "description": "Props is a map represented as a JSON object.",
+          "type": "object",
+          "default": {
+            "k": 1
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Props",
+          "example": {
+            "q": 42,
+            "r": 7
+          }
+        },
+        "ratio": {
+          "description": "Ratio is a float32 value.",
+          "type": "number",
+          "format": "float",
+          "default": 1.5,
+          "x-go-name": "Ratio",
+          "example": 2.25
+        },
+        "tags": {
+          "description": "Tags is a slice with a JSON-array default and example.",
+          "type": "array",
+          "default": [
+            "a",
+            "b"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Tags",
+          "example": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "weight": {
+          "description": "Weight is a float64 value.",
+          "type": "number",
+          "format": "double",
+          "default": 3.14,
+          "x-go-name": "Weight",
+          "example": 9.81
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/defaults-examples"
+    }
+  }
+}

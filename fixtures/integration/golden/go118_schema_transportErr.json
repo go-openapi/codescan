@@ -1,0 +1,20 @@
+{
+  "transportErr": {
+    "type": "object",
+    "required": [
+      "message"
+    ],
+    "properties": {
+      "data": {
+        "description": "Data is additional data about the error.",
+        "x-go-name": "Data"
+      },
+      "message": {
+        "description": "Message is a human-readable description of the error.",
+        "type": "string",
+        "x-go-name": "Message"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go118"
+  }
+}

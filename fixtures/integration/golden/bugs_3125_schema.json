@@ -1,0 +1,22 @@
+{
+  "Item": {
+    "type": "object",
+    "required": [
+      "value1",
+      "value2"
+    ],
+    "properties": {
+      "value1": {
+        "description": "Nullable value",
+        "x-nullable": true,
+        "$ref": "#/definitions/ValueStruct"
+      },
+      "value2": {
+        "description": "Non-nullable value",
+        "$ref": "#/definitions/ValueStruct",
+        "example": "{\"value\": 42}"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3125/minimal"
+  }
+}

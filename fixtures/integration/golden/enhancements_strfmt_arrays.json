@@ -1,0 +1,47 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Carrier": {
+      "type": "object",
+      "title": "Carrier embeds all of the named array and slice types above.",
+      "required": [
+        "hash"
+      ],
+      "properties": {
+        "blob": {
+          "type": "string",
+          "format": "byte",
+          "x-go-name": "Blob"
+        },
+        "hash": {
+          "type": "string",
+          "format": "byte",
+          "x-go-name": "Hash"
+        },
+        "objectId": {
+          "type": "string",
+          "format": "bsonobjectid",
+          "x-go-name": "ObjectID"
+        },
+        "signature": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "password"
+          },
+          "x-go-name": "Signature"
+        },
+        "token": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "x-go-name": "Token"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-arrays"
+    }
+  }
+}

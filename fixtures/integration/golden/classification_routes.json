@@ -1,0 +1,332 @@
+{
+  "/orders": {
+    "get": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "lists orders filtered by some parameters.",
+      "operationId": "listOrders",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "orders:read",
+            "https://www.googleapis.com/auth/userinfo.email"
+          ]
+        }
+      ],
+      "x-some-flag": "false",
+      "x-some-list": [
+        "item1",
+        "item2",
+        "item3"
+      ],
+      "x-some-object": {
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3",
+        "subobject": {
+          "subkey1": "subvalue1",
+          "subkey2": "subvalue2"
+        }
+      }
+    },
+    "post": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "create an order based on the parameters.",
+      "operationId": "createOrder",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  },
+  "/orders/{id}": {
+    "get": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "gets the details for an order.",
+      "operationId": "orderDetails",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "201": {
+          "$ref": "#/responses/fileResponse"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    },
+    "put": {
+      "description": "When the order doesn't exist this will return an error.",
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "orders"
+      ],
+      "summary": "Update the details for an order.",
+      "operationId": "updateOrder",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "summary": "delete a particular order.",
+      "operationId": "deleteOrder",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "202": {
+          "description": "Some description"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  },
+  "/pets": {
+    "get": {
+      "description": "This will show all available pets by default.\nYou can get the pets that are out of stock",
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "pets",
+        "users"
+      ],
+      "summary": "Lists pets filtered by some parameters.",
+      "operationId": "listPets",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ],
+      "x-some-flag": "true"
+    },
+    "post": {
+      "consumes": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "produces": [
+        "application/json",
+        "application/x-protobuf"
+      ],
+      "schemes": [
+        "http",
+        "https",
+        "ws",
+        "wss"
+      ],
+      "tags": [
+        "pets",
+        "users"
+      ],
+      "summary": "Create a pet based on the parameters.",
+      "operationId": "createPet",
+      "responses": {
+        "200": {
+          "$ref": "#/responses/someResponse"
+        },
+        "422": {
+          "$ref": "#/responses/validationError"
+        },
+        "default": {
+          "$ref": "#/responses/genericError"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        },
+        {
+          "oauth": [
+            "read",
+            "write"
+          ]
+        }
+      ]
+    }
+  }
+}
