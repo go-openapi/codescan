@@ -102,8 +102,8 @@ type ProducesDropEmptyParser struct {
 	*multilineDropEmptyParser
 }
 
-func NewProducesDropEmptyParser(set func([]string)) *ConsumesDropEmptyParser {
-	return &ConsumesDropEmptyParser{
+func NewProducesDropEmptyParser(set func([]string)) *ProducesDropEmptyParser {
+	return &ProducesDropEmptyParser{
 		multilineDropEmptyParser: &multilineDropEmptyParser{
 			set: set,
 			rx:  rxProduces,
