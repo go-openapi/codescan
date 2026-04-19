@@ -15,6 +15,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+const modelAnnotation = "model"
+
 func TestShouldAcceptTag(t *testing.T) {
 	tagTests := []struct {
 		tags        []string
@@ -206,24 +208,24 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 func TestCheckStructConflict(t *testing.T) {
 	t.Run("no conflict with same annotation", func(t *testing.T) {
 		seen := ""
-		err := checkStructConflict(&seen, "model", "// swagger:model Foo")
+		err := checkStructConflict(&seen, modelAnnotation, "// swagger:model Foo")
 		require.NoError(t, err)
-		assert.EqualT(t, "model", seen)
+		assert.EqualT(t, modelAnnotation, seen)
 
 		// Same annotation again: no conflict.
-		err = checkStructConflict(&seen, "model", "// swagger:model Bar")
+		err = checkStructConflict(&seen, modelAnnotation, "// swagger:model Bar")
 		require.NoError(t, err)
 	})
 
 	t.Run("conflict with different struct annotations", func(t *testing.T) {
-		seen := "model"
+		seen := modelAnnotation
 		err := checkStructConflict(&seen, "parameters", "// swagger:parameters myOp")
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
 	})
 
 	t.Run("model then response conflicts", func(t *testing.T) {
-		seen := "model"
+		seen := modelAnnotation
 		err := checkStructConflict(&seen, "response", "// swagger:response myResp")
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
@@ -231,7 +233,7 @@ func TestCheckStructConflict(t *testing.T) {
 
 	t.Run("parameters then model conflicts", func(t *testing.T) {
 		seen := "parameters"
-		err := checkStructConflict(&seen, "model", "// swagger:model Foo")
+		err := checkStructConflict(&seen, modelAnnotation, "// swagger:model Foo")
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
 	})

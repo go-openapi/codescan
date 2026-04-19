@@ -186,6 +186,17 @@ func TestSpecialSchemas(t *testing.T) {
 		})
 	})
 
+	// Strip stdlib-dependent definitions whose shape drifts across Go
+	// versions (e.g. reflect.Type grew iterator methods in Go 1.26). The
+	// sub-tests above already pin the scanner behaviour (the fields resolve
+	// to a $ref with x-go-package: reflect); the snapshot only needs to
+	// cover the stable, fixture-local parts of the spec.
+	for name, def := range sp.Definitions {
+		if pkg, ok := def.Extensions.GetString("x-go-package"); ok && pkg == "reflect" {
+			delete(sp.Definitions, name)
+		}
+	}
+
 	scantest.CompareOrDumpJSON(t, sp, "go123_special_spec.json")
 }
 

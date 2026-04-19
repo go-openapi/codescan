@@ -19,7 +19,7 @@ func TestApplication_LoadCode(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 	require.NotNil(t, sctx)
 	require.NotNil(t, sctx.app)
-	require.Len(t, sctx.app.Models, 39)
+	require.Len(t, sctx.app.Models, 45)
 	require.Len(t, sctx.app.Meta, 1)
 	require.Len(t, sctx.app.Routes, 7)
 	require.Empty(t, sctx.app.Operations)
@@ -118,7 +118,7 @@ func TestScanCtx_Models(t *testing.T) {
 	for range sctx.Models() {
 		count++
 	}
-	assert.EqualT(t, 39, count)
+	assert.EqualT(t, 45, count)
 }
 
 func TestScanCtx_ExtraModels(t *testing.T) {

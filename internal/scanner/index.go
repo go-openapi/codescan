@@ -321,7 +321,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				n |= routeNode
 			case "operation":
 				n |= operationNode
-			case "model": //nolint:goconst // annotation keyword matched from swagger comment
+			case "model": // annotation keyword matched from swagger comment.
 				n |= modelNode
 				if err := checkStructConflict(&seenStruct, annotation, cline.Text); err != nil {
 					return 0, err

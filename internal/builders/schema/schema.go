@@ -346,10 +346,15 @@ func (s *Builder) buildNamedType(titpe *types.Named, tgt ifaces.SwaggerTypable) 
 		cmt = new(ast.CommentGroup)
 	}
 
-	if typeName, ok := parsers.TypeName(cmt); ok {
-		_ = resolvers.SwaggerSchemaForType(typeName, tgt)
-
-		return nil
+	if tn, ok := parsers.TypeName(cmt); ok {
+		if err := resolvers.SwaggerSchemaForType(tn, tgt); err == nil {
+			return nil
+		}
+		// For unsupported swagger:type values (e.g., "array"), fall through
+		// to underlying type resolution so the full schema (including items
+		// for slices) is properly built. Build directly from the underlying
+		// type to bypass the named-type $ref creation.
+		return s.buildFromType(titpe.Underlying(), tgt)
 	}
 
 	if s.decl.Spec.Assign.IsValid() {
@@ -478,9 +483,12 @@ func (s *Builder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, t
 		return nil
 	}
 
-	if typeName, ok := parsers.TypeName(cmt); ok {
-		_ = resolvers.SwaggerSchemaForType(typeName, tgt)
-		return nil
+	if tn, ok := parsers.TypeName(cmt); ok {
+		if err := resolvers.SwaggerSchemaForType(tn, tgt); err == nil {
+			return nil
+		}
+		// For unsupported swagger:type values, fall through to makeRef
+		// rather than silently returning an empty schema.
 	}
 
 	return s.makeRef(decl, tgt)
@@ -502,6 +510,14 @@ func (s *Builder) buildNamedArray(tio *types.TypeName, cmt *ast.CommentGroup, el
 		tgt.Items().Typed("string", sfnm)
 		return nil
 	}
+	// When swagger:type is set to an unsupported value (e.g., "array"),
+	// skip the $ref and inline the array schema with proper items type.
+	if tn, ok := parsers.TypeName(cmt); ok {
+		if err := resolvers.SwaggerSchemaForType(tn, tgt); err != nil {
+			return s.buildFromType(elem, tgt.Items())
+		}
+		return nil
+	}
 	if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {
 		return s.makeRef(decl, tgt)
 	}
@@ -517,6 +533,16 @@ func (s *Builder) buildNamedSlice(tio *types.TypeName, cmt *ast.CommentGroup, el
 			return nil
 		}
 		tgt.Items().Typed("string", sfnm)
+		return nil
+	}
+	// When swagger:type is set to an unsupported value (e.g., "array"),
+	// skip the $ref and inline the slice schema with proper items type.
+	// This preserves the field's description that would be lost with $ref.
+	if tn, ok := parsers.TypeName(cmt); ok {
+		if err := resolvers.SwaggerSchemaForType(tn, tgt); err != nil {
+			// Unsupported type name (e.g., "array") — build inline from element type.
+			return s.buildFromType(elem, tgt.Items())
+		}
 		return nil
 	}
 	if decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name()); ok {

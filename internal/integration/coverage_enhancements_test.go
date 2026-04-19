@@ -164,6 +164,23 @@ func TestCoverage_NamedBasic(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_named_basic.json")
 }
 
+// TestCoverage_SwaggerTypeArray exercises the fallthrough introduced by
+// upstream #11: when swagger:type is set to a value not recognised by
+// SwaggerSchemaForType (e.g. "array"), the builder resolves the underlying
+// type instead of emitting an empty schema. Covers buildNamedSlice,
+// buildNamedArray and buildNamedStruct fallthrough branches.
+func TestCoverage_SwaggerTypeArray(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/swagger-type-array/..."},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_swagger_type_array.json")
+}
+
 func TestCoverage_RefAliasChain(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/ref-alias-chain/..."},
