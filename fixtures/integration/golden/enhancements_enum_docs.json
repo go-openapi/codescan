@@ -10,13 +10,14 @@
       ],
       "properties": {
         "channel": {
-          "description": "The delivery channel.\nemail ChannelEmail ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
+          "description": "The delivery channel.\nemail ChannelEmail  ChannelEmail and ChannelSMS share a single spec.\nsms ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
           "type": "string",
           "enum": [
             "email",
+            "sms",
             "push"
           ],
-          "x-go-enum-desc": "email ChannelEmail ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
+          "x-go-enum-desc": "email ChannelEmail  ChannelEmail and ChannelSMS share a single spec.\nsms ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
           "x-go-name": "Channel"
         },
         "id": {

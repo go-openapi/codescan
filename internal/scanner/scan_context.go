@@ -314,13 +314,13 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 			}
 
 			for _, spec := range gd.Specs {
-				literalValue, description := s.findEnumValue(spec, enumName)
-				if literalValue == nil {
+				values, descriptions := s.findEnumValue(spec, enumName)
+				if len(values) == 0 {
 					continue
 				}
 
-				list = append(list, literalValue)
-				descList = append(descList, description)
+				list = append(list, values...)
+				descList = append(descList, descriptions...)
 			}
 		}
 	}
@@ -328,66 +328,76 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 	return list, descList, true
 }
 
-func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (literalValue any, description string) {
+// findEnumValue extracts one (value, description) pair per (name, value)
+// position in a const spec. For a multi-name spec like
+// `const A, B T = "a", "b"` it emits two rows — A↔"a" and B↔"b" — each
+// sharing the spec's doc comment. The Go compiler guarantees
+// len(Names) == len(Values) when Values is non-empty, so out-of-parity
+// specs are ignored defensively.
+func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string) {
 	vs, ok := spec.(*ast.ValueSpec)
 	if !ok {
-		return nil, ""
+		return nil, nil
 	}
 
 	vsIdent, ok := vs.Type.(*ast.Ident)
 	if !ok {
-		return nil, ""
+		return nil, nil
 	}
 
 	if vsIdent.Name != enumName {
-		return nil, ""
+		return nil, nil
 	}
 
-	if len(vs.Values) == 0 {
-		return nil, ""
+	if len(vs.Values) == 0 || len(vs.Values) != len(vs.Names) {
+		return nil, nil
 	}
 
-	bl, ok := vs.Values[0].(*ast.BasicLit)
-	if !ok {
-		return nil, ""
+	docSuffix := buildEnumDocSuffix(vs.Doc)
+
+	for i, nameIdent := range vs.Names {
+		bl, ok := vs.Values[i].(*ast.BasicLit)
+		if !ok {
+			continue
+		}
+
+		literalValue := parsers.GetEnumBasicLitValue(bl)
+
+		var desc strings.Builder
+		fmt.Fprintf(&desc, "%v %s", literalValue, nameIdent.Name)
+		desc.WriteString(docSuffix)
+
+		values = append(values, literalValue)
+		descriptions = append(descriptions, desc.String())
 	}
 
-	literalValue = parsers.GetEnumBasicLitValue(bl)
+	return values, descriptions
+}
 
-	// build the enum description
-	var (
-		desc     = &strings.Builder{}
-		namesLen = len(vs.Names)
-	)
+// buildEnumDocSuffix renders the shared doc comment as " <line1> <line2>..."
+// (with a leading single space, keeping the per-line leading whitespace that
+// survives TrimPrefix("//")), or the empty string if there is no doc.
+func buildEnumDocSuffix(doc *ast.CommentGroup) string {
+	if doc == nil || len(doc.List) == 0 {
+		return ""
+	}
 
-	fmt.Fprintf(desc, "%v ", literalValue)
-	for i, name := range vs.Names {
-		desc.WriteString(name.Name)
-		if i < namesLen-1 {
-			desc.WriteString(" ")
+	var b strings.Builder
+	b.WriteString(" ")
+
+	for i, line := range doc.List {
+		if line.Text == "" {
+			continue
+		}
+
+		b.WriteString(strings.TrimPrefix(line.Text, "//"))
+
+		if i < len(doc.List)-1 {
+			b.WriteString(" ")
 		}
 	}
 
-	if vs.Doc != nil {
-		docListLen := len(vs.Doc.List)
-		if docListLen > 0 {
-			desc.WriteString(" ")
-		}
-
-		for i, doc := range vs.Doc.List {
-			if doc.Text != "" {
-				text := strings.TrimPrefix(doc.Text, "//")
-				desc.WriteString(text)
-				if i < docListLen-1 {
-					desc.WriteString(" ")
-				}
-			}
-		}
-	}
-
-	description = desc.String()
-
-	return literalValue, description
+	return b.String()
 }
 
 func sliceToSet(names []string) map[string]bool {
