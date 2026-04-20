@@ -74,7 +74,6 @@
           "$ref": "#/definitions/Payload"
         },
         "search": {
-          "description": "in: query",
           "type": "string",
           "x-go-name": "Search"
         }

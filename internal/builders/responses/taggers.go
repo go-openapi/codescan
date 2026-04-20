@@ -15,6 +15,8 @@ import (
 // baseResponseHeaderTaggers configures taggers for a response header field.
 func baseResponseHeaderTaggers(header *oaispec.Header) []parsers.TagParser {
 	return []parsers.TagParser{
+		// Match-only: claim `in: header` so it does not leak into the header's description.
+		parsers.NewSingleLineTagParser("in", parsers.NewMatchIn()),
 		parsers.NewSingleLineTagParser("maximum", parsers.NewSetMaximum(headerValidations{header})),
 		parsers.NewSingleLineTagParser("minimum", parsers.NewSetMinimum(headerValidations{header})),
 		parsers.NewSingleLineTagParser("multipleOf", parsers.NewSetMultipleOf(headerValidations{header})),

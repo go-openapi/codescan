@@ -10,7 +10,6 @@
       ],
       "properties": {
         "data": {
-          "description": "in: body",
           "type": "object",
           "required": [
             "id"
@@ -29,7 +28,6 @@
           "x-go-name": "Data"
         },
         "search": {
-          "description": "in: query",
           "type": "string",
           "x-go-name": "Search"
         }
@@ -44,7 +42,6 @@
       ],
       "properties": {
         "data": {
-          "description": "in: body",
           "type": "object",
           "required": [
             "id"
@@ -63,7 +60,6 @@
           "x-go-name": "Data"
         },
         "search": {
-          "description": "in: query",
           "type": "string",
           "x-go-name": "Search"
         }
@@ -162,7 +158,6 @@
           "$ref": "#/definitions/Payload"
         },
         "search": {
-          "description": "in: query",
           "type": "string",
           "x-go-name": "Search"
         }

@@ -243,8 +243,7 @@
         ],
         "type": "integer",
         "format": "int64",
-        "default": 400,
-        "description": "in: header"
+        "default": 400
       }
     }
   }

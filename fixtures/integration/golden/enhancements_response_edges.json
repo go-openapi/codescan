@@ -32,17 +32,17 @@
         "X-Rate-Limit": {
           "type": "integer",
           "format": "int64",
-          "description": "The request rate-limit window.\n\nin: header"
+          "description": "The request rate-limit window."
         },
         "X-Timestamp": {
           "type": "string",
           "format": "date-time",
-          "description": "The server-side timestamp for this response.\n\nin: header"
+          "description": "The server-side timestamp for this response."
         },
         "X-Trace-ID": {
           "type": "string",
           "format": "uuid",
-          "description": "The request trace identifier.\n\nin: header"
+          "description": "The request trace identifier."
         }
       }
     },
