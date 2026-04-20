@@ -35,6 +35,14 @@ type MatchParamIn struct {
 }
 
 func NewMatchParamIn(_ *oaispec.Parameter) *MatchParamIn {
+	return NewMatchIn()
+}
+
+// NewMatchIn returns a match-only tagger that claims `in: <location>`
+// lines. The `in:` directive is extracted separately via
+// parsers.ParamLocation; this tagger only prevents the line from
+// being absorbed into the surrounding description by a SectionedParser.
+func NewMatchIn() *MatchParamIn {
 	return &MatchParamIn{
 		matchOnlyParam: &matchOnlyParam{
 			rx: rxIn,

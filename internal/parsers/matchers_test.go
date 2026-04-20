@@ -23,13 +23,14 @@ func (s stubTypable) In() string           { return s.in }
 func (s stubTypable) Typed(string, string) {}
 func (s stubTypable) SetRef(oaispec.Ref)   {}
 
-//nolint:ireturn // test stub
-func (s stubTypable) Items() ifaces.SwaggerTypable { return s }
-func (s stubTypable) Schema() *oaispec.Schema      { return nil }
-func (s stubTypable) Level() int                   { return 0 }
-func (s stubTypable) AddExtension(string, any)     {}
-func (s stubTypable) WithEnum(...any)              {}
-func (s stubTypable) WithEnumDescription(string)   {}
+func (s stubTypable) Items() ifaces.SwaggerTypable { //nolint:ireturn // test stub
+	return s
+}
+func (s stubTypable) Schema() *oaispec.Schema    { return nil }
+func (s stubTypable) Level() int                 { return 0 }
+func (s stubTypable) AddExtension(string, any)   {}
+func (s stubTypable) WithEnum(...any)            {}
+func (s stubTypable) WithEnumDescription(string) {}
 
 func TestHasAnnotation(t *testing.T) {
 	t.Parallel()

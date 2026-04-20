@@ -21,7 +21,7 @@
         },
         "mac": {
           "type": "string",
-          "format": "so",
+          "format": "mac",
           "x-go-name": "MAC"
         }
       },

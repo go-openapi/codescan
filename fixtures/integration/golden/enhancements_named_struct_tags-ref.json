@@ -1,0 +1,44 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Contact": {
+      "description": "Contact references both tagged struct types so the scanner walks the\nbuildNamedStruct strfmt and typeName branches on distinct fields.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "x-go-name": "Code"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "phone": {
+          "type": "string",
+          "format": "phone",
+          "x-go-name": "Phone"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/named-struct-tags-ref"
+    },
+    "PhoneNumber": {
+      "description": "Since we have added the explicit model annotation, we expect this definition\nto bubble up and appear as a $ref in the spec.",
+      "type": "object",
+      "title": "PhoneNumber is a named struct annotated as a strfmt. When used as a\nfield type the scanner emits {type: \"string\", format: \"phone\"} via the\nstrfmt branch of buildNamedStruct.",
+      "properties": {
+        "CountryCode": {
+          "type": "string"
+        },
+        "Number": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/named-struct-tags-ref"
+    }
+  }
+}

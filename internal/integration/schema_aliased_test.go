@@ -211,7 +211,7 @@ func TestAliasedSchemas(t *testing.T) {
 		require.TrueT(t, ok)
 
 		require.NotEmpty(t, iface.Properties)
-		require.MapContainsT(t, iface.Properties, "String")
+		require.MapContainsT(t, iface.Properties, "string")
 	})
 
 	t.Run("anonymous struct should render as an anonymous schema", func(t *testing.T) {
@@ -379,8 +379,8 @@ func testAliasedInterfaceVariants(t *testing.T, sp *oaispec.Swagger) {
 		require.TrueT(t, ok)
 
 		require.TrueT(t, iface.Type.Contains("object"))
-		require.MapContainsT(t, iface.Properties, "String")
-		prop := iface.Properties["String"]
+		require.MapContainsT(t, iface.Properties, "string")
+		prop := iface.Properties["string"]
 		require.TrueT(t, prop.Type.Contains("string"))
 		assert.Len(t, iface.Properties, 1)
 	})
@@ -397,8 +397,8 @@ func testAliasedInterfaceVariants(t *testing.T, sp *oaispec.Swagger) {
 		require.TrueT(t, ok)
 
 		require.TrueT(t, iface.Type.Contains("object"))
-		require.MapContainsT(t, iface.Properties, "Get")
-		prop := iface.Properties["Get"]
+		require.MapContainsT(t, iface.Properties, "get")
+		prop := iface.Properties["get"]
 		require.TrueT(t, prop.Type.Contains("string"))
 		assert.Len(t, iface.Properties, 1)
 	})
@@ -414,8 +414,8 @@ func testAliasedInterfaceVariants(t *testing.T, sp *oaispec.Swagger) {
 			require.TrueT(t, member.Type.Contains("object"))
 			require.NotEmpty(t, member.Properties)
 			require.Len(t, member.Properties, 1)
-			propGet, isEmbedded := member.Properties["Get"]
-			propMethod, isMethod := member.Properties["Dump"]
+			propGet, isEmbedded := member.Properties["get"]
+			propMethod, isMethod := member.Properties["dump"]
 
 			switch {
 			case isEmbedded:
@@ -443,8 +443,8 @@ func testAliasedInterfaceVariants(t *testing.T, sp *oaispec.Swagger) {
 			require.TrueT(t, member.Type.Contains("object"))
 			require.NotEmpty(t, member.Properties)
 			require.Len(t, member.Properties, 1)
-			propGet, isEmbedded := member.Properties["String"]
-			propAnonymous, isAnonymous := member.Properties["Error"]
+			propGet, isEmbedded := member.Properties["string"]
+			propAnonymous, isAnonymous := member.Properties["error"]
 
 			switch {
 			case isEmbedded:
@@ -478,8 +478,8 @@ func testAliasedInterfaceVariants(t *testing.T, sp *oaispec.Swagger) {
 		foundEmbeddedAnon := false
 		foundRef := false
 		for idx, member := range iface.AllOf {
-			propGet, isEmbedded := member.Properties["String"]
-			propAnonymous, isAnonymous := member.Properties["Dump"]
+			propGet, isEmbedded := member.Properties["string"]
+			propAnonymous, isAnonymous := member.Properties["dump"]
 			isRef := member.Ref.String() != ""
 
 			switch {

@@ -40,8 +40,22 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
     },
     "AllOfStdTime": {
-      "type": "string",
       "title": "AllOfStdTime composes an allOf member that is time.Time.",
+      "allOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "x-go-name": "Label"
+            }
+          }
+        }
+      ],
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
     },
     "AllOfStrfmt": {
@@ -84,16 +98,12 @@
       "type": "object",
       "title": "Tagger is a non-empty named interface used as an allOf member.",
       "properties": {
-        "Tag": {
+        "tag": {
           "description": "Tag returns an identifier.",
-          "type": "string"
+          "type": "string",
+          "x-go-name": "Tag"
         }
       },
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
-    },
-    "ULID": {
-      "description": "ULID is a named struct formatted as a swagger strfmt. Using a struct\nunderlying type exercises the strfmt branch of buildNamedAllOf for\nstruct members.",
-      "type": "object",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
     }
   }

@@ -26,8 +26,7 @@
       "type": "object",
       "properties": {
         "createdAt": {
-          "type": "string",
-          "x-go-name": "CreatedAt"
+          "$ref": "#/definitions/Timestamp"
         },
         "first": {
           "$ref": "#/definitions/LinkA"

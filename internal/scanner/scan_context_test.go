@@ -482,29 +482,28 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 
 	t.Run("non-ValueSpec returns nil", func(t *testing.T) {
 		spec := &ast.ImportSpec{Path: &ast.BasicLit{Value: `"fmt"`}}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		assert.Nil(t, val)
-		assert.EqualT(t, "", desc)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Nil(t, values)
+		assert.Nil(t, descs)
 	})
 
 	t.Run("ValueSpec with nil Type returns nil", func(t *testing.T) {
 		spec := &ast.ValueSpec{
 			Names: []*ast.Ident{ast.NewIdent("X")},
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		assert.Nil(t, val)
-		assert.EqualT(t, "", desc)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Nil(t, values)
+		assert.Nil(t, descs)
 	})
 
 	t.Run("ValueSpec with selector type returns nil", func(t *testing.T) {
-		// Type is *ast.SelectorExpr, not *ast.Ident
 		spec := &ast.ValueSpec{
 			Names: []*ast.Ident{ast.NewIdent("X")},
 			Type:  &ast.SelectorExpr{X: ast.NewIdent("pkg"), Sel: ast.NewIdent("Type")},
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		assert.Nil(t, val)
-		assert.EqualT(t, "", desc)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Nil(t, values)
+		assert.Nil(t, descs)
 	})
 
 	t.Run("ValueSpec with non-matching enum name returns nil", func(t *testing.T) {
@@ -513,9 +512,9 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Bar"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "1"}},
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		assert.Nil(t, val)
-		assert.EqualT(t, "", desc)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Nil(t, values)
+		assert.Nil(t, descs)
 	})
 
 	t.Run("ValueSpec with no values returns nil", func(t *testing.T) {
@@ -523,38 +522,57 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Names: []*ast.Ident{ast.NewIdent("X")},
 			Type:  ast.NewIdent("Foo"),
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		assert.Nil(t, val)
-		assert.EqualT(t, "", desc)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Nil(t, values)
+		assert.Nil(t, descs)
 	})
 
-	t.Run("ValueSpec with non-BasicLit value returns nil", func(t *testing.T) {
+	t.Run("ValueSpec with non-BasicLit value skips that position", func(t *testing.T) {
 		spec := &ast.ValueSpec{
 			Names:  []*ast.Ident{ast.NewIdent("X")},
 			Type:   ast.NewIdent("Foo"),
-			Values: []ast.Expr{ast.NewIdent("someFunc")}, // *ast.Ident, not *ast.BasicLit
+			Values: []ast.Expr{ast.NewIdent("someFunc")},
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		assert.Nil(t, val)
-		assert.EqualT(t, "", desc)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Empty(t, values)
+		assert.Empty(t, descs)
 	})
 
-	t.Run("ValueSpec with multiple names builds description", func(t *testing.T) {
+	t.Run("ValueSpec with names/values parity mismatch returns nil", func(t *testing.T) {
+		// The Go compiler forbids this, but we guard defensively so a
+		// malformed AST (e.g. from tests) doesn't panic on index access.
 		spec := &ast.ValueSpec{
 			Names:  []*ast.Ident{ast.NewIdent("A"), ast.NewIdent("B")},
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "42"}},
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		require.NotNil(t, val)
-		intVal, ok := val.(int64)
-		require.True(t, ok)
-		assert.EqualT(t, int64(42), intVal)
-		// Description should contain "42 A B"
-		assert.True(t, len(desc) > 0)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		assert.Nil(t, values)
+		assert.Nil(t, descs)
 	})
 
-	t.Run("ValueSpec with doc comments builds description", func(t *testing.T) {
+	t.Run("ValueSpec with multi-name pair emits one row per name/value", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("A"), ast.NewIdent("B")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{
+				&ast.BasicLit{Kind: token.STRING, Value: `"a"`},
+				&ast.BasicLit{Kind: token.STRING, Value: `"b"`},
+			},
+			Doc: &ast.CommentGroup{
+				List: []*ast.Comment{{Text: "// shared doc"}},
+			},
+		}
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 2)
+		require.Len(t, descs, 2)
+		assert.EqualT(t, "a", values[0])
+		assert.EqualT(t, "b", values[1])
+		assert.EqualT(t, "a A  shared doc", descs[0])
+		assert.EqualT(t, "b B  shared doc", descs[1])
+	})
+
+	t.Run("ValueSpec with single name preserves legacy description shape", func(t *testing.T) {
 		spec := &ast.ValueSpec{
 			Names:  []*ast.Ident{ast.NewIdent("X")},
 			Type:   ast.NewIdent("Foo"),
@@ -566,11 +584,72 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				},
 			},
 		}
-		val, desc := sctx.findEnumValue(spec, "Foo")
-		require.NotNil(t, val)
-		assert.EqualT(t, "hello", val)
-		// Description should contain the doc comment text.
-		assert.True(t, len(desc) > 0)
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		require.Len(t, descs, 1)
+		assert.EqualT(t, "hello", values[0])
+		assert.EqualT(t, "hello X  first line  second line", descs[0])
+	})
+
+	t.Run("ValueSpec strips godoc leading identifier on single-name spec", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names:  []*ast.Ident{ast.NewIdent("PriorityLow")},
+			Type:   ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"low"`}},
+			Doc: &ast.CommentGroup{
+				List: []*ast.Comment{{Text: "// PriorityLow is a low-priority level."}},
+			},
+		}
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		assert.EqualT(t, "low PriorityLow is a low-priority level.", descs[0])
+	})
+
+	t.Run("ValueSpec strips leading identifier matching any name in multi-name spec", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("ChannelEmail"), ast.NewIdent("ChannelSMS")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{
+				&ast.BasicLit{Kind: token.STRING, Value: `"email"`},
+				&ast.BasicLit{Kind: token.STRING, Value: `"sms"`},
+			},
+			Doc: &ast.CommentGroup{
+				List: []*ast.Comment{{Text: "// ChannelEmail and ChannelSMS share a single spec."}},
+			},
+		}
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 2)
+		// Both rows strip leading "ChannelEmail" because it matches one of the names.
+		assert.EqualT(t, "email ChannelEmail and ChannelSMS share a single spec.", descs[0])
+		assert.EqualT(t, "sms ChannelSMS and ChannelSMS share a single spec.", descs[1])
+	})
+
+	t.Run("ValueSpec keeps doc unchanged when leading word is not a name", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names:  []*ast.Ident{ast.NewIdent("X")},
+			Type:   ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"x"`}},
+			Doc: &ast.CommentGroup{
+				List: []*ast.Comment{{Text: "// The x value."}},
+			},
+		}
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		assert.EqualT(t, "x X  The x value.", descs[0])
+	})
+
+	t.Run("ValueSpec with no doc comment yields bare row", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names:  []*ast.Ident{ast.NewIdent("X")},
+			Type:   ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "7"}},
+		}
+		values, descs := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		intVal, ok := values[0].(int64)
+		require.True(t, ok)
+		assert.EqualT(t, int64(7), intVal)
+		assert.EqualT(t, "7 X", descs[0])
 	})
 }
 

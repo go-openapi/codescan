@@ -31,9 +31,10 @@
       "type": "object",
       "title": "MyInterface is a top-level named interface.",
       "properties": {
-        "Identify": {
+        "identify": {
           "description": "Identify returns the name of this object.",
-          "type": "string"
+          "type": "string",
+          "x-go-name": "Identify"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/top-level-kinds"

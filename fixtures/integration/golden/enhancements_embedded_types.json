@@ -86,9 +86,10 @@
       "type": "object",
       "title": "EmbedsNamedInterface embeds a non-empty, non-error named interface.",
       "properties": {
-        "Handle": {
+        "handle": {
           "description": "Handle is a unary method exposed as a schema property.",
-          "type": "string"
+          "type": "string",
+          "x-go-name": "Handle"
         },
         "tag": {
           "type": "string",
@@ -101,9 +102,10 @@
       "type": "object",
       "title": "Handler is a non-empty named interface with a single exported method.",
       "properties": {
-        "Handle": {
+        "handle": {
           "description": "Handle is a unary method exposed as a schema property.",
-          "type": "string"
+          "type": "string",
+          "x-go-name": "Handle"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"

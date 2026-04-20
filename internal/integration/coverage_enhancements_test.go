@@ -253,6 +253,18 @@ func TestCoverage_NamedStructTags(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_named_struct_tags.json")
 }
 
+func TestCoverage_NamedStructTagsRef(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/named-struct-tags-ref/..."},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_named_struct_tags-ref.json")
+}
+
 func TestCoverage_TopLevelKinds(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/top-level-kinds/..."},

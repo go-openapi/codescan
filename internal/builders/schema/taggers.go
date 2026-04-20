@@ -20,6 +20,11 @@ func schemaTaggers(schema, ps *oaispec.Schema, nm string) []parsers.TagParser {
 	scheme := &oaispec.SimpleSchema{Type: string(schemeType)}
 
 	return []parsers.TagParser{
+		// Match-only: claim `in: <location>` lines so they do not leak into the
+		// schema description. `in:` only matters for parameter/response dispatch;
+		// if it reaches a schema field (e.g. via the alias-expand path), it is
+		// still metadata, not prose.
+		parsers.NewSingleLineTagParser("in", parsers.NewMatchIn()),
 		parsers.NewSingleLineTagParser("maximum", parsers.NewSetMaximum(schemaValidations{ps})),
 		parsers.NewSingleLineTagParser("minimum", parsers.NewSetMinimum(schemaValidations{ps})),
 		parsers.NewSingleLineTagParser("multipleOf", parsers.NewSetMultipleOf(schemaValidations{ps})),

@@ -993,26 +993,27 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 	assertModel := func(ctx *scanner.ScanCtx, packagePath, modelName string) {
 		decl, _ := ctx.FindDecl(packagePath, modelName)
 		require.NotNil(t, decl)
-		prs := &Builder{
-			ctx:  ctx,
-			decl: decl,
-		}
+		prs := NewBuilder(ctx, decl)
 		require.NoError(t, prs.Build(allModels))
 
 		schema := allModels[modelName]
 		require.Len(t, schema.Properties, 5)
 
-		require.MapContainsT(t, schema.Properties, "Value1")
-		assert.Equal(t, true, schema.Properties["Value1"].Extensions["x-nullable"])
-		require.MapContainsT(t, schema.Properties, "Value2")
-		assert.MapNotContainsT(t, schema.Properties["Value2"].Extensions, "x-nullable")
-		require.MapContainsT(t, schema.Properties, "Value3")
-		assert.Equal(t, false, schema.Properties["Value3"].Extensions["x-nullable"])
-		require.MapContainsT(t, schema.Properties, "Value4")
-		assert.MapNotContainsT(t, schema.Properties["Value4"].Extensions, "x-nullable")
-		assert.Equal(t, false, schema.Properties["Value4"].Extensions["x-isnullable"])
-		require.MapContainsT(t, schema.Properties, "Value5")
-		assert.MapNotContainsT(t, schema.Properties["Value5"].Extensions, "x-nullable")
+		// Interface-method properties are camelCased; struct fields
+		// without json tags keep the Go identifier verbatim.
+		v1, v2, v3, v4, v5 := valueKeys(modelName)
+
+		require.MapContainsT(t, schema.Properties, v1)
+		assert.Equal(t, true, schema.Properties[v1].Extensions["x-nullable"])
+		require.MapContainsT(t, schema.Properties, v2)
+		assert.MapNotContainsT(t, schema.Properties[v2].Extensions, "x-nullable")
+		require.MapContainsT(t, schema.Properties, v3)
+		assert.Equal(t, false, schema.Properties[v3].Extensions["x-nullable"])
+		require.MapContainsT(t, schema.Properties, v4)
+		assert.MapNotContainsT(t, schema.Properties[v4].Extensions, "x-nullable")
+		assert.Equal(t, false, schema.Properties[v4].Extensions["x-isnullable"])
+		require.MapContainsT(t, schema.Properties, v5)
+		assert.MapNotContainsT(t, schema.Properties[v5].Extensions, "x-nullable")
 	}
 
 	packagePattern := "./enhancements/pointers-nullable-by-default"
@@ -1026,31 +1027,40 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 	scantest.CompareOrDumpJSON(t, allModels, "enhancements_pointers_xnullable.json")
 }
 
+// valueKeys returns the five property keys expected for the fixtures
+// Item (struct, Go names verbatim) and ItemInterface (interface methods,
+// camelCased per Q9).
+func valueKeys(modelName string) (string, string, string, string, string) {
+	if modelName == "ItemInterface" {
+		return "value1", "value2", "value3", "value4", "value5"
+	}
+	return "Value1", "Value2", "Value3", "Value4", "Value5"
+}
+
 func TestPointersAreNotNullableByDefaultWhenSetXNullableForPointersIsNotSet(t *testing.T) {
 	allModels := make(map[string]oaispec.Schema)
 	assertModel := func(ctx *scanner.ScanCtx, packagePath, modelName string) {
 		decl, _ := ctx.FindDecl(packagePath, modelName)
 		require.NotNil(t, decl)
-		prs := &Builder{
-			ctx:  ctx,
-			decl: decl,
-		}
+		prs := NewBuilder(ctx, decl)
 		require.NoError(t, prs.Build(allModels))
 
 		schema := allModels[modelName]
 		require.Len(t, schema.Properties, 5)
 
-		require.MapContainsT(t, schema.Properties, "Value1")
-		assert.MapNotContainsT(t, schema.Properties["Value1"].Extensions, "x-nullable")
-		require.MapContainsT(t, schema.Properties, "Value2")
-		assert.MapNotContainsT(t, schema.Properties["Value2"].Extensions, "x-nullable")
-		require.MapContainsT(t, schema.Properties, "Value3")
-		assert.Equal(t, false, schema.Properties["Value3"].Extensions["x-nullable"])
-		require.MapContainsT(t, schema.Properties, "Value4")
-		assert.MapNotContainsT(t, schema.Properties["Value4"].Extensions, "x-nullable")
-		assert.Equal(t, false, schema.Properties["Value4"].Extensions["x-isnullable"])
-		require.MapContainsT(t, schema.Properties, "Value5")
-		assert.MapNotContainsT(t, schema.Properties["Value5"].Extensions, "x-nullable")
+		v1, v2, v3, v4, v5 := valueKeys(modelName)
+
+		require.MapContainsT(t, schema.Properties, v1)
+		assert.MapNotContainsT(t, schema.Properties[v1].Extensions, "x-nullable")
+		require.MapContainsT(t, schema.Properties, v2)
+		assert.MapNotContainsT(t, schema.Properties[v2].Extensions, "x-nullable")
+		require.MapContainsT(t, schema.Properties, v3)
+		assert.Equal(t, false, schema.Properties[v3].Extensions["x-nullable"])
+		require.MapContainsT(t, schema.Properties, v4)
+		assert.MapNotContainsT(t, schema.Properties[v4].Extensions, "x-nullable")
+		assert.Equal(t, false, schema.Properties[v4].Extensions["x-isnullable"])
+		require.MapContainsT(t, schema.Properties, v5)
+		assert.MapNotContainsT(t, schema.Properties[v5].Extensions, "x-nullable")
 	}
 
 	packagePattern := "./enhancements/pointers-nullable-by-default"
@@ -1068,10 +1078,7 @@ func TestSwaggerTypeNamed(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "NamedWithType")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(models))
 	schema := models["namedWithType"]
@@ -1117,10 +1124,7 @@ func TestSwaggerTypeNamedWithGenerics(t *testing.T) {
 			ctx := scantest.LoadClassificationPkgsCtx(t)
 			decl := getClassificationModel(ctx, testName)
 			require.NotNil(t, decl)
-			prs := &Builder{
-				ctx:  ctx,
-				decl: decl,
-			}
+			prs := NewBuilder(ctx, decl)
 			models := make(map[string]oaispec.Schema)
 			require.NoError(t, prs.Build(models))
 			testFunc(t, models)
@@ -1132,10 +1136,7 @@ func TestSwaggerTypeStruct(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "NullString")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(models))
 	schema := models["NullString"]
@@ -1152,10 +1153,7 @@ func TestStructDiscriminators(t *testing.T) {
 	for _, tn := range []string{"BaseStruct", "Giraffe", "Gazelle"} {
 		decl := getClassificationModel(ctx, tn)
 		require.NotNil(t, decl)
-		prs := &Builder{
-			ctx:  ctx,
-			decl: decl,
-		}
+		prs := NewBuilder(ctx, decl)
 		require.NoError(t, prs.Build(models))
 	}
 
@@ -1193,10 +1191,7 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		decl := getClassificationModel(ctx, tn)
 		require.NotNil(t, decl)
 
-		prs := &Builder{
-			ctx:  ctx,
-			decl: decl,
-		}
+		prs := NewBuilder(ctx, decl)
 		require.NoError(t, prs.Build(models))
 	}
 
@@ -1406,10 +1401,7 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(models))
 	schema := models["Item"]
@@ -1491,11 +1483,7 @@ func testIssue2540(descWithRef bool, expectedJSON string) func(*testing.T) {
 
 		decl, _ := ctx.FindDecl(packagePath, "Book")
 		require.NotNil(t, decl)
-		prs := &Builder{
-			ctx:  ctx,
-			decl: decl,
-		}
-
+		prs := NewBuilder(ctx, decl)
 		models := make(map[string]oaispec.Schema)
 		require.NoError(t, prs.Build(models))
 

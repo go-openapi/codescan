@@ -23,9 +23,10 @@
         {
           "type": "object",
           "properties": {
-            "Uint": {
+            "uint": {
               "type": "integer",
-              "format": "uint16"
+              "format": "uint16",
+              "x-go-name": "Uint"
             }
           }
         }

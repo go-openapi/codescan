@@ -126,7 +126,7 @@ func TestSpecialSchemas(t *testing.T) {
 			member := generic.AllOf[0]
 			require.TrueT(t, member.Type.Contains("object"))
 			require.Len(t, member.Properties, 1)
-			prop, ok := member.Properties["Uint"]
+			prop, ok := member.Properties["uint"]
 			require.TrueT(t, ok)
 			require.TrueT(t, prop.Type.Contains("integer"))
 			require.EqualT(t, "uint16", prop.Format)

@@ -5,15 +5,17 @@
     "Audited": {
       "type": "object",
       "properties": {
-        "CreatedAt": {
+        "createdAt": {
           "description": "CreatedAt is the creation timestamp.",
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "x-go-name": "CreatedAt"
         },
-        "UpdatedAt": {
+        "updatedAt": {
           "description": "UpdatedAt is the update timestamp.",
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "x-go-name": "UpdatedAt"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/interface-methods"
@@ -22,9 +24,10 @@
       "description": "Public exposes just a single scalar so we get a minimal, deterministic\ncompanion to assert the default code path.",
       "type": "object",
       "properties": {
-        "Kind": {
+        "kind": {
           "description": "Kind names the public flavor.",
-          "type": "string"
+          "type": "string",
+          "x-go-name": "Kind"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/interface-methods"
@@ -38,42 +41,47 @@
         {
           "type": "object",
           "required": [
-            "ID"
+            "id"
           ],
           "properties": {
-            "Bio": {
+            "bio": {
               "description": "Bio is a nullable pointer string.",
-              "type": "string"
+              "type": "string",
+              "x-go-name": "Bio"
             },
-            "Email": {
+            "email": {
               "description": "Email is formatted as an email strfmt.",
               "type": "string",
-              "format": "email"
-            },
-            "ID": {
-              "description": "ID is the user identifier.",
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            },
-            "Profile": {
-              "description": "Profile returns nested structured data.",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "Tags": {
-              "description": "Tags returns the user's labels.",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+              "format": "email",
+              "x-go-name": "Email"
             },
             "fullName": {
               "description": "Name is re-exposed as \"fullName\" in JSON.",
               "type": "string",
               "x-go-name": "Name"
+            },
+            "id": {
+              "description": "ID is the user identifier.",
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1,
+              "x-go-name": "ID"
+            },
+            "profile": {
+              "description": "Profile returns nested structured data.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "x-go-name": "Profile"
+            },
+            "tags": {
+              "description": "Tags returns the user's labels.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "x-go-name": "Tags"
             }
           }
         }
@@ -86,29 +94,32 @@
         {
           "type": "object",
           "properties": {
-            "ExternalID": {
-              "description": "ExternalID is tagged as uuid so the anon-method strfmt branch\nis exercised.",
-              "type": "string",
-              "format": "uuid"
-            },
-            "Revision": {
-              "description": "Revision is a nullable pointer return for x-nullable coverage.",
-              "type": "integer",
-              "format": "int64"
-            },
             "audit": {
               "description": "AuditTrail is exposed via the anonymous embedded interface.",
               "type": "string",
               "x-go-name": "AuditTrail"
+            },
+            "externalId": {
+              "description": "ExternalID is tagged as uuid so the anon-method strfmt branch\nis exercised.",
+              "type": "string",
+              "format": "uuid",
+              "x-go-name": "ExternalID"
+            },
+            "revision": {
+              "description": "Revision is a nullable pointer return for x-nullable coverage.",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Revision"
             }
           }
         },
         {
           "type": "object",
           "properties": {
-            "Kind": {
+            "kind": {
               "description": "Kind names the root flavor.",
-              "type": "string"
+              "type": "string",
+              "x-go-name": "Kind"
             }
           }
         }

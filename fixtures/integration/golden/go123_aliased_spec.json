@@ -47,8 +47,9 @@
     "anonymous_iface": {
       "type": "object",
       "properties": {
-        "String": {
-          "type": "string"
+        "string": {
+          "type": "string",
+          "x-go-name": "String"
         }
       },
       "x-go-name": "AnonymousIface",
@@ -104,8 +105,9 @@
     "iface": {
       "type": "object",
       "properties": {
-        "Get": {
-          "type": "string"
+        "get": {
+          "type": "string",
+          "x-go-name": "Get"
         }
       },
       "x-go-name": "Iface",
@@ -119,20 +121,22 @@
         {
           "type": "object",
           "properties": {
-            "Get": {
-              "type": "string"
+            "get": {
+              "type": "string",
+              "x-go-name": "Get"
             }
           }
         },
         {
           "type": "object",
           "properties": {
-            "Dump": {
+            "dump": {
               "type": "array",
               "items": {
                 "type": "integer",
                 "format": "uint8"
-              }
+              },
+              "x-go-name": "Dump"
             }
           }
         }
@@ -145,16 +149,18 @@
         {
           "type": "object",
           "properties": {
-            "String": {
-              "type": "string"
+            "string": {
+              "type": "string",
+              "x-go-name": "String"
             }
           }
         },
         {
           "type": "object",
           "properties": {
-            "Error": {
-              "type": "string"
+            "error": {
+              "type": "string",
+              "x-go-name": "Error"
             }
           }
         }
@@ -174,20 +180,22 @@
         {
           "type": "object",
           "properties": {
-            "String": {
-              "type": "string"
+            "string": {
+              "type": "string",
+              "x-go-name": "String"
             }
           }
         },
         {
           "type": "object",
           "properties": {
-            "Dump": {
+            "dump": {
               "type": "array",
               "items": {
                 "type": "integer",
                 "format": "uint8"
-              }
+              },
+              "x-go-name": "Dump"
             }
           }
         }

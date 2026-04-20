@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/go-openapi/swag/mangling"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -30,12 +31,28 @@ type Builder struct {
 	annotated  bool
 	discovered []*scanner.EntityDecl
 	postDecls  []*scanner.EntityDecl
+
+	// interfaceMethodMangler produces JSON-style property names from Go
+	// interface-method names. Interface methods cannot carry struct tags, so
+	// codescan can't read a per-field convention — instead it applies the
+	// same transform go-swagger uses for tag-less struct fields (acronym-aware
+	// lower-first, e.g. `CreatedAt → createdAt`, `ID → id`,
+	// `ExternalID → externalId`). `swagger:name` still takes precedence when
+	// present. NameMangler is thread-safe per its godoc.
+	//
+	// Pointer so that the zero value (nil) is safely detected and lazily
+	// initialized by interfaceJSONName — a zero mangling.NameMangler value
+	// panics on use, and tests that construct &Builder{…} directly bypass
+	// NewBuilder.
+	interfaceMethodMangler *mangling.NameMangler
 }
 
 func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
+	m := mangling.NewNameMangler()
 	return &Builder{
-		ctx:  ctx,
-		decl: decl,
+		ctx:                    ctx,
+		decl:                   decl,
+		interfaceMethodMangler: &m,
 	}
 }
 
@@ -87,6 +104,17 @@ func (s *Builder) inferNames() {
 	if override != "" {
 		s.Name = override
 	}
+}
+
+// interfaceJSONName maps a Go interface-method name to its JSON property
+// name via the Builder's mangler, lazily initializing the mangler on first
+// use so a zero-value Builder remains usable.
+func (s *Builder) interfaceJSONName(goName string) string {
+	if s.interfaceMethodMangler == nil {
+		m := mangling.NewNameMangler()
+		s.interfaceMethodMangler = &m
+	}
+	return s.interfaceMethodMangler.ToJSONName(goName)
 }
 
 func (s *Builder) buildFromDecl(_ *scanner.EntityDecl, schema *oaispec.Schema) error {
@@ -168,6 +196,14 @@ func (s *Builder) buildFromTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypable
 		return s.buildFromTextMarshal(typePtr.Elem(), tgt)
 	}
 
+	// An alias surfaced under a pointer (e.g. *Timestamp where
+	// Timestamp = time.Time) — route through buildAlias so the alias
+	// indirection is honored per RefAliases/TransparentAliases, same as
+	// the non-pointer path in buildFromType.
+	if typeAlias, ok := tpe.(*types.Alias); ok {
+		return s.buildAlias(typeAlias, tgt)
+	}
+
 	typeNamed, ok := tpe.(*types.Named)
 	if !ok {
 		tgt.Typed("string", "")
@@ -220,12 +256,47 @@ func (s *Builder) buildFromTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypable
 	return nil
 }
 
+// hasNamedCore reports whether tpe is a *types.Named, or resolves to one
+// by peeling one or more pointer layers. Used to gate content-based
+// shortcuts (like the TextMarshaler check) to types whose name can be
+// inspected — anonymous structural kinds cannot yield meaningful output
+// from those shortcuts and should take the structural dispatch instead.
+func hasNamedCore(tpe types.Type) bool {
+	for {
+		switch t := tpe.(type) {
+		case *types.Named:
+			return true
+		case *types.Pointer:
+			tpe = t.Elem()
+		default:
+			return false
+		}
+	}
+}
+
 func (s *Builder) buildFromType(tpe types.Type, tgt ifaces.SwaggerTypable) error {
-	// check if the type implements encoding.TextMarshaler interface
-	// if so, the type is rendered as a string.
 	logger.DebugLogf(s.ctx.Debug(), "schema buildFromType %v (%T)", tpe, tpe)
 
-	if resolvers.IsTextMarshaler(tpe) {
+	// Aliases are dispatched first, before any content-based shortcut,
+	// so the alias indirection is honored consistently with the caller's
+	// RefAliases/TransparentAliases intent. Without this, a text-
+	// marshalable alias (e.g. `type Timestamp = time.Time`) would be
+	// inlined as a plain string — losing both the alias semantics and
+	// (because buildFromTextMarshal only unwraps pointers) the target's
+	// format.
+	if titpe, ok := tpe.(*types.Alias); ok {
+		logger.DebugLogf(s.ctx.Debug(), "alias(schema.buildFromType): got alias %v to %v", titpe, titpe.Rhs())
+		return s.buildAlias(titpe, tgt)
+	}
+
+	// Only shortcut to the TextMarshaler renderer when we can reach a
+	// *types.Named by peeling pointers — buildFromTextMarshal uses the
+	// name to map to known formats (time/uuid/json.RawMessage/strfmt) and
+	// falls back to {string, ""} otherwise. An anonymous struct that only
+	// satisfies TextMarshaler by embedding time.Time (method promotion)
+	// would otherwise be flattened to {string}, erasing its body and any
+	// allOf composition. See Q4 in .claude/plans/observed-quirks.md.
+	if hasNamedCore(tpe) && resolvers.IsTextMarshaler(tpe) {
 		return s.buildFromTextMarshal(tpe, tgt)
 	}
 
@@ -253,10 +324,6 @@ func (s *Builder) buildFromType(tpe types.Type, tgt ifaces.SwaggerTypable) error
 	case *types.Named:
 		// a named type, e.g. type X struct {}
 		return s.buildNamedType(titpe, tgt)
-	case *types.Alias:
-		// a named alias, e.g. type X = {RHS type}.
-		logger.DebugLogf(s.ctx.Debug(), "alias(schema.buildFromType): got alias %v to %v", titpe, titpe.Rhs())
-		return s.buildAlias(titpe, tgt)
 	default:
 		// Warn-and-skip for unsupported kinds (TypeParam, Chan, Signature,
 		// Union, or future go/types additions). The scanner runs on user
@@ -435,14 +502,25 @@ func (s *Builder) buildNamedBasic(tio *types.TypeName, pkg *packages.Package, cm
 func (s *Builder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, tgt ifaces.SwaggerTypable) error {
 	logger.DebugLogf(s.ctx.Debug(), "found struct: %s.%s", tio.Pkg().Path(), tio.Name())
 
-	decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
-	if !ok {
-		logger.DebugLogf(s.ctx.Debug(), "could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
+	// Run strfmt first, before FindModel, so a `swagger:strfmt` type is
+	// inlined as {string, format} *without* registering the struct in
+	// ExtraModels — FindModel has a side effect that would otherwise emit
+	// the struct as an orphan object definition no field references. See
+	// Q10 in .claude/plans/observed-quirks.md.
+	//
+	// A caveat remains: when the author combines `swagger:strfmt` with
+	// `swagger:model` (a "named strfmt" shape), the field still inlines
+	// here while the top-level definition body is emitted by walking the
+	// underlying struct. That inconsistency is documented in
+	// .claude/plans/deferred-quirks.md and left for v2.
+	if sfnm, isf := parsers.StrfmtName(cmt); isf {
+		tgt.Typed("string", sfnm)
 		return nil
 	}
 
-	if sfnm, isf := parsers.StrfmtName(cmt); isf {
-		tgt.Typed("string", sfnm)
+	decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
+	if !ok {
+		logger.DebugLogf(s.ctx.Debug(), "could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
 		return nil
 	}
 
@@ -517,10 +595,6 @@ func (s *Builder) buildNamedSlice(tio *types.TypeName, cmt *ast.CommentGroup, el
 // IsStdError(ro) inside the `case *types.Alias:` branch of the RHS
 // switch below do fire: they inspect the alias target, which for
 // `type X = any` resolves to the predeclared any TypeName.
-//
-// For `type Timestamp = time.Time` the date-time format is currently
-// lost — see Q3 in .claude/plans/observed-quirks.md. Any fix belongs
-// in the RHS switch, not here.
 func (s *Builder) buildDeclAlias(tpe *types.Alias, tgt ifaces.SwaggerTypable) error {
 	if resolvers.UnsupportedBuiltinType(tpe) {
 		log.Printf("WARNING: skipped unsupported builtin type: %v", tpe)
@@ -629,7 +703,7 @@ func (s *Builder) processAnonInterfaceMethod(fld *types.Func, it *types.Interfac
 
 	name, ok := parsers.NameOverride(afld.Doc)
 	if !ok {
-		name = fld.Name()
+		name = s.interfaceJSONName(fld.Name())
 	}
 
 	if schema.Properties == nil {
@@ -859,7 +933,7 @@ func (s *Builder) processInterfaceMethod(fld *types.Func, it *types.Interface, d
 
 	name, ok := parsers.NameOverride(afld.Doc)
 	if !ok {
-		name = fld.Name()
+		name = s.interfaceJSONName(fld.Name())
 	}
 
 	ps := tgt.Properties[name]
@@ -1175,19 +1249,30 @@ func (s *Builder) buildAllOf(tpe types.Type, schema *oaispec.Schema) error {
 func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) error {
 	switch utpe := ftpe.Underlying().(type) {
 	case *types.Struct:
-		decl, found := s.ctx.FindModel(ftpe.Obj().Pkg().Path(), ftpe.Obj().Name())
-		if !found {
-			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrSchema)
-		}
+		tio := ftpe.Obj()
 
-		if resolvers.IsStdTime(ftpe.Obj()) {
+		// Run inlining shortcuts (stdlib time, swagger:strfmt) before
+		// FindModel — FindModel registers the type in ExtraModels as a
+		// side effect, which would emit an orphan top-level definition
+		// for a type whose schema we've already inlined. See Q10 in
+		// .claude/plans/observed-quirks.md.
+		if resolvers.IsStdTime(tio) {
 			schema.Typed("string", "date-time")
 			return nil
 		}
 
-		if sfnm, isf := parsers.StrfmtName(decl.Comments); isf {
-			schema.Typed("string", sfnm)
-			return nil
+		if pkg, ok := s.ctx.PkgForType(ftpe); ok {
+			if cmt, hasComments := s.ctx.FindComments(pkg, tio.Name()); hasComments {
+				if sfnm, isf := parsers.StrfmtName(cmt); isf {
+					schema.Typed("string", sfnm)
+					return nil
+				}
+			}
+		}
+
+		decl, found := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
+		if !found {
+			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrSchema)
 		}
 
 		if decl.HasModelAnnotation() {

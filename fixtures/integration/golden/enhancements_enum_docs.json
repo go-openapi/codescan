@@ -10,13 +10,14 @@
       ],
       "properties": {
         "channel": {
-          "description": "The delivery channel.\nemail ChannelEmail ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
+          "description": "The delivery channel.\nemail ChannelEmail and ChannelSMS share a single spec.\nsms ChannelSMS and ChannelSMS share a single spec.\npush ChannelPush is the push notification channel.",
           "type": "string",
           "enum": [
             "email",
+            "sms",
             "push"
           ],
-          "x-go-enum-desc": "email ChannelEmail ChannelSMS  ChannelEmail and ChannelSMS share a single spec.\npush ChannelPush  ChannelPush is the push notification channel.",
+          "x-go-enum-desc": "email ChannelEmail and ChannelSMS share a single spec.\nsms ChannelSMS and ChannelSMS share a single spec.\npush ChannelPush is the push notification channel.",
           "x-go-name": "Channel"
         },
         "id": {
@@ -25,14 +26,14 @@
           "x-go-name": "ID"
         },
         "priority": {
-          "description": "The priority level.\nlow PriorityLow  PriorityLow is a low-priority level.\nmedium PriorityMed  PriorityMed is a medium-priority level.\nhigh PriorityHigh  PriorityHigh is a high-priority level.",
+          "description": "The priority level.\nlow PriorityLow is a low-priority level.\nmedium PriorityMed is a medium-priority level.\nhigh PriorityHigh is a high-priority level.",
           "type": "string",
           "enum": [
             "low",
             "medium",
             "high"
           ],
-          "x-go-enum-desc": "low PriorityLow  PriorityLow is a low-priority level.\nmedium PriorityMed  PriorityMed is a medium-priority level.\nhigh PriorityHigh  PriorityHigh is a high-priority level.",
+          "x-go-enum-desc": "low PriorityLow is a low-priority level.\nmedium PriorityMed is a medium-priority level.\nhigh PriorityHigh is a high-priority level.",
           "x-go-name": "Priority"
         }
       },
