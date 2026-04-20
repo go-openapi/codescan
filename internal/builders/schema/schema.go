@@ -502,14 +502,25 @@ func (s *Builder) buildNamedBasic(tio *types.TypeName, pkg *packages.Package, cm
 func (s *Builder) buildNamedStruct(tio *types.TypeName, cmt *ast.CommentGroup, tgt ifaces.SwaggerTypable) error {
 	logger.DebugLogf(s.ctx.Debug(), "found struct: %s.%s", tio.Pkg().Path(), tio.Name())
 
-	decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
-	if !ok {
-		logger.DebugLogf(s.ctx.Debug(), "could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
+	// Run strfmt first, before FindModel, so a `swagger:strfmt` type is
+	// inlined as {string, format} *without* registering the struct in
+	// ExtraModels — FindModel has a side effect that would otherwise emit
+	// the struct as an orphan object definition no field references. See
+	// Q10 in .claude/plans/observed-quirks.md.
+	//
+	// A caveat remains: when the author combines `swagger:strfmt` with
+	// `swagger:model` (a "named strfmt" shape), the field still inlines
+	// here while the top-level definition body is emitted by walking the
+	// underlying struct. That inconsistency is documented in
+	// .claude/plans/deferred-quirks.md and left for v2.
+	if sfnm, isf := parsers.StrfmtName(cmt); isf {
+		tgt.Typed("string", sfnm)
 		return nil
 	}
 
-	if sfnm, isf := parsers.StrfmtName(cmt); isf {
-		tgt.Typed("string", sfnm)
+	decl, ok := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
+	if !ok {
+		logger.DebugLogf(s.ctx.Debug(), "could not find model in index: %s.%s", tio.Pkg().Path(), tio.Name())
 		return nil
 	}
 
@@ -1238,19 +1249,30 @@ func (s *Builder) buildAllOf(tpe types.Type, schema *oaispec.Schema) error {
 func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) error {
 	switch utpe := ftpe.Underlying().(type) {
 	case *types.Struct:
-		decl, found := s.ctx.FindModel(ftpe.Obj().Pkg().Path(), ftpe.Obj().Name())
-		if !found {
-			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrSchema)
-		}
+		tio := ftpe.Obj()
 
-		if resolvers.IsStdTime(ftpe.Obj()) {
+		// Run inlining shortcuts (stdlib time, swagger:strfmt) before
+		// FindModel — FindModel registers the type in ExtraModels as a
+		// side effect, which would emit an orphan top-level definition
+		// for a type whose schema we've already inlined. See Q10 in
+		// .claude/plans/observed-quirks.md.
+		if resolvers.IsStdTime(tio) {
 			schema.Typed("string", "date-time")
 			return nil
 		}
 
-		if sfnm, isf := parsers.StrfmtName(decl.Comments); isf {
-			schema.Typed("string", sfnm)
-			return nil
+		if pkg, ok := s.ctx.PkgForType(ftpe); ok {
+			if cmt, hasComments := s.ctx.FindComments(pkg, tio.Name()); hasComments {
+				if sfnm, isf := parsers.StrfmtName(cmt); isf {
+					schema.Typed("string", sfnm)
+					return nil
+				}
+			}
+		}
+
+		decl, found := s.ctx.FindModel(tio.Pkg().Path(), tio.Name())
+		if !found {
+			return fmt.Errorf("can't find source file for struct: %s: %w", ftpe.String(), ErrSchema)
 		}
 
 		if decl.HasModelAnnotation() {

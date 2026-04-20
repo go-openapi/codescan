@@ -25,19 +25,6 @@
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/named-struct-tags"
-    },
-    "PhoneNumber": {
-      "description": "PhoneNumber is a named struct annotated as a strfmt. When used as a\nfield type the scanner emits {type: \"string\", format: \"phone\"} via the\nstrfmt branch of buildNamedStruct.",
-      "type": "object",
-      "properties": {
-        "CountryCode": {
-          "type": "string"
-        },
-        "Number": {
-          "type": "string"
-        }
-      },
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/named-struct-tags"
     }
   }
 }
