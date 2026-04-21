@@ -64,6 +64,33 @@ const (
 	KindResponse  // a response-level property (status, description, …)
 )
 
+// String renders a Kind as the lowercase label used in diagnostics and
+// docs.
+func (k Kind) String() string {
+	switch k {
+	case KindParam:
+		return "param"
+	case KindHeader:
+		return "header"
+	case KindSchema:
+		return "schema"
+	case KindItems:
+		return "items"
+	case KindRoute:
+		return "route"
+	case KindOperation:
+		return "operation"
+	case KindMeta:
+		return "meta"
+	case KindResponse:
+		return "response"
+	case KindUnknown:
+		fallthrough
+	default:
+		return "unknown"
+	}
+}
+
 // ValueType categorizes the expected shape of a keyword's value. Primitive
 // types (Number, Integer, Boolean, StringEnum) are converted inside the
 // parser at parse time; RawValue defers type-conversion to the analyzer
@@ -82,6 +109,32 @@ const (
 	ValueRawBlock   // multi-line block body (headers like consumes:, security:)
 	ValueRawValue   // raw string; analyzer type-converts per field Go type
 )
+
+// String renders a ValueType as the label used in diagnostics and docs.
+func (v ValueType) String() string {
+	switch v {
+	case ValueNumber:
+		return "number"
+	case ValueInteger:
+		return "integer"
+	case ValueBoolean:
+		return "boolean"
+	case ValueString:
+		return "string"
+	case ValueCommaList:
+		return "comma-list"
+	case ValueStringEnum:
+		return "string-enum"
+	case ValueRawBlock:
+		return "raw-block"
+	case ValueRawValue:
+		return "raw-value"
+	case ValueNone:
+		fallthrough
+	default:
+		return "none"
+	}
+}
 
 // Keyword describes one recognizable `keyword: value` form.
 type Keyword struct {

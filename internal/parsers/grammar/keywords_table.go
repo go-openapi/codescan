@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate go run ./gen -out ../../../docs/annotation-keywords.md
+
 package grammar
 
 // keywords is the authoritative table of `keyword: value` forms the
