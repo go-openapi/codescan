@@ -16,8 +16,9 @@ import (
 // named productions as discrete units.
 
 const (
-	fixtureModelName = "Foo"
-	fixtureBlockKw   = "consumes"
+	fixtureModelName    = "Foo"
+	fixtureBlockKw      = "consumes"
+	fixtureValidationKw = "maximum"
 )
 
 // --- annotation-line ---

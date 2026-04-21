@@ -273,7 +273,7 @@ type Root struct{}
 	count := 0
 	for p := range b.Properties() {
 		count++
-		if p.Keyword.Name != "consumes" {
+		if p.Keyword.Name != fixtureBlockKw {
 			t.Errorf("keyword: got %q", p.Keyword.Name)
 		}
 		if p.Value != "" {

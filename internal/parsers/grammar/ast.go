@@ -188,7 +188,8 @@ type Property struct {
 	Pos        token.Position
 	Value      string
 	Typed      TypedValue
-	ItemsDepth int // 0 = no "items." nesting
+	ItemsDepth int      // 0 = no "items." nesting
+	Body       []string // populated for KEYWORD_BLOCK_HEAD lines (consumes:, security:, responses:, …); nil otherwise
 }
 
 // TypedValue carries the primitive-converted form of a keyword's

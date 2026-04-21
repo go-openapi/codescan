@@ -333,12 +333,7 @@ func (p *parseState) parseBody(base *baseBlock, post []Token) {
 			i++
 
 		case TokenKeywordBlockHead:
-			base.properties = append(base.properties, Property{
-				Keyword:    *t.Keyword,
-				Pos:        t.Pos,
-				ItemsDepth: t.ItemsDepth,
-			})
-			i++
+			i = p.collectBlockBody(base, post, i)
 
 		case TokenYAMLFence:
 			i = p.collectYAMLBody(base, post, i)
@@ -353,6 +348,55 @@ func (p *parseState) parseBody(base *baseBlock, post []Token) {
 			i++
 		}
 	}
+}
+
+// collectBlockBody emits a Property for the KEYWORD_BLOCK_HEAD token
+// at index i and consumes any subsequent TEXT tokens as the block's
+// Body. Collection stops (per legacy S6 "multi-line tagger switch")
+// at the next structured token — another keyword, annotation, YAML
+// fence, or EOF. Blank tokens are treated as body-internal separators
+// if followed by more text; a trailing run of blanks is trimmed.
+//
+// Returns the index past the last body token consumed.
+func (p *parseState) collectBlockBody(base *baseBlock, post []Token, i int) int {
+	head := post[i]
+	prop := Property{
+		Keyword:    *head.Keyword,
+		Pos:        head.Pos,
+		ItemsDepth: head.ItemsDepth,
+	}
+	i++
+
+	var pendingBlanks int
+	for i < len(post) {
+		next := post[i]
+		switch next.Kind {
+		case TokenEOF,
+			TokenAnnotation,
+			TokenKeywordValue, TokenKeywordBlockHead,
+			TokenYAMLFence, TokenRawLine:
+			base.properties = append(base.properties, prop)
+			return i
+		case TokenText:
+			for range pendingBlanks {
+				prop.Body = append(prop.Body, "")
+			}
+			pendingBlanks = 0
+			prop.Body = append(prop.Body, next.Text)
+		case TokenBlank:
+			// Defer — include only if more text follows within the
+			// block. Trailing blanks are dropped.
+			pendingBlanks++
+		default:
+			// Defensive: unknown future token kinds end the body.
+			base.properties = append(base.properties, prop)
+			return i
+		}
+		i++
+	}
+
+	base.properties = append(base.properties, prop)
+	return i
 }
 
 // collectYAMLBody captures everything between a YAML_FENCE opener at
