@@ -19,6 +19,71 @@ import (
 	"strings"
 )
 
+// Parser is the public interface the analyzer layer (bridge-taggers)
+// and LSP code consume. The default implementation is returned by
+// NewParser(); tests can substitute their own mock to drive builders
+// with synthesized Blocks without running the grammar pipeline.
+//
+// This is the unlock for P5's property-based builder tests
+// (architecture §5.3) — no test ever needs to string-format a
+// comment and re-parse it; tests construct Block values directly and
+// inject them via a mock Parser.
+type Parser interface {
+	// Parse runs the full preprocess → lex → parse pipeline on a
+	// comment group and returns the typed Block that describes it.
+	// Never panics; diagnostics accumulate on the returned Block.
+	Parse(cg *ast.CommentGroup) Block
+
+	// ParseText parses raw comment content (markers already stripped
+	// by the caller). Used by LSP — the editor provides the raw text
+	// at cursor position — and by tests synthesising input.
+	ParseText(text string, pos token.Position) Block
+
+	// ParseAs forces the annotation kind and parses the body under
+	// it. Useful for LSP completion where the annotation line is
+	// missing or being typed: given "the user is editing a model
+	// block", parse the properties under the assumed kind. (See
+	// architecture §4.6.)
+	ParseAs(kind AnnotationKind, text string, pos token.Position) Block
+}
+
+// NewParser constructs a Parser bound to a FileSet (needed to map
+// ast.CommentGroup positions to absolute source positions). The
+// returned Parser is safe for concurrent use across goroutines.
+//
+//nolint:ireturn // Parser is the intentional public interface; callers depend on the surface, not the concrete type.
+func NewParser(fset *token.FileSet) Parser {
+	return &parserImpl{fset: fset}
+}
+
+type parserImpl struct {
+	fset *token.FileSet
+}
+
+//nolint:ireturn // see Parse godoc
+func (p *parserImpl) Parse(cg *ast.CommentGroup) Block {
+	lines := Preprocess(cg, p.fset)
+	tokens := Lex(lines)
+	return ParseTokens(tokens)
+}
+
+//nolint:ireturn // see Parse godoc
+func (p *parserImpl) ParseText(text string, pos token.Position) Block {
+	lines := preprocessText(text, pos)
+	tokens := Lex(lines)
+	return ParseTokens(tokens)
+}
+
+//nolint:ireturn // see Parse godoc
+func (p *parserImpl) ParseAs(kind AnnotationKind, text string, pos token.Position) Block {
+	// Prepend a synthetic annotation line so the parser dispatches to
+	// the requested kind. If text already contains a swagger:<name>
+	// annotation, the existing line wins (findAnnotation picks the
+	// first) — the injected line is effectively decorative.
+	injected := "swagger:" + kind.String() + "\n" + text
+	return p.ParseText(injected, pos)
+}
+
 // Parse runs the full preprocess → lex → parse pipeline on a comment
 // group and returns the typed Block that describes it. Never panics;
 // diagnostics accumulate on the returned Block.
@@ -26,11 +91,12 @@ import (
 // A nil CommentGroup produces an empty UnboundBlock — useful for code
 // paths that call Parse unconditionally.
 //
-//nolint:ireturn // Block is a polymorphic family (ModelBlock, RouteBlock, …); concrete type depends on the annotation.
+// Convenience wrapper around NewParser(fset).Parse(cg) — preferred
+// for one-off uses; store the Parser and reuse it for batch work.
+//
+//nolint:ireturn // see Parse godoc
 func Parse(cg *ast.CommentGroup, fset *token.FileSet) Block {
-	lines := Preprocess(cg, fset)
-	tokens := Lex(lines)
-	return ParseTokens(tokens)
+	return NewParser(fset).Parse(cg)
 }
 
 // ParseTokens runs parser-only on a pre-lexed token stream. Useful
@@ -41,6 +107,23 @@ func Parse(cg *ast.CommentGroup, fset *token.FileSet) Block {
 func ParseTokens(tokens []Token) Block {
 	p := &parseState{tokens: tokens}
 	return p.parse()
+}
+
+// preprocessText converts raw text (already stripped of Go comment
+// markers) into a []Line. Used by ParseText/ParseAs where no
+// *ast.CommentGroup is available.
+func preprocessText(text string, basePos token.Position) []Line {
+	rawLines := strings.Split(text, "\n")
+	out := make([]Line, 0, len(rawLines))
+	for i, r := range rawLines {
+		pos := basePos
+		pos.Line += i
+		if i > 0 {
+			pos.Column = 1
+		}
+		out = append(out, Line{Text: r, Raw: r, Pos: pos})
+	}
+	return out
 }
 
 type parseState struct {
