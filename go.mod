@@ -11,7 +11,6 @@ require (
 	github.com/go-openapi/testify/v2 v2.4.2
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/tools v0.44.0
-	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

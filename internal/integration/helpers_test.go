@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/go-openapi/testify/v2/assert"
 
