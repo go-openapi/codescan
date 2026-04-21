@@ -19,15 +19,20 @@ import (
 	"strings"
 )
 
-// Parser is the public interface the analyzer layer (bridge-taggers)
-// and LSP code consume. The default implementation is returned by
-// NewParser(); tests can substitute their own mock to drive builders
-// with synthesized Blocks without running the grammar pipeline.
+// Parser is the consumer contract the analyzer layer (bridge-taggers)
+// depends on. The grammar package ships *DefaultParser as the single
+// concrete implementation; the interface exists so tests can
+// substitute a mock that distributes fabricated Blocks without
+// running the grammar pipeline.
 //
 // This is the unlock for P5's property-based builder tests
-// (architecture §5.3) — no test ever needs to string-format a
-// comment and re-parse it; tests construct Block values directly and
-// inject them via a mock Parser.
+// (architecture §5.3): tests construct Block values directly and
+// feed them through a mock Parser — no string-formatting of comments
+// and no re-parsing.
+//
+// Production code takes the concrete *DefaultParser returned by
+// NewParser; only test code (and the rare case needing a mock)
+// depends on the interface.
 type Parser interface {
 	// Parse runs the full preprocess → lex → parse pipeline on a
 	// comment group and returns the typed Block that describes it.
@@ -47,24 +52,32 @@ type Parser interface {
 	ParseAs(kind AnnotationKind, text string, pos token.Position) Block
 }
 
-// NewParser constructs a Parser bound to a FileSet (needed to map
-// ast.CommentGroup positions to absolute source positions). The
-// returned Parser is safe for concurrent use across goroutines.
+// DefaultParser is the grammar package's concrete Parser
+// implementation. Safe for concurrent use across goroutines.
+// Constructed via NewParser.
+type DefaultParser struct {
+	fset           *token.FileSet
+	diagnosticSink func(Diagnostic)
+}
+
+// NewParser constructs a DefaultParser bound to a FileSet (needed to
+// map ast.CommentGroup positions to absolute source positions).
+// Returns the concrete *DefaultParser so callers get full IDE
+// discoverability; the Parser interface is the seam tests use to
+// inject a mock.
 //
 // Variadic Options tune behavior — see WithDiagnosticSink. A
 // zero-option call is the common case.
-//
-//nolint:ireturn // Parser is the intentional public interface; callers depend on the surface, not the concrete type.
-func NewParser(fset *token.FileSet, opts ...Option) Parser {
-	p := &parserImpl{fset: fset}
+func NewParser(fset *token.FileSet, opts ...Option) *DefaultParser {
+	p := &DefaultParser{fset: fset}
 	for _, opt := range opts {
 		opt(p)
 	}
 	return p
 }
 
-// Option configures a Parser built with NewParser.
-type Option func(*parserImpl)
+// Option configures a DefaultParser built with NewParser.
+type Option func(*DefaultParser)
 
 // WithDiagnosticSink sets an optional callback invoked for every
 // Diagnostic the parser emits, in addition to accumulating it on
@@ -73,30 +86,25 @@ type Option func(*parserImpl)
 // completes. The sink runs on the parser's goroutine; callers
 // needing async delivery should push into a channel.
 func WithDiagnosticSink(sink func(Diagnostic)) Option {
-	return func(p *parserImpl) { p.diagnosticSink = sink }
-}
-
-type parserImpl struct {
-	fset           *token.FileSet
-	diagnosticSink func(Diagnostic)
+	return func(p *DefaultParser) { p.diagnosticSink = sink }
 }
 
 //nolint:ireturn // see Parse godoc
-func (p *parserImpl) Parse(cg *ast.CommentGroup) Block {
+func (p *DefaultParser) Parse(cg *ast.CommentGroup) Block {
 	lines := Preprocess(cg, p.fset)
 	tokens := Lex(lines)
 	return p.runParser(tokens)
 }
 
 //nolint:ireturn // see Parse godoc
-func (p *parserImpl) ParseText(text string, pos token.Position) Block {
+func (p *DefaultParser) ParseText(text string, pos token.Position) Block {
 	lines := preprocessText(text, pos)
 	tokens := Lex(lines)
 	return p.runParser(tokens)
 }
 
 //nolint:ireturn // see Parse godoc
-func (p *parserImpl) ParseAs(kind AnnotationKind, text string, pos token.Position) Block {
+func (p *DefaultParser) ParseAs(kind AnnotationKind, text string, pos token.Position) Block {
 	// Prepend a synthetic annotation line so the parser dispatches to
 	// the requested kind. If text already contains a swagger:<name>
 	// annotation, the existing line wins (findAnnotation picks the
@@ -105,11 +113,11 @@ func (p *parserImpl) ParseAs(kind AnnotationKind, text string, pos token.Positio
 	return p.ParseText(injected, pos)
 }
 
-// runParser constructs a parseState wired with the parserImpl's
+// runParser constructs a parseState wired with the DefaultParser's
 // options (diagnostic sink, future additions) and delegates.
 //
 //nolint:ireturn // see Parse godoc
-func (p *parserImpl) runParser(tokens []Token) Block {
+func (p *DefaultParser) runParser(tokens []Token) Block {
 	ps := &parseState{tokens: tokens, sink: p.diagnosticSink}
 	return ps.parse()
 }

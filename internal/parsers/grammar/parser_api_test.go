@@ -80,8 +80,8 @@ func TestParserInterfaceParseAs(t *testing.T) {
 }
 
 func TestParserInterfaceSatisfiedByImpl(t *testing.T) {
-	// Compile-time assertion that *parserImpl implements Parser.
-	var _ Parser = (*parserImpl)(nil)
+	// Compile-time assertion that *DefaultParser implements Parser.
+	var _ Parser = (*DefaultParser)(nil)
 	_ = t
 }
 
