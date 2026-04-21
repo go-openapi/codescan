@@ -14,6 +14,7 @@ package grammar
 import (
 	"go/ast"
 	"go/token"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -74,9 +75,88 @@ func (p *parseState) parse() Block {
 
 	p.parseTitleDesc(base, pre)
 	p.parseBody(base, post)
+	p.checkContextValidity(base)
 
 	base.diagnostics = append(base.diagnostics, p.diag...)
 	return typed
+}
+
+// checkContextValidity emits CodeContextInvalid warnings for every
+// Property whose keyword is not legal under the block's
+// AnnotationKind. Non-fatal (SeverityWarning); the analyzer decides
+// policy. Skipped for UnboundBlock and non-dispatched annotations
+// where context legality isn't meaningful at the parser layer.
+func (p *parseState) checkContextValidity(base *baseBlock) {
+	allowed := allowedContexts(base.kind)
+	if allowed == nil {
+		return
+	}
+	for _, prop := range base.properties {
+		if contextsOverlap(prop.Keyword.Contexts, allowed) {
+			continue
+		}
+		p.diag = append(p.diag, Warnf(prop.Pos, CodeContextInvalid,
+			"keyword %q not valid under swagger:%s (legal in: %s)",
+			prop.Keyword.Name, base.kind,
+			formatKeywordContexts(prop.Keyword.Contexts)))
+	}
+}
+
+// allowedContexts returns the set of Kind sub-contexts that may host
+// keywords under the given AnnotationKind. Returns nil to mean "no
+// parser-layer check" (UnboundBlock, strfmt, alias, etc., where the
+// legality depends on external context the parser doesn't have).
+//
+// The sets are deliberately broad: an operation body can contain
+// schema properties, response headers, parameters, and more, so
+// allowedContexts(AnnOperation) lists all plausible sub-contexts.
+// Analyzers may enforce tighter rules with more context (Go type,
+// enclosing struct) but the parser uses the permissive union.
+func allowedContexts(a AnnotationKind) []Kind {
+	switch a {
+	case AnnModel:
+		return []Kind{KindSchema, KindItems}
+	case AnnParameters:
+		return []Kind{KindParam, KindSchema, KindItems}
+	case AnnResponse:
+		return []Kind{KindResponse, KindSchema, KindHeader, KindItems}
+	case AnnOperation:
+		return []Kind{KindOperation, KindParam, KindSchema, KindHeader, KindItems, KindResponse}
+	case AnnRoute:
+		return []Kind{KindRoute, KindParam, KindSchema, KindHeader, KindItems, KindResponse}
+	case AnnMeta:
+		return []Kind{KindMeta, KindSchema}
+	case AnnUnknown,
+		AnnStrfmt, AnnAlias, AnnName, AnnAllOf, AnnEnumDecl,
+		AnnIgnore, AnnDefaultName, AnnType, AnnFile:
+		return nil
+	default:
+		return nil
+	}
+}
+
+// contextsOverlap reports whether any Kind in the keyword's contexts
+// list is in the allowed set.
+func contextsOverlap(kwContexts []ContextDoc, allowed []Kind) bool {
+	for _, cd := range kwContexts {
+		if slices.Contains(allowed, cd.Kind) {
+			return true
+		}
+	}
+	return false
+}
+
+// formatKeywordContexts renders a keyword's legal Kind list for
+// diagnostics — "schema, param, items".
+func formatKeywordContexts(ctxs []ContextDoc) string {
+	if len(ctxs) == 0 {
+		return "(none)"
+	}
+	out := make([]string, len(ctxs))
+	for i, c := range ctxs {
+		out[i] = c.Kind.String()
+	}
+	return strings.Join(out, ", ")
 }
 
 // findAnnotation returns the index of the first TokenAnnotation in

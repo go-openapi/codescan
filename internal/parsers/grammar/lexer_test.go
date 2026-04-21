@@ -57,7 +57,7 @@ func TestLexAnnotationRoute(t *testing.T) {
 	if toks[0].Kind != TokenAnnotation {
 		t.Fatalf("want ANNOTATION, got %s", toks[0].Kind)
 	}
-	if toks[0].Text != "route" {
+	if toks[0].Text != labelRoute {
 		t.Errorf("name: got %q want route", toks[0].Text)
 	}
 	want := []string{"GET", "/pets", "tags", "listPets"}
@@ -198,7 +198,7 @@ func TestLexGodocIdentPrefixForRoute(t *testing.T) {
 	if toks[0].Kind != TokenAnnotation {
 		t.Fatalf("want ANNOTATION, got %s: %+v", toks[0].Kind, toks[0])
 	}
-	if toks[0].Text != "route" {
+	if toks[0].Text != labelRoute {
 		t.Errorf("annotation name: got %q want route", toks[0].Text)
 	}
 	// Position should point past the "DoFoo " prefix (6 bytes).
