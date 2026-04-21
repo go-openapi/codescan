@@ -18,10 +18,10 @@ import (
 // indentation handling lives at the lexer layer where fence state is
 // tracked.
 //
-// Pos is the position of Text's first character in the source file.
-// For continuation lines inside a /* … */ block, the column is
-// approximated to 1 — exact column reconstruction would require
-// re-tokenising the comment body and is deferred until LSP needs it.
+// Pos is the position of Text's first character in the source file:
+// Line/Column are accurate on every line (including continuation
+// lines inside a /* … */ block) and Offset is the byte offset from
+// the start of the file.
 type Line struct {
 	Text string
 	Pos  token.Position
@@ -47,31 +47,70 @@ func Preprocess(cg *ast.CommentGroup, fset *token.FileSet) []Line {
 
 // stripComment returns one Line per physical source line of a single
 // *ast.Comment. It handles both the `//` line-comment form and the
-// `/* … */` block form, including multi-line blocks.
+// `/* … */` block form, including multi-line blocks. Each emitted
+// Line's Pos points precisely to the first character of Text in the
+// source file (Line, Column, and Offset all accurate).
 func stripComment(raw string, basePos token.Position) []Line {
+	const markerLen = 2 // "//" and "/*" are both 2 bytes
 	switch {
 	case strings.HasPrefix(raw, "//"):
-		text := trimContentPrefix(strings.TrimPrefix(raw, "//"))
-		return []Line{{Text: text, Pos: basePos}}
+		pos := basePos
+		pos.Column += markerLen
+		pos.Offset += markerLen
+		return []Line{stripLine(raw[markerLen:], pos)}
+
 	case strings.HasPrefix(raw, "/*"):
-		body := strings.TrimSuffix(strings.TrimPrefix(raw, "/*"), "*/")
-		rawLines := strings.Split(body, "\n")
-		out := make([]Line, 0, len(rawLines))
-		for i, r := range rawLines {
-			pos := basePos
-			pos.Line += i
-			if i > 0 {
-				pos.Column = 1
+		body := strings.TrimSuffix(raw[markerLen:], "*/")
+		out := []Line{}
+		lineOffset := 0 // byte index into body where the current line begins
+		for lineIdx := 0; ; lineIdx++ {
+			nl := strings.IndexByte(body[lineOffset:], '\n')
+
+			var segment string
+			if nl < 0 {
+				segment = body[lineOffset:]
+			} else {
+				segment = body[lineOffset : lineOffset+nl]
 			}
-			out = append(out, Line{Text: trimContentPrefix(r), Pos: pos})
+
+			pos := basePos
+			if lineIdx == 0 {
+				// Same source line as basePos; advance past "/*".
+				pos.Column += markerLen
+				pos.Offset += markerLen
+			} else {
+				// Continuation line: column restarts at 1; offset is
+				// the file offset of the first character of this line.
+				pos.Line += lineIdx
+				pos.Column = 1
+				pos.Offset += markerLen + lineOffset
+			}
+			out = append(out, stripLine(segment, pos))
+
+			if nl < 0 {
+				break
+			}
+			lineOffset += nl + 1
 		}
 		return out
+
 	default:
 		// Not a valid Go comment; preserve input defensively so
 		// downstream layers can surface a diagnostic rather than
 		// silently lose data.
 		return []Line{{Text: raw, Pos: basePos}}
 	}
+}
+
+// stripLine trims the leading decoration of a single line and advances
+// pos by the number of bytes consumed. pos must already point to the
+// first character of the (unstripped) line in the source.
+func stripLine(s string, pos token.Position) Line {
+	stripped := trimContentPrefix(s)
+	consumed := len(s) - len(stripped)
+	pos.Column += consumed
+	pos.Offset += consumed
+	return Line{Text: stripped, Pos: pos}
 }
 
 // trimContentPrefix removes the leading godoc-style decoration that
