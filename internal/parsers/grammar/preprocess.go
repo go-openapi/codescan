@@ -117,14 +117,15 @@ func stripLine(s string, pos token.Position) Line {
 // precedes real content on a comment line:
 //   - whitespace (space, tab)
 //   - continuation slashes and asterisks (“//“, “ * “, “ *  “)
-//   - dashes (“ -- “)
 //   - an optional single markdown table pipe “|“
 //
-// The set mirrors the v1 parser's rxUncommentHeaders so migrated
-// fixtures match byte-for-byte at the parse-output level (pre-P5
-// parity harness).
+// Notably it does NOT strip leading `-`, because the YAML fence
+// marker `---` must survive preprocessing intact for the lexer to
+// recognize it. Bullet-list dashes in description text stay in Text
+// as well — arguably more faithful to the author's intent than the
+// v1 behavior of silently eating them.
 func trimContentPrefix(s string) string {
-	s = strings.TrimLeft(s, " \t*/-")
+	s = strings.TrimLeft(s, " \t*/")
 	s = strings.TrimPrefix(s, "|")
 	return strings.TrimLeft(s, " \t")
 }
