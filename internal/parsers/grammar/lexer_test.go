@@ -191,6 +191,58 @@ func TestLexItemsPrefixAdvancesPos(t *testing.T) {
 	}
 }
 
+func TestLexGodocIdentPrefixForRoute(t *testing.T) {
+	// "DoFoo swagger:route GET /pets tags listPets" — v1 rxRoutePrefix
+	// allows one leading godoc identifier before swagger:route.
+	toks := Lex(mkLines("DoFoo swagger:route GET /pets tags listPets"))
+	if toks[0].Kind != TokenAnnotation {
+		t.Fatalf("want ANNOTATION, got %s: %+v", toks[0].Kind, toks[0])
+	}
+	if toks[0].Text != "route" {
+		t.Errorf("annotation name: got %q want route", toks[0].Text)
+	}
+	// Position should point past the "DoFoo " prefix (6 bytes).
+	if toks[0].Pos.Column != 7 {
+		t.Errorf("Pos.Column: got %d want 7 (after 'DoFoo ')", toks[0].Pos.Column)
+	}
+}
+
+func TestLexGodocIdentPrefixRestrictedToRoute(t *testing.T) {
+	// Only "route" gets the ident-prefix exception — other annotations
+	// stay as TEXT when prefixed.
+	cases := []string{
+		"DoFoo swagger:model Bar",
+		"DoFoo swagger:operation GET /pets listPets",
+		"DoFoo swagger:parameters Foo",
+	}
+	for _, in := range cases {
+		t.Run(in, func(t *testing.T) {
+			toks := Lex(mkLines(in))
+			if toks[0].Kind != TokenText {
+				t.Errorf("%q: want TEXT (non-route annotation must start line), got %s",
+					in, toks[0].Kind)
+			}
+		})
+	}
+}
+
+func TestLexGodocIdentPrefixRejectsMultipleIdents(t *testing.T) {
+	// Two-word prefix is not allowed — must be exactly one identifier.
+	toks := Lex(mkLines("Do Foo swagger:route GET /pets listPets"))
+	if toks[0].Kind != TokenText {
+		t.Errorf("want TEXT (multi-word prefix not allowed), got %s", toks[0].Kind)
+	}
+}
+
+func TestLexGodocIdentPrefixRejectsSwaggerRoutex(t *testing.T) {
+	// "swagger:routex" is not swagger:route — ident-prefix must not eat
+	// into a longer annotation name.
+	toks := Lex(mkLines("DoFoo swagger:routex GET /pets listPets"))
+	if toks[0].Kind != TokenText {
+		t.Errorf("want TEXT (swagger:routex is not swagger:route), got %s", toks[0].Kind)
+	}
+}
+
 func TestLexEOFIsAlwaysLast(t *testing.T) {
 	toks := Lex(mkLines("swagger:model Foo", "", "maximum: 5"))
 	if toks[len(toks)-1].Kind != TokenEOF {

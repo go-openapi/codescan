@@ -76,6 +76,13 @@ func (k Kind) String() string {
 		return "schema"
 	case KindItems:
 		return "items"
+	// The string literals below intentionally duplicate some of the
+	// labelXxx constants defined in ast.go. Kind (keyword context) and
+	// AnnotationKind (Block dispatch) are separate concerns that happen
+	// to share a handful of label spellings; see architecture §4.6 —
+	// coupling them through a shared const would hide that distinction.
+	//
+	//nolint:goconst // see note above
 	case KindRoute:
 		return "route"
 	case KindOperation:

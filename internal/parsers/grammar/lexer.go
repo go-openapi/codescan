@@ -6,6 +6,8 @@ package grammar
 import (
 	"go/token"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // TokenKind classifies a preprocessed line. The lexer assigns exactly
@@ -91,10 +93,74 @@ func lexLine(line Line) Token {
 	if strings.HasPrefix(text, "swagger:") {
 		return lexAnnotation(text, line.Pos)
 	}
+	// swagger:route is the one annotation allowed to follow a leading
+	// godoc-style identifier (e.g. `DoFoo swagger:route GET /pets ...`).
+	// See architecture §1.1 C2 / v1 rxRoutePrefix.
+	if prefixLen, ok := matchGodocRoutePrefix(text); ok {
+		pos := line.Pos
+		pos.Column += prefixLen
+		pos.Offset += prefixLen
+		return lexAnnotation(text[prefixLen:], pos)
+	}
 	if tok, ok := lexKeyword(text, line.Pos); ok {
 		return tok
 	}
 	return Token{Kind: TokenText, Text: text, Pos: line.Pos}
+}
+
+// matchGodocRoutePrefix returns the byte offset of "swagger:route"
+// in s if s has the form "<identifier><whitespace>swagger:route<end|whitespace>".
+// Returns (0, false) otherwise. Only "route" gets this exception.
+func matchGodocRoutePrefix(s string) (int, bool) {
+	identEnd := scanIdentifier(s)
+	if identEnd == 0 {
+		return 0, false
+	}
+	wsEnd := identEnd
+	for wsEnd < len(s) && (s[wsEnd] == ' ' || s[wsEnd] == '\t') {
+		wsEnd++
+	}
+	if wsEnd == identEnd {
+		return 0, false
+	}
+	const prefix = "swagger:" + labelRoute
+	if !strings.HasPrefix(s[wsEnd:], prefix) {
+		return 0, false
+	}
+	// Guard against "swagger:routex" — the annotation name must end.
+	after := wsEnd + len(prefix)
+	if after < len(s) && s[after] != ' ' && s[after] != '\t' {
+		return 0, false
+	}
+	return wsEnd, true
+}
+
+// scanIdentifier returns the byte length of a leading godoc identifier
+// in s, or 0 if s does not start with one. Matches v1's
+// `\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]*` — a Unicode letter followed by
+// letters, digits, hyphens, or connector punctuation (underscore).
+func scanIdentifier(s string) int {
+	if len(s) == 0 {
+		return 0
+	}
+	r, size := utf8.DecodeRuneInString(s)
+	if !unicode.IsLetter(r) {
+		return 0
+	}
+	i := size
+	for i < len(s) {
+		r, size = utf8.DecodeRuneInString(s[i:])
+		if !isIdentCont(r) {
+			break
+		}
+		i += size
+	}
+	return i
+}
+
+func isIdentCont(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) ||
+		r == '_' || r == '-'
 }
 
 // lexAnnotation parses "swagger:<name> [arg1 arg2 ...]". Malformed

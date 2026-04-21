@@ -85,6 +85,35 @@ func ListPets() {}
 	}
 }
 
+func TestParseRouteWithGodocIdentPrefix(t *testing.T) {
+	// End-to-end: the leading "ListPets" identifier is stripped so the
+	// parser sees a normal swagger:route annotation.
+	src := `package p
+
+// ListPets swagger:route GET /pets tags listPets
+func ListPets() {}
+`
+	cg, fset := parseCommentGroup(t, src)
+	b := Parse(cg, fset)
+
+	rb, ok := b.(*RouteBlock)
+	if !ok {
+		t.Fatalf("want *RouteBlock, got %T", b)
+	}
+	if rb.Method != http.MethodGet {
+		t.Errorf("Method: got %q want GET", rb.Method)
+	}
+	if rb.Path != "/pets" {
+		t.Errorf("Path: got %q want /pets", rb.Path)
+	}
+	if rb.OpID != "listPets" {
+		t.Errorf("OpID: got %q want listPets", rb.OpID)
+	}
+	if len(b.Diagnostics()) != 0 {
+		t.Errorf("godoc-prefixed route must parse cleanly, got %+v", b.Diagnostics())
+	}
+}
+
 func TestParseRouteMalformed(t *testing.T) {
 	src := `package p
 
