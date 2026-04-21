@@ -1,0 +1,94 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "NotificationA": {
+      "description": "NotificationA exercises case A: field uses PriorityA, no inline\nenum override.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "priority": {
+          "description": "The priority level. Enum values come from PriorityA's consts.\nlow PriorityALow\nmedium PriorityAMed\nhigh PriorityAHigh",
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "x-go-enum-desc": "low PriorityALow\nmedium PriorityAMed\nhigh PriorityAHigh",
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
+    },
+    "NotificationB": {
+      "description": "NotificationB exercises case B: plain string field with inline",
+      "type": "object",
+      "properties": {
+        "priority": {
+          "description": "The priority level.",
+          "type": "string",
+          "enum": [
+            "low",
+            " medium",
+            " high"
+          ],
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
+    },
+    "NotificationC": {
+      "type": "object",
+      "title": "NotificationC exercises case C: inline JSON-array enum.",
+      "properties": {
+        "priority": {
+          "description": "The priority level.",
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
+    },
+    "NotificationD": {
+      "type": "object",
+      "title": "NotificationD exercises case D.",
+      "properties": {
+        "priority": {
+          "description": "The priority level.",
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
+    },
+    "NotificationE": {
+      "description": "NotificationE exercises case E: the inline enum on the field\ncompetes with the const-derived enum from PriorityE. The golden\noutput captures which one wins in v1.",
+      "type": "object",
+      "properties": {
+        "priority": {
+          "description": "Inline enum provides a narrower set than the const block.\nlow PriorityELow\nmedium PriorityEMed\nhigh PriorityEHigh",
+          "type": "string",
+          "enum": [
+            "urgent",
+            " normal"
+          ],
+          "x-go-enum-desc": "low PriorityELow\nmedium PriorityEMed\nhigh PriorityEHigh",
+          "x-go-name": "Priority"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
+    }
+  }
+}
