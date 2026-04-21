@@ -14,6 +14,7 @@ package grammar
 import (
 	"go/ast"
 	"go/token"
+	"strconv"
 	"strings"
 )
 
@@ -244,6 +245,7 @@ func (p *parseState) parseBody(base *baseBlock, post []Token) {
 				Keyword:    *t.Keyword,
 				Pos:        t.Pos,
 				Value:      t.Value,
+				Typed:      p.typeConvert(*t.Keyword, t.Value, t.Pos),
 				ItemsDepth: t.ItemsDepth,
 			})
 			i++
@@ -303,6 +305,95 @@ func (p *parseState) collectYAMLBody(base *baseBlock, post []Token, i int) int {
 		Text: strings.Join(body, "\n"),
 	})
 	return i
+}
+
+// typeConvert performs primitive value-typing per the keyword's
+// declared ValueType (architecture §3.4). Primitives (Number, Integer,
+// Boolean, StringEnum) are converted at parse time and populate the
+// corresponding TypedValue field. Non-primitive ValueTypes (String,
+// CommaList, RawValue, RawBlock, None) return a zero TypedValue — the
+// analyzer consumes the raw Property.Value with knowledge of the
+// target Go type.
+//
+// Conversion failures emit non-fatal diagnostics on p.diag; the
+// returned TypedValue stays zero so downstream consumers can tell
+// "no conversion performed" from "conversion succeeded with zero
+// value" via Typed.Type.
+func (p *parseState) typeConvert(kw Keyword, raw string, pos token.Position) TypedValue {
+	switch kw.Value.Type {
+	case ValueNumber:
+		op, rest := splitCmpOperator(raw)
+		n, err := strconv.ParseFloat(strings.TrimSpace(rest), 64)
+		if err != nil {
+			p.diag = append(p.diag, Errorf(pos, CodeInvalidNumber,
+				"%s: %q is not a valid number", kw.Name, raw))
+			return TypedValue{}
+		}
+		return TypedValue{Type: ValueNumber, Op: op, Number: n}
+
+	case ValueInteger:
+		i, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+		if err != nil {
+			p.diag = append(p.diag, Errorf(pos, CodeInvalidInteger,
+				"%s: %q is not a valid integer", kw.Name, raw))
+			return TypedValue{}
+		}
+		return TypedValue{Type: ValueInteger, Integer: i}
+
+	case ValueBoolean:
+		b, ok := parseBool(raw)
+		if !ok {
+			p.diag = append(p.diag, Errorf(pos, CodeInvalidBoolean,
+				"%s: %q is not a valid boolean (expected true or false)", kw.Name, raw))
+			return TypedValue{}
+		}
+		return TypedValue{Type: ValueBoolean, Boolean: b}
+
+	case ValueStringEnum:
+		for _, allowed := range kw.Value.Values {
+			if strings.EqualFold(raw, allowed) {
+				return TypedValue{Type: ValueStringEnum, String: allowed}
+			}
+		}
+		p.diag = append(p.diag, Errorf(pos, CodeInvalidStringEnum,
+			"%s: %q is not one of {%s}",
+			kw.Name, raw, strings.Join(kw.Value.Values, ", ")))
+		return TypedValue{}
+
+	case ValueNone, ValueString, ValueCommaList, ValueRawValue, ValueRawBlock:
+		return TypedValue{}
+
+	default:
+		return TypedValue{}
+	}
+}
+
+// splitCmpOperator strips a leading comparison operator ("<=", ">=",
+// "<", ">", "=") from s, returning the operator (or "") and the rest.
+// Supports the v1 `maximum: <5` / `minimum: >=0` forms.
+func splitCmpOperator(s string) (op, rest string) {
+	s = strings.TrimLeft(s, " \t")
+	for _, candidate := range []string{"<=", ">=", "<", ">", "="} {
+		if strings.HasPrefix(s, candidate) {
+			return candidate, s[len(candidate):]
+		}
+	}
+	return "", s
+}
+
+// parseBool accepts only "true" or "false" (case-insensitive). stdlib
+// strconv.ParseBool is too lenient for the swagger grammar, accepting
+// "1", "t", "T", etc.
+func parseBool(s string) (bool, bool) {
+	s = strings.TrimSpace(s)
+	switch {
+	case strings.EqualFold(s, "true"):
+		return true, true
+	case strings.EqualFold(s, "false"):
+		return false, true
+	default:
+		return false, false
+	}
 }
 
 // reconstructLine returns a best-effort text rendering of a Token as

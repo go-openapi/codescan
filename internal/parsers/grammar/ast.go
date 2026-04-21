@@ -194,12 +194,19 @@ type Property struct {
 // TypedValue carries the primitive-converted form of a keyword's
 // value when the keyword's ValueType is Number/Integer/Boolean/
 // StringEnum. For other ValueTypes the fields are zero.
+//
+// Op is the leading comparison operator stripped from a Number value
+// ("<", "<=", ">", ">=", "="); empty when no operator was present or
+// for non-Number values. v1 accepts e.g. `maximum: <5` to mean
+// exclusive-maximum; the analyzer interprets Op + Number to decide
+// inclusive vs. exclusive semantics.
 type TypedValue struct {
 	Type    ValueType
+	Op      string
 	Number  float64
 	Integer int64
 	Boolean bool
-	String  string // for StringEnum: the matched enum value (canonical)
+	String  string // for StringEnum: the canonical (table-spelled) value
 }
 
 // RawYAML is one captured YAML body (between --- fences). The parser
