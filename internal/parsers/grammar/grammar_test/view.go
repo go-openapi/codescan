@@ -23,6 +23,7 @@
 package grammartest
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/ast"
@@ -283,7 +284,13 @@ func AssertGoldenView(t *testing.T, path string, views []NormalizedCommentView) 
 	if err != nil {
 		t.Fatalf("read golden %s: %v\n(run with UPDATE_GOLDEN=1 to create)", path, err)
 	}
-	if string(got) != string(want) {
+	// Normalise line endings: git on Windows checks files out with
+	// CRLF by default (core.autocrlf=true), which would otherwise
+	// break byte-equal comparison against the LF-only output of
+	// json.MarshalIndent. Normalising on the read side only is
+	// correct because `got` is always freshly LF-produced.
+	want = bytes.ReplaceAll(want, []byte("\r\n"), []byte("\n"))
+	if !bytes.Equal(got, want) {
 		t.Fatalf(
 			"golden mismatch at %s\n--- want (%d bytes)\n%s\n--- got (%d bytes)\n%s\n(run with UPDATE_GOLDEN=1 to accept)",
 			path, len(want), want, len(got), got,
