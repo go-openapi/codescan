@@ -454,13 +454,21 @@ func (s *Builder) buildNamedBasic(tio *types.TypeName, pkg *packages.Package, cm
 			tgt.WithEnum(enumValues...)
 			enumTypeName := reflect.TypeOf(enumValues[0]).String()
 			_ = resolvers.SwaggerSchemaForType(enumTypeName, tgt)
+
+			if len(enumDesces) > 0 {
+				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
+			}
+
+			return nil
 		}
 
-		if len(enumDesces) > 0 {
-			tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
-		}
-
-		return nil
+		// Q2: swagger:enum with no matching const values. Previously
+		// we silently returned here and the resulting schema had no
+		// type or enum (a confusing invisible failure). Now we warn
+		// and fall through so the type-resolution engine can still
+		// decide what to do with the underlying Go type (it may be
+		// a model, an alias, a strfmt, …).
+		log.Printf("WARNING: swagger:enum %s: no matching const values found; dropping enum semantics", enumName)
 	}
 
 	if defaultName, ok := parsers.DefaultName(cmt); ok {

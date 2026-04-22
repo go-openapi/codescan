@@ -67,8 +67,7 @@
       "title": "NotificationD exercises case D.",
       "properties": {
         "priority": {
-          "description": "The priority level.",
-          "x-go-name": "Priority"
+          "$ref": "#/definitions/PriorityD"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
@@ -88,6 +87,10 @@
           "x-go-name": "Priority"
         }
       },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
+    },
+    "PriorityD": {
+      "type": "string",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
     }
   }
