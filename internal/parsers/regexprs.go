@@ -78,34 +78,19 @@ var (
 	// truncates descriptions. Use rxSwaggerAnnotationStrict for that.
 	rxSwaggerAnnotation = regexp.MustCompile(`(?:^|[\s/])swagger:([\p{L}\p{N}\p{Pd}\p{Pc}]+)`)
 
-	// rxSwaggerAnnotationStrict matches a swagger:<name> annotation
-	// only at the start of a comment line (with comment-prefix noise
-	// tolerated per rxCommentPrefix). Used by SectionedParser as the
-	// block-body terminator so prose that mentions `swagger:*` in
-	// passing does not cut description accumulation short. Finishes
-	// the work of 09f6748 ("All annotations should start their
-	// comment line.") which tightened the per-annotation validator
-	// regexes but left the block-level terminator using the loose
-	// pattern.
-	//
-	// For `swagger:route` with a godoc-style prefix, the per-annotation
-	// rxRoutePrefix handles the legitimate identifier-before-route
-	// form; the SectionedParser does not build routes directly, so
-	// this strict pattern never needs that exception.
-	rxSwaggerAnnotationStrict = regexp.MustCompile(rxCommentPrefix + `swagger:[\p{L}\p{N}\p{Pd}\p{Pc}]+`)
-	rxFileUpload              = regexp.MustCompile(rxCommentPrefix + `swagger:file`)
-	rxStrFmt                  = regexp.MustCompile(rxCommentPrefix + `swagger:strfmt\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxAlias                   = regexp.MustCompile(rxCommentPrefix + `swagger:alias`)
-	rxName                    = regexp.MustCompile(rxCommentPrefix + `swagger:name\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)(?:\.)?$`)
-	rxAllOf                   = regexp.MustCompile(rxCommentPrefix + `swagger:allOf\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)?(?:\.)?$`)
-	rxModelOverride           = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxResponseOverride        = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxParametersOverride      = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\p{Zs}]+)(?:\.)?$`)
-	rxEnum                    = regexp.MustCompile(rxCommentPrefix + `swagger:enum\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxIgnoreOverride          = regexp.MustCompile(rxCommentPrefix + `swagger:ignore\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxDefault                 = regexp.MustCompile(rxCommentPrefix + `swagger:default\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxType                    = regexp.MustCompile(rxCommentPrefix + `swagger:type\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxRoute                   = regexp.MustCompile(
+	rxFileUpload         = regexp.MustCompile(rxCommentPrefix + `swagger:file`)
+	rxStrFmt             = regexp.MustCompile(rxCommentPrefix + `swagger:strfmt\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxAlias              = regexp.MustCompile(rxCommentPrefix + `swagger:alias`)
+	rxName               = regexp.MustCompile(rxCommentPrefix + `swagger:name\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)(?:\.)?$`)
+	rxAllOf              = regexp.MustCompile(rxCommentPrefix + `swagger:allOf\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)?(?:\.)?$`)
+	rxModelOverride      = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxResponseOverride   = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxParametersOverride = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\p{Zs}]+)(?:\.)?$`)
+	rxEnum               = regexp.MustCompile(rxCommentPrefix + `swagger:enum\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxIgnoreOverride     = regexp.MustCompile(rxCommentPrefix + `swagger:ignore\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxDefault            = regexp.MustCompile(rxCommentPrefix + `swagger:default\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxType               = regexp.MustCompile(rxCommentPrefix + `swagger:type\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxRoute              = regexp.MustCompile(
 		rxRoutePrefix +
 			"swagger:route\\p{Zs}*" +
 			rxMethod +
@@ -135,12 +120,11 @@ var (
 			")?\\p{Zs}+" +
 			rxOpID + "\\p{Zs}*$")
 
-	rxIndent             = regexp.MustCompile(`[\p{Zs}\t]*/*[\p{Zs}\t]*[^\p{Zs}\t]`)
-	rxNotIndent          = regexp.MustCompile(`[^\p{Zs}\t]`)
-	rxPunctuationEnd     = regexp.MustCompile(`\p{Po}$`)
-	rxTitleStart         = regexp.MustCompile(`^[#]+\p{Zs}+`)
-	rxStripTitleComments = regexp.MustCompile(`^[^\p{L}]*[Pp]ackage\p{Zs}+[^\p{Zs}]+\p{Zs}*`)
-	rxAllowedExtensions  = regexp.MustCompile(`^[Xx]-`)
+	rxIndent            = regexp.MustCompile(`[\p{Zs}\t]*/*[\p{Zs}\t]*[^\p{Zs}\t]`)
+	rxNotIndent         = regexp.MustCompile(`[^\p{Zs}\t]`)
+	rxPunctuationEnd    = regexp.MustCompile(`\p{Po}$`)
+	rxTitleStart        = regexp.MustCompile(`^[#]+\p{Zs}+`)
+	rxAllowedExtensions = regexp.MustCompile(`^[Xx]-`)
 
 	rxIn              = regexp.MustCompile(rxCommentPrefix + `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`)
 	rxRequired        = regexp.MustCompile(rxCommentPrefix + `[Rr]equired\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
@@ -150,16 +134,7 @@ var (
 	rxSecurity        = regexp.MustCompile(rxCommentPrefix + `[Ss]ecurity\p{Zs}*[Dd]efinitions:`)
 	rxResponses       = regexp.MustCompile(rxCommentPrefix + `[Rr]esponses\p{Zs}*:`)
 	rxParameters      = regexp.MustCompile(rxCommentPrefix + `[Pp]arameters\p{Zs}*:`)
-	rxSchemes         = regexp.MustCompile(rxCommentPrefix + `[Ss]chemes\p{Zs}*:\p{Zs}*((?:(?:https?|HTTPS?|wss?|WSS?)[\p{Zs},]*)+)(?:\.)?$`)
-	rxVersion         = regexp.MustCompile(rxCommentPrefix + `[Vv]ersion\p{Zs}*:\p{Zs}*(.+)$`)
-	rxHost            = regexp.MustCompile(rxCommentPrefix + `[Hh]ost\p{Zs}*:\p{Zs}*(.+)$`)
-	rxBasePath        = regexp.MustCompile(rxCommentPrefix + `[Bb]ase\p{Zs}*-*[Pp]ath\p{Zs}*:\p{Zs}*` + rxPath + "(?:\\.)?$")
-	rxLicense         = regexp.MustCompile(rxCommentPrefix + `[Ll]icense\p{Zs}*:\p{Zs}*(.+)$`)
-	rxContact         = regexp.MustCompile(rxCommentPrefix + `[Cc]ontact\p{Zs}*-?(?:[Ii]info\p{Zs}*)?:\p{Zs}*(.+)$`)
-	rxTOS             = regexp.MustCompile(rxCommentPrefix + `[Tt](:?erms)?\p{Zs}*-?[Oo]f?\p{Zs}*-?[Ss](?:ervice)?\p{Zs}*:`)
 	rxExtensions      = regexp.MustCompile(rxCommentPrefix + `[Ee]xtensions\p{Zs}*:`)
-	rxInfoExtensions  = regexp.MustCompile(rxCommentPrefix + `[In]nfo\p{Zs}*[Ee]xtensions:`)
-	// currently unused: rxExample         = regexp.MustCompile(`[Ex]ample\p{Zs}*:\p{Zs}*(.*)$`).
 )
 
 func Rxf(rxp, ar string) *regexp.Regexp {

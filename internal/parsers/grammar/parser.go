@@ -198,6 +198,17 @@ func (p *parseState) parse() Block {
 		typed = p.buildTypedBlock(kind, annTok, base)
 		pre = p.tokens[:annIdx]
 		post = p.tokens[annIdx+1:]
+		// When the annotation trails the block (e.g., a `swagger:meta`
+		// at the tail of a package doc), body tokens live in the
+		// pre-annotation slice. Split pre at the first body-start so
+		// Title/Description collection stops before structural
+		// tokens, and those tokens reach parseBody alongside any
+		// post-annotation ones.
+		if splitIdx := findBodyStart(pre); splitIdx >= 0 {
+			tail := pre[splitIdx:]
+			pre = pre[:splitIdx]
+			post = append(append([]Token{}, tail...), post...)
+		}
 	} else {
 		base = newBaseBlock(AnnUnknown, firstMeaningfulPos(p.tokens))
 		typed = &UnboundBlock{baseBlock: base}
@@ -449,25 +460,13 @@ func (p *parseState) parseTitleDesc(base *baseBlock, pre []Token) {
 		case TokenText:
 			current = append(current, t.Text)
 			proseLines = append(proseLines, t.Text)
-		case TokenKeywordValue:
-			// Pre-annotation keyword lines (e.g., `discriminator: true`
-			// appearing before a trailing `swagger:name` annotation on
-			// an interface method) land on the block's Properties
-			// alongside post-annotation keywords. Without this, those
-			// keywords fall into a gap — not prose, not properties —
-			// and never reach the analyzer.
-			base.properties = append(base.properties, Property{
-				Keyword:    *t.Keyword,
-				Pos:        t.Pos,
-				Value:      t.Value,
-				Typed:      p.typeConvert(*t.Keyword, t.Value, t.Pos),
-				ItemsDepth: t.ItemsDepth,
-			})
 		case TokenEOF,
 			TokenAnnotation,
-			TokenKeywordBlockHead,
+			TokenKeywordValue, TokenKeywordBlockHead,
 			TokenYAMLFence, TokenRawLine:
-			// Ignored in the title/description slice.
+			// Ignored in the title/description slice. Structural
+			// tokens are routed through parseBody via parse()'s
+			// body-split even when the annotation is trailing.
 		default:
 			// Unreachable at v1; future kinds ignored defensively.
 		}

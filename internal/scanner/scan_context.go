@@ -115,7 +115,7 @@ func (s *ScanCtx) Debug() bool {
 	return s.debug
 }
 
-func (s *ScanCtx) Meta() iter.Seq[parsers.MetaSection] {
+func (s *ScanCtx) Meta() iter.Seq[*ast.CommentGroup] {
 	if s.app == nil {
 		return nil
 	}

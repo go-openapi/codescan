@@ -11,7 +11,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/responses"
 	"github.com/go-openapi/codescan/internal/builders/routes"
 	"github.com/go-openapi/codescan/internal/builders/schema"
-	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -131,8 +131,10 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 
 func (s *Builder) buildMeta() error {
 	// build swagger object
-	for decl := range s.ctx.Meta() {
-		if err := parsers.NewMetaParser(s.input).Parse(decl.Comments); err != nil {
+	parser := grammar.NewParser(s.ctx.FileSet())
+	for cg := range s.ctx.Meta() {
+		block := parser.Parse(cg)
+		if err := applyMetaBlock(s.input, block); err != nil {
 			return err
 		}
 	}

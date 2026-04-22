@@ -46,28 +46,6 @@ func NewProducesDropEmptyParser(set func([]string)) *ProducesDropEmptyParser {
 	}
 }
 
-type multilineDropEmptyParser struct {
-	set func([]string)
-	rx  *regexp.Regexp
-}
-
-func newMultilineDropEmptyParser(rx *regexp.Regexp, set func([]string)) *multilineDropEmptyParser {
-	return &multilineDropEmptyParser{
-		set: set,
-		rx:  rx,
-	}
-}
-
-func (m *multilineDropEmptyParser) Matches(line string) bool {
-	return m.rx.MatchString(line)
-}
-
-func (m *multilineDropEmptyParser) Parse(lines []string) error {
-	m.set(removeEmptyLines(lines))
-
-	return nil
-}
-
 // multilineYAMLListParser is the Q4 replacement for
 // multilineDropEmptyParser on list-valued block bodies
 // (`consumes:` / `produces:` in meta + operation scope). The

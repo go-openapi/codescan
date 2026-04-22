@@ -74,7 +74,7 @@ type TypeIndex struct {
 	AllPackages             map[string]*packages.Package
 	Models                  map[*ast.Ident]*EntityDecl
 	ExtraModels             map[*ast.Ident]*EntityDecl
-	Meta                    []parsers.MetaSection
+	Meta                    []*ast.CommentGroup
 	Routes                  []parsers.ParsedPathContent
 	Operations              []parsers.ParsedPathContent
 	Parameters              []*EntityDecl
@@ -145,7 +145,7 @@ func (a *TypeIndex) processFile(pkg *packages.Package, file *ast.File) error {
 	}
 
 	if n&metaNode != 0 {
-		a.Meta = append(a.Meta, parsers.MetaSection{Comments: file.Doc})
+		a.Meta = append(a.Meta, file.Doc)
 	}
 
 	if n&operationNode != 0 {
