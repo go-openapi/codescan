@@ -3,7 +3,9 @@
   "paths": {},
   "definitions": {
     "IgnoredModel": {
+      "description": "so the sectionedParser flags it as ignored and buildFromDecl returns\nearly via its `sp.ignored` branch.",
       "type": "object",
+      "title": "IgnoredModel is annotated as a model but also carries swagger:ignore,",
       "properties": {
         "value": {
           "type": "integer",

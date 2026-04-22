@@ -29,7 +29,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
     },
     "NotificationB": {
-      "description": "NotificationB exercises case B: plain string field with inline",
+      "description": "NotificationB exercises case B: plain string field with inline\ncomma-list enum. No swagger:enum on the type, no consts in code.",
       "type": "object",
       "properties": {
         "priority": {
@@ -89,6 +89,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
     },
     "PriorityD": {
+      "description": "PriorityD has a swagger:enum annotation but no corresponding\nconst declarations in this package. The builder's FindEnumValues\ncall returns an empty slice; the test captures how the spec\nrenders in that case.",
       "type": "string",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/enum-overrides"
     }

@@ -65,20 +65,47 @@ const (
 )
 
 var (
-	rxSwaggerAnnotation  = regexp.MustCompile(`(?:^|[\s/])swagger:([\p{L}\p{N}\p{Pd}\p{Pc}]+)`)
-	rxFileUpload         = regexp.MustCompile(rxCommentPrefix + `swagger:file`)
-	rxStrFmt             = regexp.MustCompile(rxCommentPrefix + `swagger:strfmt\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxAlias              = regexp.MustCompile(rxCommentPrefix + `swagger:alias`)
-	rxName               = regexp.MustCompile(rxCommentPrefix + `swagger:name\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)(?:\.)?$`)
-	rxAllOf              = regexp.MustCompile(rxCommentPrefix + `swagger:allOf\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)?(?:\.)?$`)
-	rxModelOverride      = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxResponseOverride   = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxParametersOverride = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\p{Zs}]+)(?:\.)?$`)
-	rxEnum               = regexp.MustCompile(rxCommentPrefix + `swagger:enum\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxIgnoreOverride     = regexp.MustCompile(rxCommentPrefix + `swagger:ignore\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxDefault            = regexp.MustCompile(rxCommentPrefix + `swagger:default\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxType               = regexp.MustCompile(rxCommentPrefix + `swagger:type\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
-	rxRoute              = regexp.MustCompile(
+	// rxSwaggerAnnotation matches `swagger:<name>` anywhere on a comment
+	// line where it is preceded by whitespace, `/`, or the start of the
+	// line. Kept loose because it is the classification regex consumed
+	// by scanner.index.ExtractAnnotation (and parsers.HasAnnotation),
+	// where `swagger:route` is allowed to follow a godoc-style
+	// identifier (e.g. `// MyHandler swagger:route GET /path`) per
+	// rxRoutePrefix.
+	//
+	// Do NOT use this regex as a block terminator — it triggers on
+	// mid-prose mentions like `// carries swagger:ignore, so ...` and
+	// truncates descriptions. Use rxSwaggerAnnotationStrict for that.
+	rxSwaggerAnnotation = regexp.MustCompile(`(?:^|[\s/])swagger:([\p{L}\p{N}\p{Pd}\p{Pc}]+)`)
+
+	// rxSwaggerAnnotationStrict matches a swagger:<name> annotation
+	// only at the start of a comment line (with comment-prefix noise
+	// tolerated per rxCommentPrefix). Used by SectionedParser as the
+	// block-body terminator so prose that mentions `swagger:*` in
+	// passing does not cut description accumulation short. Finishes
+	// the work of 09f6748 ("All annotations should start their
+	// comment line.") which tightened the per-annotation validator
+	// regexes but left the block-level terminator using the loose
+	// pattern.
+	//
+	// For `swagger:route` with a godoc-style prefix, the per-annotation
+	// rxRoutePrefix handles the legitimate identifier-before-route
+	// form; the SectionedParser does not build routes directly, so
+	// this strict pattern never needs that exception.
+	rxSwaggerAnnotationStrict = regexp.MustCompile(rxCommentPrefix + `swagger:[\p{L}\p{N}\p{Pd}\p{Pc}]+`)
+	rxFileUpload              = regexp.MustCompile(rxCommentPrefix + `swagger:file`)
+	rxStrFmt                  = regexp.MustCompile(rxCommentPrefix + `swagger:strfmt\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxAlias                   = regexp.MustCompile(rxCommentPrefix + `swagger:alias`)
+	rxName                    = regexp.MustCompile(rxCommentPrefix + `swagger:name\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)(?:\.)?$`)
+	rxAllOf                   = regexp.MustCompile(rxCommentPrefix + `swagger:allOf\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\.]+)?(?:\.)?$`)
+	rxModelOverride           = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxResponseOverride        = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxParametersOverride      = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\p{Zs}]+)(?:\.)?$`)
+	rxEnum                    = regexp.MustCompile(rxCommentPrefix + `swagger:enum\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxIgnoreOverride          = regexp.MustCompile(rxCommentPrefix + `swagger:ignore\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxDefault                 = regexp.MustCompile(rxCommentPrefix + `swagger:default\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxType                    = regexp.MustCompile(rxCommentPrefix + `swagger:type\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)(?:\.)?$`)
+	rxRoute                   = regexp.MustCompile(
 		rxRoutePrefix +
 			"swagger:route\\p{Zs}*" +
 			rxMethod +

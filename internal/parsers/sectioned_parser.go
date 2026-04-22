@@ -208,8 +208,13 @@ COMMENTS:
 // caller should stop processing further comments (a swagger: annotation
 // that doesn't belong to this parser, or swagger:ignore).
 func (st *SectionedParser) parseLine(line string) (stop bool) {
-	// Step 1: check for swagger:* annotations.
-	if rxSwaggerAnnotation.MatchString(line) {
+	// Step 1: check for swagger:* annotations. Use the strict
+	// line-start pattern so prose mentioning `swagger:*` in passing
+	// (e.g. `// carries swagger:ignore, so ...`) does not terminate
+	// the block — see rxSwaggerAnnotationStrict godoc and commit
+	// 09f6748 (the finishing half of "All annotations should start
+	// their comment line.").
+	if rxSwaggerAnnotationStrict.MatchString(line) {
 		if rxIgnoreOverride.MatchString(line) {
 			st.ignored = true
 			return true // an explicit ignore terminates this parser
