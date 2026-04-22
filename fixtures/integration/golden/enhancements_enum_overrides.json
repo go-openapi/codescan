@@ -37,8 +37,8 @@
           "type": "string",
           "enum": [
             "low",
-            " medium",
-            " high"
+            "medium",
+            "high"
           ],
           "x-go-name": "Priority"
         }
@@ -82,7 +82,7 @@
           "type": "string",
           "enum": [
             "urgent",
-            " normal"
+            "normal"
           ],
           "x-go-enum-desc": "low PriorityELow\nmedium PriorityEMed\nhigh PriorityEHigh",
           "x-go-name": "Priority"

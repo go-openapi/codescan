@@ -79,9 +79,17 @@ func parseValueFromSchema(s string, schema *spec.SimpleSchema) (any, error) {
 }
 
 func parseEnumOld(val string, s *spec.SimpleSchema) []any {
+	// Trim per-value whitespace so `enum: low, medium, high` produces
+	// ["low", "medium", "high"] rather than the v1-legacy
+	// ["low", " medium", " high"] — a long-standing quirk documented
+	// as W2 §2.6 quirk 1 and fixed here to converge with the v2
+	// enum sub-parser's behavior before the P5 schema migration.
+	// JSON-array values go through ParseEnum's quoted path (below)
+	// which preserves intentional whitespace inside quotes.
 	list := strings.Split(val, ",")
 	interfaceSlice := make([]any, len(list))
 	for i, d := range list {
+		d = strings.TrimSpace(d)
 		v, err := parseValueFromSchema(d, s)
 		if err != nil {
 			interfaceSlice[i] = d
