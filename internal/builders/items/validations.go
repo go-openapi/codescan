@@ -12,6 +12,14 @@ type Validations struct {
 	current *oaispec.Items
 }
 
+// NewValidations wraps an *oaispec.Items as a ValidationBuilder /
+// OperationValidationBuilder target. Used by the grammar bridge
+// (e.g. parameters.applyBlockToField) to hand an items chain level
+// to items.ApplyBlock.
+func NewValidations(it *oaispec.Items) Validations {
+	return Validations{current: it}
+}
+
 func (sv Validations) SetMaximum(val float64, exclusive bool) {
 	sv.current.Maximum = &val
 	sv.current.ExclusiveMaximum = exclusive

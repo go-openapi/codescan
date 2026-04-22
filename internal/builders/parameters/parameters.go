@@ -411,24 +411,28 @@ func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.Entit
 		ps.Items = nil
 	}
 
-	taggers, err := setupParamTaggers(&ps, name, afld, p.ctx.SkipExtensions(), p.ctx.Debug())
-	if err != nil {
-		return "", err
-	}
+	if p.ctx.UseGrammarParser() {
+		p.applyBlockToField(afld, &ps)
+	} else {
+		taggers, err := setupParamTaggers(&ps, name, afld, p.ctx.SkipExtensions(), p.ctx.Debug())
+		if err != nil {
+			return "", err
+		}
 
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetDescription(func(lines []string) {
-			ps.Description = parsers.JoinDropLast(lines)
-			enumDesc := parsers.GetEnumDesc(ps.Extensions)
-			if enumDesc != "" {
-				ps.Description += "\n" + enumDesc
-			}
-		}),
-		parsers.WithTaggers(taggers...),
-	)
+		sp := parsers.NewSectionedParser(
+			parsers.WithSetDescription(func(lines []string) {
+				ps.Description = parsers.JoinDropLast(lines)
+				enumDesc := parsers.GetEnumDesc(ps.Extensions)
+				if enumDesc != "" {
+					ps.Description += "\n" + enumDesc
+				}
+			}),
+			parsers.WithTaggers(taggers...),
+		)
 
-	if err := sp.Parse(afld.Doc); err != nil {
-		return "", err
+		if err := sp.Parse(afld.Doc); err != nil {
+			return "", err
+		}
 	}
 	if ps.In == "path" {
 		ps.Required = true
