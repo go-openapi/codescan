@@ -40,13 +40,17 @@ func (r *ResponseBuilder) Build(responses map[string]oaispec.Response) error {
 	logger.DebugLogf(r.ctx.Debug(), "building response: %s", name)
 
 	// analyze doc comment for the model
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetDescription(func(lines []string) {
-			response.Description = parsers.JoinDropLast(lines)
-		}),
-	)
-	if err := sp.Parse(r.decl.Comments); err != nil {
-		return err
+	if r.ctx.UseGrammarParser() {
+		r.applyBlockToDecl(&response)
+	} else {
+		sp := parsers.NewSectionedParser(
+			parsers.WithSetDescription(func(lines []string) {
+				response.Description = parsers.JoinDropLast(lines)
+			}),
+		)
+		if err := sp.Parse(r.decl.Comments); err != nil {
+			return err
+		}
 	}
 
 	// analyze struct body for fields etc
@@ -376,18 +380,22 @@ func (r *ResponseBuilder) processResponseField(fld *types.Var, decl *scanner.Ent
 		ps.Typed("string", strfmtName)
 	}
 
-	taggers, err := setupResponseHeaderTaggers(&ps, name, afld)
-	if err != nil {
-		return err
-	}
+	if r.ctx.UseGrammarParser() {
+		r.applyBlockToHeader(afld, &ps)
+	} else {
+		taggers, err := setupResponseHeaderTaggers(&ps, name, afld)
+		if err != nil {
+			return err
+		}
 
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetDescription(func(lines []string) { ps.Description = parsers.JoinDropLast(lines) }),
-		parsers.WithTaggers(taggers...),
-	)
+		sp := parsers.NewSectionedParser(
+			parsers.WithSetDescription(func(lines []string) { ps.Description = parsers.JoinDropLast(lines) }),
+			parsers.WithTaggers(taggers...),
+		)
 
-	if err := sp.Parse(afld.Doc); err != nil {
-		return err
+		if err := sp.Parse(afld.Doc); err != nil {
+			return err
+		}
 	}
 
 	if in != "body" {
