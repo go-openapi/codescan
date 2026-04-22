@@ -10,8 +10,10 @@ import (
 
 func (r *Builder) routeTaggers(op *oaispec.Operation) []parsers.TagParser {
 	return []parsers.TagParser{
-		parsers.NewMultiLineTagParser("Consumes", parsers.NewConsumesDropEmptyParser(opConsumesSetter(op)), false),
-		parsers.NewMultiLineTagParser("Produces", parsers.NewProducesDropEmptyParser(opProducesSetter(op)), false),
+		// Q4: YAML-list bodies; skip external rxUncommentHeaders strip so
+		// `-` markers reach the YAML sub-parser intact.
+		parsers.NewMultiLineTagParser("Consumes", parsers.NewConsumesDropEmptyParser(opConsumesSetter(op)), true),
+		parsers.NewMultiLineTagParser("Produces", parsers.NewProducesDropEmptyParser(opProducesSetter(op)), true),
 		parsers.NewSingleLineTagParser("Schemes", parsers.NewSetSchemes(opSchemeSetter(op))),
 		parsers.NewMultiLineTagParser("Security", parsers.NewSetSecurityScheme(opSecurityDefsSetter(op)), false),
 		parsers.NewMultiLineTagParser("Parameters", parsers.NewSetParams(r.parameters, opParamSetter(op)), false),

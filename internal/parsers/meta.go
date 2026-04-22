@@ -102,8 +102,11 @@ func NewMetaParser(swspec *spec.Swagger) *SectionedParser {
 	sp.setDescription = func(lines []string) { info.Description = JoinDropLast(lines) }
 	sp.taggers = []TagParser{
 		NewMultiLineTagParser("TOS", newMultilineDropEmptyParser(rxTOS, metaTOSSetter(info)), false),
-		NewMultiLineTagParser("Consumes", newMultilineDropEmptyParser(rxConsumes, metaConsumesSetter(swspec)), false),
-		NewMultiLineTagParser("Produces", newMultilineDropEmptyParser(rxProduces, metaProducesSetter(swspec)), false),
+		// Q4: Consumes/Produces bodies are YAML lists; skipCleanUp=true
+		// so the external rxUncommentHeaders pass doesn't strip the
+		// `-` list markers before our YAML-aware Parse sees them.
+		NewMultiLineTagParser("Consumes", NewConsumesDropEmptyParser(metaConsumesSetter(swspec)), true),
+		NewMultiLineTagParser("Produces", NewProducesDropEmptyParser(metaProducesSetter(swspec)), true),
 		NewSingleLineTagParser("Schemes", NewSetSchemes(metaSchemeSetter(swspec))),
 		NewMultiLineTagParser("Security", newSetSecurity(rxSecuritySchemes, metaSecuritySetter(swspec)), false),
 		NewMultiLineTagParser("SecurityDefinitions", NewYAMLParser(WithMatcher(rxSecurity), WithSetter(metaSecurityDefinitionsSetter(swspec))), true),

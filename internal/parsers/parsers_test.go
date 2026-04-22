@@ -82,7 +82,8 @@ func TestConsumesDropEmptyParser(t *testing.T) {
 	assert.TrueT(t, cp.Matches("Consumes:"))
 	assert.FalseT(t, cp.Matches("other"))
 
-	require.NoError(t, cp.Parse([]string{"application/json", "", "application/xml", "  "}))
+	// Q4: body is YAML-list-strict. Input uses `- value` markers.
+	require.NoError(t, cp.Parse([]string{"- application/json", "", "- application/xml", "  "}))
 	assert.Equal(t, []string{"application/json", "application/xml"}, got)
 }
 
@@ -94,6 +95,19 @@ func TestProducesDropEmptyParser(t *testing.T) {
 	assert.TrueT(t, pp.Matches("produces:"))
 	assert.TrueT(t, pp.Matches("Produces:"))
 
-	require.NoError(t, pp.Parse([]string{"text/plain", "", "text/html"}))
+	require.NoError(t, pp.Parse([]string{"- text/plain", "", "- text/html"}))
 	assert.Equal(t, []string{"text/plain", "text/html"}, got)
+}
+
+func TestMultilineYAMLListParserNonListDropsValues(t *testing.T) {
+	// Q4 strict-list contract: a scalar body emits a warning and
+	// produces no values (setter called with nothing? no — setter
+	// is NOT called on the non-list path, so `got` stays at its
+	// zero value).
+	t.Parallel()
+
+	var called bool
+	cp := NewConsumesDropEmptyParser(func(v []string) { called = true; _ = v })
+	require.NoError(t, cp.Parse([]string{"application/json"})) // bare form, not a list
+	assert.FalseT(t, called)
 }

@@ -90,8 +90,14 @@ var (
 			rxOpID + "\\p{Zs}*$")
 	rxBeginYAMLSpec    = regexp.MustCompile(rxCommentPrefix + `---\p{Zs}*$`)
 	rxUncommentHeaders = regexp.MustCompile(`^[\p{Zs}\t/\*-]*\|?`)
-	rxUncommentYAML    = regexp.MustCompile(`^[\p{Zs}\t]*/*`)
-	rxOperation        = regexp.MustCompile(
+	// rxUncommentNoDash mirrors rxUncommentHeaders but does NOT strip
+	// leading `-`. Used for multi-line list-bodied keywords
+	// (`consumes:` / `produces:`) where `-` is a YAML list marker
+	// the body's sub-parser needs to see. See Q4 fix
+	// (.claude/plans/workshops/w2-enum.md §2.6).
+	rxUncommentNoDash = regexp.MustCompile(`^[\p{Zs}\t/\*]*\|?`)
+	rxUncommentYAML   = regexp.MustCompile(`^[\p{Zs}\t]*/*`)
+	rxOperation       = regexp.MustCompile(
 		rxCommentPrefix +
 			"swagger:operation\\p{Zs}*" +
 			rxMethod +
