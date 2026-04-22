@@ -7,47 +7,11 @@ import (
 	"encoding/json"
 	"go/ast"
 	"log"
-	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/spec"
 )
-
-type SetEnum struct {
-	builder ifaces.ValidationBuilder
-	rx      *regexp.Regexp
-}
-
-func NewSetEnum(builder ifaces.ValidationBuilder, opts ...PrefixRxOption) *SetEnum {
-	rx := rxEnumValidation
-	for _, apply := range opts {
-		rx = apply(rxEnumFmt)
-	}
-
-	return &SetEnum{
-		builder: builder,
-		rx:      rx,
-	}
-}
-
-func (se *SetEnum) Matches(line string) bool {
-	return se.rx.MatchString(line)
-}
-
-func (se *SetEnum) Parse(lines []string) error {
-	if len(lines) == 0 || (len(lines) == 1 && len(lines[0]) == 0) {
-		return nil
-	}
-
-	matches := se.rx.FindStringSubmatch(lines[0])
-	if len(matches) > 1 && len(matches[1]) > 0 {
-		se.builder.SetEnum(matches[1])
-	}
-
-	return nil
-}
 
 // ParseValueFromSchema converts a raw annotation value to the Go
 // representation implied by the target schema's Type/Format. Used by

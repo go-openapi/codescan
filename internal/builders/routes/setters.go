@@ -13,10 +13,6 @@ func opProducesSetter(op *spec.Operation) func([]string) {
 	return func(produces []string) { op.Produces = produces }
 }
 
-func opSchemeSetter(op *spec.Operation) func([]string) {
-	return func(schemes []string) { op.Schemes = schemes }
-}
-
 func opSecurityDefsSetter(op *spec.Operation) func([]map[string][]string) {
 	return func(securityDefs []map[string][]string) { op.Security = securityDefs }
 }

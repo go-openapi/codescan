@@ -144,8 +144,6 @@ var (
 
 	rxIn              = regexp.MustCompile(rxCommentPrefix + `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`)
 	rxRequired        = regexp.MustCompile(rxCommentPrefix + `[Rr]equired\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
-	rxDiscriminator   = regexp.MustCompile(rxCommentPrefix + `[Dd]iscriminator\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
-	rxReadOnly        = regexp.MustCompile(rxCommentPrefix + `[Rr]ead(?:\p{Zs}*|[\p{Pd}\p{Pc}])?[Oo]nly\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
 	rxConsumes        = regexp.MustCompile(rxCommentPrefix + `[Cc]onsumes\p{Zs}*:`)
 	rxProduces        = regexp.MustCompile(rxCommentPrefix + `[Pp]roduces\p{Zs}*:`)
 	rxSecuritySchemes = regexp.MustCompile(rxCommentPrefix + `[Ss]ecurity\p{Zs}*:`)
@@ -161,7 +159,6 @@ var (
 	rxTOS             = regexp.MustCompile(rxCommentPrefix + `[Tt](:?erms)?\p{Zs}*-?[Oo]f?\p{Zs}*-?[Ss](?:ervice)?\p{Zs}*:`)
 	rxExtensions      = regexp.MustCompile(rxCommentPrefix + `[Ee]xtensions\p{Zs}*:`)
 	rxInfoExtensions  = regexp.MustCompile(rxCommentPrefix + `[In]nfo\p{Zs}*[Ee]xtensions:`)
-	rxDeprecated      = regexp.MustCompile(rxCommentPrefix + `[Dd]eprecated\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
 	// currently unused: rxExample         = regexp.MustCompile(`[Ex]ample\p{Zs}*:\p{Zs}*(.*)$`).
 )
 

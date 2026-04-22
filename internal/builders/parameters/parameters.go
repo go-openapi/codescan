@@ -5,7 +5,6 @@ package parameters
 
 import (
 	"fmt"
-	"go/ast"
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -358,30 +357,6 @@ func (p *ParameterBuilder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.
 	return nil
 }
 
-// parseParamDoc routes the field's comment through the grammar
-// bridge (when UseGrammarParser is set) or the legacy SectionedParser
-// pipeline, writing description and validation onto ps.
-func (p *ParameterBuilder) parseParamDoc(afld *ast.Field, ps *oaispec.Parameter, name string) error {
-	if p.ctx.UseGrammarParser() {
-		return p.applyBlockToField(afld, ps)
-	}
-	taggers, err := setupParamTaggers(ps, name, afld, p.ctx.SkipExtensions(), p.ctx.Debug())
-	if err != nil {
-		return err
-	}
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetDescription(func(lines []string) {
-			ps.Description = parsers.JoinDropLast(lines)
-			enumDesc := parsers.GetEnumDesc(ps.Extensions)
-			if enumDesc != "" {
-				ps.Description += "\n" + enumDesc
-			}
-		}),
-		parsers.WithTaggers(taggers...),
-	)
-	return sp.Parse(afld.Doc)
-}
-
 // processParamField processes a single non-embedded struct field for parameter building.
 // Returns the parameter name if the field was processed, or "" if it was skipped.
 func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.EntityDecl, seen map[string]oaispec.Parameter) (string, error) {
@@ -436,7 +411,7 @@ func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.Entit
 		ps.Items = nil
 	}
 
-	if err := p.parseParamDoc(afld, &ps, name); err != nil {
+	if err := p.applyBlockToField(afld, &ps); err != nil {
 		return "", err
 	}
 	if ps.In == "path" {
@@ -466,12 +441,4 @@ func (p *ParameterBuilder) makeRef(decl *scanner.EntityDecl, prop ifaces.Swagger
 	p.postDecls = append(p.postDecls, decl) // mark the $ref target as discovered
 
 	return nil
-}
-
-func spExtensionsSetter(ps *oaispec.Parameter, skipExt bool) func(*oaispec.Extensions) {
-	return func(exts *oaispec.Extensions) {
-		for name, value := range *exts {
-			resolvers.AddExtension(&ps.VendorExtensible, name, value, skipExt)
-		}
-	}
 }
