@@ -4,6 +4,8 @@
 package schema
 
 import (
+	"strings"
+
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers"
@@ -129,4 +131,19 @@ func (sv schemaValidations) SetEnum(val string) {
 		typ = sv.current.Type[0]
 	}
 	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Format: sv.current.Format, Type: typ})
+
+	// Q3: a field-level `enum: ...` overrides const-derived values.
+	// When the enum is replaced, any x-go-enum-desc previously set by
+	// the type-level `swagger:enum TypeName` pass is now stale — it
+	// describes values that aren't in the enum any more. The
+	// description text may also have had the enum-desc appended to it
+	// (see schema.go's WithSetDescription callback); strip that
+	// suffix so the rendered description isn't misleading.
+	if enumDesc := parsers.GetEnumDesc(sv.current.Extensions); enumDesc != "" {
+		delete(sv.current.Extensions, parsers.EnumDescExtension())
+		sv.current.Description = strings.TrimSuffix(
+			strings.TrimSuffix(sv.current.Description, enumDesc),
+			"\n",
+		)
+	}
 }

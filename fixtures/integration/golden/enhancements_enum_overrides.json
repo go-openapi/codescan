@@ -77,13 +77,12 @@
       "type": "object",
       "properties": {
         "priority": {
-          "description": "Inline enum provides a narrower set than the const block.\nlow PriorityELow\nmedium PriorityEMed\nhigh PriorityEHigh",
+          "description": "Inline enum provides a narrower set than the const block.",
           "type": "string",
           "enum": [
             "urgent",
             "normal"
           ],
-          "x-go-enum-desc": "low PriorityELow\nmedium PriorityEMed\nhigh PriorityEHigh",
           "x-go-name": "Priority"
         }
       },
