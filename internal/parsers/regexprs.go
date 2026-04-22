@@ -100,16 +100,8 @@ var (
 			rxOpTags +
 			")?\\p{Zs}+" +
 			rxOpID + "\\p{Zs}*$")
-	rxBeginYAMLSpec    = regexp.MustCompile(rxCommentPrefix + `---\p{Zs}*$`)
 	rxUncommentHeaders = regexp.MustCompile(`^[\p{Zs}\t/\*-]*\|?`)
-	// rxUncommentNoDash mirrors rxUncommentHeaders but does NOT strip
-	// leading `-`. Used for multi-line list-bodied keywords
-	// (`consumes:` / `produces:`) where `-` is a YAML list marker
-	// the body's sub-parser needs to see. See Q4 fix
-	// (.claude/plans/workshops/w2-enum.md §2.6).
-	rxUncommentNoDash = regexp.MustCompile(`^[\p{Zs}\t/\*]*\|?`)
-	rxUncommentYAML   = regexp.MustCompile(`^[\p{Zs}\t]*/*`)
-	rxOperation       = regexp.MustCompile(
+	rxOperation        = regexp.MustCompile(
 		rxCommentPrefix +
 			"swagger:operation\\p{Zs}*" +
 			rxMethod +
@@ -126,15 +118,12 @@ var (
 	rxTitleStart        = regexp.MustCompile(`^[#]+\p{Zs}+`)
 	rxAllowedExtensions = regexp.MustCompile(`^[Xx]-`)
 
-	rxIn              = regexp.MustCompile(rxCommentPrefix + `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`)
-	rxRequired        = regexp.MustCompile(rxCommentPrefix + `[Rr]equired\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
-	rxConsumes        = regexp.MustCompile(rxCommentPrefix + `[Cc]onsumes\p{Zs}*:`)
-	rxProduces        = regexp.MustCompile(rxCommentPrefix + `[Pp]roduces\p{Zs}*:`)
-	rxSecuritySchemes = regexp.MustCompile(rxCommentPrefix + `[Ss]ecurity\p{Zs}*:`)
-	rxSecurity        = regexp.MustCompile(rxCommentPrefix + `[Ss]ecurity\p{Zs}*[Dd]efinitions:`)
-	rxResponses       = regexp.MustCompile(rxCommentPrefix + `[Rr]esponses\p{Zs}*:`)
-	rxParameters      = regexp.MustCompile(rxCommentPrefix + `[Pp]arameters\p{Zs}*:`)
-	rxExtensions      = regexp.MustCompile(rxCommentPrefix + `[Ee]xtensions\p{Zs}*:`)
+	rxIn         = regexp.MustCompile(rxCommentPrefix + `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`)
+	rxRequired   = regexp.MustCompile(rxCommentPrefix + `[Rr]equired\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
+	rxSecurity   = regexp.MustCompile(rxCommentPrefix + `[Ss]ecurity\p{Zs}*[Dd]efinitions:`)
+	rxResponses  = regexp.MustCompile(rxCommentPrefix + `[Rr]esponses\p{Zs}*:`)
+	rxParameters = regexp.MustCompile(rxCommentPrefix + `[Pp]arameters\p{Zs}*:`)
+	rxExtensions = regexp.MustCompile(rxCommentPrefix + `[Ee]xtensions\p{Zs}*:`)
 )
 
 func Rxf(rxp, ar string) *regexp.Regexp {

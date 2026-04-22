@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
-	yamlparser "github.com/go-openapi/codescan/internal/parsers/yaml"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	"github.com/go-openapi/loads/fmts"
 	"github.com/go-openapi/spec"
 	yaml "go.yaml.in/yaml/v3"
@@ -71,15 +71,15 @@ func dispatchMetaKeyword(p grammar.Property, swspec *spec.Swagger) error {
 func dispatchMetaSimple(p grammar.Property, swspec *spec.Swagger) bool {
 	switch p.Keyword.Name {
 	case "tos":
-		swspec.Info.TermsOfService = parsers.JoinDropLast(dropEmpty(p.Body))
+		swspec.Info.TermsOfService = parsers.JoinDropLast(helpers.DropEmpty(p.Body))
 	case "consumes":
-		swspec.Consumes = yamlListBody(p.Body)
+		swspec.Consumes = helpers.YAMLListBody(p.Body)
 	case "produces":
-		swspec.Produces = yamlListBody(p.Body)
+		swspec.Produces = helpers.YAMLListBody(p.Body)
 	case "schemes":
-		swspec.Schemes = parseSchemesLine(p.Value)
+		swspec.Schemes = helpers.SchemesList(p.Value)
 	case "security":
-		swspec.Security = parseSecurityRequirements(p.Body)
+		swspec.Security = helpers.SecurityRequirements(p.Body)
 	case "version":
 		swspec.Info.Version = strings.TrimSpace(p.Value)
 	case "host":
@@ -153,87 +153,6 @@ func applyMetaExtensions(data []byte, swspec *spec.Swagger) error {
 	return nil
 }
 
-// yamlListBody parses a block body as a YAML list and returns its
-// stringified items. Mirrors parsers.multilineYAMLListParser (the
-// Q4 strict-list contract for consumes / produces): a non-list body
-// is silently dropped — legacy emits a WARNING log but does not
-// error. Empty bodies return nil.
-func yamlListBody(body []string) []string {
-	cleaned := dropEmpty(body)
-	if len(cleaned) == 0 {
-		return nil
-	}
-	parsed, err := yamlparser.Parse(strings.Join(cleaned, "\n"))
-	if err != nil {
-		return nil
-	}
-	list, ok := parsed.([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(list))
-	for _, item := range list {
-		out = append(out, fmt.Sprintf("%v", item))
-	}
-	return out
-}
-
-// dropEmpty removes whitespace-only entries from a body slice.
-func dropEmpty(lines []string) []string {
-	out := make([]string, 0, len(lines))
-	for _, l := range lines {
-		if strings.TrimSpace(l) != "" {
-			out = append(out, l)
-		}
-	}
-	return out
-}
-
-// parseSchemesLine mirrors parsers.SetSchemes.Parse — comma-split
-// the value, trim each entry, drop empties.
-func parseSchemesLine(value string) []string {
-	out := make([]string, 0)
-	for s := range strings.SplitSeq(value, ",") {
-		if ts := strings.TrimSpace(s); ts != "" {
-			out = append(out, ts)
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-// parseSecurityRequirements handles a Security block body. Legacy
-// (newSetSecurity) parses lines of the form `name: scope1, scope2`
-// (with `name:` as an empty-scope entry) into []map[string][]string.
-func parseSecurityRequirements(body []string) []map[string][]string {
-	cleaned := dropEmpty(body)
-	if len(cleaned) == 0 {
-		return nil
-	}
-	out := make([]map[string][]string, 0, len(cleaned))
-	for _, raw := range cleaned {
-		line := strings.TrimSpace(raw)
-		name, rest, found := strings.Cut(line, ":")
-		if !found {
-			continue
-		}
-		name = strings.TrimSpace(name)
-		rest = strings.TrimSpace(rest)
-		scopes := []string{}
-		if rest != "" {
-			for s := range strings.SplitSeq(rest, ",") {
-				if ts := strings.TrimSpace(s); ts != "" {
-					scopes = append(scopes, ts)
-				}
-			}
-		}
-		out = append(out, map[string][]string{name: scopes})
-	}
-	return out
-}
-
 // unmarshalYAMLBody mirrors parsers.YAMLParser.Parse: the block
 // body (`---` fence contents, preserving indent) is yaml-unmarshal'd,
 // converted to JSON via fmts.YAMLToJSON, and handed to the setter.
@@ -261,7 +180,7 @@ func unmarshalYAMLBody(body []string, setter func([]byte) error) error {
 // removeYAMLIndent mirrors parsers.removeYamlIndent — strip the
 // common leading-indent detected on the first non-empty line.
 func removeYAMLIndent(body []string) []string {
-	cleaned := dropEmpty(body)
+	cleaned := helpers.DropEmpty(body)
 	if len(cleaned) == 0 {
 		return nil
 	}

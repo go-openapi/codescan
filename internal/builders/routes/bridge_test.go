@@ -19,20 +19,16 @@ func parseRouteBody(t *testing.T, body string) grammar.Block {
 	return p.ParseAs(grammar.AnnRoute, body, token.Position{Line: 1})
 }
 
-func TestApplyRouteSchemes(t *testing.T) {
+func TestDispatchRouteSchemes(t *testing.T) {
 	var b Builder
 	op := &oaispec.Operation{}
 
 	block := parseRouteBody(t, "schemes: http, https, ws")
-	var prop grammar.Property
-	for p := range block.Properties() {
-		prop = p
-		break
+	for prop := range block.Properties() {
+		if err := b.dispatchRouteKeyword(prop, op); err != nil {
+			t.Fatalf("dispatch: %v", err)
+		}
 	}
-	if prop.Keyword.Name != "schemes" {
-		t.Fatalf("expected schemes property, got %q", prop.Keyword.Name)
-	}
-	b.applyRouteSchemes(prop, op)
 
 	want := []string{"http", "https", "ws"}
 	if len(op.Schemes) != len(want) {

@@ -4,8 +4,41 @@
 package parsers
 
 import (
+	"regexp"
 	"strings"
 )
+
+// cleanupScannerLines strips comment-marker noise (matching ur) from
+// each line and trims leading/trailing all-empty runs. Used by the
+// legacy body parsers for consumes/produces (rxUncommentNoDash) and
+// extensions (rxUncommentHeaders), plus the grammar-side prose
+// splitter in CollectScannerTitleDescription.
+func cleanupScannerLines(lines []string, ur *regexp.Regexp) []string {
+	if len(lines) == 0 {
+		return lines
+	}
+
+	seenLine := -1
+	var lastContent int
+
+	uncommented := make([]string, 0, len(lines))
+	for i, v := range lines {
+		str := ur.ReplaceAllString(v, "")
+		uncommented = append(uncommented, str)
+		if str != "" {
+			if seenLine < 0 {
+				seenLine = i
+			}
+			lastContent = i
+		}
+	}
+
+	if seenLine == -1 {
+		return nil
+	}
+
+	return uncommented[seenLine : lastContent+1]
+}
 
 // CollectScannerTitleDescription splits header lines (free-form prose
 // appearing before the first recognized tag in a comment block) into

@@ -4,10 +4,9 @@
 package routes
 
 import (
-	"strings"
-
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -52,25 +51,31 @@ const (
 	kwExtensions = "extensions"
 )
 
-// dispatchRouteKeyword routes one grammar Property to the legacy
-// body-parser that already knows how to parse that keyword's body
-// shape. The body-parsers' Parse(lines []string) signature accepts
-// grammar's Property.Body directly — comment markers are already
-// stripped, YAML list markers survive, etc.
+// dispatchRouteKeyword routes one grammar Property to the matching
+// body parser. Simple body shapes (schemes comma-list, consumes /
+// produces YAML-list, security name:scope lines) use shared
+// helpers in internal/parsers/helpers. The three domain-heavy
+// body parsers (parameters, responses, extensions) still live in
+// internal/parsers/ — their v1-parity logic (e.g. `+ name:` param
+// blocks, `200: someResponse` response mapping, nested YAML
+// extension maps) is substantial enough to warrant dedicated
+// files.
 func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation) error {
 	switch p.Keyword.Name {
 	case kwSchemes:
-		r.applyRouteSchemes(p, op)
+		if v := helpers.SchemesList(p.Value); v != nil {
+			op.Schemes = v
+		}
 	case kwDeprecated:
 		if p.Typed.Type == grammar.ValueBoolean {
 			op.Deprecated = p.Typed.Boolean
 		}
 	case kwConsumes:
-		return parsers.NewConsumesDropEmptyParser(opConsumesSetter(op)).Parse(p.Body)
+		op.Consumes = helpers.YAMLListBody(p.Body)
 	case kwProduces:
-		return parsers.NewProducesDropEmptyParser(opProducesSetter(op)).Parse(p.Body)
+		op.Produces = helpers.YAMLListBody(p.Body)
 	case kwSecurity:
-		return parsers.NewSetSecurityScheme(opSecurityDefsSetter(op)).Parse(p.Body)
+		op.Security = helpers.SecurityRequirements(p.Body)
 	case kwParameters:
 		return parsers.NewSetParams(r.parameters, opParamSetter(op)).Parse(p.Body)
 	case kwResponses:
@@ -79,19 +84,4 @@ func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation
 		return parsers.NewSetExtensions(opExtensionsSetter(op), r.ctx.Debug()).Parse(p.Body)
 	}
 	return nil
-}
-
-// applyRouteSchemes parses `schemes: http, https, ws, wss` — v1 uses
-// a regex capture that isolates the post-colon comma-list; the
-// grammar already hands us the trimmed value directly.
-func (r *Builder) applyRouteSchemes(p grammar.Property, op *oaispec.Operation) {
-	schemes := make([]string, 0)
-	for s := range strings.SplitSeq(p.Value, ",") {
-		if ts := strings.TrimSpace(s); ts != "" {
-			schemes = append(schemes, ts)
-		}
-	}
-	if len(schemes) > 0 {
-		op.Schemes = schemes
-	}
 }

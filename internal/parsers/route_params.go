@@ -13,6 +13,9 @@ import (
 )
 
 const (
+	// kvParts is the number of parts when splitting key:value pairs.
+	kvParts = 2
+
 	// paramDescriptionKey indicates the tag used to define a parameter description in swagger:route.
 	paramDescriptionKey = "description"
 	// paramNameKey indicates the tag used to define a parameter name in swagger:route.

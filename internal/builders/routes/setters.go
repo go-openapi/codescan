@@ -5,18 +5,6 @@ package routes
 
 import "github.com/go-openapi/spec"
 
-func opConsumesSetter(op *spec.Operation) func([]string) {
-	return func(consumes []string) { op.Consumes = consumes }
-}
-
-func opProducesSetter(op *spec.Operation) func([]string) {
-	return func(produces []string) { op.Produces = produces }
-}
-
-func opSecurityDefsSetter(op *spec.Operation) func([]map[string][]string) {
-	return func(securityDefs []map[string][]string) { op.Security = securityDefs }
-}
-
 func opResponsesSetter(op *spec.Operation) func(*spec.Response, map[int]spec.Response) {
 	return func(def *spec.Response, scr map[int]spec.Response) {
 		if op.Responses == nil {
