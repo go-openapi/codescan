@@ -59,6 +59,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/allof-edges"
     },
     "AllOfStrfmt": {
+      "title": "AllOfStrfmt composes an allOf member that carries a swagger:strfmt tag.",
       "allOf": [
         {
           "type": "string",

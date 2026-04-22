@@ -1,0 +1,24 @@
+[
+  {
+    "annotationKind": "model",
+    "annotationArgs": {
+      "name": "Foo"
+    },
+    "properties": [
+      {
+        "keyword": "in",
+        "value": "query",
+        "typed": {
+          "type": "string-enum",
+          "string": "query"
+        }
+      }
+    ],
+    "diagnostics": [
+      {
+        "code": "parse.context-invalid",
+        "severity": "warning"
+      }
+    ]
+  }
+]

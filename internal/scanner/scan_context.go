@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -98,11 +99,24 @@ func (s *ScanCtx) RefAliases() bool {
 	return s.opts.RefAliases
 }
 
+// FileSet returns the shared *token.FileSet used by the scan's
+// loaded packages. Needed by callers that construct a
+// grammar.Parser for comment groups that don't live under a single
+// EntityDecl's *packages.Package — notably operation and route
+// path-level annotations whose source is aggregated from multiple
+// packages.
+func (s *ScanCtx) FileSet() *token.FileSet {
+	if len(s.pkgs) == 0 {
+		return nil
+	}
+	return s.pkgs[0].Fset
+}
+
 func (s *ScanCtx) Debug() bool {
 	return s.debug
 }
 
-func (s *ScanCtx) Meta() iter.Seq[parsers.MetaSection] {
+func (s *ScanCtx) Meta() iter.Seq[*ast.CommentGroup] {
 	if s.app == nil {
 		return nil
 	}
@@ -361,7 +375,7 @@ func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, d
 			continue
 		}
 
-		literalValue := parsers.GetEnumBasicLitValue(bl)
+		literalValue := helpers.GetEnumBasicLitValue(bl)
 
 		var desc strings.Builder
 		fmt.Fprintf(&desc, "%v %s", literalValue, nameIdent.Name)

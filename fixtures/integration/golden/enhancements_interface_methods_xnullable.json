@@ -3,6 +3,7 @@
   "paths": {},
   "definitions": {
     "Audited": {
+      "description": "Audited is a small named interface that is embedded with swagger:allOf\ninto richer interfaces below.",
       "type": "object",
       "properties": {
         "createdAt": {

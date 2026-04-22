@@ -206,6 +206,33 @@ func TestCoverage_EnumDocs(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_enum_docs.json")
 }
 
+// TestCoverage_EnumOverrides captures the v1 behavior for five
+// enum-related cases that W2 needs to pin down before the P5.1
+// schema-builder migration:
+//
+//	A. `swagger:enum` with matching consts            — const inference
+//	B. inline `enum: a,b,c` only                      — inline only
+//	C. inline `enum: ["a","b","c"]` JSON form only    — JSON inline only
+//	D. `swagger:enum` with NO matching consts         — empty/??? case
+//	E. `swagger:enum` + matching consts + inline on   — override question
+//	   the field
+//
+// See `.claude/plans/workshops/w2-enum.md` §2.6 and
+// `fixtures/enhancements/enum-overrides/types.go` for the fixture.
+// The golden snapshot becomes the v1-behavior contract the v2
+// migration either preserves or consciously diverges from.
+func TestCoverage_EnumOverrides(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/enum-overrides/..."},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_enum_overrides.json")
+}
+
 func TestCoverage_TextMarshal(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/text-marshal/..."},

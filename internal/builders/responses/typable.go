@@ -7,7 +7,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/items"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -116,7 +116,7 @@ func (sv headerValidations) SetCollectionFormat(val string) {
 }
 
 func (sv headerValidations) SetEnum(val string) {
-	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
+	sv.current.Enum = helpers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
 }
 
 func (sv headerValidations) SetDefault(val any) { sv.current.Default = val }

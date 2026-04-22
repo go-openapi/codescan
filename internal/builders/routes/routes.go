@@ -45,13 +45,7 @@ func (r *Builder) Build(tgt *oaispec.Paths) error {
 	)
 	op.Tags = r.route.Tags
 
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetTitle(func(lines []string) { op.Summary = parsers.JoinDropLast(lines) }),
-		parsers.WithSetDescription(func(lines []string) { op.Description = parsers.JoinDropLast(lines) }),
-		parsers.WithTaggers(r.routeTaggers(op)...),
-	)
-
-	if err := sp.Parse(r.route.Remaining); err != nil {
+	if err := r.applyBlockToRoute(op); err != nil {
 		return fmt.Errorf("operation (%s): %w", op.ID, err)
 	}
 

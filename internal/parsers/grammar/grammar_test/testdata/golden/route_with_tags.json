@@ -1,0 +1,25 @@
+[
+  {
+    "annotationKind": "route",
+    "annotationArgs": {
+      "method": "GET",
+      "path": "/pets",
+      "tags": "tags",
+      "opId": "listPets"
+    },
+    "properties": [
+      {
+        "keyword": "consumes",
+        "body": [
+          "application/json"
+        ]
+      },
+      {
+        "keyword": "produces",
+        "body": [
+          "application/json"
+        ]
+      }
+    ]
+  }
+]

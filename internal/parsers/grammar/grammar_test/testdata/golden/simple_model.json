@@ -1,0 +1,29 @@
+[
+  {
+    "annotationKind": "model",
+    "annotationArgs": {
+      "name": "Foo"
+    },
+    "properties": [
+      {
+        "keyword": "maximum",
+        "value": "100",
+        "typed": {
+          "type": "number",
+          "number": 100
+        }
+      },
+      {
+        "keyword": "minimum",
+        "value": "0",
+        "typed": {
+          "type": "number"
+        }
+      },
+      {
+        "keyword": "pattern",
+        "value": "^[a-z]+$"
+      }
+    ]
+  }
+]

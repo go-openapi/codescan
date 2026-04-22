@@ -411,23 +411,7 @@ func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.Entit
 		ps.Items = nil
 	}
 
-	taggers, err := setupParamTaggers(&ps, name, afld, p.ctx.SkipExtensions(), p.ctx.Debug())
-	if err != nil {
-		return "", err
-	}
-
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetDescription(func(lines []string) {
-			ps.Description = parsers.JoinDropLast(lines)
-			enumDesc := parsers.GetEnumDesc(ps.Extensions)
-			if enumDesc != "" {
-				ps.Description += "\n" + enumDesc
-			}
-		}),
-		parsers.WithTaggers(taggers...),
-	)
-
-	if err := sp.Parse(afld.Doc); err != nil {
+	if err := p.applyBlockToField(afld, &ps); err != nil {
 		return "", err
 	}
 	if ps.In == "path" {
@@ -457,12 +441,4 @@ func (p *ParameterBuilder) makeRef(decl *scanner.EntityDecl, prop ifaces.Swagger
 	p.postDecls = append(p.postDecls, decl) // mark the $ref target as discovered
 
 	return nil
-}
-
-func spExtensionsSetter(ps *oaispec.Parameter, skipExt bool) func(*oaispec.Extensions) {
-	return func(exts *oaispec.Extensions) {
-		for name, value := range *exts {
-			resolvers.AddExtension(&ps.VendorExtensible, name, value, skipExt)
-		}
-	}
 }

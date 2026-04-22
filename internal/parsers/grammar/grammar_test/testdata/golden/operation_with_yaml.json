@@ -1,0 +1,15 @@
+[
+  {
+    "annotationKind": "operation",
+    "annotationArgs": {
+      "method": "GET",
+      "path": "/pets",
+      "opId": "listPets"
+    },
+    "yamlBlocks": [
+      {
+        "text": " responses:\n   200: successResponse\n   404: notFound"
+      }
+    ]
+  }
+]

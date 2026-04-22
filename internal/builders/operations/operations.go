@@ -33,15 +33,8 @@ func (o *Builder) Build(tgt *oaispec.Paths) error {
 		o.path.Method, o.path.ID,
 		&pthObj, o.operations[o.path.ID])
 	op.Tags = o.path.Tags
-	sp := parsers.NewYAMLSpecScanner(
-		func(lines []string) { op.Summary = parsers.JoinDropLast(lines) },     // setTitle
-		func(lines []string) { op.Description = parsers.JoinDropLast(lines) }, // setDescription
-	)
 
-	if err := sp.Parse(o.path.Remaining); err != nil {
-		return fmt.Errorf("operation (%s): %w", op.ID, err)
-	}
-	if err := sp.UnmarshalSpec(op.UnmarshalJSON); err != nil {
+	if err := o.applyBlockToOperation(op); err != nil {
 		return fmt.Errorf("operation (%s): %w", op.ID, err)
 	}
 

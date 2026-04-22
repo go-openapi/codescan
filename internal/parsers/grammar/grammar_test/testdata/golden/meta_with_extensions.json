@@ -1,0 +1,32 @@
+[
+  {
+    "annotationKind": "meta",
+    "properties": [
+      {
+        "keyword": "version",
+        "value": "\"1.0\""
+      },
+      {
+        "keyword": "host",
+        "value": "api.example.com"
+      },
+      {
+        "keyword": "extensions",
+        "body": [
+          "   x-foo: bar",
+          "   x-baz: 42"
+        ]
+      }
+    ],
+    "extensions": [
+      {
+        "name": "x-foo",
+        "value": "bar"
+      },
+      {
+        "name": "x-baz",
+        "value": "42"
+      }
+    ]
+  }
+]

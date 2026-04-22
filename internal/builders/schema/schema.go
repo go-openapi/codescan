@@ -4,7 +4,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/types"
@@ -118,25 +117,10 @@ func (s *Builder) interfaceJSONName(goName string) string {
 }
 
 func (s *Builder) buildFromDecl(_ *scanner.EntityDecl, schema *oaispec.Schema) error {
-	// analyze doc comment for the model
-	// This includes parsing "example", "default" and other validation at the top-level declaration.
-	sp := s.createParser("", schema, schema, nil,
-		parsers.WithSetTitle(func(lines []string) { schema.Title = parsers.JoinDropLast(lines) }),
-		parsers.WithSetDescription(func(lines []string) {
-			schema.Description = parsers.JoinDropLast(lines)
-			enumDesc := parsers.GetEnumDesc(schema.Extensions)
-			if enumDesc != "" {
-				schema.Description += "\n" + enumDesc
-			}
-		}),
-	)
-
-	if err := sp.Parse(s.decl.Comments); err != nil {
-		return err
-	}
-
-	// if the type is marked to ignore, just return
-	if sp.Ignored() {
+	// analyze doc comment for the model.
+	// applyBlockToDecl returns true when a swagger:ignore annotation
+	// short-circuits further building.
+	if s.applyBlockToDecl(schema) {
 		return nil
 	}
 
@@ -454,13 +438,21 @@ func (s *Builder) buildNamedBasic(tio *types.TypeName, pkg *packages.Package, cm
 			tgt.WithEnum(enumValues...)
 			enumTypeName := reflect.TypeOf(enumValues[0]).String()
 			_ = resolvers.SwaggerSchemaForType(enumTypeName, tgt)
+
+			if len(enumDesces) > 0 {
+				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
+			}
+
+			return nil
 		}
 
-		if len(enumDesces) > 0 {
-			tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
-		}
-
-		return nil
+		// Q2: swagger:enum with no matching const values. Previously
+		// we silently returned here and the resulting schema had no
+		// type or enum (a confusing invisible failure). Now we warn
+		// and fall through so the type-resolution engine can still
+		// decide what to do with the underlying Go type (it may be
+		// a model, an alias, a strfmt, …).
+		log.Printf("WARNING: swagger:enum %s: no matching const values found; dropping enum semantics", enumName)
 	}
 
 	if defaultName, ok := parsers.DefaultName(cmt); ok {
@@ -719,10 +711,7 @@ func (s *Builder) processAnonInterfaceMethod(fld *types.Func, it *types.Interfac
 		ps.Items = nil
 	}
 
-	sp := s.createParser(name, schema, &ps, afld)
-	if err := sp.Parse(afld.Doc); err != nil {
-		return err
-	}
+	s.applyBlockToField(afld, schema, &ps, name)
 
 	if ps.Ref.String() == "" && name != fld.Name() {
 		ps.AddExtension("x-go-name", fld.Name())
@@ -947,10 +936,7 @@ func (s *Builder) processInterfaceMethod(fld *types.Func, it *types.Interface, d
 		ps.Items = nil
 	}
 
-	sp := s.createParser(name, tgt, &ps, afld)
-	if err := sp.Parse(afld.Doc); err != nil {
-		return err
-	}
+	s.applyBlockToField(afld, tgt, &ps, name)
 
 	if ps.Ref.String() == "" && name != fld.Name() {
 		ps.AddExtension("x-go-name", fld.Name())
@@ -1203,10 +1189,7 @@ func (s *Builder) processStructField(fld *types.Var, decl *scanner.EntityDecl, t
 		ps.Items = nil
 	}
 
-	sp := s.createParser(name, tgt, &ps, afld)
-	if err := sp.Parse(afld.Doc); err != nil {
-		return err
-	}
+	s.applyBlockToField(afld, tgt, &ps, name)
 
 	if ps.Ref.String() == "" && name != fld.Name() {
 		resolvers.AddExtension(&ps.VendorExtensible, "x-go-name", fld.Name(), s.ctx.SkipExtensions())
@@ -1373,70 +1356,6 @@ func (s *Builder) makeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) 
 	s.postDecls = append(s.postDecls, decl)
 
 	return nil
-}
-
-func (s *Builder) createParser(nm string, schema, ps *oaispec.Schema, fld *ast.Field, opts ...parsers.SectionedParserOption) *parsers.SectionedParser {
-	if ps.Ref.String() != "" && !s.ctx.DescWithRef() {
-		// if DescWithRef option is enabled, allow the tagged documentation to flow alongside the $ref
-		// otherwise behave as expected by jsonschema draft4: $ref predates all sibling keys.
-		opts = append(
-			opts,
-			parsers.WithTaggers(refSchemaTaggers(schema, nm)...),
-		)
-
-		return parsers.NewSectionedParser(opts...)
-	}
-
-	taggers := schemaTaggers(schema, ps, nm)
-
-	// the parser may be called outside the context of struct field.
-	// In that case, just return the outcome of the parsing now.
-
-	if fld != nil {
-		// check if this is a primitive, if so parse the validations from the
-		// doc comments of the slice declaration.
-		if ftped, ok := fld.Type.(*ast.ArrayType); ok {
-			var err error
-			arrayTaggers, err := parseArrayTypes(taggers, ftped.Elt, ps.Items, 0) // NOTE: swallows error silently
-			if err == nil {
-				taggers = arrayTaggers
-			}
-		}
-	}
-
-	opts = append(
-		opts,
-		parsers.WithSetDescription(func(lines []string) {
-			ps.Description = parsers.JoinDropLast(lines)
-			enumDesc := parsers.GetEnumDesc(ps.Extensions)
-			if enumDesc != "" {
-				ps.Description += "\n" + enumDesc
-			}
-		}),
-		parsers.WithTaggers(taggers...),
-	)
-
-	return parsers.NewSectionedParser(opts...)
-}
-
-func schemaVendorExtensibleSetter(meta *oaispec.Schema) func(json.RawMessage) error {
-	return func(jsonValue json.RawMessage) error {
-		var jsonData oaispec.Extensions
-		err := json.Unmarshal(jsonValue, &jsonData)
-		if err != nil {
-			return err
-		}
-
-		for k := range jsonData {
-			if !parsers.IsAllowedExtension(k) {
-				return fmt.Errorf("invalid schema extension name, should start from `x-`: %s: %w", k, ErrSchema)
-			}
-		}
-
-		meta.Extensions = jsonData
-
-		return nil
-	}
 }
 
 func extractAllOfClass(doc *ast.CommentGroup, schema *oaispec.Schema) {
