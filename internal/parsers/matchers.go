@@ -23,10 +23,6 @@ func IsAliasParam(prop ifaces.SwaggerTypable) bool {
 	return in == "query" || in == "path" || in == "formData"
 }
 
-func IsAllowedExtension(ext string) bool {
-	return rxAllowedExtensions.MatchString(ext)
-}
-
 func ExtractAnnotation(line string) (string, bool) {
 	matches := rxSwaggerAnnotation.FindStringSubmatch(line)
 	if len(matches) < minMatchCount {

@@ -36,22 +36,33 @@ to builders without direct coupling.
 | `scan_context.go` | `ScanCtx` / `NewScanCtx` — loads Go packages via `golang.org/x/tools/go/packages` |
 | `index.go` | `TypeIndex` — node classification (meta/route/operation/model/parameters/response) |
 | `declaration.go` | `EntityDecl` — wraps a type/value declaration with its enclosing file/package |
+| `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |
 
-### `internal/parsers/` — comment-block parsing engine
+### `internal/parsers/` — scanner classification + helpers
+
+Post grammar-migration (P6.3), `parsers/` is intentionally scanner-only. The
+old regex-based comment-block parsing engine is gone; what remains are
+classification helpers used by the scanner and builders, plus subpackages
+for the grammar parser and its satellite helpers.
+
+**Root — scanner classification**
 
 | File | Contents |
 |------|----------|
-| `sectioned_parser.go` | The section-driven parser that walks title/description/annotation blocks |
-| `parsers.go`, `parsers_helpers.go` | Dispatch + helpers for tag/package filtering, value extraction |
-| `tag_parsers.go`, `matchers.go` | Tag recognisers (`TypeName`, `Model`, etc.) |
-| `regexprs.go` | Shared regular expressions for annotation parsing |
-| `meta.go` | Swagger info-block parsing (title, version, license, contact) |
-| `responses.go`, `route_params.go` | Response / route-parameter annotation parsing |
-| `validations.go`, `extensions.go` | Validation directives, `x-*` extensions |
-| `enum.go`, `security.go` | Enum extraction from Go constants, security-definition blocks |
-| `yaml_parser.go`, `yaml_spec_parser.go` | Embedded-YAML parsing for `swagger:operation` bodies |
-| `lines.go`, `parsed_path_content.go` | Comment-line and path-content helpers |
-| `errors.go` | Sentinel errors |
+| `matchers.go` | Classification helpers: `HasAnnotation`, `ExtractAnnotation`, `ModelOverride`, `StrfmtName`, `ParamLocation`, etc. |
+| `regexprs.go` | Regex definitions for the `swagger:<name>` annotations + `in:` / `required:` classification |
+| `parsed_path_content.go` | `ParsedPathContent` + `ParseOperationPathAnnotation` / `ParseRoutePathAnnotation` |
+
+**Subpackages**
+
+| Package | Role |
+|---------|------|
+| `grammar/` | The new grammar-based comment parser — `NewParser`, `Block`, `Property`, keyword tables |
+| `grammar/gen/`, `grammar/grammar_test/` | Generator + external grammar tests |
+| `helpers/` | Bridge-consumed helpers: `JoinDropLast`, `CollectScannerTitleDescription`, `RemoveIndent`, `ParseEnum`, `ParseValueFromSchema`, `YAMLListBody`, `SecurityRequirements`, `SchemesList`, enum-desc extension handling |
+| `yaml/` | Grammar's companion YAML sub-parser — reads `---`-fenced bodies into generic values |
+| `enum/` | Experimental enum body sub-parser (not yet activated — see `.claude/plans/workshops/w2-enum.md`) |
+| `routebody/` | **The last v1 regex-era body parsers.** `SetOpParams` / `SetOpResponses` / `SetOpExtensions` consume the indented `parameters:` / `responses:` / `extensions:` blocks inside `swagger:route` docs. Consumed exclusively by `internal/builders/routes/bridge.go` — deleteable as a unit once routes grows a grammar-native body pipeline |
 
 ### `internal/builders/` — Swagger object construction
 

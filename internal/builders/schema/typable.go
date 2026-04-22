@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -81,7 +81,7 @@ func (st Typable) WithEnumDescription(desc string) {
 	if desc == "" {
 		return
 	}
-	st.AddExtension(parsers.EnumDescExtension(), desc)
+	st.AddExtension(helpers.EnumDescExtension(), desc)
 }
 
 func BodyTypable(in string, schema *oaispec.Schema, skipExt bool) (ifaces.SwaggerTypable, *oaispec.Schema) { //nolint:ireturn // polymorphic by design
@@ -130,7 +130,7 @@ func (sv schemaValidations) SetEnum(val string) {
 	if len(sv.current.Type) > 0 {
 		typ = sv.current.Type[0]
 	}
-	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Format: sv.current.Format, Type: typ})
+	sv.current.Enum = helpers.ParseEnum(val, &oaispec.SimpleSchema{Format: sv.current.Format, Type: typ})
 
 	// Q3: a field-level `enum: ...` overrides const-derived values.
 	// When the enum is replaced, any x-go-enum-desc previously set by
@@ -139,8 +139,8 @@ func (sv schemaValidations) SetEnum(val string) {
 	// description text may also have had the enum-desc appended to it
 	// (see schema.go's WithSetDescription callback); strip that
 	// suffix so the rendered description isn't misleading.
-	if enumDesc := parsers.GetEnumDesc(sv.current.Extensions); enumDesc != "" {
-		delete(sv.current.Extensions, parsers.EnumDescExtension())
+	if enumDesc := helpers.GetEnumDesc(sv.current.Extensions); enumDesc != "" {
+		delete(sv.current.Extensions, helpers.EnumDescExtension())
 		sv.current.Description = strings.TrimSuffix(
 			strings.TrimSuffix(sv.current.Description, enumDesc),
 			"\n",

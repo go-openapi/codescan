@@ -6,11 +6,16 @@ package schema
 import (
 	"encoding/json"
 	"go/ast"
+	"strings"
+
+	"github.com/go-openapi/loads/fmts"
+	yaml "go.yaml.in/yaml/v3"
 
 	"github.com/go-openapi/codescan/internal/builders/items"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
+	"github.com/go-openapi/codescan/internal/scanner/classify"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -117,31 +122,36 @@ func applySchemaBlock(b grammar.Block, t schemaBlockTargets) {
 }
 
 // applyExtensionsBody feeds the grammar-captured extension body
-// lines through the v1 YAML-aware extension parser so nested / typed
-// values (bool, number, list, map) land on ps.Extensions with their
+// lines through a YAML → JSON pipeline so nested / typed values
+// (bool, number, list, map) land on ps.Extensions with their
 // semantic types — parity with the legacy schemaVendorExtensibleSetter
 // path. Unknown x-* names (rejected by IsAllowedExtension) are
 // silently dropped, matching the legacy reject-with-error behaviour
 // sufficiently for parity (errors on extension names are rare and
 // always user-authored).
 func applyExtensionsBody(ps *oaispec.Schema, body []string) {
-	yamlParser := parsers.NewYAMLParser(
-		parsers.WithExtensionMatcher(),
-		parsers.WithSetter(func(jsonValue json.RawMessage) error {
-			var data oaispec.Extensions
-			if err := json.Unmarshal(jsonValue, &data); err != nil {
-				return err
-			}
-			for k, v := range data {
-				if !parsers.IsAllowedExtension(k) {
-					continue
-				}
-				ps.AddExtension(k, v)
-			}
-			return nil
-		}),
-	)
-	_ = yamlParser.Parse(body)
+	if len(body) == 0 || (len(body) == 1 && body[0] == "") {
+		return
+	}
+	yamlContent := strings.Join(body, "\n")
+	var yamlValue any
+	if err := yaml.Unmarshal([]byte(yamlContent), &yamlValue); err != nil {
+		return
+	}
+	jsonValue, err := fmts.YAMLToJSON(yamlValue)
+	if err != nil {
+		return
+	}
+	var data oaispec.Extensions
+	if err := json.Unmarshal(jsonValue, &data); err != nil {
+		return
+	}
+	for k, v := range data {
+		if !classify.IsAllowedExtension(k) {
+			continue
+		}
+		ps.AddExtension(k, v)
+	}
 }
 
 func dispatchSchemaKeyword(p grammar.Property, t schemaBlockTargets, valid schemaValidations, scheme *oaispec.SimpleSchema) {
@@ -211,11 +221,11 @@ func dispatchStringOrEnum(p grammar.Property, valid schemaValidations, scheme *o
 		// (see .claude/plans/workshops/w2-enum.md §2.6).
 		valid.SetEnum(p.Value)
 	case "default":
-		if v, err := parsers.ParseValueFromSchema(p.Value, scheme); err == nil {
+		if v, err := helpers.ParseValueFromSchema(p.Value, scheme); err == nil {
 			valid.SetDefault(v)
 		}
 	case "example":
-		if v, err := parsers.ParseValueFromSchema(p.Value, scheme); err == nil {
+		if v, err := helpers.ParseValueFromSchema(p.Value, scheme); err == nil {
 			valid.SetExample(v)
 		}
 	default:
@@ -344,8 +354,8 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 	// entire prose header is the description. Legacy output is
 	// JoinDropLast("\n", header); enum-desc extension suffix is
 	// appended last.
-	ps.Description = parsers.JoinDropLast(block.ProseLines())
-	if enumDesc := parsers.GetEnumDesc(ps.Extensions); enumDesc != "" {
+	ps.Description = helpers.JoinDropLast(block.ProseLines())
+	if enumDesc := helpers.GetEnumDesc(ps.Extensions); enumDesc != "" {
 		if ps.Description != "" {
 			ps.Description += "\n"
 		}
@@ -389,10 +399,10 @@ func (s *Builder) applyBlockToDecl(schema *oaispec.Schema) (ignored bool) {
 		return true
 	}
 
-	title, desc := parsers.CollectScannerTitleDescription(block.ProseLines())
-	schema.Title = parsers.JoinDropLast(title)
-	schema.Description = parsers.JoinDropLast(desc)
-	if enumDesc := parsers.GetEnumDesc(schema.Extensions); enumDesc != "" {
+	title, desc := helpers.CollectScannerTitleDescription(block.ProseLines())
+	schema.Title = helpers.JoinDropLast(title)
+	schema.Description = helpers.JoinDropLast(desc)
+	if enumDesc := helpers.GetEnumDesc(schema.Extensions); enumDesc != "" {
 		if schema.Description != "" {
 			schema.Description += "\n"
 		}

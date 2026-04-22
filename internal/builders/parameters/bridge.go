@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/items"
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
+	"github.com/go-openapi/codescan/internal/scanner/classify"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -85,8 +86,8 @@ func (p *ParameterBuilder) applyBlockToField(afld *ast.Field, param *oaispec.Par
 
 	// Description: raw-line JoinDropLast for v1 parity (line-preserving
 	// `"\n"` join), enum-desc extension suffix appended.
-	param.Description = parsers.JoinDropLast(block.ProseLines())
-	if enumDesc := parsers.GetEnumDesc(param.Extensions); enumDesc != "" {
+	param.Description = helpers.JoinDropLast(block.ProseLines())
+	if enumDesc := helpers.GetEnumDesc(param.Extensions); enumDesc != "" {
 		if param.Description != "" {
 			param.Description += "\n"
 		}
@@ -106,7 +107,7 @@ func (p *ParameterBuilder) applyBlockToField(afld *ast.Field, param *oaispec.Par
 	}
 
 	for ext := range block.Extensions() {
-		if !parsers.IsAllowedExtension(ext.Name) {
+		if !classify.IsAllowedExtension(ext.Name) {
 			continue
 		}
 		param.AddExtension(ext.Name, ext.Value)
@@ -194,13 +195,13 @@ func dispatchStringOrEnum(p grammar.Property, valid paramValidations, scheme *oa
 	case "enum":
 		valid.SetEnum(p.Value)
 	case "default":
-		v, err := parsers.ParseValueFromSchema(p.Value, scheme)
+		v, err := helpers.ParseValueFromSchema(p.Value, scheme)
 		if err != nil {
 			return true, err
 		}
 		valid.SetDefault(v)
 	case "example":
-		v, err := parsers.ParseValueFromSchema(p.Value, scheme)
+		v, err := helpers.ParseValueFromSchema(p.Value, scheme)
 		if err != nil {
 			return true, err
 		}

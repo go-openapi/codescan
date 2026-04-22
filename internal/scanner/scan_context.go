@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -374,7 +375,7 @@ func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, d
 			continue
 		}
 
-		literalValue := parsers.GetEnumBasicLitValue(bl)
+		literalValue := helpers.GetEnumBasicLitValue(bl)
 
 		var desc strings.Builder
 		fmt.Fprintf(&desc, "%v %s", literalValue, nameIdent.Name)

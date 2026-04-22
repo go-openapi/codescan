@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package parsers
+package routebody
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/logger"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -39,7 +40,7 @@ func (ss *SetOpExtensions) Parse(lines []string) error {
 		return nil
 	}
 
-	cleanLines := cleanupScannerLines(lines, rxUncommentHeaders)
+	cleanLines := helpers.CleanupScannerLines(lines, rxUncommentHeaders)
 
 	exts := new(oaispec.VendorExtensible)
 	extList := make([]extensionObject, 0)

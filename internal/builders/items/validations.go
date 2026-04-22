@@ -4,7 +4,7 @@
 package items
 
 import (
-	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -38,7 +38,7 @@ func (sv Validations) SetPattern(val string)          { sv.current.Pattern = val
 func (sv Validations) SetUnique(val bool)             { sv.current.UniqueItems = val }
 func (sv Validations) SetCollectionFormat(val string) { sv.current.CollectionFormat = val }
 func (sv Validations) SetEnum(val string) {
-	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
+	sv.current.Enum = helpers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
 }
 func (sv Validations) SetDefault(val any) { sv.current.Default = val }
 func (sv Validations) SetExample(val any) { sv.current.Example = val }

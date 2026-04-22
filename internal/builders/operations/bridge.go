@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	"github.com/go-openapi/loads/fmts"
 	oaispec "github.com/go-openapi/spec"
 	yaml "go.yaml.in/yaml/v3"
@@ -36,9 +36,9 @@ func (o *Builder) applyBlockToOperation(op *oaispec.Operation) error {
 	fset := o.ctx.FileSet()
 	block := grammar.NewParser(fset).Parse(o.path.Remaining)
 
-	title, desc := parsers.CollectScannerTitleDescription(block.ProseLines())
-	op.Summary = parsers.JoinDropLast(title)
-	op.Description = parsers.JoinDropLast(desc)
+	title, desc := helpers.CollectScannerTitleDescription(block.ProseLines())
+	op.Summary = helpers.JoinDropLast(title)
+	op.Description = helpers.JoinDropLast(desc)
 
 	var yamlBody string
 	for y := range block.YAMLBlocks() {
@@ -60,7 +60,7 @@ func (o *Builder) applyBlockToOperation(op *oaispec.Operation) error {
 // parse correctly.
 func unmarshalOpYAML(body string, unmarshal func([]byte) error) error {
 	lines := strings.Split(body, "\n")
-	lines = parsers.RemoveIndent(lines)
+	lines = helpers.RemoveIndent(lines)
 	normalized := strings.Join(lines, "\n")
 
 	yamlValue := make(map[any]any)

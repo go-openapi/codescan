@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package parsers
+package helpers
 
 import (
 	"testing"
@@ -42,25 +42,4 @@ func TestSetter(t *testing.T) {
 	set := Setter(&target)
 	set([]string{"line1", "line2", ""})
 	assert.EqualT(t, "line1\nline2", target)
-}
-
-func TestRemoveEmptyLines(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name  string
-		input []string
-		want  []string
-	}{
-		{"nil", nil, []string{}},
-		{"all empty", []string{"", "  ", "\t"}, []string{}},
-		{"mixed", []string{"hello", "", "world", "  "}, []string{"hello", "world"}},
-		{"no empty", []string{"a", "b"}, []string{"a", "b"}},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, removeEmptyLines(tc.input))
-		})
-	}
 }

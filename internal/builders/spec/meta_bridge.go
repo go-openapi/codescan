@@ -11,9 +11,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/parsers/helpers"
+	"github.com/go-openapi/codescan/internal/scanner/classify"
 	"github.com/go-openapi/loads/fmts"
 	"github.com/go-openapi/spec"
 	yaml "go.yaml.in/yaml/v3"
@@ -40,13 +40,13 @@ func applyMetaBlock(swspec *spec.Swagger, block grammar.Block) error {
 	if swspec.Info == nil {
 		swspec.Info = new(spec.Info)
 	}
-	title, desc := parsers.CollectScannerTitleDescription(block.ProseLines())
-	joinedTitle := parsers.JoinDropLast(title)
+	title, desc := helpers.CollectScannerTitleDescription(block.ProseLines())
+	joinedTitle := helpers.JoinDropLast(title)
 	if joinedTitle != "" {
 		joinedTitle = rxStripTitleComments.ReplaceAllString(joinedTitle, "")
 	}
 	swspec.Info.Title = joinedTitle
-	swspec.Info.Description = parsers.JoinDropLast(desc)
+	swspec.Info.Description = helpers.JoinDropLast(desc)
 
 	for p := range block.Properties() {
 		if p.ItemsDepth != 0 {
@@ -71,7 +71,7 @@ func dispatchMetaKeyword(p grammar.Property, swspec *spec.Swagger) error {
 func dispatchMetaSimple(p grammar.Property, swspec *spec.Swagger) bool {
 	switch p.Keyword.Name {
 	case "tos":
-		swspec.Info.TermsOfService = parsers.JoinDropLast(helpers.DropEmpty(p.Body))
+		swspec.Info.TermsOfService = helpers.JoinDropLast(helpers.DropEmpty(p.Body))
 	case "consumes":
 		swspec.Consumes = helpers.YAMLListBody(p.Body)
 	case "produces":
@@ -216,7 +216,7 @@ var ErrBadExtensionName = errors.New("invalid schema extension name, should star
 // check — every vendor extension key must begin with `x-` or `X-`.
 func validateExtensionNames(ext spec.Extensions) error {
 	for k := range ext {
-		if !parsers.IsAllowedExtension(k) {
+		if !classify.IsAllowedExtension(k) {
 			return fmt.Errorf("%w: %s", ErrBadExtensionName, k)
 		}
 	}

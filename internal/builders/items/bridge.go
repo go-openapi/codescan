@@ -107,7 +107,7 @@ func dispatchItemsKeyword(p grammar.Property, t ifaces.ValidationBuilder) {
 		}
 	case "enum":
 		// Delegated to the existing target.SetEnum, which routes
-		// through parsers.ParseEnum (post-Q1 fix: comma-list
+		// through helpers.ParseEnum (post-Q1 fix: comma-list
 		// trimmed, JSON array verbatim). Direct use of
 		// internal/parsers/enum.Parse is deferred to the
 		// post-migration cleanup commit that takes the fully-typed

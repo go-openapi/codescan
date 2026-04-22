@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package parsers
+package helpers
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestCollectScannerTitleDescription(t *testing.T) {
 			"// This is the description.",
 			"// More description.",
 		}
-		title, desc := collectScannerTitleDescription(headers)
+		title, desc := CollectScannerTitleDescription(headers)
 		assert.Equal(t, []string{"This is the title."}, title)
 		assert.Equal(t, []string{"This is the description.", "More description."}, desc)
 	})
@@ -29,7 +29,7 @@ func TestCollectScannerTitleDescription(t *testing.T) {
 			"// A single title line.",
 			"// And some description.",
 		}
-		title, desc := collectScannerTitleDescription(headers)
+		title, desc := CollectScannerTitleDescription(headers)
 		assert.Equal(t, []string{"A single title line."}, title)
 		assert.Equal(t, []string{"And some description."}, desc)
 	})
@@ -39,7 +39,7 @@ func TestCollectScannerTitleDescription(t *testing.T) {
 			"// # My Title",
 			"// Description here.",
 		}
-		title, desc := collectScannerTitleDescription(headers)
+		title, desc := CollectScannerTitleDescription(headers)
 		assert.Equal(t, []string{"My Title"}, title)
 		assert.Equal(t, []string{"Description here."}, desc)
 	})
@@ -49,25 +49,21 @@ func TestCollectScannerTitleDescription(t *testing.T) {
 			"// no punctuation at end means no title",
 			"// more text",
 		}
-		title, desc := collectScannerTitleDescription(headers)
+		title, desc := CollectScannerTitleDescription(headers)
 		assert.Empty(t, title)
 		assert.Equal(t, []string{"no punctuation at end means no title", "more text"}, desc)
 	})
 
 	t.Run("empty", func(t *testing.T) {
-		title, desc := collectScannerTitleDescription(nil)
+		title, desc := CollectScannerTitleDescription(nil)
 		assert.Empty(t, title)
 		assert.Empty(t, desc)
 	})
 
 	t.Run("blank line only", func(t *testing.T) {
 		headers := []string{"//"}
-		title, desc := collectScannerTitleDescription(headers)
+		title, desc := CollectScannerTitleDescription(headers)
 		assert.Empty(t, title)
 		assert.Nil(t, desc)
 	})
-
-	// Note: the branch at line 31-32 (desc = nil when blank is last line)
-	// is unreachable because cleanupScannerLines always trims trailing blanks
-	// before collectScannerTitleDescription processes the slice.
 }

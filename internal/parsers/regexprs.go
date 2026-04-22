@@ -100,8 +100,7 @@ var (
 			rxOpTags +
 			")?\\p{Zs}+" +
 			rxOpID + "\\p{Zs}*$")
-	rxUncommentHeaders = regexp.MustCompile(`^[\p{Zs}\t/\*-]*\|?`)
-	rxOperation        = regexp.MustCompile(
+	rxOperation = regexp.MustCompile(
 		rxCommentPrefix +
 			"swagger:operation\\p{Zs}*" +
 			rxMethod +
@@ -112,18 +111,8 @@ var (
 			")?\\p{Zs}+" +
 			rxOpID + "\\p{Zs}*$")
 
-	rxIndent            = regexp.MustCompile(`[\p{Zs}\t]*/*[\p{Zs}\t]*[^\p{Zs}\t]`)
-	rxNotIndent         = regexp.MustCompile(`[^\p{Zs}\t]`)
-	rxPunctuationEnd    = regexp.MustCompile(`\p{Po}$`)
-	rxTitleStart        = regexp.MustCompile(`^[#]+\p{Zs}+`)
-	rxAllowedExtensions = regexp.MustCompile(`^[Xx]-`)
-
-	rxIn         = regexp.MustCompile(rxCommentPrefix + `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`)
-	rxRequired   = regexp.MustCompile(rxCommentPrefix + `[Rr]equired\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
-	rxSecurity   = regexp.MustCompile(rxCommentPrefix + `[Ss]ecurity\p{Zs}*[Dd]efinitions:`)
-	rxResponses  = regexp.MustCompile(rxCommentPrefix + `[Rr]esponses\p{Zs}*:`)
-	rxParameters = regexp.MustCompile(rxCommentPrefix + `[Pp]arameters\p{Zs}*:`)
-	rxExtensions = regexp.MustCompile(rxCommentPrefix + `[Ee]xtensions\p{Zs}*:`)
+	rxIn       = regexp.MustCompile(rxCommentPrefix + `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`)
+	rxRequired = regexp.MustCompile(rxCommentPrefix + `[Rr]equired\p{Zs}*:\p{Zs}*(true|false)(?:\.)?$`)
 )
 
 func Rxf(rxp, ar string) *regexp.Regexp {

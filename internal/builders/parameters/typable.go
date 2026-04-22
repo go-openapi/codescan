@@ -7,7 +7,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/items"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -70,7 +70,7 @@ func (pt paramTypable) WithEnumDescription(desc string) {
 	if desc == "" {
 		return
 	}
-	pt.param.AddExtension(parsers.EnumDescExtension(), desc)
+	pt.param.AddExtension(helpers.EnumDescExtension(), desc)
 }
 
 type paramValidations struct {
@@ -95,7 +95,7 @@ func (sv paramValidations) SetPattern(val string)          { sv.current.Pattern 
 func (sv paramValidations) SetUnique(val bool)             { sv.current.UniqueItems = val }
 func (sv paramValidations) SetCollectionFormat(val string) { sv.current.CollectionFormat = val }
 func (sv paramValidations) SetEnum(val string) {
-	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
+	sv.current.Enum = helpers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
 }
 func (sv paramValidations) SetDefault(val any) { sv.current.Default = val }
 func (sv paramValidations) SetExample(val any) { sv.current.Example = val }

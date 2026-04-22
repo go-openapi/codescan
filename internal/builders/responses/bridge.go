@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/items"
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/parsers/helpers"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -66,7 +66,7 @@ func collectHeaderItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []hea
 // description, no taggers.
 func (r *ResponseBuilder) applyBlockToDecl(resp *oaispec.Response) {
 	block := grammar.NewParser(r.decl.Pkg.Fset).Parse(r.decl.Comments)
-	resp.Description = parsers.JoinDropLast(block.ProseLines())
+	resp.Description = helpers.JoinDropLast(block.ProseLines())
 }
 
 // applyBlockToHeader parses afld.Doc under the grammar parser and
@@ -85,7 +85,7 @@ func (r *ResponseBuilder) applyBlockToDecl(resp *oaispec.Response) {
 func (r *ResponseBuilder) applyBlockToHeader(afld *ast.Field, header *oaispec.Header) {
 	block := grammar.NewParser(r.decl.Pkg.Fset).Parse(afld.Doc)
 
-	header.Description = parsers.JoinDropLast(block.ProseLines())
+	header.Description = helpers.JoinDropLast(block.ProseLines())
 
 	scheme := &header.SimpleSchema
 	valid := headerValidations{header}
@@ -107,7 +107,7 @@ func (r *ResponseBuilder) applyBlockToHeader(afld *ast.Field, header *oaispec.He
 
 // dispatchHeaderKeyword routes a level-0 Property into
 // headerValidations or, for scheme-aware default/example, through
-// parsers.ParseValueFromSchema. Covers the v1 baseResponseHeaderTaggers
+// helpers.ParseValueFromSchema. Covers the v1 baseResponseHeaderTaggers
 // surface minus `in:` (upstream-resolved).
 func dispatchHeaderKeyword(p grammar.Property, valid headerValidations, scheme *oaispec.SimpleSchema) {
 	if dispatchNumericValidation(p, valid) {
@@ -168,11 +168,11 @@ func dispatchStringOrEnum(p grammar.Property, valid headerValidations, scheme *o
 	case "enum":
 		valid.SetEnum(p.Value)
 	case "default":
-		if v, err := parsers.ParseValueFromSchema(p.Value, scheme); err == nil {
+		if v, err := helpers.ParseValueFromSchema(p.Value, scheme); err == nil {
 			valid.SetDefault(v)
 		}
 	case "example":
-		if v, err := parsers.ParseValueFromSchema(p.Value, scheme); err == nil {
+		if v, err := helpers.ParseValueFromSchema(p.Value, scheme); err == nil {
 			valid.SetExample(v)
 		}
 	default:

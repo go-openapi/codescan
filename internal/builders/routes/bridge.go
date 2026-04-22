@@ -4,9 +4,9 @@
 package routes
 
 import (
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/parsers/helpers"
+	"github.com/go-openapi/codescan/internal/parsers/routebody"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -23,9 +23,9 @@ import (
 func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
 	block := grammar.NewParser(r.ctx.FileSet()).Parse(r.route.Remaining)
 
-	title, desc := parsers.CollectScannerTitleDescription(block.ProseLines())
-	op.Summary = parsers.JoinDropLast(title)
-	op.Description = parsers.JoinDropLast(desc)
+	title, desc := helpers.CollectScannerTitleDescription(block.ProseLines())
+	op.Summary = helpers.JoinDropLast(title)
+	op.Description = helpers.JoinDropLast(desc)
 
 	for prop := range block.Properties() {
 		if prop.ItemsDepth != 0 {
@@ -55,11 +55,11 @@ const (
 // body parser. Simple body shapes (schemes comma-list, consumes /
 // produces YAML-list, security name:scope lines) use shared
 // helpers in internal/parsers/helpers. The three domain-heavy
-// body parsers (parameters, responses, extensions) still live in
-// internal/parsers/ — their v1-parity logic (e.g. `+ name:` param
-// blocks, `200: someResponse` response mapping, nested YAML
-// extension maps) is substantial enough to warrant dedicated
-// files.
+// body parsers (parameters, responses, extensions) live in
+// internal/parsers/routebody — their v1-parity logic (e.g.
+// `+ name:` param blocks, `200: someResponse` response mapping,
+// nested YAML extension maps) is the last citadel of the
+// pre-grammar pipeline.
 func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation) error {
 	switch p.Keyword.Name {
 	case kwSchemes:
@@ -77,11 +77,11 @@ func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation
 	case kwSecurity:
 		op.Security = helpers.SecurityRequirements(p.Body)
 	case kwParameters:
-		return parsers.NewSetParams(r.parameters, opParamSetter(op)).Parse(p.Body)
+		return routebody.NewSetParams(r.parameters, opParamSetter(op)).Parse(p.Body)
 	case kwResponses:
-		return parsers.NewSetResponses(r.definitions, r.responses, opResponsesSetter(op)).Parse(p.Body)
+		return routebody.NewSetResponses(r.definitions, r.responses, opResponsesSetter(op)).Parse(p.Body)
 	case kwExtensions:
-		return parsers.NewSetExtensions(opExtensionsSetter(op), r.ctx.Debug()).Parse(p.Body)
+		return routebody.NewSetExtensions(opExtensionsSetter(op), r.ctx.Debug()).Parse(p.Body)
 	}
 	return nil
 }
