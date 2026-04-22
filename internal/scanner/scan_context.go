@@ -98,6 +98,13 @@ func (s *ScanCtx) RefAliases() bool {
 	return s.opts.RefAliases
 }
 
+// UseGrammarParser reports whether the scan is configured to route
+// comment-group parsing through the v2 grammar parser. See
+// Options.UseGrammarParser for the migration seam semantics.
+func (s *ScanCtx) UseGrammarParser() bool {
+	return s.opts.UseGrammarParser
+}
+
 func (s *ScanCtx) Debug() bool {
 	return s.debug
 }

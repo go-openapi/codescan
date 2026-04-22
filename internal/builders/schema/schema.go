@@ -731,6 +731,7 @@ func (s *Builder) processAnonInterfaceMethod(fld *types.Func, it *types.Interfac
 	if err := sp.Parse(afld.Doc); err != nil {
 		return err
 	}
+	s.applyItemsBridge(afld, &ps)
 
 	if ps.Ref.String() == "" && name != fld.Name() {
 		ps.AddExtension("x-go-name", fld.Name())
@@ -959,6 +960,7 @@ func (s *Builder) processInterfaceMethod(fld *types.Func, it *types.Interface, d
 	if err := sp.Parse(afld.Doc); err != nil {
 		return err
 	}
+	s.applyItemsBridge(afld, &ps)
 
 	if ps.Ref.String() == "" && name != fld.Name() {
 		ps.AddExtension("x-go-name", fld.Name())
@@ -1215,6 +1217,7 @@ func (s *Builder) processStructField(fld *types.Var, decl *scanner.EntityDecl, t
 	if err := sp.Parse(afld.Doc); err != nil {
 		return err
 	}
+	s.applyItemsBridge(afld, &ps)
 
 	if ps.Ref.String() == "" && name != fld.Name() {
 		resolvers.AddExtension(&ps.VendorExtensible, "x-go-name", fld.Name(), s.ctx.SkipExtensions())
@@ -1399,7 +1402,6 @@ func (s *Builder) createParser(nm string, schema, ps *oaispec.Schema, fld *ast.F
 
 	// the parser may be called outside the context of struct field.
 	// In that case, just return the outcome of the parsing now.
-
 	if fld != nil {
 		// check if this is a primitive, if so parse the validations from the
 		// doc comments of the slice declaration.
