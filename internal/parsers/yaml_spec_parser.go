@@ -141,6 +141,15 @@ func (sp *YAMLSpecScanner) collectTitleDescription() {
 	sp.title, sp.header = collectScannerTitleDescription(sp.header)
 }
 
+// RemoveIndent normalises the common leading indentation on a YAML
+// body: it strips the first line's indent from every line and
+// converts remaining tab indentation to two-space equivalents. Used
+// by YAMLSpecScanner's UnmarshalSpec pipeline and by the grammar
+// operations bridge for the same v1-parity normalisation.
+func RemoveIndent(spec []string) []string {
+	return removeIndent(spec)
+}
+
 // removes indent based on the first line.
 func removeIndent(spec []string) []string {
 	if len(spec) == 0 {

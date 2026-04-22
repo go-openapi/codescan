@@ -126,13 +126,17 @@ func stripLine(s string, pos token.Position, rawStrip func(string) string) Line 
 	return Line{Text: stripped, Raw: rawStrip(s), Pos: pos}
 }
 
-// stripSingleGodocSpace strips one leading space or tab — the godoc
-// `// ` convention — preserving all other content whitespace. Used
-// for Line.Raw on `//` comment lines.
+// stripSingleGodocSpace used to strip one leading space or tab
+// following the godoc `// ` convention. It is now a no-op — Line.Raw
+// preserves the entire post-marker content verbatim so consumers
+// that rely on source indentation (YAML fence bodies whose first
+// line's tab anchors removeIndent; extension bodies whose nested
+// maps rely on relative indent) see the source faithfully.
+//
+// Kept as a named function for the stripLine callback seam so future
+// per-kind stripping strategies can slot in without rewiring
+// callers.
 func stripSingleGodocSpace(s string) string {
-	if len(s) > 0 && (s[0] == ' ' || s[0] == '\t') {
-		return s[1:]
-	}
 	return s
 }
 

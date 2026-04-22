@@ -114,11 +114,12 @@ type Root struct{}
 		t.Fatalf("keyword: got %q", prop.Keyword.Name)
 	}
 	// Extensions bodies preserve source indentation in Property.Body
-	// so nested YAML-like extension maps can be re-parsed downstream.
-	// The extracted Extension entries (block.Extensions()) are the
+	// verbatim (comment markers stripped, all post-marker whitespace
+	// retained) so nested YAML-like extension maps can be re-parsed
+	// downstream. Extension entries (block.Extensions()) are the
 	// cleaned form.
-	if len(prop.Body) != 1 || prop.Body[0] != "  x-foo: bar" {
-		t.Errorf("Body: got %q want [  x-foo: bar]", prop.Body)
+	if len(prop.Body) != 1 || prop.Body[0] != "   x-foo: bar" {
+		t.Errorf("Body: got %q want [   x-foo: bar]", prop.Body)
 	}
 
 	extCount := 0

@@ -11,6 +11,7 @@ import (
 	"iter"
 	"log"
 	"maps"
+	"os"
 	"slices"
 	"strings"
 
@@ -18,6 +19,17 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers"
 	"golang.org/x/tools/go/packages"
 )
+
+// envForceGrammarParser, when set to "1" / "true" in the process
+// environment, forces Options.UseGrammarParser to true at context
+// construction time regardless of the value the caller passed.
+// Used by CI to run the full test suite under the grammar path
+// without threading the flag through every test call site —
+// `CODESCAN_USE_GRAMMAR=1 go test ./...`.
+//
+// Removed at P6 cutover alongside the legacy regex path and the
+// flag itself.
+const envForceGrammarParser = "CODESCAN_USE_GRAMMAR"
 
 const pkgLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
@@ -41,6 +53,14 @@ type ScanCtx struct {
 }
 
 func NewScanCtx(opts *Options) (*ScanCtx, error) {
+	// Env-var override: CODESCAN_USE_GRAMMAR=1 forces the grammar
+	// parser on for all builders regardless of the caller's flag.
+	// Test-only migration aid; removed at P6 cutover.
+	switch os.Getenv(envForceGrammarParser) {
+	case "1", "true", "TRUE", "True":
+		opts.UseGrammarParser = true
+	}
+
 	cfg := &packages.Config{
 		Dir:   opts.WorkDir,
 		Mode:  pkgLoadMode,

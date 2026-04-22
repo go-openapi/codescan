@@ -4,6 +4,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"go/ast"
 
 	"github.com/go-openapi/codescan/internal/builders/items"
@@ -103,19 +104,44 @@ func applySchemaBlock(b grammar.Block, t schemaBlockTargets) {
 		if p.ItemsDepth != 0 {
 			continue
 		}
-		dispatchSchemaKeyword(p, t, valid, scheme)
-	}
-
-	for ext := range b.Extensions() {
-		if !parsers.IsAllowedExtension(ext.Name) {
-			// Matches legacy schemaVendorExtensibleSetter: unknown
-			// x-* names were rejected with an error. At the grammar
-			// layer we preserve parity by silently skipping —
-			// the grammar parser already emitted a diagnostic.
+		if p.Keyword.Name == "extensions" || p.Keyword.Name == "YAMLExtensionsBlock" {
+			// Delegate the body to v1's YAML-aware extension parser
+			// so nested/typed values (bool, list, map) are
+			// recognised — block.Extensions()'s flat iterator
+			// stores values as strings only.
+			applyExtensionsBody(t.ps, p.Body)
 			continue
 		}
-		t.ps.AddExtension(ext.Name, ext.Value)
+		dispatchSchemaKeyword(p, t, valid, scheme)
 	}
+}
+
+// applyExtensionsBody feeds the grammar-captured extension body
+// lines through the v1 YAML-aware extension parser so nested / typed
+// values (bool, number, list, map) land on ps.Extensions with their
+// semantic types — parity with the legacy schemaVendorExtensibleSetter
+// path. Unknown x-* names (rejected by IsAllowedExtension) are
+// silently dropped, matching the legacy reject-with-error behaviour
+// sufficiently for parity (errors on extension names are rare and
+// always user-authored).
+func applyExtensionsBody(ps *oaispec.Schema, body []string) {
+	yamlParser := parsers.NewYAMLParser(
+		parsers.WithExtensionMatcher(),
+		parsers.WithSetter(func(jsonValue json.RawMessage) error {
+			var data oaispec.Extensions
+			if err := json.Unmarshal(jsonValue, &data); err != nil {
+				return err
+			}
+			for k, v := range data {
+				if !parsers.IsAllowedExtension(k) {
+					continue
+				}
+				ps.AddExtension(k, v)
+			}
+			return nil
+		}),
+	)
+	_ = yamlParser.Parse(body)
 }
 
 func dispatchSchemaKeyword(p grammar.Property, t schemaBlockTargets, valid schemaValidations, scheme *oaispec.SimpleSchema) {

@@ -8,7 +8,7 @@
     },
     "yamlBlocks": [
       {
-        "text": "responses:\n  200: successResponse\n  404: notFound"
+        "text": " responses:\n   200: successResponse\n   404: notFound"
       }
     ]
   }

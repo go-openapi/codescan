@@ -93,7 +93,9 @@ func runDispatch(t *testing.T, param *oaispec.Parameter, body string) {
 		if prop.ItemsDepth != 0 {
 			continue
 		}
-		dispatchParamKeyword(prop, param, valid, scheme)
+		if err := dispatchParamKeyword(prop, param, valid, scheme); err != nil {
+			t.Fatalf("dispatchParamKeyword: %v", err)
+		}
 	}
 }
 

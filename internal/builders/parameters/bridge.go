@@ -80,7 +80,7 @@ func collectParamItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []para
 //     fixture exercises them, and the follow-up commit that moves
 //     YAML-body parsing through internal/parsers/yaml will also
 //     plug this gap.
-func (p *ParameterBuilder) applyBlockToField(afld *ast.Field, param *oaispec.Parameter) {
+func (p *ParameterBuilder) applyBlockToField(afld *ast.Field, param *oaispec.Parameter) error {
 	block := grammar.NewParser(p.decl.Pkg.Fset).Parse(afld.Doc)
 
 	// Description: raw-line JoinDropLast for v1 parity (line-preserving
@@ -100,7 +100,9 @@ func (p *ParameterBuilder) applyBlockToField(afld *ast.Field, param *oaispec.Par
 		if prop.ItemsDepth != 0 {
 			continue
 		}
-		dispatchParamKeyword(prop, param, valid, scheme)
+		if err := dispatchParamKeyword(prop, param, valid, scheme); err != nil {
+			return err
+		}
 	}
 
 	for ext := range block.Extensions() {
@@ -118,23 +120,29 @@ func (p *ParameterBuilder) applyBlockToField(afld *ast.Field, param *oaispec.Par
 			items.ApplyBlock(block, items.NewValidations(tgt.items), tgt.level)
 		}
 	}
+	return nil
 }
 
 // dispatchParamKeyword routes a level-0 Property into paramValidations
 // or the raw param target. Covers the same keyword surface as v1's
 // baseInlineParamTaggers minus `in:` (upstream-resolved) and the
 // Extensions block (handled via block.Extensions() by the caller).
-func dispatchParamKeyword(p grammar.Property, param *oaispec.Parameter, valid paramValidations, scheme *oaispec.SimpleSchema) {
+func dispatchParamKeyword(p grammar.Property, param *oaispec.Parameter, valid paramValidations, scheme *oaispec.SimpleSchema) error {
 	if dispatchNumericValidation(p, valid) {
-		return
+		return nil
 	}
 	if dispatchIntegerValidation(p, valid) {
-		return
+		return nil
 	}
-	if dispatchStringOrEnum(p, valid, scheme) {
-		return
+	handled, err := dispatchStringOrEnum(p, valid, scheme)
+	if err != nil {
+		return err
+	}
+	if handled {
+		return nil
 	}
 	dispatchParamFlags(p, param, valid)
+	return nil
 }
 
 func dispatchNumericValidation(p grammar.Property, valid paramValidations) bool {
@@ -175,25 +183,32 @@ func dispatchIntegerValidation(p grammar.Property, valid paramValidations) bool 
 
 // dispatchStringOrEnum handles pattern/enum/default/example —
 // keywords whose value is consumed as a raw string or resolved
-// against the target's SimpleSchema.
-func dispatchStringOrEnum(p grammar.Property, valid paramValidations, scheme *oaispec.SimpleSchema) bool {
+// against the target's SimpleSchema. Parse errors from
+// ParseValueFromSchema (e.g. `default: notanumber` on an int
+// parameter) propagate so the run surfaces them, matching v1's
+// error semantics.
+func dispatchStringOrEnum(p grammar.Property, valid paramValidations, scheme *oaispec.SimpleSchema) (bool, error) {
 	switch p.Keyword.Name {
 	case "pattern":
 		valid.SetPattern(p.Value)
 	case "enum":
 		valid.SetEnum(p.Value)
 	case "default":
-		if v, err := parsers.ParseValueFromSchema(p.Value, scheme); err == nil {
-			valid.SetDefault(v)
+		v, err := parsers.ParseValueFromSchema(p.Value, scheme)
+		if err != nil {
+			return true, err
 		}
+		valid.SetDefault(v)
 	case "example":
-		if v, err := parsers.ParseValueFromSchema(p.Value, scheme); err == nil {
-			valid.SetExample(v)
+		v, err := parsers.ParseValueFromSchema(p.Value, scheme)
+		if err != nil {
+			return true, err
 		}
+		valid.SetExample(v)
 	default:
-		return false
+		return false, nil
 	}
-	return true
+	return true, nil
 }
 
 // dispatchParamFlags handles unique/required/collectionFormat — the

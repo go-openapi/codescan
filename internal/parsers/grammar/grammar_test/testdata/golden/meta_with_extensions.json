@@ -13,8 +13,8 @@
       {
         "keyword": "extensions",
         "body": [
-          "  x-foo: bar",
-          "  x-baz: 42"
+          "   x-foo: bar",
+          "   x-baz: 42"
         ]
       }
     ],

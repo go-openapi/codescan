@@ -304,7 +304,10 @@ func ListPets() {}
 	count := 0
 	for y := range b.YAMLBlocks() {
 		count++
-		if !slices.Contains(splitLines(y.Text), "responses:") {
+		// Line.Raw preserves the godoc space after `// ` so the body's
+		// responses header appears as " responses:" — consumers
+		// (operation bridge) normalize via parsers.RemoveIndent.
+		if !slices.Contains(splitLines(y.Text), " responses:") {
 			t.Errorf("YAML body missing 'responses:' line:\n%s", y.Text)
 		}
 	}

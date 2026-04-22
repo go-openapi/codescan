@@ -38,17 +38,19 @@ func ListPets() {}
 		if len(lines) < 3 {
 			t.Fatalf("want at least 3 body lines, got %d: %q", len(lines), y.Text)
 		}
-		// Line 0: "responses:" — no leading whitespace expected.
-		if lines[0] != "responses:" {
-			t.Errorf("line 0: got %q want %q", lines[0], "responses:")
+		// Line 0: " responses:" — the godoc convention space after
+		// `// ` is now preserved in Line.Raw so YAML bodies with tab
+		// indentation (e.g. go119 fixture) round-trip faithfully.
+		if lines[0] != " responses:" {
+			t.Errorf("line 0: got %q want %q", lines[0], " responses:")
 		}
-		// Line 1: "  200: successResponse" — 2-space indent preserved.
-		if lines[1] != "  200: successResponse" {
-			t.Errorf("line 1: got %q want %q", lines[1], "  200: successResponse")
+		// Line 1: `   200: successResponse` — godoc space + source
+		// 2-space indent preserved.
+		if lines[1] != "   200: successResponse" {
+			t.Errorf("line 1: got %q want %q", lines[1], "   200: successResponse")
 		}
-		// Line 2: same.
-		if lines[2] != "  404: notFound" {
-			t.Errorf("line 2: got %q want %q", lines[2], "  404: notFound")
+		if lines[2] != "   404: notFound" {
+			t.Errorf("line 2: got %q want %q", lines[2], "   404: notFound")
 		}
 	}
 	if count != 1 {

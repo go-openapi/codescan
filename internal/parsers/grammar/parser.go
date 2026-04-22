@@ -449,9 +449,23 @@ func (p *parseState) parseTitleDesc(base *baseBlock, pre []Token) {
 		case TokenText:
 			current = append(current, t.Text)
 			proseLines = append(proseLines, t.Text)
+		case TokenKeywordValue:
+			// Pre-annotation keyword lines (e.g., `discriminator: true`
+			// appearing before a trailing `swagger:name` annotation on
+			// an interface method) land on the block's Properties
+			// alongside post-annotation keywords. Without this, those
+			// keywords fall into a gap — not prose, not properties —
+			// and never reach the analyzer.
+			base.properties = append(base.properties, Property{
+				Keyword:    *t.Keyword,
+				Pos:        t.Pos,
+				Value:      t.Value,
+				Typed:      p.typeConvert(*t.Keyword, t.Value, t.Pos),
+				ItemsDepth: t.ItemsDepth,
+			})
 		case TokenEOF,
 			TokenAnnotation,
-			TokenKeywordValue, TokenKeywordBlockHead,
+			TokenKeywordBlockHead,
 			TokenYAMLFence, TokenRawLine:
 			// Ignored in the title/description slice.
 		default:
@@ -460,6 +474,13 @@ func (p *parseState) parseTitleDesc(base *baseBlock, pre []Token) {
 	}
 	flush()
 
+	// Trim trailing blank lines from proseLines so JoinDropLast
+	// produces parity with v1's SectionedParser, which stopped
+	// collecting header lines at the first tagger match and never
+	// accumulated more than one trailing blank.
+	for len(proseLines) > 0 && proseLines[len(proseLines)-1] == "" {
+		proseLines = proseLines[:len(proseLines)-1]
+	}
 	base.proseLines = proseLines
 
 	if len(paragraphs) > 0 {
@@ -563,7 +584,19 @@ func (p *parseState) collectBlockBody(base *baseBlock, post []Token, i int) int 
 		case TokenEOF,
 			TokenAnnotation,
 			TokenKeywordBlockHead,
-			TokenYAMLFence, TokenRawLine:
+			TokenRawLine:
+			base.properties = append(base.properties, prop)
+			return i
+		case TokenYAMLFence:
+			if isExtensions {
+				// Extension blocks may wrap their body in `---`
+				// fences (e.g., `Extensions:\n---\nx-foo: false\n---`).
+				// Absorb the fence-internal lines into prop.Body so
+				// the downstream v1-style extension body parser sees
+				// them. The closing fence is skipped.
+				i = p.absorbFencedExtensionBody(base, &prop, post, i)
+				continue
+			}
 			base.properties = append(base.properties, prop)
 			return i
 		case TokenKeywordValue:
@@ -586,6 +619,44 @@ func (p *parseState) collectBlockBody(base *baseBlock, post []Token, i int) int 
 	}
 
 	base.properties = append(base.properties, prop)
+	return i
+}
+
+// absorbFencedExtensionBody consumes the `---`-fenced body of an
+// extensions block, appending each interior line (as Raw) to
+// prop.Body and emitting each as an Extension entry via
+// parseExtensionLine. Returns the index past the closing fence (or
+// past EOF if the block is unterminated). Mirrors how v1's
+// SetOpExtensions.Parse treats fence-wrapped extension bodies — the
+// fences are consumed, the interior is parsed with indentation
+// intact.
+func (p *parseState) absorbFencedExtensionBody(base *baseBlock, prop *Property, post []Token, i int) int {
+	openerPos := post[i].Pos
+	i++
+	for i < len(post) {
+		next := post[i]
+		if next.Kind == TokenYAMLFence {
+			return i + 1 // skip closing fence
+		}
+		if next.Kind == TokenEOF {
+			p.emit(Errorf(openerPos, CodeUnterminatedYAML,
+				"YAML body opened with --- but never closed"))
+			return i
+		}
+		if next.Kind == TokenRawLine {
+			prop.Body = append(prop.Body, next.Text)
+			// Also extract Extension entries. parseExtensionLine
+			// expects a TEXT-shaped Token — synthesise one with the
+			// raw line.
+			surrogate := Token{Kind: TokenText, Text: strings.TrimSpace(next.Text), Pos: next.Pos}
+			if ext, ok := parseExtensionLine(surrogate); ok {
+				if isExtensionName(ext.Name) {
+					base.extensions = append(base.extensions, ext)
+				}
+			}
+		}
+		i++
+	}
 	return i
 }
 

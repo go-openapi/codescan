@@ -5,6 +5,7 @@ package operations
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
@@ -53,12 +54,17 @@ func (o *Builder) applyBlockToOperation(op *oaispec.Operation) error {
 
 // unmarshalOpYAML converts a raw YAML body into the operation's
 // JSON-shape expected by oaispec.Operation.UnmarshalJSON. Mirrors
-// the tail of parsers.YAMLSpecScanner.UnmarshalSpec without the
-// comment-stripping / indent-normalisation steps the grammar
-// handles upstream.
+// parsers.YAMLSpecScanner.UnmarshalSpec — common leading indent is
+// stripped and tab indentation normalised to spaces so YAML bodies
+// written with godoc-style leading tabs (e.g. the go119 fixture)
+// parse correctly.
 func unmarshalOpYAML(body string, unmarshal func([]byte) error) error {
+	lines := strings.Split(body, "\n")
+	lines = parsers.RemoveIndent(lines)
+	normalized := strings.Join(lines, "\n")
+
 	yamlValue := make(map[any]any)
-	if err := yaml.Unmarshal([]byte(body), &yamlValue); err != nil {
+	if err := yaml.Unmarshal([]byte(normalized), &yamlValue); err != nil {
 		return fmt.Errorf("operation yaml body: %w", err)
 	}
 
