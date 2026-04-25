@@ -4,12 +4,12 @@
 
 | Total Contributors | Total Contributions |
 | --- | --- |
-| 57  | 301  |
+| 57  | 315  |
 
 | Username | All Time Contribution Count | All Commits |
 | --- | --- | --- |
 | @casualjim | 149 | <https://github.com/go-openapi/codescan/commits?author=casualjim> |
-| @fredbi | 47 | <https://github.com/go-openapi/codescan/commits?author=fredbi> |
+| @fredbi | 61 | <https://github.com/go-openapi/codescan/commits?author=fredbi> |
 | @emilgpa | 10 | <https://github.com/go-openapi/codescan/commits?author=emilgpa> |
 | @jredville | 6 | <https://github.com/go-openapi/codescan/commits?author=jredville> |
 | @dimovnike | 5 | <https://github.com/go-openapi/codescan/commits?author=dimovnike> |
