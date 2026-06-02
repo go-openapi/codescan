@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	"github.com/go-openapi/codescan/internal/scantest"
 	"github.com/go-openapi/testify/v2/assert"
@@ -19,7 +20,10 @@ const (
 	epsilon = 1e-9
 
 	// fixturesModule is the module path of the fixtures nested module.
-	fixturesModule = "github.com/go-openapi/codescan/fixtures"
+	fixturesModule     = "github.com/go-openapi/codescan/fixtures"
+	fixtureMinimal3125 = "bugs/3125/minimal"
+	sampleValue1       = "value1"
+	sampleValue2       = "value2"
 )
 
 func TestBuilder_Struct_Tag(t *testing.T) {
@@ -37,20 +41,14 @@ func TestBuilder_Struct_Tag(t *testing.T) {
 		require.NotNil(t, td)
 	})
 
-	prs := &Builder{
-		ctx:  ctx,
-		decl: td,
-	}
+	prs := NewBuilder(ctx, td)
 	result := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(result))
+	require.NoError(t, prs.Build(WithDefinitions(result)))
 
 	scantest.CompareOrDumpJSON(t, result, "petstore_schema_Tag.json")
 }
 
 func TestBuilder_Struct_Pet(t *testing.T) {
-	// Debug = true
-	// defer func() { Debug = false }()
-
 	ctx := scantest.LoadPetstorePkgsCtx(t, false)
 	var td *scanner.EntityDecl
 	for k, v := range ctx.Models() {
@@ -62,20 +60,14 @@ func TestBuilder_Struct_Pet(t *testing.T) {
 	}
 	require.NotNil(t, td)
 
-	prs := &Builder{
-		ctx:  ctx,
-		decl: td,
-	}
+	prs := NewBuilder(ctx, td)
 	result := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(result))
+	require.NoError(t, prs.Build(WithDefinitions(result)))
 
 	scantest.CompareOrDumpJSON(t, result, "petstore_schema_Pet.json")
 }
 
 func TestBuilder_Struct_Order(t *testing.T) {
-	// Debug = true
-	// defer func() { Debug = false }()
-
 	ctx := scantest.LoadPetstorePkgsCtx(t, false)
 	var td *scanner.EntityDecl
 	for k, v := range ctx.Models() {
@@ -87,12 +79,9 @@ func TestBuilder_Struct_Order(t *testing.T) {
 	}
 	require.NotNil(t, td)
 
-	prs := &Builder{
-		ctx:  ctx,
-		decl: td,
-	}
+	prs := NewBuilder(ctx, td)
 	result := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(result))
+	require.NoError(t, prs.Build(WithDefinitions(result)))
 
 	scantest.CompareOrDumpJSON(t, result, "petstore_schema_Order.json")
 }
@@ -101,23 +90,26 @@ func TestBuilder(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "NoModel")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["NoModel"]
 
 	assert.Equal(t, oaispec.StringOrArray([]string{"object"}), schema.Type)
 	assert.EqualT(t, "NoModel is a struct without an annotation.", schema.Title)
-	assert.EqualT(t, "NoModel exists in a package\nbut is not annotated with the swagger model annotations\nso it should now show up in a test.", schema.Description)
+	assert.EqualT(t,
+		"NoModel exists in a package\nbut is not annotated with the swagger model annotations\nso it should now show up in a test.",
+		schema.Description,
+	)
 	assert.Len(t, schema.Required, 3)
 	assert.Len(t, schema.Properties, 12)
 
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
 	prop, ok := schema.Properties["id"]
-	assert.EqualT(t, "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000", prop.Description)
+	assert.EqualT(t,
+		"ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+		prop.Description,
+	)
 	assert.TrueT(t, ok, "should have had an 'id' property")
 	assert.InDeltaT(t, 1000.00, *prop.Maximum, epsilon)
 	assert.TrueT(t, prop.ExclusiveMaximum, "'id' should have had an exclusive maximum")
@@ -152,8 +144,8 @@ func TestBuilder(t *testing.T) {
 	expectedNameExtensions := oaispec.Extensions{
 		"x-go-name": "Name",
 		"x-property-array": []any{
-			"value1",
-			"value2",
+			sampleValue1,
+			sampleValue2,
 		},
 		"x-property-array-obj": []any{
 			map[string]any{
@@ -269,7 +261,10 @@ func TestBuilder(t *testing.T) {
 	scantest.AssertProperty(t, itprop, "integer", "id", "int32", "ID")
 	iprop, ok := itprop.Properties["id"]
 	assert.TrueT(t, ok)
-	assert.EqualT(t, "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000", iprop.Description)
+	assert.EqualT(t,
+		"ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+		iprop.Description,
+	)
 	require.NotNil(t, iprop.Maximum)
 	assert.InDeltaT(t, 1000.00, *iprop.Maximum, epsilon)
 	assert.TrueT(t, iprop.ExclusiveMaximum, "'id' should have had an exclusive maximum")
@@ -282,7 +277,9 @@ func TestBuilder(t *testing.T) {
 	iprop, ok = itprop.Properties["pet"]
 	assert.TrueT(t, ok)
 	if itprop.Ref.String() != "" {
-		assert.EqualT(t, "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket", iprop.Description)
+		assert.EqualT(t, "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket",
+			iprop.Description,
+		)
 	}
 
 	scantest.AssertProperty(t, itprop, "integer", "quantity", "int16", "Quantity")
@@ -304,7 +301,7 @@ func TestBuilder(t *testing.T) {
 
 	decl2 := getClassificationModel(ctx, "StoreOrder")
 	require.NotNil(t, decl2)
-	require.NoError(t, (&Builder{decl: decl2, ctx: ctx}).Build(models))
+	require.NoError(t, NewBuilder(ctx, decl2).Build(WithDefinitions(models)))
 	msch, ok := models["order"]
 	pn := fixturesModule + "/goparsing/classification/models"
 	assert.TrueT(t, ok)
@@ -319,7 +316,7 @@ func TestBuilder_AddExtensions(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	decl := getClassificationModel(ctx, "StoreOrder")
 	require.NotNil(t, decl)
-	require.NoError(t, (&Builder{decl: decl, ctx: ctx}).Build(models))
+	require.NoError(t, NewBuilder(ctx, decl).Build(WithDefinitions(models)))
 
 	msch, ok := models["order"]
 	pn := fixturesModule + "/goparsing/classification/models"
@@ -333,12 +330,9 @@ func TestTextMarhalCustomType(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "TextMarshalModel")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["TextMarshalModel"]
 	scantest.AssertProperty(t, &schema, "string", "id", "uuid", "ID")
 	scantest.AssertArrayProperty(t, &schema, "string", "ids", "uuid", "IDs")
@@ -356,12 +350,9 @@ func TestEmbeddedTypes(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "ComplexerOne")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["ComplexerOne"]
 	scantest.AssertProperty(t, &schema, "integer", "age", "int32", "Age")
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
@@ -375,12 +366,9 @@ func TestParsePrimitiveSchemaProperty(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "PrimateModel")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["PrimateModel"]
 	scantest.AssertProperty(t, &schema, "boolean", "a", "", "A")
@@ -406,12 +394,9 @@ func TestParseStringFormatSchemaProperty(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "FormattedModel")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["FormattedModel"]
 	scantest.AssertProperty(t, &schema, "string", "a", "byte", "A")
@@ -441,12 +426,9 @@ func TestStringStructTag(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "JSONString")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	sch := models["jsonString"]
 	scantest.AssertProperty(t, &sch, "string", "someInt", "int64", "SomeInt")
@@ -474,12 +456,9 @@ func TestPtrFieldStringStructTag(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "JSONPtrString")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	sch := models["jsonPtrString"]
 	scantest.AssertProperty(t, &sch, "string", "someInt", "int64", "SomeInt")
@@ -506,12 +485,9 @@ func TestIgnoredStructField(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "IgnoredFields")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	sch := models["ignoredFields"]
 	scantest.AssertProperty(t, &sch, "string", "someIncludedField", "", "SomeIncludedField")
@@ -523,12 +499,9 @@ func TestParseStructFields(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "SimpleComplexModel")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["SimpleComplexModel"]
 	scantest.AssertProperty(t, &schema, "object", "emb", "", "Emb")
@@ -544,12 +517,9 @@ func TestParsePointerFields(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "Pointdexter")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["Pointdexter"]
 
@@ -569,12 +539,9 @@ func TestEmbeddedStarExpr(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "EmbeddedStarExpr")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["EmbeddedStarExpr"]
 
@@ -586,12 +553,9 @@ func TestArrayOfPointers(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "Cars")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["cars"]
 	scantest.AssertProperty(t, &schema, "array", "cars", "", "Cars")
@@ -601,12 +565,9 @@ func TestOverridingOneIgnore(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "OverridingOneIgnore")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["OverridingOneIgnore"]
 
@@ -630,12 +591,9 @@ func testParseCollectionFields(
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, modelName)
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models[modelName]
 
@@ -682,12 +640,9 @@ func TestInterfaceField(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "Interfaced")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["Interfaced"]
 	scantest.AssertProperty(t, &schema, "", "custom_data", "", "CustomData")
@@ -697,12 +652,9 @@ func TestAliasedTypes(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "OtherTypes")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["OtherTypes"]
 	scantest.AssertRef(t, &schema, "named", "Named", "#/definitions/SomeStringType")
@@ -783,11 +735,8 @@ func TestAliasedModels(t *testing.T) {
 		decl := getClassificationModel(ctx, nm)
 		require.NotNil(t, decl)
 
-		prs := &Builder{
-			decl: decl,
-			ctx:  ctx,
-		}
-		require.NoError(t, prs.Build(defs))
+		prs := NewBuilder(ctx, decl)
+		require.NoError(t, prs.Build(WithDefinitions(defs)))
 	}
 
 	for k := range defs {
@@ -853,24 +802,21 @@ func TestAliasedTopLevelModels(t *testing.T) {
 
 			t.Run("with schema builder", func(t *testing.T) {
 				require.NotNil(t, decl)
-				builder := &Builder{
-					ctx:  ctx,
-					decl: decl,
-				}
+				builder := NewBuilder(ctx, decl)
 
 				t.Run("should build model for Customer", func(t *testing.T) {
 					models := make(map[string]oaispec.Schema)
-					require.NoError(t, builder.Build(models))
+					require.NoError(t, builder.Build(WithDefinitions(models)))
 
 					assertRefDefinition(t, models, "Customer", "#/definitions/User", "")
 				})
 
 				t.Run("should have discovered models for User and Customer", func(t *testing.T) {
-					require.Len(t, builder.postDecls, 2)
+					require.Len(t, builder.PostDeclarations(), 2)
 					foundUserIndex := -1
 					foundCustomerIndex := -1
 
-					for i, discoveredDecl := range builder.postDecls {
+					for i, discoveredDecl := range builder.PostDeclarations() {
 						switch discoveredDecl.Obj().Name() {
 						case "User":
 							foundUserIndex = i
@@ -880,15 +826,14 @@ func TestAliasedTopLevelModels(t *testing.T) {
 					}
 					require.GreaterOrEqualT(t, foundUserIndex, 0)
 					require.GreaterOrEqualT(t, foundCustomerIndex, 0)
+					postDecls := builder.PostDeclarations()
+					require.GreaterT(t, len(postDecls), foundUserIndex)
 
-					userBuilder := &Builder{
-						ctx:  ctx,
-						decl: builder.postDecls[foundUserIndex],
-					}
+					userBuilder := NewBuilder(ctx, postDecls[foundUserIndex])
 
 					t.Run("should build model for User", func(t *testing.T) {
 						models := make(map[string]oaispec.Schema)
-						require.NoError(t, userBuilder.Build(models))
+						require.NoError(t, userBuilder.Build(WithDefinitions(models)))
 
 						require.MapContainsT(t, models, "User")
 
@@ -929,14 +874,11 @@ func TestAliasedTopLevelModels(t *testing.T) {
 
 			t.Run("with schema builder", func(t *testing.T) {
 				require.NotNil(t, decl)
-				builder := &Builder{
-					ctx:  ctx,
-					decl: decl,
-				}
+				builder := NewBuilder(ctx, decl)
 
 				t.Run("should build model for Customer", func(t *testing.T) {
 					models := make(map[string]oaispec.Schema)
-					require.NoError(t, builder.Build(models))
+					require.NoError(t, builder.Build(WithDefinitions(models)))
 
 					require.MapContainsT(t, models, "Customer")
 					customer := models["Customer"]
@@ -950,8 +892,9 @@ func TestAliasedTopLevelModels(t *testing.T) {
 				})
 
 				t.Run("should have discovered only Customer", func(t *testing.T) {
-					require.Len(t, builder.postDecls, 1)
-					discovered := builder.postDecls[0]
+					postDecls := builder.PostDeclarations()
+					require.Len(t, postDecls, 1)
+					discovered := postDecls[0]
 					assert.EqualT(t, "Customer", discovered.Obj().Name())
 				})
 			})
@@ -963,12 +906,9 @@ func TestEmbeddedAllOf(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "AllOfModel")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  ctx,
-		decl: decl,
-	}
+	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["AllOfModel"]
 
 	require.Len(t, schema.AllOf, 3)
@@ -994,7 +934,7 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 		decl, _ := ctx.FindDecl(packagePath, modelName)
 		require.NotNil(t, decl)
 		prs := NewBuilder(ctx, decl)
-		require.NoError(t, prs.Build(allModels))
+		require.NoError(t, prs.Build(WithDefinitions(allModels)))
 
 		schema := allModels[modelName]
 		require.Len(t, schema.Properties, 5)
@@ -1028,11 +968,13 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 }
 
 // valueKeys returns the five property keys expected for the fixtures
-// Item (struct, Go names verbatim) and ItemInterface (interface methods,
-// camelCased per Q9).
+// Item (struct, Go names verbatim) and ItemInterface (interface
+// methods, JSON-name-derived via the interface-method mangler — see
+// [§method-mangler](./README.md#method-mangler) — so the keys are
+// camelCased rather than Go-verbatim).
 func valueKeys(modelName string) (string, string, string, string, string) {
 	if modelName == "ItemInterface" {
-		return "value1", "value2", "value3", "value4", "value5"
+		return sampleValue1, sampleValue2, "value3", "value4", "value5"
 	}
 	return "Value1", "Value2", "Value3", "Value4", "Value5"
 }
@@ -1043,7 +985,7 @@ func TestPointersAreNotNullableByDefaultWhenSetXNullableForPointersIsNotSet(t *t
 		decl, _ := ctx.FindDecl(packagePath, modelName)
 		require.NotNil(t, decl)
 		prs := NewBuilder(ctx, decl)
-		require.NoError(t, prs.Build(allModels))
+		require.NoError(t, prs.Build(WithDefinitions(allModels)))
 
 		schema := allModels[modelName]
 		require.Len(t, schema.Properties, 5)
@@ -1080,7 +1022,7 @@ func TestSwaggerTypeNamed(t *testing.T) {
 	require.NotNil(t, decl)
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["namedWithType"]
 
 	scantest.AssertProperty(t, &schema, "object", "some_map", "", "SomeMap")
@@ -1126,7 +1068,7 @@ func TestSwaggerTypeNamedWithGenerics(t *testing.T) {
 			require.NotNil(t, decl)
 			prs := NewBuilder(ctx, decl)
 			models := make(map[string]oaispec.Schema)
-			require.NoError(t, prs.Build(models))
+			require.NoError(t, prs.Build(WithDefinitions(models)))
 			testFunc(t, models)
 		})
 	}
@@ -1138,7 +1080,7 @@ func TestSwaggerTypeStruct(t *testing.T) {
 	require.NotNil(t, decl)
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["NullString"]
 
 	assert.TrueT(t, schema.Type.Contains("string"))
@@ -1154,7 +1096,7 @@ func TestStructDiscriminators(t *testing.T) {
 		decl := getClassificationModel(ctx, tn)
 		require.NotNil(t, decl)
 		prs := NewBuilder(ctx, decl)
-		require.NoError(t, prs.Build(models))
+		require.NoError(t, prs.Build(WithDefinitions(models)))
 	}
 
 	schema := models["animal"]
@@ -1192,7 +1134,7 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		require.NotNil(t, decl)
 
 		prs := NewBuilder(ctx, decl)
-		require.NoError(t, prs.Build(models))
+		require.NoError(t, prs.Build(WithDefinitions(models)))
 	}
 
 	schema, ok := models["fish"]
@@ -1390,105 +1332,393 @@ func assertMapRef(t *testing.T, schema *oaispec.Schema, jsonName, goName, fragme
 	assert.EqualT(t, fragment, psch.Ref.String())
 }
 
-func TestEmbeddedDescriptionAndTags(t *testing.T) {
-	packagePattern := "./bugs/3125/minimal"
-	packagePath := fixturesModule + "/bugs/3125/minimal"
+func TestBuilder_DiagnosticsOnInvalidNumeric(t *testing.T) {
+	packagePattern := "./enhancements/diagnostics"
+	packagePath := fixturesModule + "/enhancements/diagnostics"
+
+	var collected []grammar.Diagnostic
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
-		Packages:    []string{packagePattern},
-		WorkDir:     scantest.FixturesDir(),
-		DescWithRef: true,
+		Packages: []string{packagePattern},
+		WorkDir:  scantest.FixturesDir(),
+		OnDiagnostic: func(d grammar.Diagnostic) {
+			collected = append(collected, d)
+		},
+	})
+	require.NoError(t, err)
+
+	decl, _ := ctx.FindDecl(packagePath, "BadMaximum")
+	require.NotNil(t, decl)
+	prs := NewBuilder(ctx, decl)
+	models := make(map[string]oaispec.Schema)
+	require.NoError(t, prs.Build(WithDefinitions(models)))
+
+	schema := models["BadMaximum"]
+	require.Contains(t, schema.Properties, "count")
+	count := schema.Properties["count"]
+	// The invalid `maximum: notanumber` is silently dropped — Maximum
+	// stays nil on the property schema.
+	assert.Nil(t, count.Maximum, "invalid maximum: should be dropped from spec")
+
+	// Builder.Diagnostics() and the OnDiagnostic callback both surface
+	// the parser's CodeInvalidNumber error.
+	bd := prs.Diagnostics()
+	require.NotEmpty(t, bd)
+	require.NotEmpty(t, collected)
+
+	foundCallback := false
+	for _, d := range collected {
+		if d.Code == grammar.CodeInvalidNumber {
+			foundCallback = true
+			break
+		}
+	}
+	assert.True(t, foundCallback, "OnDiagnostic should fire with CodeInvalidNumber")
+
+	foundBuilder := false
+	for _, d := range bd {
+		if d.Code == grammar.CodeInvalidNumber {
+			foundBuilder = true
+			break
+		}
+	}
+	assert.True(t, foundBuilder, "Builder.Diagnostics should contain CodeInvalidNumber")
+}
+
+// TestBuilder_DiagnosticsOnAmbiguousEmbed exercises the
+// embed-ambiguity diagnostic path. The fixture defines three
+// shapes that all share a property JSON name across embeds:
+//
+//   - AmbiguousEmbed       — two sibling embeds at the same depth
+//     promote the same JSON name under different Go field names;
+//     the diagnostic must fire.
+//   - DepthShadowingEmbed  — an inner embed at depth 2 is shadowed
+//     by a Go field at depth 1; Go's depth rule already disambiguates
+//     and the diagnostic must remain silent.
+//   - ExplicitOverride     — a top-level field re-declares the
+//     embedded JSON name; the embed-side override is happening at
+//     depth 0 and the diagnostic must remain silent.
+//
+// The diagnostic carries CodeAmbiguousEmbed (SeverityWarning); the
+// spec output remains last-write-wins regardless. Behaviour is not
+// changed by this signal, only surfaced.
+func TestBuilder_DiagnosticsOnAmbiguousEmbed(t *testing.T) {
+	packagePattern := "./enhancements/diagnostics"
+	packagePath := fixturesModule + "/enhancements/diagnostics"
+
+	build := func(t *testing.T, name string) *Builder {
+		t.Helper()
+		ctx, err := scanner.NewScanCtx(&scanner.Options{
+			Packages: []string{packagePattern},
+			WorkDir:  scantest.FixturesDir(),
+		})
+		require.NoError(t, err)
+
+		decl, _ := ctx.FindDecl(packagePath, name)
+		require.NotNil(t, decl, "fixture decl %s not found", name)
+		prs := NewBuilder(ctx, decl)
+		models := make(map[string]oaispec.Schema)
+		require.NoError(t, prs.Build(WithDefinitions(models)))
+		return prs
+	}
+
+	hasAmbig := func(ds []grammar.Diagnostic) bool {
+		for _, d := range ds {
+			if d.Code == grammar.CodeAmbiguousEmbed {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("peer embeds at same depth fire the diagnostic", func(t *testing.T) {
+		prs := build(t, "AmbiguousEmbed")
+		ds := prs.Diagnostics()
+		require.NotEmpty(t, ds)
+		assert.True(t, hasAmbig(ds), "expected CodeAmbiguousEmbed in %+v", ds)
+		// Verify severity and message shape.
+		for _, d := range ds {
+			if d.Code != grammar.CodeAmbiguousEmbed {
+				continue
+			}
+			assert.Equal(t, grammar.SeverityWarning, d.Severity)
+			assert.Contains(t, d.Message, "shared")
+			assert.Contains(t, d.Message, "Foo")
+			assert.Contains(t, d.Message, "Bar")
+		}
+	})
+
+	t.Run("depth-rule shadowing stays silent", func(t *testing.T) {
+		prs := build(t, "DepthShadowingEmbed")
+		assert.False(t, hasAmbig(prs.Diagnostics()),
+			"depth shadowing must not be flagged as ambiguity")
+	})
+
+	t.Run("top-level explicit override stays silent", func(t *testing.T) {
+		prs := build(t, "ExplicitOverride")
+		assert.False(t, hasAmbig(prs.Diagnostics()),
+			"top-level explicit override must not be flagged as ambiguity")
+	})
+}
+
+// TestEmbeddedDescriptionAndTags verifies the allOf compound shape
+// for $ref'd fields with field-level x-extensions and example. v1
+// rode them as siblings of $ref (rejecting JSON Schema draft-4);
+// the current builder produces the principled allOf compound where
+// the description lives on the outer parent and the override
+// decorations live on the override arm — see
+// `internal/builders/schema/walker.go#applyToRefField` for the
+// shape rules and the DescWithRef toggle's role.
+func TestEmbeddedDescriptionAndTags(t *testing.T) {
+	packagePattern := "./" + fixtureMinimal3125
+	packagePath := fixturesModule + "/" + fixtureMinimal3125
+	ctx, err := scanner.NewScanCtx(&scanner.Options{
+		Packages: []string{packagePattern},
+		WorkDir:  scantest.FixturesDir(),
 	})
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["Item"]
 
-	assert.Equal(t, []string{"value1", "value2"}, schema.Required)
+	assert.Equal(t, []string{sampleValue1, sampleValue2}, schema.Required)
 	require.Len(t, schema.Properties, 2)
 
-	require.MapContainsT(t, schema.Properties, "value1")
-	assert.EqualT(t, "Nullable value", schema.Properties["value1"].Description)
-	assert.Equal(t, true, schema.Properties["value1"].Extensions["x-nullable"])
+	// Both Value1 and Value2 are typed *ValueStruct / ValueStruct
+	// (named) → $ref. Field-level decorations move to the override
+	// arm of an allOf compound; description rides the outer parent.
 
-	require.MapContainsT(t, schema.Properties, "value2")
-	assert.EqualT(t, "Non-nullable value", schema.Properties["value2"].Description)
-	assert.MapNotContainsT(t, schema.Properties["value2"].Extensions, "x-nullable")
-	assert.Equal(t, `{"value": 42}`, schema.Properties["value2"].Example)
+	// Vendor extensions ride the OUTER compound (alongside x-go-name)
+	// so the field carries all its x-* metadata at one level.
+	// Validations go on the override arm (AllOf[1]).
+
+	require.MapContainsT(t, schema.Properties, sampleValue1)
+	v1 := schema.Properties[sampleValue1]
+	assert.EqualT(t, "Nullable value", v1.Description)
+	assert.Equal(t, true, v1.Extensions["x-nullable"], "x-nullable should be on the outer compound, not inside AllOf")
+	require.Len(t, v1.AllOf, 1, "value1 has an extension-only override → single-arm allOf")
+	assert.Equal(t, "#/definitions/ValueStruct", v1.AllOf[0].Ref.String())
+	assert.Empty(t, v1.Ref.String(), "outer schema must NOT carry the ref directly")
+
+	require.MapContainsT(t, schema.Properties, sampleValue2)
+	v2 := schema.Properties[sampleValue2]
+	assert.EqualT(t, "Non-nullable value", v2.Description)
+	assert.MapNotContainsT(t, v2.Extensions, "x-nullable")
+	require.Len(t, v2.AllOf, 2, "value2 has an example override → two-arm allOf")
+	assert.Equal(t, "#/definitions/ValueStruct", v2.AllOf[0].Ref.String())
+	assert.Equal(t, `{"value": 42}`, v2.AllOf[1].Example)
 
 	scantest.CompareOrDumpJSON(t, models, "bugs_3125_schema.json")
 }
 
-func TestIssue2540(t *testing.T) {
-	t.Run("should produce example and default for top level declaration only",
-		testIssue2540(false, `{
-		"Book": {
-      "description": "At this moment, a book is only described by its publishing date\nand author.",
-      "type": "object",
-      "title": "Book holds all relevant information about a book.",
-			"example": "{ \"Published\": 2026, \"Author\": \"Fred\" }",
-      "default": "{ \"Published\": 1900, \"Author\": \"Unknown\" }",
-      "properties": {
-        "Author": {
-          "$ref": "#/definitions/Author"
-        },
-        "Published": {
-          "type": "integer",
-          "format": "int64",
-          "minimum": 0,
-          "example": 2021
-        }
-      }
-    }
-  }`),
-	)
-	t.Run("should produce example and default for top level declaration and embedded $ref field",
-		testIssue2540(true, `{
-		"Book": {
-      "description": "At this moment, a book is only described by its publishing date\nand author.",
-      "type": "object",
-      "title": "Book holds all relevant information about a book.",
-			"example": "{ \"Published\": 2026, \"Author\": \"Fred\" }",
-      "default": "{ \"Published\": 1900, \"Author\": \"Unknown\" }",
-      "properties": {
-        "Author": {
-          "$ref": "#/definitions/Author",
-          "example": "{ \"Name\": \"Tolkien\" }"
-        },
-        "Published": {
-          "type": "integer",
-          "format": "int64",
-          "minimum": 0,
-          "example": 2021
-        }
-      }
-    }
-  }`),
-	)
+// TestEmbeddedDescriptionAndTags_OptionVariants captures the
+// (SkipExtensions, DescWithRef) option matrix on the bugs/3125
+// fixture into separately-named goldens. Verifies that:
+//
+//   - Validation/extension overrides on a $ref'd field always wrap
+//     in allOf (Value1's x-nullable, Value2's example are both
+//     overrides). DescWithRef toggles description placement on the
+//     allOf parent vs. dropped in the description-only-no-overrides
+//     case (which doesn't apply here — both fields have overrides).
+//   - SkipExtensions suppresses scanner-derived x-go-name /
+//     x-go-package without affecting user-authored x-nullable or
+//     the allOf shape.
+//
+// The four goldens produce a complete trace of (skipExt, descRef)
+// permutations and serve as regression locks for the option
+// semantics described in scanner.Options.
+func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
+	cases := []struct {
+		name       string
+		skipExt    bool
+		descRef    bool
+		goldenFile string
+	}{
+		{"default", false, false, "bugs_3125_schema.json"},
+		{"DescWithRef", false, true, "bugs_3125_schema_descwithref.json"},
+		{"SkipExt", true, false, "bugs_3125_schema_skipext.json"},
+		{"SkipExt+DescWithRef", true, true, "bugs_3125_schema_skipext_descwithref.json"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, err := scanner.NewScanCtx(&scanner.Options{
+				Packages:       []string{"./" + fixtureMinimal3125},
+				WorkDir:        scantest.FixturesDir(),
+				SkipExtensions: tc.skipExt,
+				DescWithRef:    tc.descRef,
+			})
+			require.NoError(t, err)
+			decl, _ := ctx.FindDecl(fixturesModule+"/"+fixtureMinimal3125, "Item")
+			require.NotNil(t, decl)
+			prs := NewBuilder(ctx, decl)
+			models := make(map[string]oaispec.Schema)
+			require.NoError(t, prs.Build(WithDefinitions(models)))
+			scantest.CompareOrDumpJSON(t, models, tc.goldenFile)
+		})
+	}
 }
 
-func testIssue2540(descWithRef bool, expectedJSON string) func(*testing.T) {
-	return func(t *testing.T) {
-		packagePattern := "./bugs/2540/foo"
-		packagePath := fixturesModule + "/bugs/2540/foo"
+// TestEmbeddedDescriptionAndTags_SkipExtensions verifies that with
+// SkipExtensions=true, the allOf compound on a $ref'd field is NOT
+// polluted by the scanner-derived metadata (x-go-name / x-go-package
+// / x-nullable inferred from pointer-ness). User-authored
+// `Extensions: x-foo` blocks would still flow (they're explicit), but
+// nothing else should land alongside the $ref.
+//
+// This is a regression guard: in v1, $ref'd fields had ps.Ref non-empty
+// throughout, so the schema.go x-go-name / x-go-package guards
+// (`if ps.Ref.String() == ""`) silently skipped. Post-S7, the allOf
+// rewrite clears ps.Ref — those guards now fire. Without
+// SkipExtensions=true, x-go-name lands on the outer compound (visible
+// in the regular TestEmbeddedDescriptionAndTags). With
+// SkipExtensions=true, the metadata extension writers respect the
+// option and the outer compound stays clean.
+func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
+	packagePattern := "./" + fixtureMinimal3125
+	packagePath := fixturesModule + "/" + fixtureMinimal3125
+	ctx, err := scanner.NewScanCtx(&scanner.Options{
+		Packages:       []string{packagePattern},
+		WorkDir:        scantest.FixturesDir(),
+		SkipExtensions: true,
+	})
+	require.NoError(t, err)
+	decl, _ := ctx.FindDecl(packagePath, "Item")
+	require.NotNil(t, decl)
+	prs := NewBuilder(ctx, decl)
+	models := make(map[string]oaispec.Schema)
+	require.NoError(t, prs.Build(WithDefinitions(models)))
+	schema := models["Item"]
+
+	require.Len(t, schema.Properties, 2)
+
+	// User-authored x-nullable should still be present (`Extensions:`
+	// raw block in the source). Scanner-derived x-go-name, x-go-package
+	// should be skipped.
+	v1 := schema.Properties[sampleValue1]
+	assert.MapNotContainsT(t, v1.Extensions, "x-go-name", "x-go-name should be skipped under SkipExtensions=true")
+	assert.MapNotContainsT(t, v1.Extensions, "x-go-package", "x-go-package should be skipped under SkipExtensions=true")
+	// Note: x-nullable on Value1 is user-authored, not scanner-derived;
+	// it travels with the user's `Extensions:` block and SHOULD still
+	// be present even under SkipExtensions=true.
+	assert.Equal(t, true, v1.Extensions["x-nullable"], "user-authored x-nullable should survive SkipExtensions=true")
+
+	v2 := schema.Properties[sampleValue2]
+	assert.MapNotContainsT(t, v2.Extensions, "x-go-name")
+	assert.MapNotContainsT(t, v2.Extensions, "x-go-package")
+	assert.MapNotContainsT(t, v2.Extensions, "x-nullable", "value2 has no x-nullable in source")
+}
+
+// TestParamsShape_DescWithRef_BothModes covers the description-only
+// $ref'd field case where the user toggles DescWithRef:
+//
+//   - DescWithRef=false (default): the description is dropped and the
+//     field emits as a bare {$ref: ...}.
+//   - DescWithRef=true: the description rides a single-arm allOf
+//     compound — {description: ..., allOf: [{$ref}]}.
+//
+// Fixture: classification operations corpus' `pet` field of
+// `items[]` in NoModel carries only a description plus a $ref to the
+// pet model — no validations, no user-authored extensions.
+//
+// When the field carries validation or extension overrides, the
+// allOf compound is mandatory regardless of DescWithRef — covered by
+// TestEmbeddedDescriptionAndTags / TestEmbeddedDescriptionAndTags_SkipExtensions.
+func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
+	getPetField := func(t *testing.T, descWithRef bool) oaispec.Schema {
+		t.Helper()
 		ctx, err := scanner.NewScanCtx(&scanner.Options{
-			Packages:       []string{packagePattern},
+			Packages: []string{
+				"./goparsing/classification",
+				"./goparsing/classification/models",
+				"./goparsing/classification/operations",
+			},
 			WorkDir:        scantest.FixturesDir(),
-			DescWithRef:    descWithRef,
 			SkipExtensions: true,
+			DescWithRef:    descWithRef,
 		})
 		require.NoError(t, err)
-
-		decl, _ := ctx.FindDecl(packagePath, "Book")
+		decl, ok := ctx.FindDecl(fixturesModule+"/goparsing/classification/models", "NoModel")
+		require.True(t, ok)
 		require.NotNil(t, decl)
 		prs := NewBuilder(ctx, decl)
 		models := make(map[string]oaispec.Schema)
-		require.NoError(t, prs.Build(models))
-
-		b, err := json.Marshal(models)
-		require.NoError(t, err)
-		assert.JSONEqT(t, expectedJSON, string(b))
+		require.NoError(t, prs.Build(WithDefinitions(models)))
+		noModel := models["NoModel"]
+		require.Contains(t, noModel.Properties, "items")
+		itemsProp := noModel.Properties["items"]
+		require.NotNil(t, itemsProp.Items)
+		require.NotNil(t, itemsProp.Items.Schema)
+		itemSchema := itemsProp.Items.Schema
+		require.Contains(t, itemSchema.Properties, "pet")
+		return itemSchema.Properties["pet"]
 	}
+
+	t.Run("DescWithRef=false → bare $ref", func(t *testing.T) {
+		pet := getPetField(t, false)
+		assert.Equal(t, "#/definitions/pet", pet.Ref.String())
+		assert.Empty(t, pet.AllOf, "no allOf compound expected")
+		assert.Empty(t, pet.Description, "description dropped under DescWithRef=false")
+		assert.MapNotContainsT(t, pet.Extensions, "x-go-name")
+	})
+
+	t.Run("DescWithRef=true → single-arm allOf with description", func(t *testing.T) {
+		pet := getPetField(t, true)
+		assert.Empty(t, pet.Ref.String(), "outer schema must NOT carry the ref directly")
+		require.Len(t, pet.AllOf, 1, "single-arm allOf for description-only override")
+		assert.Equal(t, "#/definitions/pet", pet.AllOf[0].Ref.String())
+		assert.Contains(t, pet.Description, "The Pet to add")
+		assert.MapNotContainsT(t, pet.Extensions, "x-go-name")
+	})
+}
+
+// TestIssue2540 verifies the JSON Schema draft-4 allOf compound shape
+// for a $ref'd field (`Author Author`) carrying its own field-level
+// `example:`. The example must travel on the override arm of the
+// allOf compound, never as a sibling of $ref. The DescWithRef toggle
+// does not change this case — when validations (here, `example`)
+// are present, the allOf wrap is mandatory regardless of the flag.
+func TestIssue2540(t *testing.T) {
+	const expectedJSON = `{
+		"Book": {
+      "description": "At this moment, a book is only described by its publishing date\nand author.",
+      "type": "object",
+      "title": "Book holds all relevant information about a book.",
+			"example": "{ \"Published\": 2026, \"Author\": \"Fred\" }",
+      "default": "{ \"Published\": 1900, \"Author\": \"Unknown\" }",
+      "properties": {
+        "Author": {
+          "allOf": [
+            {"$ref": "#/definitions/Author"},
+            {"example": "{ \"Name\": \"Tolkien\" }"}
+          ]
+        },
+        "Published": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 0,
+          "example": 2021
+        }
+      }
+    }
+  }`
+	packagePattern := "./bugs/2540/foo"
+	packagePath := fixturesModule + "/bugs/2540/foo"
+	ctx, err := scanner.NewScanCtx(&scanner.Options{
+		Packages:       []string{packagePattern},
+		WorkDir:        scantest.FixturesDir(),
+		SkipExtensions: true,
+	})
+	require.NoError(t, err)
+
+	decl, _ := ctx.FindDecl(packagePath, "Book")
+	require.NotNil(t, decl)
+	prs := NewBuilder(ctx, decl)
+	models := make(map[string]oaispec.Schema)
+	require.NoError(t, prs.Build(WithDefinitions(models)))
+
+	b, err := json.Marshal(models)
+	require.NoError(t, err)
+	assert.JSONEqT(t, expectedJSON, string(b))
 }

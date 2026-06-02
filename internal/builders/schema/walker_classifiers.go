@@ -1,0 +1,317 @@
+// SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+// SPDX-License-Identifier: Apache-2.0
+
+package schema
+
+import (
+	"go/ast"
+	"go/types"
+	"log"
+	"reflect"
+	"strings"
+
+	"github.com/go-openapi/codescan/internal/builders/resolvers"
+	"github.com/go-openapi/codescan/internal/ifaces"
+	"github.com/go-openapi/codescan/internal/logger"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"golang.org/x/tools/go/packages"
+)
+
+// findAnnotationArg returns the first positional argument of the
+// first Block of the given annotation kind in cg, filtered to
+// non-empty single-word arguments and read through the ParseBlocks
+// cache.
+//
+// # Details
+//
+// See [§classifier-walkers](./README.md#classifier-walkers) — the
+// single-word filter's rationale and the named-basic prose-trap
+// fixture it protects against.
+func (s *Builder) findAnnotationArg(cg *ast.CommentGroup, kind grammar.AnnotationKind) (string, bool) {
+	for _, b := range s.ParseBlocks(cg) {
+		if b.AnnotationKind() != kind {
+			continue
+		}
+		arg, ok := b.AnnotationArg()
+		if !ok {
+			continue
+		}
+		if strings.ContainsAny(arg, " \t") {
+			continue
+		}
+		return arg, true
+	}
+	return "", false
+}
+
+// Per-call-site classifier walkers.
+//
+// One walker per call site; each documents in its godoc which
+// `swagger:<kind>` annotations it consumes.
+//
+// # Details
+//
+// See [§classifier-walkers](./README.md#classifier-walkers) — the
+// design rationale, the walker inventory table, and the
+// `findAnnotationArg` single-word filter contract that backs the
+// kind-specific lookups.
+
+// classifierTextMarshal is the named-type walker fired at the
+// text-marshal short-circuit (`buildFromTextMarshal` end-of-pipe).
+// Consumes only `swagger:strfmt`. On match writes
+// `{string, <format>}` to tgt and returns true.
+func (s *Builder) classifierTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypable) (resolved bool) {
+	decl, ok := s.Ctx.DeclForType(tpe)
+	if !ok || decl == nil {
+		return false
+	}
+
+	if name, ok := s.findAnnotationArg(decl.Comments, grammar.AnnStrfmt); ok {
+		tgt.Typed("string", name)
+		return true
+	}
+
+	return false
+}
+
+// classifierNamedTypeOverride is the named-type walker fired in
+// `buildFromType`'s named-fallback and `buildFromStruct`'s pre-
+// pass. Consumes only `swagger:type` (the explicit type-override
+// annotation). On match attempts SwaggerSchemaForType and
+// reports back via the (handled, fallthrough) tuple:
+//
+//   - handled=true,  fallthrough=false → caller returns nil
+//   - handled=false, fallthrough=false → no swagger:type present
+//   - handled=true,  fallthrough=true  → unrecognised type-ref
+//     value (caller should resolve via the underlying type)
+func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable) (handled, fallthroughUnderlying bool) {
+	name, ok := s.findAnnotationArg(cg, grammar.AnnType)
+	if !ok {
+		return false, false
+	}
+	if err := resolvers.SwaggerSchemaForType(name, tgt); err == nil {
+		return true, false
+	}
+	// Unsupported swagger:type value (e.g. "array") — caller falls
+	// through to the underlying type so the full schema (including
+	// items for slices) is properly built.
+	return true, true
+}
+
+// classifierNamedBasic is the named-type walker for
+// `buildNamedBasic`. Consumes a cascade of classifier
+// annotations in source-priority order:
+//
+//	swagger:strfmt → swagger:enum → swagger:default →
+//	swagger:type   → swagger:alias
+//
+// The final arm is the "primitive-inline" branch: it fires when
+// either (a) the builder is in SimpleSchema mode (the M1 contract
+// for non-body parameters and response headers — `$ref` forbidden by
+// OAS v2 so the underlying primitive ships inline) or (b) the user
+// has explicitly opted in via `swagger:alias` on the decl. These two
+// triggers are intentionally orthogonal — the SimpleSchema flag is
+// caller-driven and covers query/path/header/formData uniformly,
+// while `swagger:alias` is a per-type author override that bypasses
+// the model-ref pipeline regardless of mode.
+//
+// Returns:
+//   - handled=true  → caller returns nil (target written, terminal)
+//   - handled=false → no classifier matched; caller continues to
+//     FindModel / SwaggerSchemaForType fallback
+func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable) (resolved bool) {
+	if name, ok := s.findAnnotationArg(cg, grammar.AnnStrfmt); ok {
+		tgt.Typed("string", name)
+		return true
+	}
+
+	if enumName, ok := s.findAnnotationArg(cg, grammar.AnnEnum); ok {
+		enumValues, enumDesces, _ := s.Ctx.FindEnumValues(pkg, enumName)
+		if len(enumValues) > 0 {
+			tgt.WithEnum(enumValues...)
+			enumTypeName := reflect.TypeOf(enumValues[0]).String()
+			_ = resolvers.SwaggerSchemaForType(enumTypeName, tgt)
+			if len(enumDesces) > 0 {
+				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
+			}
+			return true
+		}
+		// swagger:enum with no matching const values. Fall through so
+		// the type-resolution engine can still decide what to do with
+		// the underlying Go type (it may be a model, an alias, a
+		// strfmt, …) rather than dropping the field entirely.
+		log.Printf("WARNING: swagger:enum %s: no matching const values found; dropping enum semantics", enumName)
+	}
+
+	if defaultName, ok := s.findAnnotationArg(cg, grammar.AnnDefaultName); ok {
+		logger.DebugLogf(s.Ctx.Debug(), "default name: %s", defaultName)
+		return true
+	}
+
+	if typeName, ok := s.findAnnotationArg(cg, grammar.AnnType); ok {
+		_ = resolvers.SwaggerSchemaForType(typeName, tgt)
+		return true
+	}
+
+	if s.simpleSchema || s.findAnnotation(cg, grammar.AnnAlias) != nil {
+		if err := resolvers.SwaggerSchemaForType(utitpe.Name(), tgt); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// classifierNamedArrayLike is the named-type walker shared
+// between `buildNamedArray` and `buildNamedSlice`. Both have the
+// same classifier surface — `swagger:strfmt` and `swagger:type` —
+// with subtly different strfmt fall-throughs (array honors a
+// "bsonobjectid" special case the slice doesn't). The boolean
+// `forSlice` switches that arm; the rest is identical.
+//
+// Returns:
+//   - handled=true,  err=nil   → caller returns nil
+//   - handled=true,  err!=nil  → unrecognised swagger:type → caller
+//     should fall through to inline the element type
+//   - handled=false, err=nil   → no classifier matched
+func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, forSlice bool) (handled bool, fallthroughElement bool) {
+	if sfnm, isf := s.findAnnotationArg(cg, grammar.AnnStrfmt); isf {
+		if sfnm == "byte" {
+			tgt.Typed("string", sfnm)
+			return true, false
+		}
+		if !forSlice && sfnm == "bsonobjectid" {
+			tgt.Typed("string", sfnm)
+			return true, false
+		}
+		tgt.Items().Typed("string", sfnm)
+		return true, false
+	}
+
+	// When swagger:type is set to an unsupported value (e.g. "array"),
+	// skip the $ref and inline the array/slice schema with the proper
+	// items type.
+	if tn, ok := s.findAnnotationArg(cg, grammar.AnnType); ok {
+		if err := resolvers.SwaggerSchemaForType(tn, tgt); err != nil {
+			return true, true
+		}
+		return true, false
+	}
+
+	return false, false
+}
+
+// classifierAliasTargetStrfmt is the named-type walker fired
+// from `buildNamedAllOf`'s struct branch — checks the alias's
+// target type's docstring for `swagger:strfmt`. On match writes
+// `{string, <format>}` to schema and returns true.
+func (s *Builder) classifierAliasTargetStrfmt(tpe types.Type, tgt ifaces.SwaggerTypable) bool {
+	decl, ok := s.Ctx.DeclForType(tpe)
+	if !ok || decl == nil {
+		return false
+	}
+	if name, ok := s.findAnnotationArg(decl.Comments, grammar.AnnStrfmt); ok {
+		tgt.Typed("string", name)
+		return true
+	}
+	return false
+}
+
+// fieldDoc is the field-level FieldWalker output: every
+// classifier signal a struct field / interface method might
+// carry, pre-extracted in a single pass over the field's
+// ParseBlocks slice. Consumed by the four field-level call
+// patterns documented on scanFieldDoc.
+type fieldDoc struct {
+	// Ignored — bare `swagger:ignore` presence (the field /
+	// method should be skipped entirely).
+	Ignored bool
+	// JSONName — argument of `swagger:name <X>` (rename the
+	// JSON property name). Empty when the annotation is absent
+	// or its arg is empty / multi-word.
+	JSONName string
+	// StrfmtName — argument of `swagger:strfmt <X>` (the
+	// string format to inline). Empty when the annotation is
+	// absent or its arg is empty / multi-word.
+	StrfmtName string
+	// TypeOverride — argument of `swagger:type <X>` at the
+	// field level. Empty when absent or multi-word. See
+	// [§user-overrides](./README.md#user-overrides).
+	TypeOverride string
+	// IsAllOfMember — bare `swagger:allOf` presence (treat
+	// this embedded type as an allOf compound member).
+	IsAllOfMember bool
+	// AllOfClass — argument of `swagger:allOf <X>` (the
+	// discriminator class for x-class). Empty for bare
+	// `swagger:allOf`.
+	AllOfClass string
+}
+
+// scanFieldDoc inspects afld's docstring through the ParseBlocks
+// cache and returns every field-level classifier signal in one pass.
+//
+// Consumes: swagger:ignore / swagger:name / swagger:strfmt /
+// swagger:type / swagger:allOf. The AnnType arm carries an inline
+// single-word filter — see [§user-overrides](./README.md#user-overrides)
+// for why.
+func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
+	var fd fieldDoc
+	if afld == nil {
+		return fd
+	}
+	for _, b := range s.ParseBlocks(afld.Doc) {
+		switch b.AnnotationKind() { //nolint:exhaustive // field-level walker only consumes these five kinds
+		case grammar.AnnIgnore:
+			fd.Ignored = true
+		case grammar.AnnName:
+			if name, ok := b.AnnotationArg(); ok {
+				fd.JSONName = name
+			}
+		case grammar.AnnStrfmt:
+			if name, ok := b.AnnotationArg(); ok {
+				fd.StrfmtName = name
+			}
+		case grammar.AnnType:
+			if name, ok := b.AnnotationArg(); ok && !strings.ContainsAny(name, " \t") {
+				fd.TypeOverride = name
+			}
+		case grammar.AnnAllOf:
+			fd.IsAllOfMember = true
+			if name, ok := b.AnnotationArg(); ok {
+				fd.AllOfClass = name
+			}
+		}
+	}
+	return fd
+}
+
+// classifierStructPreBuildType is the named-type walker fired
+// at the top of `buildFromStruct`. Consumes only `swagger:type`.
+// On match attempts SwaggerSchemaForType (errors are swallowed —
+// the caller's fallback handles unknown leaves) and returns true to
+// short-circuit the struct-build pipeline.
+func (s *Builder) classifierStructPreBuildType(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable) (resolved bool) {
+	name, ok := s.findAnnotationArg(cg, grammar.AnnType)
+	if !ok {
+		return false
+	}
+	_ = resolvers.SwaggerSchemaForType(name, tgt)
+	return true
+}
+
+// classifierNamedStructStrfmt is the named-type walker fired
+// from `buildNamedStruct`'s strfmt-first branch. Checks the
+// struct's docstring for `swagger:strfmt`; on match writes
+// `{string, <format>}` to tgt and returns true.
+//
+// Pre-FindModel call site: matters because FindModel registers
+// the type in ExtraModels as a side effect; running this walker
+// first prevents an orphan top-level definition for a strfmt-
+// inlined type.
+func (s *Builder) classifierNamedStructStrfmt(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable) (resolved bool) {
+	if name, ok := s.findAnnotationArg(cg, grammar.AnnStrfmt); ok {
+		tgt.Typed("string", name)
+		return true
+	}
+	return false
+}
