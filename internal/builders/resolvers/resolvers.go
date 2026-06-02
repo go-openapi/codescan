@@ -104,23 +104,24 @@ func UnsupportedBuiltinType(tpe types.Type) bool {
 	}
 }
 
-func UnsupportedBuiltin(tpe ifaces.Objecter) bool {
+// UnsupportedBuiltin returns true when tpe is unsafe.Pointer.
+//
+// Other "unsupported builtins" (complex64, complex128) cannot reach
+// this function: they surface as *types.Basic, which does not satisfy
+// [ifaces.Objecter]. Those are caught one layer down by
+// [UnsupportedBasic] / [UnsupportedBuiltinType] when the *types.Basic
+// surfaces directly.
+//
+// Supported builtins:
+//
+//   - error
+func UnsupportedBuiltin(tpe ifaces.Objecter) (skip bool) {
 	o := tpe.Obj()
-	if o == nil {
+	if o == nil || o.Pkg() == nil {
 		return false
 	}
 
-	if o.Pkg() != nil {
-		if o.Pkg().Path() == "unsafe" {
-			return true
-		}
-
-		return false // not a builtin type
-	}
-
-	_, found := unsupportedTypes[o.Name()]
-
-	return found
+	return o.Pkg().Path() == "unsafe"
 }
 
 func UnsupportedBasic(tpe *types.Basic) bool {
