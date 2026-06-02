@@ -3,6 +3,7 @@
   "paths": {},
   "definitions": {
     "objectStruct": {
+      "description": "ObjectStruct carries swagger:type object (unsupported by\nswaggerSchemaForType for structs). The fix inlines the struct as\ntype:object rather than producing an empty schema.",
       "type": "object",
       "x-go-name": "ObjectStruct",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/swagger-type-array"
@@ -25,6 +26,7 @@
           "x-go-name": "Labels"
         },
         "nested": {
+          "description": "The nested struct with an unsupported swagger:type.",
           "type": "object",
           "properties": {
             "name": {
@@ -47,6 +49,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/swagger-type-array"
     },
     "structWithBadType": {
+      "description": "StructWithBadType is a struct whose swagger:type is set to an\nunrecognised value. The fix ensures buildNamedStruct falls through to\nmakeRef so the property is still serialisable — the key assertion is\nthat the referenced schema is not empty.",
       "x-go-name": "StructWithBadType",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/swagger-type-array"
     }

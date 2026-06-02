@@ -51,7 +51,7 @@
           ]
         }
       ],
-      "x-some-flag": "false",
+      "x-some-flag": false,
       "x-some-list": [
         "item1",
         "item2",
@@ -98,8 +98,6 @@
           "name": "request",
           "in": "body",
           "schema": {
-            "description": "The request model.",
-            "type": "object",
             "$ref": "#/definitions/orderModel"
           }
         }
@@ -267,6 +265,9 @@
             "$ref": "#/definitions/someResponse"
           }
         },
+        "202": {
+          "description": "Some description"
+        },
         "422": {
           "description": "validationError",
           "schema": {
@@ -327,8 +328,6 @@
           "allowEmptyValue": true
         },
         {
-          "maxLength": 20,
-          "minLength": 5,
           "type": "array",
           "description": "some query values",
           "name": "someQuery",
@@ -358,7 +357,6 @@
           "name": "request",
           "in": "body",
           "schema": {
-            "description": "The request model.",
             "type": "string",
             "default": "orange",
             "enum": [
@@ -458,7 +456,7 @@
           ]
         }
       ],
-      "x-some-flag": "true"
+      "x-some-flag": true
     },
     "post": {
       "consumes": [
@@ -487,8 +485,6 @@
           "name": "request",
           "in": "body",
           "schema": {
-            "description": "The request model.",
-            "type": "object",
             "$ref": "#/definitions/petModel"
           }
         },

@@ -1,0 +1,36 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "listItemsTaggedResp",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "genericError": {
+      "description": "GenericError is the catch-all error response.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

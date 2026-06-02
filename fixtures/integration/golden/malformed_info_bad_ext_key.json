@@ -1,0 +1,14 @@
+{
+  "schemes": [
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "Probe description.",
+    "title": "Probe API.",
+    "version": "0.0.1"
+  },
+  "host": "localhost",
+  "basePath": "/",
+  "paths": {}
+}

@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "listItemsPositional",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "someResponse": {
+      "description": "SomeResponse is a top-level response object.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "x-go-name": "Status"
+          }
+        }
+      }
+    }
+  }
+}

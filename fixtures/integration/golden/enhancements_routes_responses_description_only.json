@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items/{id}": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Get an item.",
+        "operationId": "getItemDescOnly",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "not found"
+          },
+          "500": {
+            "description": "server error"
+          }
+        }
+      }
+    }
+  }
+}

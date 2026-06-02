@@ -1,0 +1,48 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "post": {
+        "summary": "Send a map body.",
+        "operationId": "mapBody",
+        "parameters": [
+          {
+            "x-go-name": "Items",
+            "description": "Items is a body parameter of type map[string]LocalItem.",
+            "name": "items",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/LocalItem"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "LocalItem": {
+      "description": "LocalItem — NOT annotated; reachable only via the map field on\nMapParams below.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "tag": {
+          "type": "string",
+          "x-go-name": "Tag"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/parameters-map-postdecl"
+    }
+  }
+}

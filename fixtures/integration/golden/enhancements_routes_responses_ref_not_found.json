@@ -1,0 +1,15 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "listItemsRefNotFound",
+        "responses": {}
+      }
+    }
+  }
+}

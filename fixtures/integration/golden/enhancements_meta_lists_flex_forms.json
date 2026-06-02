@@ -1,0 +1,19 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json",
+    "application/xml"
+  ],
+  "schemes": [
+    "http",
+    "https",
+    "ws"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "Package meta_lists_flex_forms witnesses Property.AsList covering\nthe meta (swagger:meta) annotation surface for list-shaped\nkeywords. The meta dispatcher in builders/spec/walker.go reads\nschemes / consumes / produces via the same Property.AsList seam\nthe routes dispatcher uses, so the accepted forms are identical.\n\n\nTitle:\n\nLists Flex Forms (meta)\n\nDescription:\n\nWitnesses inline + multi-line list forms on the meta surface."
+  },
+  "paths": {}
+}

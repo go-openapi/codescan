@@ -236,7 +236,16 @@
           "$ref": "#/definitions/ExtendedID"
         },
         "id": {
-          "$ref": "#/definitions/UUID"
+          "description": "the id for this order",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UUID"
+            },
+            {
+              "minimum": 1
+            }
+          ],
+          "x-go-name": "ID"
         },
         "items": {
           "description": "the items for this order",
@@ -265,7 +274,6 @@
           "description": "the name for this user",
           "type": "integer",
           "format": "int64",
-          "minLength": 3,
           "x-go-name": "UserID"
         }
       },

@@ -1,0 +1,57 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets/{id}": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Get a pet.",
+        "operationId": "getPetMixed",
+        "responses": {
+          "200": {
+            "description": "the pet",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-responses-mixed-bodies"
+    }
+  },
+  "responses": {
+    "genericError": {
+      "description": "GenericError is the catch-all error response.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

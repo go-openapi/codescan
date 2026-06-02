@@ -59,10 +59,19 @@ func AssertArrayRef(t *testing.T, schema *oaispec.Schema, jsonName, goName, frag
 	assert.EqualT(t, fragment, psch.Ref.String())
 }
 
+// AssertRef checks that the named property is a $ref to fragment.
+// Accepts both shapes: a bare $ref schema, and the P7/S7 allOf
+// compound where the $ref rides arm[0] (with description and
+// optional override siblings on the parent / arm[1]).
 func AssertRef(t *testing.T, schema *oaispec.Schema, jsonName, _, fragment string) {
 	t.Helper()
 
-	assert.Empty(t, schema.Properties[jsonName].Type)
 	psch := schema.Properties[jsonName]
-	assert.EqualT(t, fragment, psch.Ref.String())
+	assert.Empty(t, psch.Type)
+	if psch.Ref.String() != "" {
+		assert.EqualT(t, fragment, psch.Ref.String())
+		return
+	}
+	require.NotEmpty(t, psch.AllOf, "property %q has neither $ref nor allOf", jsonName)
+	assert.EqualT(t, fragment, psch.AllOf[0].Ref.String())
 }

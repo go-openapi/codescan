@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Tag": {
+      "description": "Tag is a named struct intended to be referenceable as a model\nfrom body schemas. Using it as the type of a header field is the\nauthor misuse this fixture captures.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "value": {
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-header-ref-leak"
+    }
+  },
+  "responses": {
+    "leakResponse": {
+      "description": "LeakResponse pins the post-fix shape: the header field is\nsurfaced, the body schema is NOT corrupted, and the diagnostic\nsignals the misuse.",
+      "headers": {
+        "X-Tag": {
+          "description": "TagHeader is a header field typed as a named struct. Pre-Q2\nthis leaked `$ref: \"#/definitions/Tag\"` onto resp.Schema and\nleft the header empty. Post-fix resp.Schema stays nil; the\nheader surfaces empty (no Type — the named struct can't\nreduce to a SimpleSchema primitive); diagnostic fires."
+        }
+      }
+    },
+    "leakWithStrfmtResponse": {
+      "description": "LeakWithStrfmtResponse pins the post-fix shape under the strfmt\noverride: the header gets {string, uuid}, the body schema stays\nnil, and the diagnostic still fires for the underlying ref\nattempt.",
+      "headers": {
+        "X-Tag-ID": {
+          "type": "string",
+          "format": "uuid",
+          "description": "TagID is a header field with strfmt override on a named-struct\ntype. The strfmt override runs after the exit-validator's\nreset, so the header surfaces as {string, uuid}. No body-schema\nleak."
+        }
+      }
+    }
+  }
+}

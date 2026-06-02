@@ -1,0 +1,55 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Envelope": {
+      "type": "object",
+      "title": "Envelope is the canonical named struct.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response-shapes"
+    },
+    "EnvelopeAlias": {
+      "title": "EnvelopeAlias is an alias of Envelope.",
+      "$ref": "#/definitions/Envelope"
+    },
+    "EnvelopeAlias2": {
+      "title": "EnvelopeAlias2 is an alias of EnvelopeAlias (alias-of-alias).",
+      "$ref": "#/definitions/EnvelopeAlias"
+    }
+  },
+  "responses": {
+    "bodyAliasResponse": {
+      "description": "BodyAliasResponse — body field uses an alias-of-alias chain.",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAlias2"
+      }
+    },
+    "headerAliasedBasicResponse": {
+      "description": "HeaderAliasedBasicResponse — header field is an alias of a\nnamed string. Expected emission: primitive inline\n{string, \"\"}; no $ref under any mode (headers can't carry\n$ref).",
+      "headers": {
+        "X-Session": {
+          "type": "string"
+        }
+      }
+    },
+    "headerAliasedStructResponse": {
+      "description": "HeaderAliasedStructResponse — header field is an alias of a\nnamed struct. Expected emission: NO body schema corruption\n(Q2 fix); header surfaces empty (struct can't reduce to a\nSimpleSchema primitive); CodeUnsupportedInSimpleSchema\ndiagnostic fires for the underlying ref attempt.",
+      "headers": {
+        "X-Detail": {}
+      }
+    }
+  }
+}

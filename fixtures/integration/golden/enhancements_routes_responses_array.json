@@ -1,0 +1,66 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "List pets and a matrix of items.",
+        "operationId": "listPetsArray",
+        "responses": {
+          "200": {
+            "description": "the pet list",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Pet"
+              }
+            }
+          },
+          "202": {
+            "description": "items grid",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Item"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Item": {
+      "type": "object",
+      "title": "Item is one item.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-responses-array"
+    },
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-responses-array"
+    }
+  }
+}

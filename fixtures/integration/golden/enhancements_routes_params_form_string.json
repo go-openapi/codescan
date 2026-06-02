@@ -1,0 +1,28 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/forms": {
+      "post": {
+        "tags": [
+          "forms"
+        ],
+        "summary": "Submit a form.",
+        "operationId": "submitForm",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "optional comment",
+            "name": "comment",
+            "in": "formData",
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

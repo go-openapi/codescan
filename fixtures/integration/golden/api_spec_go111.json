@@ -1,119 +1,121 @@
 {
-  "consumes":[
+  "consumes": [
     "application/json"
   ],
-  "produces":[
+  "produces": [
     "application/json"
   ],
-  "schemes":[
+  "schemes": [
     "https"
   ],
-  "swagger":"2.0",
-  "info":{
-    "description":"the purpose of this application is to provide an application\nthat is using plain go code to define an API",
-    "title":"API.",
-    "version":"0.0.1"
+  "swagger": "2.0",
+  "info": {
+    "description": "the purpose of this application is to provide an application\nthat is using plain go code to define an API",
+    "title": "API.",
+    "version": "0.0.1"
   },
-  "host":"localhost",
-  "paths":{
-    "/admin/bookings/":{
-      "get":{
-        "consumes":[
+  "host": "localhost",
+  "paths": {
+    "/admin/bookings/": {
+      "get": {
+        "consumes": [
           "application/json"
         ],
-        "produces":[
+        "produces": [
           "application/json"
         ],
-        "schemes":[
+        "schemes": [
           "http",
           "https"
         ],
-        "tags":[
+        "tags": [
           "booking"
         ],
-        "summary":"Bookings lists all the appointments that have been made on the site.",
+        "summary": "Bookings lists all the appointments that have been made on the site.",
+        "operationId": "Bookings",
         "deprecated": true,
-        "operationId":"Bookings",
-        "responses":{
-          "200":{
-            "$ref":"#/responses/BookingResponse"
+        "responses": {
+          "200": {
+            "$ref": "#/responses/BookingResponse"
           }
         }
       }
     }
   },
-  "definitions":{
-    "Booking":{
-      "description":"A Booking in the system",
-      "type":"object",
-      "required":[
+  "definitions": {
+    "Booking": {
+      "description": "A Booking in the system",
+      "type": "object",
+      "required": [
         "id",
         "Subject"
       ],
-      "properties":{
-        "Subject":{
-          "description":"Subject the subject of this booking",
-          "type":"string"
+      "properties": {
+        "Subject": {
+          "description": "Subject the subject of this booking",
+          "type": "string"
         },
-        "id":{
-          "description":"ID the id of the booking",
-          "type":"integer",
-          "format":"int64",
-          "x-go-name":"ID",
-          "readOnly":true
+        "id": {
+          "description": "ID the id of the booking",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID",
+          "readOnly": true
         }
       },
-      "x-go-package":"github.com/go-swagger/scan-repo-boundary/makeplans"
+      "x-go-package": "github.com/go-swagger/scan-repo-boundary/makeplans"
     },
-    "Customer":{
-      "type":"object",
-      "title":"Customer of the site.",
-      "properties":{
-        "name":{
-          "type":"string",
-          "x-go-name":"Name"
+    "Customer": {
+      "type": "object",
+      "title": "Customer of the site.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
         }
       },
-      "x-go-package":"github.com/go-openapi/codescan/fixtures/goparsing/spec"
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/spec"
     },
-    "DateRange":{
-      "description":"DateRange represents a scheduled appointments time\nDateRange should be in definitions since it's being used in a response",
-      "type":"object",
-      "properties":{
-        "end":{
-          "type":"string",
-          "x-go-name":"End"
+    "DateRange": {
+      "description": "DateRange represents a scheduled appointments time\nDateRange should be in definitions since it's being used in a response",
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "string",
+          "x-go-name": "End"
         },
-        "start":{
-          "type":"string",
-          "x-go-name":"Start"
+        "start": {
+          "type": "string",
+          "x-go-name": "Start"
         }
       },
-      "x-go-package":"github.com/go-openapi/codescan/fixtures/goparsing/spec"
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/spec"
     }
   },
-  "responses":{
-    "BookingResponse":{
-      "description":"BookingResponse represents a scheduled appointment",
-      "schema":{
-        "type":"object",
-        "properties":{
-          "booking":{
-            "$ref":"#/definitions/Booking"
+  "responses": {
+    "BookingResponse": {
+      "description": "BookingResponse represents a scheduled appointment",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "booking": {
+            "$ref": "#/definitions/Booking"
           },
-          "customer":{
-            "$ref":"#/definitions/Customer"
+          "customer": {
+            "$ref": "#/definitions/Customer"
           },
-          "dates":{
-            "$ref":"#/definitions/DateRange"
+          "dates": {
+            "$ref": "#/definitions/DateRange"
           },
           "map": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
-            "example": {"key": "value"},
-            "x-go-name": "Map"
+            "x-go-name": "Map",
+            "example": {
+              "key": "value"
+            }
           },
           "slice": {
             "type": "array",

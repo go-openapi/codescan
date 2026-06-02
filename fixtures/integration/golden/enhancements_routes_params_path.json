@@ -1,0 +1,28 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items/{id}": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Get an item by id.",
+        "operationId": "getItem",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "item identifier",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

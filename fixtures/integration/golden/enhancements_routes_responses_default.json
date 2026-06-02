@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Health probe.",
+        "operationId": "health",
+        "responses": {
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "genericError": {
+      "description": "GenericError is the catch-all error response.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

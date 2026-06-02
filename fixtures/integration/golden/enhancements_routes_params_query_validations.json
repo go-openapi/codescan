@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items filtered by parameters.",
+        "operationId": "listItems",
+        "parameters": [
+          {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "default": 20,
+            "description": "maximum number of items returned",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "enum": [
+              "pending",
+              "active",
+              "archived"
+            ],
+            "type": "string",
+            "description": "filter by status",
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

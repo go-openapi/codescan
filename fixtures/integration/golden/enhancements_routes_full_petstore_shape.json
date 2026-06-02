@@ -1,0 +1,99 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "pets",
+          "users"
+        ],
+        "summary": "Create a pet with the full metadata surface.",
+        "operationId": "createPetFull",
+        "parameters": [
+          {
+            "type": "boolean",
+            "default": false,
+            "description": "enable tracing",
+            "name": "trace",
+            "in": "query"
+          },
+          {
+            "description": "pet to create",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "the created pet",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ],
+        "x-route-flag": true
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-full-petstore-shape"
+    }
+  },
+  "responses": {
+    "genericError": {
+      "description": "GenericError is the catch-all error response.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

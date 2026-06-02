@@ -70,14 +70,14 @@ type BookingResponse struct {
 // Bookings lists all the appointments that have been made on the site.
 //
 // Consumes:
-// application/json
+// - application/json
 //
 // Deprecated: true
 //
 // Schemes: http, https
 //
 // Produces:
-// application/json
+// - application/json
 //
 // Responses:
 // 200: BookingResponse

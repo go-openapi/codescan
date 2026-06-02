@@ -42,7 +42,7 @@
           ]
         }
       ],
-      "x-some-flag": "false",
+      "x-some-flag": false,
       "x-some-list": [
         "item1",
         "item2",
@@ -282,7 +282,7 @@
           ]
         }
       ],
-      "x-some-flag": "true"
+      "x-some-flag": true
     },
     "post": {
       "consumes": [

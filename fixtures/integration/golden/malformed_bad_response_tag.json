@@ -1,0 +1,13 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/bad-response": {
+      "get": {
+        "tags": [
+          "bad"
+        ],
+        "operationId": "doBadResp"
+      }
+    }
+  }
+}

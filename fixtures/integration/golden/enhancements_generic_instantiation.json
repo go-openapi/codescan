@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "generic_container": {
+      "description": "These should emit with the substituted underlying shape, not as\n$ref to the (empty) generic declaration.",
+      "type": "object",
+      "title": "Container holds fields whose types are generic INSTANTIATIONS.",
+      "properties": {
+        "counts": {
+          "description": "Counts is an instantiation of GenericMap with K=string, V=int.\nExpected schema: {object, additionalProperties:{integer, int64}}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Counts"
+        },
+        "items": {
+          "description": "Items is an instantiation of GenericSlice with T=int.\nExpected schema: {array, items:{integer, int64}}.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Items"
+        },
+        "names": {
+          "description": "Names is an instantiation of GenericSlice with T=string.\nExpected schema: {array, items:{string}}.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Names"
+        }
+      },
+      "x-go-name": "Container",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/generic-instantiation"
+    }
+  }
+}

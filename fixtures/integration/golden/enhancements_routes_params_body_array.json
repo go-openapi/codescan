@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "post": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Create several pets.",
+        "operationId": "createPets",
+        "parameters": [
+          {
+            "description": "pets to create",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Pet"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-params-body-array"
+    }
+  }
+}
