@@ -6,14 +6,21 @@ package routes
 import (
 	"fmt"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/operations"
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
 
+// Builder constructs OAS v2 path entries for one `swagger:route`
+// annotation. It embeds *common.Builder for shared state (Ctx,
+// ParseBlocks cache, diagnostic sink). The embedded Decl is left
+// nil — routes build off a path annotation, not a declaration —
+// so MakeRef and other Decl-anchored helpers must not be called.
 type Builder struct {
-	ctx         *scanner.ScanCtx
+	*common.Builder
+
 	route       parsers.ParsedPathContent
 	responses   map[string]oaispec.Response
 	operations  map[string]*oaispec.Operation
@@ -29,7 +36,7 @@ type Inputs struct {
 
 func NewBuilder(ctx *scanner.ScanCtx, route parsers.ParsedPathContent, inputs Inputs) *Builder {
 	return &Builder{
-		ctx:         ctx,
+		Builder:     common.New(ctx, nil),
 		route:       route,
 		responses:   inputs.Responses,
 		operations:  inputs.Operations,
@@ -45,13 +52,7 @@ func (r *Builder) Build(tgt *oaispec.Paths) error {
 	)
 	op.Tags = r.route.Tags
 
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetTitle(func(lines []string) { op.Summary = parsers.JoinDropLast(lines) }),
-		parsers.WithSetDescription(func(lines []string) { op.Description = parsers.JoinDropLast(lines) }),
-		parsers.WithTaggers(r.routeTaggers(op)...),
-	)
-
-	if err := sp.Parse(r.route.Remaining); err != nil {
+	if err := r.applyBlockToRoute(op); err != nil {
 		return fmt.Errorf("operation (%s): %w", op.ID, err)
 	}
 
