@@ -185,5 +185,3 @@ func stripPackagePrefix(s string) string {
 	}
 	return strings.TrimLeft(rest[idx:], " \t")
 }
-
-

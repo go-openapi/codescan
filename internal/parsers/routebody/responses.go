@@ -55,21 +55,21 @@ func ParseResponses(body string, basePos token.Position, diag func(grammar.Diagn
 		}
 		pos := offsetPos(basePos, lineNo)
 
-		idx := strings.Index(line, ":")
-		if idx < 0 {
+		before, after, ok0 := strings.Cut(line, ":")
+		if !ok0 {
 			emitDiagf(diag, pos,
 				"response line %q has no `:` separator", line)
 			continue
 		}
 
-		code := strings.TrimSpace(line[:idx])
+		code := strings.TrimSpace(before)
 		if code == "" {
 			emitDiagf(diag, pos,
 				"response line missing status code before `:`")
 			continue
 		}
 
-		value := strings.TrimSpace(line[idx+1:])
+		value := strings.TrimSpace(after)
 		decl, ok := parseResponseValue(code, value, pos, diag)
 		if !ok {
 			continue
@@ -168,11 +168,11 @@ func parseResponseValue(code, value string, pos token.Position, diag func(gramma
 // otherwise. The split takes only the FIRST colon — anything
 // after it is the value.
 func splitTagToken(tok string) (tag, value string, ok bool) {
-	idx := strings.Index(tok, ":")
-	if idx < 0 {
+	before, after, ok := strings.Cut(tok, ":")
+	if !ok {
 		return "", "", false
 	}
-	return tok[:idx], tok[idx+1:], true
+	return before, after, true
 }
 
 // stripArrayPrefixes counts leading `[]` prefixes on a body/response

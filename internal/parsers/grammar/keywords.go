@@ -132,13 +132,12 @@ func aka(names ...string) keywordOpt {
 	return func(kw *Keyword) { kw.Aliases = append(kw.Aliases, names...) }
 }
 
-func asNumber() keywordOpt    { return func(kw *Keyword) { kw.Shape = ShapeNumber } }
-func asInt() keywordOpt       { return func(kw *Keyword) { kw.Shape = ShapeInt } }
-func asBool() keywordOpt      { return func(kw *Keyword) { kw.Shape = ShapeBool } }
-func asString() keywordOpt    { return func(kw *Keyword) { kw.Shape = ShapeString } }
-func asCommaList() keywordOpt { return func(kw *Keyword) { kw.Shape = ShapeCommaList } }
-func asRawBlock() keywordOpt  { return func(kw *Keyword) { kw.Shape = ShapeRawBlock } }
-func asRawValue() keywordOpt  { return func(kw *Keyword) { kw.Shape = ShapeRawValue } }
+func asNumber() keywordOpt   { return func(kw *Keyword) { kw.Shape = ShapeNumber } }
+func asInt() keywordOpt      { return func(kw *Keyword) { kw.Shape = ShapeInt } }
+func asBool() keywordOpt     { return func(kw *Keyword) { kw.Shape = ShapeBool } }
+func asString() keywordOpt   { return func(kw *Keyword) { kw.Shape = ShapeString } }
+func asRawBlock() keywordOpt { return func(kw *Keyword) { kw.Shape = ShapeRawBlock } }
+func asRawValue() keywordOpt { return func(kw *Keyword) { kw.Shape = ShapeRawValue } }
 
 func asEnumOption(values ...string) keywordOpt {
 	return func(kw *Keyword) {

@@ -35,7 +35,7 @@ const (
 	rxOpID   = "((?:\\p{L}[\\p{L}\\p{N}\\p{Pd}\\p{Pc}]+)+)"
 )
 
-//nolint:gochecknoglobals // compile-once regexes; read-only.
+// compile-once regexes; read-only.
 var (
 	// rxSwaggerAnnotation matches `swagger:<name>` anywhere on a comment
 	// line where it is preceded by whitespace, `/`, or start-of-line.

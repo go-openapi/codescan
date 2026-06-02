@@ -98,4 +98,3 @@ func BodyTypable(in string, schema *oaispec.Schema, skipExt bool) (ifaces.Swagge
 
 	return &Typable{schema.Items.Schema, 1, skipExt}, schema
 }
-

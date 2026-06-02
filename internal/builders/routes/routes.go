@@ -21,10 +21,10 @@ import (
 type Builder struct {
 	*common.Builder
 
-	route       parsers.ParsedPathContent
-	responses   map[string]oaispec.Response
-	operations  map[string]*oaispec.Operation
-	parameters  []*oaispec.Parameter
+	route      parsers.ParsedPathContent
+	responses  map[string]oaispec.Response
+	operations map[string]*oaispec.Operation
+	// parameters  []*oaispec.Parameter // shared parameters - unsupported for now
 	definitions map[string]oaispec.Schema
 }
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"go/token"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -138,12 +139,12 @@ func isChunkSigil(line string) bool {
 // Returns (key, value, true) when both halves are non-empty after
 // trimming; (_, _, false) otherwise.
 func splitKeyValue(line string) (key, value string, ok bool) {
-	idx := strings.Index(line, ":")
-	if idx < 0 {
+	before, after, ok := strings.Cut(line, ":")
+	if !ok {
 		return "", "", false
 	}
-	key = strings.TrimSpace(line[:idx])
-	value = strings.TrimSpace(line[idx+1:])
+	key = strings.TrimSpace(before)
+	value = strings.TrimSpace(after)
 	if key == "" {
 		return "", "", false
 	}
@@ -278,11 +279,8 @@ func buildProperty(kw grammar.Keyword, raw string, pos token.Position) (grammar.
 		// write while the handler-side string fallback recovers the
 		// raw value where supported (handlers.CollectionFormatString
 		// reads pr.Value when Typed is empty).
-		for _, allowed := range kw.Values {
-			if raw == allowed {
-				p.Typed = grammar.TypedValue{Type: grammar.ShapeEnumOption, String: raw}
-				break
-			}
+		if slices.Contains(kw.Values, raw) {
+			p.Typed = grammar.TypedValue{Type: grammar.ShapeEnumOption, String: raw}
 		}
 	case grammar.ShapeNone, grammar.ShapeString, grammar.ShapeCommaList,
 		grammar.ShapeRawBlock, grammar.ShapeRawValue:

@@ -48,12 +48,14 @@ func TestSchemaValueExtractors(t *testing.T) {
 		"swagger:parameters      ",
 	}
 
-	validParams := []string{
+	const numValid = 4 + 3 // +3 extra space
+	validParams := make([]string, 0, numValid)
+	validParams = append(validParams,
 		"yada123",
 		"date",
 		"date-time",
 		"long-combo-1-with-combo-2-and-a-3rd-one-too",
-	}
+	)
 	invalidParams := []string{
 		"1-yada-3",
 		"1-2-3",
@@ -98,7 +100,7 @@ func verifySwaggerMultiArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefi
 	for i := range validParams {
 		vp = vp[:0]
 		for j := range i + 1 {
-			vp = append(vp, validParams[j]) //nolint:gosec // G602: j is bounded by i+1 which is bounded by len(validParams)
+			vp = append(vp, validParams[j]) // G602 (false positive from gosec now fixed): j is bounded by i+1 which is bounded by len(validParams)
 		}
 
 		actualParams = append(actualParams, strings.Join(vp, " "))
