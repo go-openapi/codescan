@@ -216,7 +216,7 @@ func (r *Builder) buildAlias(tpe *types.Alias, resp *oaispec.Response, seen map[
 		return r.buildFromType(rhs, resp, seen)
 	}
 
-	decl, ok := r.Ctx.FindModel(o.Pkg().Path(), o.Name())
+	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrResponses)
 	}
@@ -310,7 +310,7 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return r.buildFromField(fld, unaliased, typable, seen)
 	}
 
-	decl, ok := r.Ctx.FindModel(o.Pkg().Path(), o.Name())
+	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrResponses)
 	}
@@ -437,4 +437,3 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 
 	return nil
 }
-

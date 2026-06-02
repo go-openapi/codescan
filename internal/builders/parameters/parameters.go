@@ -114,7 +114,7 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 		return p.buildFromType(rhs, op, seen)
 	}
 
-	decl, ok := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
+	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrParameters)
 	}
@@ -127,7 +127,7 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 		if o.Pkg() == nil {
 			break // builtin
 		}
-		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
@@ -137,7 +137,7 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 		if o.Pkg() == nil {
 			break // builtin
 		}
-		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
@@ -297,7 +297,7 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil
 	}
 
-	decl, ok := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
+	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrParameters)
 	}
@@ -318,7 +318,7 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 			break // builtin
 		}
 
-		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
@@ -330,7 +330,7 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 			break // builtin
 		}
 
-		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
@@ -452,4 +452,3 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 	seen[name] = ps
 	return name, nil
 }
-
