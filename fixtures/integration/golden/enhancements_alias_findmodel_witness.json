@@ -1,0 +1,38 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AliasOfPlain": {
+      "title": "AliasOfPlain is an alias pointing at the unannotated target.",
+      "$ref": "#/definitions/PlainTarget"
+    },
+    "PlainTarget": {
+      "description": "It must end up in spec.definitions only via the orchestrator's\ndiscovery of the alias's RHS — not via any implicit lookup side\neffect at scan time.",
+      "type": "object",
+      "title": "PlainTarget is a user struct with no swagger:model annotation.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "note": {
+          "type": "string",
+          "x-go-name": "Note"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-findmodel-witness"
+    }
+  },
+  "responses": {
+    "witnessResponse": {
+      "description": "WitnessResponse has a response body whose Go type is the same\nalias — mirror witness on the response builder's\nbuildFieldAlias path.",
+      "schema": {
+        "$ref": "#/definitions/AliasOfPlain"
+      }
+    }
+  }
+}
