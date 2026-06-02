@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -98,11 +99,52 @@ func (s *ScanCtx) RefAliases() bool {
 	return s.opts.RefAliases
 }
 
+// FileSet returns the shared *token.FileSet used by the scan's
+// loaded packages.
+//
+// Callers that construct a grammar.Parser for comment groups not
+// owned by a single EntityDecl's *packages.Package (notably
+// operation and route path-level annotations aggregated across
+// packages) read the FileSet from here so the produced positions
+// resolve against the same file table the rest of the scan uses.
+func (s *ScanCtx) FileSet() *token.FileSet {
+	if len(s.pkgs) == 0 {
+		return nil
+	}
+	return s.pkgs[0].Fset
+}
+
+// PosOf resolves p to a token.Position via the active FileSet. Returns
+// the zero token.Position when p is invalid or no FileSet is available.
+// Useful for attaching a source location to a Diagnostic without each
+// caller re-deriving the FileSet.
+func (s *ScanCtx) PosOf(p token.Pos) token.Position {
+	if !p.IsValid() {
+		return token.Position{}
+	}
+	fset := s.FileSet()
+	if fset == nil {
+		return token.Position{}
+	}
+	return fset.Position(p)
+}
+
 func (s *ScanCtx) Debug() bool {
 	return s.debug
 }
 
-func (s *ScanCtx) Meta() iter.Seq[parsers.MetaSection] {
+// OnDiagnostic returns the user-supplied diagnostic sink, or nil when
+// the consumer has not opted into diagnostic delivery.
+//
+// # Details
+//
+// See [§diagnostics](./README.md#diagnostics) — callback contract,
+// ordering guarantee, experimental-API caveat.
+func (s *ScanCtx) OnDiagnostic() func(grammar.Diagnostic) {
+	return s.opts.OnDiagnostic
+}
+
+func (s *ScanCtx) Meta() iter.Seq[*ast.CommentGroup] {
 	if s.app == nil {
 		return nil
 	}
@@ -229,6 +271,68 @@ func (s *ScanCtx) FindDecl(pkgPath, name string) (*EntityDecl, bool) {
 	return nil, false
 }
 
+// GetModel is a pure read: it returns the model decl for (pkgPath,
+// name) without any side effect.
+//
+// # Details
+//
+// See [§model-lookup](./README.md#model-lookup) — the three-source
+// lookup order (Models, ExtraModels, FindDecl), and how this
+// differs from FindModel.
+//
+// Returns (nil, false) when no matching decl exists in any of the
+// three sources. Callers that want the lookup hit registered as a
+// discovered model must follow up with AddDiscoveredModel explicitly.
+func (s *ScanCtx) GetModel(pkgPath, name string) (*EntityDecl, bool) {
+	for _, cand := range s.app.Models {
+		ct := cand.Obj()
+		if ct.Name() == name && ct.Pkg().Path() == pkgPath {
+			return cand, true
+		}
+	}
+
+	for _, cand := range s.app.ExtraModels {
+		ct := cand.Obj()
+		if ct.Name() == name && ct.Pkg().Path() == pkgPath {
+			return cand, true
+		}
+	}
+
+	return s.FindDecl(pkgPath, name)
+}
+
+// AddDiscoveredModel registers decl in the ExtraModels index so the
+// spec orchestrator emits a top-level definition for it.
+//
+// No-op when decl is already an annotated swagger:model (in Models);
+// annotated decls are emitted unconditionally and re-registering
+// them as "discovered" would create a Models↔ExtraModels bouncing
+// loop in joinExtraModels. Nil and Ident-less decls are silently
+// ignored.
+//
+// Use only at sites that explicitly intend the registration —
+// pure-read lookups should use GetModel. See
+// [§model-lookup](./README.md#model-lookup).
+func (s *ScanCtx) AddDiscoveredModel(decl *EntityDecl) {
+	if decl == nil || decl.Ident == nil {
+		return
+	}
+	if _, alreadyModel := s.app.Models[decl.Ident]; alreadyModel {
+		return
+	}
+	s.app.ExtraModels[decl.Ident] = decl
+}
+
+// FindModel returns the model decl for (pkgPath, name) and, when the
+// hit comes from FindDecl fallback, registers it in ExtraModels as a
+// side effect.
+//
+// Deprecated: prefer the explicit pair GetModel (pure read) and
+// AddDiscoveredModel (explicit registration). The implicit
+// registration side effect surprises readers and pulls stdlib types
+// (notably time.Time, json.RawMessage) into the spec's top-level
+// definitions when they should be inlined where referenced. See
+// [§model-lookup](./README.md#model-lookup).
 func (s *ScanCtx) FindModel(pkgPath, name string) (*EntityDecl, bool) {
 	for _, cand := range s.app.Models {
 		ct := cand.Obj()
@@ -361,7 +465,7 @@ func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, d
 			continue
 		}
 
-		literalValue := parsers.GetEnumBasicLitValue(bl)
+		literalValue := enumBasicLitValue(bl)
 
 		var desc strings.Builder
 		fmt.Fprintf(&desc, "%v %s", literalValue, nameIdent.Name)
