@@ -4,8 +4,11 @@ linters:
   disable:
     - depguard
     - funlen
+    - goconst # disabled, perhaps temporarily as this linter has become way too pick and noisy
     - godox
+    - gomodguard_v2
     - exhaustruct
+    - ireturn # not suited to the design of this repo
     - nlreturn
     - nonamedreturns
     - noinlineerr
