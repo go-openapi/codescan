@@ -20,6 +20,54 @@ const (
 	paramID = "id"
 )
 
+// TestParseResponses_OptionVariants captures (SkipExtensions,
+// DescWithRef) option permutations on the classification responses
+// corpus into separately-named goldens. Same response set as
+// TestParseResponses; the matrix verifies $ref'd-field shape under
+// each option pair. See parameters/TestParamsParser_OptionVariants
+// for the full matrix rationale.
+func TestParseResponses_OptionVariants(t *testing.T) {
+	cases := []struct {
+		name       string
+		skipExt    bool
+		descRef    bool
+		goldenFile string
+	}{
+		{"default", false, false, "classification_responses.json"},
+		{"DescWithRef", false, true, "classification_responses_descwithref.json"},
+		{"SkipExt", true, false, "classification_responses_skipext.json"},
+		{"SkipExt+DescWithRef", true, true, "classification_responses_skipext_descwithref.json"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sctx, err := scanner.NewScanCtx(&scanner.Options{
+				Packages: []string{
+					"./goparsing/classification",
+					"./goparsing/classification/models",
+					"./goparsing/classification/operations",
+				},
+				WorkDir:        scantest.FixturesDir(),
+				SkipExtensions: tc.skipExt,
+				DescWithRef:    tc.descRef,
+			})
+			require.NoError(t, err)
+			responses := make(map[string]spec.Response)
+			responseNames := []string{
+				"ComplexerOne", "SimpleOnes", "SimpleOnesFunc", "ComplexerPointerOne",
+				"SomeResponse", "ValidationError", "Resp", "FileResponse",
+				"GenericError", "ValidationError",
+			}
+			for _, rn := range responseNames {
+				td := getResponse(sctx, rn)
+				require.NotNil(t, td)
+				prs := NewBuilder(sctx, td)
+				require.NoError(t, prs.Build(responses))
+			}
+			scantest.CompareOrDumpJSON(t, responses, tc.goldenFile)
+		})
+	}
+}
+
 func TestParseResponses(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
 	responses := make(map[string]spec.Response)
@@ -31,10 +79,7 @@ func TestParseResponses(t *testing.T) {
 	for _, rn := range responseNames {
 		td := getResponse(sctx, rn)
 		require.NotNil(t, td)
-		prs := &ResponseBuilder{
-			ctx:  sctx,
-			decl: td,
-		}
+		prs := NewBuilder(sctx, td)
 		require.NoError(t, prs.Build(responses))
 	}
 
@@ -301,10 +346,7 @@ func TestParseResponses_TransparentAliases(t *testing.T) {
 
 	// Build the response map using the transparent alias fixtures.
 	responses := make(map[string]spec.Response)
-	prs := &ResponseBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(responses))
 
 	resp, ok := responses["transparentAliasResponse"]
@@ -327,10 +369,7 @@ func TestParseResponses_Issue2007(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
 	responses := make(map[string]spec.Response)
 	td := getResponse(sctx, "GetConfiguration")
-	prs := &ResponseBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(responses))
 
 	resp := responses["GetConfiguration"]
@@ -350,10 +389,7 @@ func TestParseResponses_Issue2011(t *testing.T) {
 	responses := make(map[string]spec.Response)
 	td := getResponse(sctx, "NumPlatesResp")
 	require.NotNil(t, td)
-	prs := &ResponseBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(responses))
 
 	resp := responses["NumPlatesResp"]
@@ -371,16 +407,13 @@ func TestParseResponses_Issue2145(t *testing.T) {
 	require.NoError(t, err)
 	responses := make(map[string]spec.Response)
 	td := getResponse(sctx, "GetProductsResponse")
-	prs := &ResponseBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(responses))
 	resp := responses["GetProductsResponse"]
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	assert.NotEmpty(t, prs.postDecls) // should have Product
+	assert.NotEmpty(t, prs.PostDeclarations()) // should have Product
 
 	scantest.CompareOrDumpJSON(t, responses, "product_responses.json")
 }
@@ -398,10 +431,7 @@ func TestGo118ParseResponses_Issue2011(t *testing.T) {
 	sctx := scantest.LoadGo118ClassificationPkgsCtx(t)
 	responses := make(map[string]spec.Response)
 	td := getResponse(sctx, "NumPlatesResp")
-	prs := &ResponseBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(responses))
 
 	resp := responses["NumPlatesResp"]

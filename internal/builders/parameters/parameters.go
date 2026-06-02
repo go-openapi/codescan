@@ -7,43 +7,48 @@ import (
 	"fmt"
 	"go/types"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/logger"
-	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
 
 const inBody = "body"
 
-type ParameterBuilder struct {
-	ctx       *scanner.ScanCtx
-	decl      *scanner.EntityDecl
-	postDecls []*scanner.EntityDecl
+// Builder constructs OAS v2 parameter entries for one
+// `swagger:parameters` declaration and writes them onto the matching
+// operations. Embeds *common.Builder for shared state (Ctx, Decl,
+// PostDeclarations, diagnostics, ParseBlocks cache).
+type Builder struct {
+	*common.Builder
 }
 
-func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *ParameterBuilder {
-	return &ParameterBuilder{
-		ctx:  ctx,
-		decl: decl,
+// NewBuilder constructs an initialized [Builder] bound to
+// ctx and decl. The embedded common.Builder owns the diagnostic
+// sink, the post-declaration list, and the per-comment-group parse
+// cache.
+func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
+	return &Builder{
+		Builder: common.New(ctx, decl),
 	}
 }
 
-func (p *ParameterBuilder) Build(operations map[string]*oaispec.Operation) error {
+func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 	// check if there is a swagger:parameters tag that is followed by one or more words,
 	// these words are the ids of the operations this parameter struct applies to
 	// once type name is found convert it to a schema, by looking up the schema in the
 	// parameters dictionary that got passed into this parse method
-	for _, opid := range p.decl.OperationIDs() {
+	for _, opid := range p.Decl.OperationIDs() {
 		operation, ok := operations[opid]
 		if !ok {
 			operation = new(oaispec.Operation)
 			operations[opid] = operation
 			operation.ID = opid
 		}
-		logger.DebugLogf(p.ctx.Debug(), "building parameters for: %s", opid)
+		logger.DebugLogf(p.Ctx.Debug(), "building parameters for: %s", opid)
 
 		// analyze struct body for fields etc
 		// each exported struct field:
@@ -52,7 +57,7 @@ func (p *ParameterBuilder) Build(operations map[string]*oaispec.Operation) error
 		// * has to document the validations that apply for the type and the field
 		// * when the struct field points to a model it becomes a ref: #/definitions/ModelName
 		// * comments that aren't tags is used as the description
-		if err := p.buildFromType(p.decl.ObjType(), operation, make(map[string]oaispec.Parameter)); err != nil {
+		if err := p.buildFromType(p.Decl.ObjType(), operation, make(map[string]oaispec.Parameter)); err != nil {
 			return err
 		}
 	}
@@ -60,25 +65,21 @@ func (p *ParameterBuilder) Build(operations map[string]*oaispec.Operation) error
 	return nil
 }
 
-func (p *ParameterBuilder) PostDeclarations() []*scanner.EntityDecl {
-	return p.postDecls
-}
-
-func (p *ParameterBuilder) buildFromType(otpe types.Type, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildFromType(otpe types.Type, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
 	switch tpe := otpe.(type) {
 	case *types.Pointer:
 		return p.buildFromType(tpe.Elem(), op, seen)
 	case *types.Named:
 		return p.buildNamedType(tpe, op, seen)
 	case *types.Alias:
-		logger.DebugLogf(p.ctx.Debug(), "alias(parameters.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
+		logger.DebugLogf(p.Ctx.Debug(), "alias(parameters.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
 		return p.buildAlias(tpe, op, seen)
 	default:
 		return fmt.Errorf("unhandled type (%T): %s: %w", otpe, tpe.String(), ErrParameters)
 	}
 }
 
-func (p *ParameterBuilder) buildNamedType(tpe *types.Named, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildNamedType(tpe *types.Named, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) || resolvers.IsStdError(o) {
 		return fmt.Errorf("%s type not supported in the context of a parameters section definition: %w", o.Name(), ErrParameters)
@@ -87,18 +88,18 @@ func (p *ParameterBuilder) buildNamedType(tpe *types.Named, op *oaispec.Operatio
 
 	switch stpe := o.Type().Underlying().(type) {
 	case *types.Struct:
-		logger.DebugLogf(p.ctx.Debug(), "build from named type %s: %T", o.Name(), tpe)
-		if decl, found := p.ctx.DeclForType(o.Type()); found {
+		logger.DebugLogf(p.Ctx.Debug(), "build from named type %s: %T", o.Name(), tpe)
+		if decl, found := p.Ctx.DeclForType(o.Type()); found {
 			return p.buildFromStruct(decl, stpe, op, seen)
 		}
 
-		return p.buildFromStruct(p.decl, stpe, op, seen)
+		return p.buildFromStruct(p.Decl, stpe, op, seen)
 	default:
 		return fmt.Errorf("unhandled type (%T): %s: %w", stpe, o.Type().Underlying().String(), ErrParameters)
 	}
 }
 
-func (p *ParameterBuilder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) || resolvers.IsStdError(o) {
 		return fmt.Errorf("%s type not supported in the context of a parameters section definition: %w", o.Name(), ErrParameters)
@@ -109,15 +110,15 @@ func (p *ParameterBuilder) buildAlias(tpe *types.Alias, op *oaispec.Operation, s
 	rhs := tpe.Rhs()
 
 	// If transparent aliases are enabled, use the underlying type directly without creating a definition
-	if p.ctx.TransparentAliases() {
+	if p.Ctx.TransparentAliases() {
 		return p.buildFromType(rhs, op, seen)
 	}
 
-	decl, ok := p.ctx.FindModel(o.Pkg().Path(), o.Name())
+	decl, ok := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrParameters)
 	}
-	p.postDecls = append(p.postDecls, decl) // mark the left-hand side as discovered
+	p.AppendPostDecl(decl) // mark the left-hand side as discovered
 
 	switch rtpe := rhs.(type) {
 	// load declaration for named unaliased type
@@ -126,28 +127,28 @@ func (p *ParameterBuilder) buildAlias(tpe *types.Alias, op *oaispec.Operation, s
 		if o.Pkg() == nil {
 			break // builtin
 		}
-		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
-		p.postDecls = append(p.postDecls, decl)
+		p.AppendPostDecl(decl)
 	case *types.Alias:
 		o := rtpe.Obj()
 		if o.Pkg() == nil {
 			break // builtin
 		}
-		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
-		p.postDecls = append(p.postDecls, decl)
+		p.AppendPostDecl(decl)
 	}
 
 	return p.buildFromType(rhs, op, seen)
 }
 
-func (p *ParameterBuilder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) error {
-	logger.DebugLogf(p.ctx.Debug(), "build from field %s: %T", fld.Name(), tpe)
+func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) error {
+	logger.DebugLogf(p.Ctx.Debug(), "build from field %s: %T", fld.Name(), tpe)
 
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
@@ -167,49 +168,69 @@ func (p *ParameterBuilder) buildFromField(fld *types.Var, tpe types.Type, typabl
 	case *types.Named:
 		return p.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		logger.DebugLogf(p.ctx.Debug(), "alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs())
+		logger.DebugLogf(p.Ctx.Debug(), "alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs())
 		return p.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrParameters)
 	}
 }
 
-func (p *ParameterBuilder) buildFromFieldStruct(tpe *types.Struct, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(p.ctx, p.decl)
-	if err := sb.BuildFromType(tpe, typable); err != nil {
+func (p *Builder) buildFromFieldStruct(tpe *types.Struct, typable ifaces.SwaggerTypable) error {
+	sb := schema.NewBuilder(p.Ctx, p.Decl)
+	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
 		return err
 	}
-	p.postDecls = append(p.postDecls, sb.PostDeclarations()...)
+	for _, d := range sb.PostDeclarations() {
+		p.AppendPostDecl(d)
+	}
 
 	return nil
 }
 
-func (p *ParameterBuilder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
+func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
+	// Map fields are only legal under in=body — paramTypable.Schema()
+	// returns nil for non-body. No SimpleSchema variant needed.
 	sch := new(oaispec.Schema)
 	typable.Schema().Typed("object", "").AdditionalProperties = &oaispec.SchemaOrBool{
 		Schema: sch,
 	}
 
-	sb := schema.NewBuilder(p.ctx, p.decl)
-	if err := sb.BuildFromType(ftpe.Elem(), schema.NewTypable(sch, typable.Level()+1, p.ctx.SkipExtensions())); err != nil {
+	sb := schema.NewBuilder(p.Ctx, p.Decl)
+	if err := sb.Build(schema.WithType(
+		ftpe.Elem(),
+		schema.NewTypable(sch, typable.Level()+1, p.Ctx.SkipExtensions())),
+	); err != nil {
 		return err
+	}
+
+	// Propagate the sub-builder's PostDeclarations so a model
+	// discovered only through the map's value type (no
+	// swagger:model annotation, no other reference site) makes it
+	// into the spec's definitions section. Every sibling
+	// buildFromFieldXxx method does the same; this loop went
+	// missing in M2.5's schema-builder factor-out — see the
+	// parameters-map-postdecl fixture.
+	for _, d := range sb.PostDeclarations() {
+		p.AppendPostDecl(d)
 	}
 
 	return nil
 }
 
-func (p *ParameterBuilder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(p.ctx, p.decl)
-	if err := sb.BuildFromType(tpe, typable); err != nil {
+func (p *Builder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
+	sb := schema.NewBuilder(p.Ctx, p.Decl)
+	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
 		return err
 	}
 
-	p.postDecls = append(p.postDecls, sb.PostDeclarations()...)
+	for _, d := range sb.PostDeclarations() {
+		p.AppendPostDecl(d)
+	}
 
 	return nil
 }
 
-func (p *ParameterBuilder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
+func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
 	o := ftpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
@@ -220,7 +241,7 @@ func (p *ParameterBuilder) buildNamedField(ftpe *types.Named, typable ifaces.Swa
 	}
 	resolvers.MustNotBeABuiltinType(o)
 
-	decl, found := p.ctx.DeclForType(o.Type())
+	decl, found := p.Ctx.DeclForType(o.Type())
 	if !found {
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrParameters)
 	}
@@ -230,23 +251,25 @@ func (p *ParameterBuilder) buildNamedField(ftpe *types.Named, typable ifaces.Swa
 		return nil
 	}
 
-	if sfnm, isf := parsers.StrfmtName(decl.Comments); isf {
+	if sfnm, isf := strfmtFromDoc(p.ParseBlocks(decl.Comments)); isf {
 		typable.Typed("string", sfnm)
 		return nil
 	}
 
-	sb := schema.NewBuilder(p.ctx, decl)
+	sb := schema.NewBuilder(p.Ctx, decl)
 	sb.InferNames()
-	if err := sb.BuildFromType(decl.ObjType(), typable); err != nil {
+	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable)); err != nil {
 		return err
 	}
 
-	p.postDecls = append(p.postDecls, sb.PostDeclarations()...)
+	for _, d := range sb.PostDeclarations() {
+		p.AppendPostDecl(d)
+	}
 
 	return nil
 }
 
-func (p *ParameterBuilder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable, fld *types.Var, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable, fld *types.Var, seen map[string]oaispec.Parameter) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
@@ -263,22 +286,24 @@ func (p *ParameterBuilder) buildFieldAlias(tpe *types.Alias, typable ifaces.Swag
 	rhs := tpe.Rhs()
 
 	// If transparent aliases are enabled, use the underlying type directly without creating a definition
-	if p.ctx.TransparentAliases() {
-		sb := schema.NewBuilder(p.ctx, p.decl)
-		if err := sb.BuildFromType(rhs, typable); err != nil {
+	if p.Ctx.TransparentAliases() {
+		sb := schema.NewBuilder(p.Ctx, p.Decl)
+		if err := sb.Build(schema.OptionFor(rhs, typable)); err != nil {
 			return err
 		}
-		p.postDecls = append(p.postDecls, sb.PostDeclarations()...)
+		for _, d := range sb.PostDeclarations() {
+			p.AppendPostDecl(d)
+		}
 		return nil
 	}
 
-	decl, ok := p.ctx.FindModel(o.Pkg().Path(), o.Name())
+	decl, ok := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrParameters)
 	}
-	p.postDecls = append(p.postDecls, decl) // mark the left-hand side as discovered
+	p.AppendPostDecl(decl) // mark the left-hand side as discovered
 
-	if typable.In() != inBody || !p.ctx.RefAliases() {
+	if typable.In() != inBody || !p.Ctx.RefAliases() {
 		// if ref option is disabled, and always for non-body parameters: just expand the alias
 		unaliased := types.Unalias(tpe)
 		return p.buildFromField(fld, unaliased, typable, seen)
@@ -293,31 +318,31 @@ func (p *ParameterBuilder) buildFieldAlias(tpe *types.Alias, typable ifaces.Swag
 			break // builtin
 		}
 
-		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
 
-		return p.makeRef(decl, typable)
+		return p.MakeRef(decl, typable)
 	case *types.Alias:
 		o := rtpe.Obj()
 		if o.Pkg() == nil {
 			break // builtin
 		}
 
-		decl, found := p.ctx.FindModel(o.Pkg().Path(), o.Name())
+		decl, found := p.Ctx.FindModel(o.Pkg().Path(), o.Name())
 		if !found {
 			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
 		}
 
-		return p.makeRef(decl, typable)
+		return p.MakeRef(decl, typable)
 	}
 
 	// anonymous type: just expand it
 	return p.buildFromField(fld, rhs, typable, seen)
 }
 
-func (p *ParameterBuilder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
 	numFields := tpe.NumFields()
 
 	if numFields == 0 {
@@ -359,19 +384,21 @@ func (p *ParameterBuilder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.
 
 // processParamField processes a single non-embedded struct field for parameter building.
 // Returns the parameter name if the field was processed, or "" if it was skipped.
-func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.EntityDecl, seen map[string]oaispec.Parameter) (string, error) {
+func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, seen map[string]oaispec.Parameter) (string, error) {
 	if !fld.Exported() {
-		logger.DebugLogf(p.ctx.Debug(), "skipping field %s because it's not exported", fld.Name())
+		logger.DebugLogf(p.Ctx.Debug(), "skipping field %s because it's not exported", fld.Name())
 		return "", nil
 	}
 
 	afld := resolvers.FindASTField(decl.File, fld.Pos())
 	if afld == nil {
-		logger.DebugLogf(p.ctx.Debug(), "can't find source associated with %s", fld.String())
+		logger.DebugLogf(p.Ctx.Debug(), "can't find source associated with %s", fld.String())
 		return "", nil
 	}
 
-	if parsers.Ignored(afld.Doc) {
+	signals := scanFieldDocSignals(p.ParseBlocks(afld.Doc), afld.Doc)
+
+	if signals.ignored {
 		return "", nil
 	}
 
@@ -384,50 +411,30 @@ func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.Entit
 	}
 
 	in := "query"
-	// scan for param location first, this changes some behavior down the line
-	if afld.Doc != nil {
-		inOverride, ok := parsers.ParamLocation(afld.Doc)
-		if ok {
-			in = inOverride
-		}
+	if signals.inSet {
+		in = signals.in
 	}
 
 	ps := seen[name]
 	ps.In = in
-	var pty ifaces.SwaggerTypable = paramTypable{&ps, p.ctx.SkipExtensions()}
+	var pty ifaces.SwaggerTypable = paramTypable{&ps, p.Ctx.SkipExtensions()}
 	if in == inBody {
-		pty = schema.NewTypable(pty.Schema(), 0, p.ctx.SkipExtensions())
+		pty = schema.NewTypable(pty.Schema(), 0, p.Ctx.SkipExtensions())
 	}
 
-	if in == "formData" && afld.Doc != nil && parsers.FileParam(afld.Doc) {
+	if in == "formData" && signals.file {
 		pty.Typed("file", "")
 	} else if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
 		return "", err
 	}
 
-	if strfmtName, ok := parsers.StrfmtName(afld.Doc); ok {
-		ps.Typed("string", strfmtName)
+	if signals.strfmtSet {
+		ps.Typed("string", signals.strfmt)
 		ps.Ref = oaispec.Ref{}
 		ps.Items = nil
 	}
 
-	taggers, err := setupParamTaggers(&ps, name, afld, p.ctx.SkipExtensions(), p.ctx.Debug())
-	if err != nil {
-		return "", err
-	}
-
-	sp := parsers.NewSectionedParser(
-		parsers.WithSetDescription(func(lines []string) {
-			ps.Description = parsers.JoinDropLast(lines)
-			enumDesc := parsers.GetEnumDesc(ps.Extensions)
-			if enumDesc != "" {
-				ps.Description += "\n" + enumDesc
-			}
-		}),
-		parsers.WithTaggers(taggers...),
-	)
-
-	if err := sp.Parse(afld.Doc); err != nil {
+	if err := p.applyBlockToField(afld, &ps); err != nil {
 		return "", err
 	}
 	if ps.In == "path" {
@@ -439,30 +446,10 @@ func (p *ParameterBuilder) processParamField(fld *types.Var, decl *scanner.Entit
 	}
 
 	if name != fld.Name() {
-		resolvers.AddExtension(&ps.VendorExtensible, "x-go-name", fld.Name(), p.ctx.SkipExtensions())
+		resolvers.AddExtension(&ps.VendorExtensible, "x-go-name", fld.Name(), p.Ctx.SkipExtensions())
 	}
 
 	seen[name] = ps
 	return name, nil
 }
 
-func (p *ParameterBuilder) makeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) error {
-	nm, _ := decl.Names()
-	ref, err := oaispec.NewRef("#/definitions/" + nm)
-	if err != nil {
-		return err
-	}
-
-	prop.SetRef(ref)
-	p.postDecls = append(p.postDecls, decl) // mark the $ref target as discovered
-
-	return nil
-}
-
-func spExtensionsSetter(ps *oaispec.Parameter, skipExt bool) func(*oaispec.Extensions) {
-	return func(exts *oaispec.Extensions) {
-		for name, value := range *exts {
-			resolvers.AddExtension(&ps.VendorExtensible, name, value, skipExt)
-		}
-	}
-}
