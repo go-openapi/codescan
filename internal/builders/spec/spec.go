@@ -11,7 +11,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/responses"
 	"github.com/go-openapi/codescan/internal/builders/routes"
 	"github.com/go-openapi/codescan/internal/builders/schema"
-	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -99,11 +99,22 @@ func (s *Builder) buildDiscovered() error {
 	keepGoing := len(s.discovered) > 0
 	for keepGoing {
 		var queue []*scanner.EntityDecl
+		// Dedupe by name within this pass. The same decl can appear
+		// multiple times in s.discovered (one entry per reference
+		// site that called AppendPostDecl); without this, both copies
+		// get queued and Build runs twice, each appending to the
+		// existing schema's AllOf and producing doubled entries.
+		queued := make(map[string]struct{})
 		for _, d := range s.discovered {
 			nm, _ := d.Names()
-			if _, ok := s.definitions[nm]; !ok {
-				queue = append(queue, d)
+			if _, alreadyDone := s.definitions[nm]; alreadyDone {
+				continue
 			}
+			if _, dupInPass := queued[nm]; dupInPass {
+				continue
+			}
+			queued[nm] = struct{}{}
+			queue = append(queue, d)
 		}
 		s.discovered = nil
 		for _, sd := range queue {
@@ -120,7 +131,7 @@ func (s *Builder) buildDiscovered() error {
 func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	sb := schema.NewBuilder(s.ctx, decl)
 	sb.SetDiscovered(s.discovered)
-	if err := sb.Build(s.definitions); err != nil {
+	if err := sb.Build(schema.WithDefinitions(s.definitions)); err != nil {
 		return err
 	}
 
@@ -130,9 +141,10 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 }
 
 func (s *Builder) buildMeta() error {
-	// build swagger object
-	for decl := range s.ctx.Meta() {
-		if err := parsers.NewMetaParser(s.input).Parse(decl.Comments); err != nil {
+	parser := grammar.NewParser(s.ctx.FileSet())
+	for cg := range s.ctx.Meta() {
+		block := parser.Parse(cg)
+		if err := applyMetaBlock(s.input, block); err != nil {
 			return err
 		}
 	}
