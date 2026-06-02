@@ -1,0 +1,153 @@
+// SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+// SPDX-License-Identifier: Apache-2.0
+
+// Package validations owns cross-builder validation and coercion
+// concerns shared by the schema, parameters, responses, and
+// items/headers code paths.
+//
+// The package has two halves:
+//
+//   - Value coercion (this file) — turns raw annotation text into
+//     the Go value implied by the target schema's type+format,
+//     for keywords whose payload is a primitive literal
+//     (default:, example:, enum:).
+//   - Shape legality (shape.go) — answers whether a given keyword
+//     is legal on a schema of a given Swagger type.
+//
+// # Details
+//
+// See [§contract](./README.md#contract) — why these helpers live
+// in the builder layer rather than in the grammar parser.
+package validations
+
+import (
+	"encoding/json"
+	"strconv"
+	"strings"
+
+	"github.com/go-openapi/spec"
+)
+
+// CoerceValue converts a raw annotation value to the Go representation
+// implied by the target schema's Type/Format. Used by default:/example:
+// setters where the annotation body is a primitive literal whose
+// meaning depends on the target: `default: 3` becomes int(3) against
+// `Type: "integer"`, "3" against `Type: "string"`, and so on.
+//
+// A nil schema yields the raw string unchanged. Numeric and boolean
+// parsing errors are surfaced to the caller; JSON parse failures on
+// object/array targets are absorbed and the raw string is returned.
+//
+// Dispatch is on [spec.SimpleSchema.TypeName] — Format wins when set,
+// otherwise Type is consulted.
+//
+// # Details
+//
+// See [§coercion-dispatch](./README.md#coercion-dispatch) — the
+// per-type dispatch table, and the rationale for absorbing
+// object/array JSON parse failures.
+func CoerceValue(s string, schema *spec.SimpleSchema) (any, error) {
+	if schema == nil {
+		return s, nil
+	}
+
+	switch strings.Trim(schema.TypeName(), "\"") {
+	case "integer", "int", "int64", "int32", "int16":
+		return strconv.Atoi(s)
+	case "bool", "boolean":
+		return strconv.ParseBool(s)
+	case "number", "float64", "float32":
+		return strconv.ParseFloat(s, 64)
+	case "object":
+		var obj map[string]any
+		if err := json.Unmarshal([]byte(s), &obj); err != nil {
+			return s, nil //nolint:nilerr // fallback: return raw string when JSON is invalid
+		}
+		return obj, nil
+	case "array":
+		var slice []any
+		if err := json.Unmarshal([]byte(s), &slice); err != nil {
+			return s, nil //nolint:nilerr // fallback: return raw string when JSON is invalid
+		}
+		return slice, nil
+	default:
+		return s, nil
+	}
+}
+
+// ParseDefault is the two-axis entry point for default:/example:
+// coercion. It dispatches on schemaType alone — schemaFormat is
+// accepted for surface stability but not consulted today.
+//
+// # Details
+//
+// See [§coercion-dispatch](./README.md#coercion-dispatch) and
+// [§format-axis](./README.md#format-axis) — why the two-axis
+// surface exists alongside [CoerceValue] and which refinements
+// the schemaFormat argument is reserved for.
+func ParseDefault(s, schemaType, schemaFormat string) (any, error) {
+	_ = schemaFormat // reserved for format-specific paths
+	return CoerceValue(s, &spec.SimpleSchema{Type: schemaType})
+}
+
+// ParseEnumValues is the two-axis entry point for enum: coercion.
+// Mirrors [ParseDefault] — dispatches on schemaType, with
+// schemaFormat reserved for future per-format paths.
+func ParseEnumValues(val, schemaType, schemaFormat string) []any {
+	_ = schemaFormat // reserved for format-specific paths
+	return CoerceEnum(val, &spec.SimpleSchema{Type: schemaType})
+}
+
+// CoerceEnum turns an `enum: …` annotation value into a typed []any.
+// Accepts the JSON-array form (`enum: ["a","b"]`) and the comma-list
+// form (`enum: a, b`). Per-value typing is applied via [CoerceValue]
+// against the target schema.
+//
+// # Details
+//
+// See [§enum-shapes](./README.md#enum-shapes) — how the two input
+// forms are detected and how each element is normalised before
+// per-value coercion.
+func CoerceEnum(val string, s *spec.SimpleSchema) []any {
+	var rawElements []json.RawMessage
+	if err := json.Unmarshal([]byte(val), &rawElements); err != nil {
+		return coerceEnumCommaList(val, s)
+	}
+
+	out := make([]any, len(rawElements))
+	for i, d := range rawElements {
+		ds, err := strconv.Unquote(string(d))
+		if err != nil {
+			ds = string(d)
+		}
+
+		v, err := CoerceValue(ds, s)
+		if err != nil {
+			out[i] = ds
+			continue
+		}
+		out[i] = v
+	}
+
+	return out
+}
+
+// coerceEnumCommaList handles the comma-list `enum: a, b, c` form.
+// Per-value whitespace is trimmed before coercion; per-value parse
+// errors fall back to the raw string.
+func coerceEnumCommaList(val string, s *spec.SimpleSchema) []any {
+	list := strings.Split(val, ",")
+	out := make([]any, len(list))
+
+	for i, d := range list {
+		d = strings.TrimSpace(d)
+		v, err := CoerceValue(d, s)
+		if err != nil {
+			out[i] = d
+			continue
+		}
+		out[i] = v
+	}
+
+	return out
+}

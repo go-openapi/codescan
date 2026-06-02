@@ -26,6 +26,38 @@
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/text-marshal"
+    },
+    "override_container": {
+      "description": "OverrideContainer references UUID so the schema builder walks\nthe override path.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "date",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-name": "OverrideContainer",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/text-marshal/explicit_override"
+    },
+    "wrapping_time_container": {
+      "description": "WrappingTimeContainer references UUID so the schema builder walks\nthe heuristic path.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-name": "WrappingTimeContainer",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/text-marshal/uuid_wrapping_time"
     }
   }
 }

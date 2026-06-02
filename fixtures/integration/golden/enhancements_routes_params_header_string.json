@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items with auth header.",
+        "operationId": "secureItems",
+        "parameters": [
+          {
+            "pattern": "^[0-9a-fA-F-]+$",
+            "type": "string",
+            "format": "uuid",
+            "description": "request correlation id",
+            "name": "X-Request-ID",
+            "in": "header",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

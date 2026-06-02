@@ -7,20 +7,32 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
 
+// Builder constructs OAS v2 operation entries for one
+// `swagger:operation` annotation. Embeds *common.Builder for shared
+// state (Ctx, ParseBlocks cache, diagnostic sink). Decl is unused
+// because operations build off a path annotation, not a declaration;
+// the MakeRef / Decl-anchored helpers must not be called.
+//
+// # Details
+//
+// See [§builder](./README.md#builder) for the Build orchestration
+// and the path-item-slot reuse semantics.
 type Builder struct {
-	ctx        *scanner.ScanCtx
+	*common.Builder
+
 	path       parsers.ParsedPathContent
 	operations map[string]*oaispec.Operation
 }
 
 func NewBuilder(ctx *scanner.ScanCtx, pth parsers.ParsedPathContent, operations map[string]*oaispec.Operation) *Builder {
 	return &Builder{
-		ctx:        ctx,
+		Builder:    common.New(ctx, nil),
 		path:       pth,
 		operations: operations,
 	}
@@ -33,15 +45,8 @@ func (o *Builder) Build(tgt *oaispec.Paths) error {
 		o.path.Method, o.path.ID,
 		&pthObj, o.operations[o.path.ID])
 	op.Tags = o.path.Tags
-	sp := parsers.NewYAMLSpecScanner(
-		func(lines []string) { op.Summary = parsers.JoinDropLast(lines) },     // setTitle
-		func(lines []string) { op.Description = parsers.JoinDropLast(lines) }, // setDescription
-	)
 
-	if err := sp.Parse(o.path.Remaining); err != nil {
-		return fmt.Errorf("operation (%s): %w", op.ID, err)
-	}
-	if err := sp.UnmarshalSpec(op.UnmarshalJSON); err != nil {
+	if err := o.applyBlockToOperation(op); err != nil {
 		return fmt.Errorf("operation (%s): %w", op.ID, err)
 	}
 
@@ -54,22 +59,20 @@ func (o *Builder) Build(tgt *oaispec.Paths) error {
 	return nil
 }
 
-// assignOrReuse either reuses an existing operation (if the ID matches)
-// or assigns op to the slot.
-//
-// TODO(claude): rewrite without double indirection.
-func assignOrReuse(slot **oaispec.Operation, op *oaispec.Operation, id string) *oaispec.Operation {
-	if *slot != nil && id == (*slot).ID {
-		return *slot
-	}
-	*slot = op
-	return op
-}
-
 func SetPathOperation(method, id string, pthObj *oaispec.PathItem, op *oaispec.Operation) *oaispec.Operation {
 	return setPathOperation(method, id, pthObj, op)
 }
 
+// setPathOperation lands op on the HTTP-verb slot of pthObj. Returns
+// the operation now occupying the slot — either the reused existing
+// one or op itself. Unrecognised methods leave pthObj untouched and
+// return op verbatim.
+//
+// # Details
+//
+// See [§path-operation-slot](./README.md#path-operation-slot) for the
+// slot-reuse contract, the nil-op allocation behaviour, and the
+// public `SetPathOperation` re-export used by sibling packages.
 func setPathOperation(method, id string, pthObj *oaispec.PathItem, op *oaispec.Operation) *oaispec.Operation {
 	if op == nil {
 		op = new(oaispec.Operation)
@@ -78,19 +81,40 @@ func setPathOperation(method, id string, pthObj *oaispec.PathItem, op *oaispec.O
 
 	switch strings.ToUpper(method) {
 	case "GET":
-		op = assignOrReuse(&pthObj.Get, op, id)
+		if pthObj.Get == nil || pthObj.Get.ID != id {
+			pthObj.Get = op
+		}
+		return pthObj.Get
 	case "POST":
-		op = assignOrReuse(&pthObj.Post, op, id)
+		if pthObj.Post == nil || pthObj.Post.ID != id {
+			pthObj.Post = op
+		}
+		return pthObj.Post
 	case "PUT":
-		op = assignOrReuse(&pthObj.Put, op, id)
+		if pthObj.Put == nil || pthObj.Put.ID != id {
+			pthObj.Put = op
+		}
+		return pthObj.Put
 	case "PATCH":
-		op = assignOrReuse(&pthObj.Patch, op, id)
+		if pthObj.Patch == nil || pthObj.Patch.ID != id {
+			pthObj.Patch = op
+		}
+		return pthObj.Patch
 	case "HEAD":
-		op = assignOrReuse(&pthObj.Head, op, id)
+		if pthObj.Head == nil || pthObj.Head.ID != id {
+			pthObj.Head = op
+		}
+		return pthObj.Head
 	case "DELETE":
-		op = assignOrReuse(&pthObj.Delete, op, id)
+		if pthObj.Delete == nil || pthObj.Delete.ID != id {
+			pthObj.Delete = op
+		}
+		return pthObj.Delete
 	case "OPTIONS":
-		op = assignOrReuse(&pthObj.Options, op, id)
+		if pthObj.Options == nil || pthObj.Options.ID != id {
+			pthObj.Options = op
+		}
+		return pthObj.Options
 	}
 
 	return op

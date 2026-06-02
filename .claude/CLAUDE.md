@@ -36,26 +36,33 @@ to builders without direct coupling.
 | `scan_context.go` | `ScanCtx` / `NewScanCtx` — loads Go packages via `golang.org/x/tools/go/packages` |
 | `index.go` | `TypeIndex` — node classification (meta/route/operation/model/parameters/response) |
 | `declaration.go` | `EntityDecl` — wraps a type/value declaration with its enclosing file/package |
+| `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |
 
-### `internal/parsers/` — comment-block parsing engine
+### `internal/parsers/` — scanner classification + helpers
+
+Post grammar-migration (P6.3), `parsers/` is intentionally scanner-only. The
+old regex-based comment-block parsing engine is gone; what remains are
+classification helpers used by the scanner and builders, plus subpackages
+for the grammar parser and its satellite helpers.
+
+**Root — scanner classification**
 
 | File | Contents |
 |------|----------|
-| `sectioned_parser.go` | The section-driven parser that walks title/description/annotation blocks |
-| `parsers.go`, `parsers_helpers.go` | Dispatch + helpers for tag/package filtering, value extraction |
-| `tag_parsers.go`, `matchers.go` | Tag recognisers (`TypeName`, `Model`, etc.) |
-| `regexprs.go` | Shared regular expressions for annotation parsing |
-| `meta.go` | Swagger info-block parsing (title, version, license, contact) |
-| `responses.go`, `route_params.go` | Response / route-parameter annotation parsing |
-| `validations.go`, `extensions.go` | Validation directives, `x-*` extensions |
-| `enum.go`, `security.go` | Enum extraction from Go constants, security-definition blocks |
-| `yaml_parser.go`, `yaml_spec_parser.go` | Embedded-YAML parsing for `swagger:operation` bodies |
-| `lines.go`, `parsed_path_content.go` | Comment-line and path-content helpers |
-| `errors.go` | Sentinel errors |
+| `matchers.go` | `ExtractAnnotation`, `ModelOverride`, `ResponseOverride`, `ParametersOverride` — the scanner-level annotation classifiers |
+| `regexprs.go` | Regex definitions backing the matchers + `rxRoute` / `rxOperation` for the path-annotation parsers |
+| `parsed_path_content.go` | `ParsedPathContent` + `ParseOperationPathAnnotation` / `ParseRoutePathAnnotation` |
+
+**Subpackages**
+
+| Package | Role |
+|---------|------|
+| `grammar/` | The grammar parser — `NewParser`, `Block`, `Property`, keyword tables |
+| `yaml/` | YAML sub-parser used by grammar's typed-extensions surface and by operation / meta body unmarshal |
 
 ### `internal/builders/` — Swagger object construction
 
-Each sub-package owns one concern and a `taggers.go` file wiring parsers to its targets.
+Each sub-package owns one concern; `walker.go` carries the per-block grammar dispatch.
 
 | Package | Contents |
 |---------|----------|
@@ -64,9 +71,11 @@ Each sub-package owns one concern and a `taggers.go` file wiring parsers to its 
 | `operations` | Operation (route handler) annotation parsing |
 | `parameters` | Parameter annotation parsing |
 | `responses` | Response annotation parsing |
-| `routes` | Route/path discovery and matching |
-| `items` | Array-item targets (typable + validations, no own annotations) |
-| `resolvers` | `SwaggerSchemaForType`, identity/assertion helpers shared by builders |
+| `routes` | Route/path discovery + body parsers (`body_params.go`, `body_responses.go`) |
+| `common` | `*common.Builder` embedded by every per-decl builder; `SchemesList` + `SecurityRequirements` shared by routes/spec |
+| `handlers` | Walker callback factories shared across schema/parameters/responses (`Number`, `Integer`, `UniqueBool`, `PatternString`, …) |
+| `resolvers` | `SwaggerSchemaForType`, identity/assertion helpers, items-chain ifaces adapters (`ItemsTypable` / `ItemsValidations`) shared by builders |
+| `validations` | Type-aware coercion / shape-check primitives (`CoerceEnum`, `ParseDefault`, `IsLegalForType`) |
 
 ### `internal/ifaces/` — cross-package interfaces
 

@@ -1,0 +1,43 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets/{id}": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Get a pet by id.",
+        "operationId": "getPet",
+        "responses": {
+          "200": {
+            "description": "the pet as returned",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "404": {
+            "description": "not found"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-responses-tagged-body"
+    }
+  }
+}

@@ -66,16 +66,6 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
-    "EnvelopeAlias2": {
-      "type": "object",
-      "title": "EnvelopeAlias2 aliases EnvelopeAlias (alias-of-alias).",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/PayloadAlias"
-        }
-      },
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
-    },
     "Payload": {
       "type": "object",
       "title": "Payload is the canonical struct referenced by aliases.",
@@ -150,6 +140,7 @@
     },
     "exportedParams": {
       "type": "object",
+      "title": "exportedParams is the backing struct for an aliased swagger:parameters.",
       "required": [
         "data"
       ],
@@ -169,7 +160,7 @@
     "aliasedResponse": {
       "description": "AliasedResponse has a body field whose type is an alias chain.",
       "schema": {
-        "$ref": "#/definitions/EnvelopeAlias2"
+        "$ref": "#/definitions/ResponseEnvelope"
       }
     },
     "namedTopResponse": {

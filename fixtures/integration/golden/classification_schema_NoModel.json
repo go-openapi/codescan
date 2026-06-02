@@ -251,7 +251,6 @@
         "description": "the name for this user",
         "type": "integer",
         "format": "int64",
-        "minLength": 3,
         "x-go-name": "UserID"
       }
     },

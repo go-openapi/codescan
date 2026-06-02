@@ -255,10 +255,11 @@ func testSpecialTypesStruct(t *testing.T, sp *oaispec.Swagger) {
 			})
 		})
 
-		t.Run("a json.RawMessage should be recognized and render as an object (yes this is wrong)", func(t *testing.T) {
+		t.Run("a json.RawMessage should be recognized and render as an empty schema (any type)", func(t *testing.T) {
 			m, ok := props["Message"]
 			require.TrueT(t, ok)
-			require.TrueT(t, m.Type.Contains("object"))
+			assert.EqualT(t, 0, len(m.Type), "Message should have no type — empty schema models 'any'")
+			assert.EqualT(t, "", m.Format)
 		})
 
 		t.Run("type time.Duration is not recognized as a special type and should just render as a ref", func(t *testing.T) {

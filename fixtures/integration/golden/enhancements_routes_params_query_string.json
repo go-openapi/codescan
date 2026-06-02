@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Search items by tag.",
+        "operationId": "searchItems",
+        "parameters": [
+          {
+            "pattern": "^[a-z]+$",
+            "type": "string",
+            "format": "byte",
+            "description": "tag to filter by",
+            "name": "tag",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

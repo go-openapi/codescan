@@ -1,0 +1,62 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets/{id}": {
+      "put": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Update a pet identified by id.",
+        "operationId": "updatePet",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "pet identifier",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "default": false,
+            "description": "validate without persisting",
+            "name": "dryRun",
+            "in": "query"
+          },
+          {
+            "description": "updated pet",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-params-multiple"
+    }
+  }
+}

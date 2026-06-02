@@ -30,12 +30,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// You can get the pets that are out of stock
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//
@@ -93,12 +93,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// lists orders filtered by some parameters.
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//
@@ -133,12 +133,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// create an order based on the parameters.
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//
@@ -169,12 +169,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// gets the details for an order.
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//
@@ -195,12 +195,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// When the order doesn't exist this will return an error.
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//
@@ -219,12 +219,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// delete a particular order.
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//
@@ -243,12 +243,12 @@ func ServeAPI(host, basePath string, schemes []string) error {
 	// Allow some params with constraints.
 	//
 	// Consumes:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Produces:
-	// application/json
-	// application/x-protobuf
+	// - application/json
+	// - application/x-protobuf
 	//
 	// Schemes: http, https, ws, wss
 	//

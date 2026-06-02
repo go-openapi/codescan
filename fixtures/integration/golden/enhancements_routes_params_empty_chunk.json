@@ -1,0 +1,19 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/empty": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Endpoint with an empty parameter chunk.",
+        "operationId": "emptyChunkOp",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/matrix": {
+      "post": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Submit a matrix of items.",
+        "operationId": "submitMatrix",
+        "parameters": [
+          {
+            "description": "nested grid of items",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Item"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Item": {
+      "type": "object",
+      "title": "Item is one item.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-params-body-array-nested"
+    }
+  }
+}

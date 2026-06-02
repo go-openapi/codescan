@@ -25,11 +25,18 @@ const (
 // code assertions to be explicit about the various expectations when entering a function
 
 func MustNotBeABuiltinType(o *types.TypeName) {
-	if o.Pkg() != nil {
+	if o != nil && o.Pkg() != nil {
 		return
 	}
 
-	panic(fmt.Errorf("type %q expected not to be a builtin: %w", o.Name(), ErrInternal))
+	var name string
+	if o != nil {
+		name = o.Name()
+	} else {
+		name = "<nil>"
+	}
+
+	panic(fmt.Errorf("type %q expected not to be a builtin: %w", name, ErrInternal))
 }
 
 func MustHaveRightHandSide(a *types.Alias) {
@@ -38,6 +45,14 @@ func MustHaveRightHandSide(a *types.Alias) {
 	}
 
 	panic(fmt.Errorf("type alias %q expected to declare a right-hand-side: %w", a.Obj().Name(), ErrInternal))
+}
+
+func MustBeAType(tpe types.TypeAndValue) {
+	if tpe.IsType() {
+		return
+	}
+
+	panic(fmt.Errorf("declaration is not a type: %v: %w", tpe, ErrInternal))
 }
 
 // IsFieldStringable check if the field type is a scalar. If the field type is
@@ -60,21 +75,22 @@ func IsFieldStringable(tpe ast.Expr) bool {
 }
 
 func IsTextMarshaler(tpe types.Type) bool {
-	encodingPkg, err := importer.Default().Import("encoding")
+	encoding, err := importer.Default().Import("encoding")
 	if err != nil {
 		return false
 	}
-	// Proposal for enhancement: there should be a better way to check this than hardcoding the TextMarshaler iface.
-	obj := encodingPkg.Scope().Lookup("TextMarshaler")
-	if obj == nil {
+
+	iface := encoding.Scope().Lookup("TextMarshaler")
+	if iface == nil {
 		return false
 	}
-	ifc, ok := obj.Type().Underlying().(*types.Interface)
+
+	asInterface, ok := iface.Type().Underlying().(*types.Interface)
 	if !ok {
 		return false
 	}
 
-	return types.Implements(tpe, ifc)
+	return types.Implements(tpe, asInterface)
 }
 
 func IsStdTime(o *types.TypeName) bool {
@@ -95,6 +111,20 @@ func IsAny(o *types.TypeName) bool {
 
 func AddExtension(ve *oaispec.VendorExtensible, key string, value any, skip bool) {
 	if skip {
+		return
+	}
+
+	// handle synonyms
+	if (key != "x-nullable" && key != "x-isnullable") || len(ve.Extensions) == 0 {
+		ve.AddExtension(key, value)
+
+		return
+	}
+
+	if _, ok := ve.Extensions["x-nullable"]; ok {
+		return
+	}
+	if _, ok := ve.Extensions["x-isnullable"]; ok {
 		return
 	}
 

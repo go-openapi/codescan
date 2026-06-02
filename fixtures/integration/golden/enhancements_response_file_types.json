@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "responses": {
+    "fileBodyResponse": {
+      "description": "FileBodyResponse is the legitimate case: the response IS a file.\n`swagger:file` on the Body field with `in: body` rewrites\nresp.Schema to {file, \"\"} and skips the field build.",
+      "schema": {
+        "type": "file"
+      }
+    },
+    "fileOnHeaderResponse": {
+      "description": "FileOnHeaderResponse exercises the Q3 misuse: `swagger:file` on\na header-positioned field. Post-fix the diagnostic fires and\nthe field falls through to the normal build, surfacing as a\nregular header (typed as string here).",
+      "headers": {
+        "X-Misplaced": {
+          "type": "string",
+          "description": "Misplaced has both `in: header` and `swagger:file`. The\nscanner diagnoses and treats it as a normal header."
+        }
+      }
+    },
+    "fileOnImplicitDefaultResponse": {
+      "description": "FileOnImplicitDefaultResponse — `swagger:file` on a field with\nno `in:` line. After Q1 the implicit default is header, so this\nis also a misuse. Same diagnostic fires; field becomes a header.",
+      "headers": {
+        "X-Implicit": {
+          "type": "string",
+          "description": "Implicit has only `swagger:file` — no `in:` line at all.\nQ1's implicit-header default applies; Q3's gate diagnoses."
+        }
+      }
+    }
+  }
+}

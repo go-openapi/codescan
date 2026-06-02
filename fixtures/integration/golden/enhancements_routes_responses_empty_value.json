@@ -1,0 +1,22 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items/{id}": {
+      "delete": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Delete an item.",
+        "operationId": "deleteItemEmpty",
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "not found"
+          }
+        }
+      }
+    }
+  }
+}

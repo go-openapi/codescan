@@ -1,0 +1,55 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "responses": {
+    "allHeadersResponse": {
+      "description": "AllHeadersResponse — every field becomes a header. Etag carries\nno `in:` line at all (default); RateLimit carries an explicit\n`in: header` (parity with existing fixtures).",
+      "headers": {
+        "ETag": {
+          "type": "string",
+          "description": "Etag carries an HTTP entity tag for cache validation.\nNo `in:` line — defaults to header (Q1 fix)."
+        },
+        "X-Rate-Limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "RateLimit advertises the remaining quota."
+        }
+      }
+    },
+    "emptyResponse": {
+      "description": "EmptyResponse — empty Go struct with a swagger:response\nannotation. Produces a response with description only; no Headers\nmap, no Schema."
+    },
+    "invalidInResponse": {
+      "description": "InvalidInResponse — non-vocabulary `in:` value. The scanner emits\na CodeInvalidAnnotation warning naming the bad value, then falls\nback to the default (header).",
+      "headers": {
+        "Cookie": {
+          "type": "string",
+          "description": "Cookie carries a session cookie. The `in: cookie` line is\nnot in the OAS v2 vocabulary; the scanner warns and treats\nthe field as a header anyway."
+        }
+      }
+    },
+    "mixedResponse": {
+      "description": "MixedResponse — body field plus headers (implicit + explicit).",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      },
+      "headers": {
+        "X-Limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Limit advertises the remaining quota."
+        },
+        "X-Tag": {
+          "type": "string",
+          "description": "Tag is a tracing tag. Implicit header (no `in:`)."
+        }
+      }
+    }
+  }
+}

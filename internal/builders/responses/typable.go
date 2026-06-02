@@ -4,20 +4,21 @@
 package responses
 
 import (
-	"github.com/go-openapi/codescan/internal/builders/items"
+	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/parsers"
 	oaispec "github.com/go-openapi/spec"
 )
-
-var _ ifaces.ValidationBuilder = &headerValidations{}
 
 type responseTypable struct {
 	in       string
 	header   *oaispec.Header
 	response *oaispec.Response
 	skipExt  bool
+
+	// refAttempted: caller-owned flag flipped when SetRef is called
+	// under non-body mode. See [§typable](./README.md#typable).
+	refAttempted *bool
 }
 
 func (ht responseTypable) In() string { return ht.in }
@@ -41,12 +42,20 @@ func (ht responseTypable) Items() ifaces.SwaggerTypable { //nolint:ireturn // po
 
 	ht.header.Type = "array"
 
-	return items.NewTypable(ht.header.Items, 1, "header")
+	return resolvers.NewItemsTypable(ht.header.Items, 1, "header")
 }
 
+// SetRef writes the ref onto the body schema in body mode; under
+// non-body it no-ops and flips refAttempted (Q2). See
+// [§typable](./README.md#typable).
 func (ht responseTypable) SetRef(ref oaispec.Ref) {
-	// having trouble seeing the usefulness of this one here
-	ht.Schema().Ref = ref
+	if ht.in == inBody {
+		ht.Schema().Ref = ref
+		return
+	}
+	if ht.refAttempted != nil {
+		*ht.refAttempted = true
+	}
 }
 
 func (ht responseTypable) Schema() *oaispec.Schema {
@@ -69,56 +78,21 @@ func (ht responseTypable) WithEnumDescription(_ string) {
 	// no
 }
 
-type headerValidations struct {
-	current *oaispec.Header
+// SimpleSchemaShape satisfies schema.SimpleSchemaProbe (non-body
+// path; body uses WithType). See [§typable](./README.md#typable).
+func (ht responseTypable) SimpleSchemaShape() *oaispec.SimpleSchema {
+	return &ht.header.SimpleSchema
 }
 
-func (sv headerValidations) SetMaximum(val float64, exclusive bool) {
-	sv.current.Maximum = &val
-	sv.current.ExclusiveMaximum = exclusive
+// HasRef satisfies schema.SimpleSchemaProbe. True when a non-body
+// SetRef attempt was recorded — the exit validator emits
+// CodeUnsupportedInSimpleSchema. See [§typable](./README.md#typable).
+func (ht responseTypable) HasRef() bool {
+	return ht.refAttempted != nil && *ht.refAttempted
 }
 
-func (sv headerValidations) SetMinimum(val float64, exclusive bool) {
-	sv.current.Minimum = &val
-	sv.current.ExclusiveMinimum = exclusive
+// ResetForViolation satisfies schema.SimpleSchemaProbe. Wipes the
+// header's SimpleSchema back to `{}`.
+func (ht responseTypable) ResetForViolation() {
+	ht.header.SimpleSchema = oaispec.SimpleSchema{}
 }
-
-func (sv headerValidations) SetMultipleOf(val float64) {
-	sv.current.MultipleOf = &val
-}
-
-func (sv headerValidations) SetMinItems(val int64) {
-	sv.current.MinItems = &val
-}
-
-func (sv headerValidations) SetMaxItems(val int64) {
-	sv.current.MaxItems = &val
-}
-
-func (sv headerValidations) SetMinLength(val int64) {
-	sv.current.MinLength = &val
-}
-
-func (sv headerValidations) SetMaxLength(val int64) {
-	sv.current.MaxLength = &val
-}
-
-func (sv headerValidations) SetPattern(val string) {
-	sv.current.Pattern = val
-}
-
-func (sv headerValidations) SetUnique(val bool) {
-	sv.current.UniqueItems = val
-}
-
-func (sv headerValidations) SetCollectionFormat(val string) {
-	sv.current.CollectionFormat = val
-}
-
-func (sv headerValidations) SetEnum(val string) {
-	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
-}
-
-func (sv headerValidations) SetDefault(val any) { sv.current.Default = val }
-
-func (sv headerValidations) SetExample(val any) { sv.current.Example = val }

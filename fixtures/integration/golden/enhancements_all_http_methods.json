@@ -10,7 +10,7 @@
         "operationId": "getItem",
         "responses": {
           "200": {
-            "description": " OK"
+            "description": "OK"
           }
         }
       },
@@ -22,7 +22,7 @@
         "operationId": "putItem",
         "responses": {
           "200": {
-            "description": " OK"
+            "description": "OK"
           }
         }
       },
@@ -34,7 +34,7 @@
         "operationId": "postItem",
         "responses": {
           "201": {
-            "description": " Created"
+            "description": "Created"
           }
         }
       },
@@ -46,7 +46,7 @@
         "operationId": "deleteItem",
         "responses": {
           "204": {
-            "description": " No Content"
+            "description": "No Content"
           }
         }
       },
@@ -58,7 +58,7 @@
         "operationId": "optionsItem",
         "responses": {
           "200": {
-            "description": " OK"
+            "description": "OK"
           }
         }
       },
@@ -70,7 +70,7 @@
         "operationId": "headItem",
         "responses": {
           "200": {
-            "description": " OK"
+            "description": "OK"
           }
         }
       },
@@ -82,7 +82,7 @@
         "operationId": "patchItem",
         "responses": {
           "200": {
-            "description": " OK"
+            "description": "OK"
           }
         }
       }

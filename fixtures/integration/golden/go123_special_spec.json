@@ -124,9 +124,7 @@
           "type": "string",
           "x-go-type": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special.IsATextMarshaler"
         },
-        "Message": {
-          "type": "object"
-        },
+        "Message": {},
         "NamedArray": {
           "$ref": "#/definitions/go_array"
         },

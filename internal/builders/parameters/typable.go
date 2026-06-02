@@ -4,14 +4,11 @@
 package parameters
 
 import (
-	"github.com/go-openapi/codescan/internal/builders/items"
+	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/parsers"
 	oaispec "github.com/go-openapi/spec"
 )
-
-var _ ifaces.OperationValidationBuilder = &paramValidations{}
 
 type paramTypable struct {
 	param   *oaispec.Parameter
@@ -41,7 +38,7 @@ func (pt paramTypable) Items() ifaces.SwaggerTypable { //nolint:ireturn // polym
 		pt.param.Items = new(oaispec.Items)
 	}
 	pt.param.Type = "array"
-	return items.NewTypable(pt.param.Items, 1, pt.param.In)
+	return resolvers.NewItemsTypable(pt.param.Items, 1, pt.param.In)
 }
 
 func (pt paramTypable) Schema() *oaispec.Schema {
@@ -70,32 +67,24 @@ func (pt paramTypable) WithEnumDescription(desc string) {
 	if desc == "" {
 		return
 	}
-	pt.param.AddExtension(parsers.EnumDescExtension(), desc)
+	pt.param.AddExtension(resolvers.ExtEnumDesc, desc)
 }
 
-type paramValidations struct {
-	current *oaispec.Parameter
+// SimpleSchemaShape satisfies schema.SimpleSchemaProbe. See
+// [§typable](./README.md#typable).
+func (pt paramTypable) SimpleSchemaShape() *oaispec.SimpleSchema {
+	return &pt.param.SimpleSchema
 }
 
-func (sv paramValidations) SetMaximum(val float64, exclusive bool) {
-	sv.current.Maximum = &val
-	sv.current.ExclusiveMaximum = exclusive
+// HasRef satisfies schema.SimpleSchemaProbe. SimpleSchema forbids
+// $ref; a non-empty Ref signals a violation.
+func (pt paramTypable) HasRef() bool {
+	return pt.param.Ref.String() != ""
 }
 
-func (sv paramValidations) SetMinimum(val float64, exclusive bool) {
-	sv.current.Minimum = &val
-	sv.current.ExclusiveMinimum = exclusive
+// ResetForViolation satisfies schema.SimpleSchemaProbe. Wipes
+// SimpleSchema and Ref back to empty.
+func (pt paramTypable) ResetForViolation() {
+	pt.param.SimpleSchema = oaispec.SimpleSchema{}
+	pt.param.Ref = oaispec.Ref{}
 }
-func (sv paramValidations) SetMultipleOf(val float64)      { sv.current.MultipleOf = &val }
-func (sv paramValidations) SetMinItems(val int64)          { sv.current.MinItems = &val }
-func (sv paramValidations) SetMaxItems(val int64)          { sv.current.MaxItems = &val }
-func (sv paramValidations) SetMinLength(val int64)         { sv.current.MinLength = &val }
-func (sv paramValidations) SetMaxLength(val int64)         { sv.current.MaxLength = &val }
-func (sv paramValidations) SetPattern(val string)          { sv.current.Pattern = val }
-func (sv paramValidations) SetUnique(val bool)             { sv.current.UniqueItems = val }
-func (sv paramValidations) SetCollectionFormat(val string) { sv.current.CollectionFormat = val }
-func (sv paramValidations) SetEnum(val string) {
-	sv.current.Enum = parsers.ParseEnum(val, &oaispec.SimpleSchema{Type: sv.current.Type, Format: sv.current.Format})
-}
-func (sv paramValidations) SetDefault(val any) { sv.current.Default = val }
-func (sv paramValidations) SetExample(val any) { sv.current.Example = val }

@@ -1,0 +1,28 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "listItemsUnknown",
+        "parameters": [
+          {
+            "minimum": 1,
+            "type": "integer",
+            "description": "max results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

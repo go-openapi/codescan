@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "post": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Create a pet with author-asserted schema constraints.",
+        "operationId": "createPetWithOverrides",
+        "parameters": [
+          {
+            "description": "pet to create",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "format": "special",
+              "maximum": 999,
+              "minimum": 0,
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet on offer.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/routes-params-body-with-schema-validations"
+    }
+  }
+}

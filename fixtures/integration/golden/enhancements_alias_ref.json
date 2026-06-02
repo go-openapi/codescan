@@ -66,6 +66,7 @@
     },
     "exportedParams": {
       "type": "object",
+      "title": "exportedParams is the backing struct for an aliased swagger:parameters.",
       "required": [
         "data"
       ],

@@ -6,27 +6,14 @@ package parsers
 import (
 	"go/ast"
 	"regexp"
-	"slices"
 	"strings"
-
-	"github.com/go-openapi/codescan/internal/ifaces"
 )
 
 const minMatchCount = 2
 
-func HasAnnotation(line string) bool {
-	return rxSwaggerAnnotation.MatchString(line)
-}
-
-func IsAliasParam(prop ifaces.SwaggerTypable) bool {
-	in := prop.In()
-	return in == "query" || in == "path" || in == "formData"
-}
-
-func IsAllowedExtension(ext string) bool {
-	return rxAllowedExtensions.MatchString(ext)
-}
-
+// ExtractAnnotation returns the trailing identifier of a `swagger:<name>`
+// marker found anywhere on line, or ("", false) if no marker is
+// present. Used by the scanner's annotation-classification index.
 func ExtractAnnotation(line string) (string, bool) {
 	matches := rxSwaggerAnnotation.FindStringSubmatch(line)
 	if len(matches) < minMatchCount {
@@ -36,100 +23,32 @@ func ExtractAnnotation(line string) (string, bool) {
 	return matches[1], true
 }
 
-func AllOfMember(comments *ast.CommentGroup) bool {
-	return commentMatcher(rxAllOf)(comments)
-}
-
-func FileParam(comments *ast.CommentGroup) bool {
-	return commentMatcher(rxFileUpload)(comments)
-}
-
-func Ignored(comments *ast.CommentGroup) bool {
-	return commentMatcher(rxIgnoreOverride)(comments)
-}
-
-func AliasParam(comments *ast.CommentGroup) bool {
-	return commentMatcher(rxAlias)(comments)
-}
-
-func StrfmtName(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxStrFmt)(comments)
-}
-
-func ParamLocation(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxIn)(comments)
-}
-
-func EnumName(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxEnum)(comments)
-}
-
-func AllOfName(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxAllOf)(comments)
-}
-
-func NameOverride(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxName)(comments)
-}
-
-func DefaultName(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxDefault)(comments)
-}
-
-func TypeName(comments *ast.CommentGroup) (string, bool) {
-	return commentSubMatcher(rxType)(comments)
-}
-
+// ModelOverride returns the name argument of a `swagger:model <name>`
+// marker found anywhere in comments, or ("", true) when the marker
+// is present without an argument (bare `swagger:model`). Returns
+// ("", false) when no marker is found.
 func ModelOverride(comments *ast.CommentGroup) (string, bool) {
 	return commentBlankSubMatcher(rxModelOverride)(comments)
 }
 
+// ResponseOverride returns the name argument of a `swagger:response
+// <name>` marker, matching the bare-marker semantics of ModelOverride.
 func ResponseOverride(comments *ast.CommentGroup) (string, bool) {
 	return commentBlankSubMatcher(rxResponseOverride)(comments)
 }
 
+// ParametersOverride returns every operation-id reference attached to
+// a `swagger:parameters` marker. One marker can carry several
+// operation ids; multiple markers across comments accumulate.
 func ParametersOverride(comments *ast.CommentGroup) ([]string, bool) {
 	return commentMultipleSubMatcher(rxParametersOverride)(comments)
 }
 
-func commentMatcher(rx *regexp.Regexp) func(*ast.CommentGroup) bool {
-	return func(comments *ast.CommentGroup) bool {
-		if comments == nil {
-			return false
-		}
-
-		return slices.ContainsFunc(comments.List, func(cmt *ast.Comment) bool {
-			for ln := range strings.SplitSeq(cmt.Text, "\n") {
-				if rx.MatchString(ln) {
-					return true
-				}
-			}
-
-			return false
-		})
-	}
-}
-
-func commentSubMatcher(rx *regexp.Regexp) func(*ast.CommentGroup) (string, bool) {
-	return func(comments *ast.CommentGroup) (string, bool) {
-		if comments == nil {
-			return "", false
-		}
-
-		for _, cmt := range comments.List {
-			for ln := range strings.SplitSeq(cmt.Text, "\n") {
-				matches := rx.FindStringSubmatch(ln)
-				if len(matches) > 1 && len(strings.TrimSpace(matches[1])) > 0 {
-					return strings.TrimSpace(matches[1]), true
-				}
-			}
-		}
-
-		return "", false
-	}
-}
-
-// same as commentSubMatcher but returns true if a bare annotation is found, even without an empty submatch.
+// commentBlankSubMatcher returns a matcher that searches comments for
+// any line matching rx and returns the first non-blank submatch.
+// When the marker is present but carries no argument, returns
+// ("", true) so callers can distinguish "no marker" from "bare
+// marker." See ModelOverride / ResponseOverride.
 func commentBlankSubMatcher(rx *regexp.Regexp) func(*ast.CommentGroup) (string, bool) {
 	return func(comments *ast.CommentGroup) (string, bool) {
 		if comments == nil {
@@ -153,6 +72,9 @@ func commentBlankSubMatcher(rx *regexp.Regexp) func(*ast.CommentGroup) (string, 
 	}
 }
 
+// commentMultipleSubMatcher returns a matcher that collects every
+// non-blank submatch from comments, splitting whitespace-separated
+// arguments into individual entries. See ParametersOverride.
 func commentMultipleSubMatcher(rx *regexp.Regexp) func(*ast.CommentGroup) ([]string, bool) {
 	return func(comments *ast.CommentGroup) ([]string, bool) {
 		if comments == nil {

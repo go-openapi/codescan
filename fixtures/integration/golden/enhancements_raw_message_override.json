@@ -1,0 +1,73 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AsArray": {
+      "type": "array",
+      "title": "AsArray (case B.2) — named wrapper with `swagger:type array`.",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/raw-message-override"
+    },
+    "AsObject": {
+      "description": "AsObject (case B.1) — named wrapper of json.RawMessage with\n`swagger:type object`. The classifier overrides the recognizer\nbecause IsStdJSONRawMessage checks for encoding/json.RawMessage\nidentity; the wrapper has its own package path and does NOT\nmatch. The classifier on the slice arm fires instead.",
+      "type": "object",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/raw-message-override"
+    },
+    "FieldLevelContainer": {
+      "description": "FieldLevelContainer (case C) — exercises field-level\n`swagger:type` on plain json.RawMessage fields. The field-level\nwalker (scanFieldDoc) consumes swagger:type and applyFieldCarrier\napplies it after buildFromType, so the user override beats the\nRawMessage recognizer's empty-schema default.",
+      "type": "object",
+      "properties": {
+        "arr": {
+          "description": "Overridden to {type: array, items: {integer, uint8}} via\nfield-level swagger:type. \"array\" isn't a known SwaggerSchemaForType\nvalue, so the override falls back to building from Underlying()\n(= []byte) which yields the byte-typed array shape.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8"
+          },
+          "x-go-name": "Arr"
+        },
+        "obj": {
+          "description": "Overridden to {type: object} via field-level swagger:type.",
+          "type": "object",
+          "x-go-name": "Obj"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/raw-message-override"
+    },
+    "PlainContainer": {
+      "type": "object",
+      "title": "PlainContainer (case A) — bare json.RawMessage field, no overrides.",
+      "properties": {
+        "payload": {
+          "description": "Should emit an empty schema (`{}`).",
+          "x-go-name": "Payload"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/raw-message-override"
+    },
+    "TypedContainer": {
+      "type": "object",
+      "title": "TypedContainer (case B field reference) — references the wrappers.",
+      "properties": {
+        "arr": {
+          "description": "Wrapped via AsArray — expect `{$ref: AsArray}` whose definition\nresolves to a typed array shape.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8"
+          },
+          "x-go-name": "Arr"
+        },
+        "obj": {
+          "description": "Wrapped via AsObject — expect `{$ref: AsObject}` whose definition\nresolves to `{type: object}` (the classifier wins on the decl).",
+          "type": "object",
+          "x-go-name": "Obj"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/raw-message-override"
+    }
+  }
+}

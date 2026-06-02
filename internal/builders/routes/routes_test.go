@@ -18,13 +18,24 @@ const epsilon = 1e-9
 
 func TestRoutesParser(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
+	// M6.5-C requires ref resolution to succeed (Q22 strictness):
+	// untagged response names must be present in either the responses
+	// map or the definitions map, otherwise the dangling ref is
+	// diagnosed and dropped. Seed the responses map with the names
+	// the classification fixture's routes reference inline.
+	responses := map[string]oaispec.Response{
+		"genericError":    {},
+		"someResponse":    {},
+		"validationError": {},
+		"fileResponse":    {},
+		"resp":            {},
+	}
 	var ops oaispec.Paths
 	for apiPath := range sctx.Routes() {
-		prs := &Builder{
-			ctx:        sctx,
-			route:      apiPath,
-			operations: make(map[string]*oaispec.Operation),
-		}
+		prs := NewBuilder(sctx, apiPath, Inputs{
+			Operations: make(map[string]*oaispec.Operation),
+			Responses:  responses,
+		})
 		require.NoError(t, prs.Build(&ops))
 	}
 
@@ -32,7 +43,7 @@ func TestRoutesParser(t *testing.T) {
 
 	po, ok := ops.Paths["/pets"]
 	ext := make(oaispec.Extensions)
-	ext.Add("x-some-flag", "true")
+	ext.Add("x-some-flag", true)
 	assert.TrueT(t, ok)
 	assert.NotNil(t, po.Get)
 	assertOperation(t,
@@ -56,8 +67,8 @@ func TestRoutesParser(t *testing.T) {
 
 	po, ok = ops.Paths["/orders"]
 	ext = make(oaispec.Extensions)
-	ext.Add("x-some-flag", "false")
-	ext.Add("x-some-list", []string{"item1", "item2", "item3"})
+	ext.Add("x-some-flag", false)
+	ext.Add("x-some-list", []any{"item1", "item2", "item3"})
 	ext.Add("x-some-object", map[string]any{
 		"key1": "value1",
 		"key2": "value2",
@@ -143,11 +154,9 @@ func TestRoutesParserBody(t *testing.T) {
 	require.NoError(t, err)
 	var ops oaispec.Paths
 	for apiPath := range sctx.Routes() {
-		prs := &Builder{
-			ctx:        sctx,
-			route:      apiPath,
-			operations: make(map[string]*oaispec.Operation),
-		}
+		prs := NewBuilder(sctx, apiPath, Inputs{
+			Operations: make(map[string]*oaispec.Operation),
+		})
 		require.NoError(t, prs.Build(&ops))
 	}
 
@@ -282,16 +291,20 @@ func validateRoutesParameters(t *testing.T, ops oaispec.Paths) {
 	assert.InDelta(t, def, p.Default, epsilon)
 	assert.Nil(t, p.Schema)
 
-	// Testing array param provided as query string. Testing "minLength" and "maxLength" constraints for "array" types
+	// someQuery — array param. M6.5-C type-gates SimpleSchema
+	// validations: minLength/maxLength apply only to string-typed
+	// schemas (the OAS v2 contract). The legacy routes parser
+	// mis-applied them to arrays; M6.5-C drops them with a
+	// CodeShapeMismatch diagnostic instead. Use `minItems`/`maxItems`
+	// to constrain array length.
 	p = po.Post.Parameters[1]
 	assert.EqualT(t, "someQuery", p.Name)
 	assert.EqualT(t, "some query values", p.Description)
 	assert.EqualT(t, "query", p.In)
 	assert.FalseT(t, p.Required)
 	assert.EqualT(t, "array", p.Type)
-	minLen, maxLen := int64(5), int64(20)
-	assert.Equal(t, &maxLen, p.MaxLength)
-	assert.Equal(t, &minLen, p.MinLength)
+	assert.Nil(t, p.MaxLength)
+	assert.Nil(t, p.MinLength)
 	assert.Nil(t, p.Schema)
 
 	// Testing boolean param with default value

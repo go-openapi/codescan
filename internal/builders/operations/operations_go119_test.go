@@ -25,11 +25,7 @@ func TestIndentedYAMLBlock(t *testing.T) {
 
 	var ops spec.Paths
 	for apiPath := range sctx.Operations() {
-		prs := &Builder{
-			ctx:        sctx,
-			path:       apiPath,
-			operations: make(map[string]*spec.Operation),
-		}
+		prs := NewBuilder(sctx, apiPath, make(map[string]*spec.Operation))
 		require.NoError(t, prs.Build(&ops))
 	}
 

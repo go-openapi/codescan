@@ -11,7 +11,7 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 
-	"github.com/go-openapi/spec"
+	oaispec "github.com/go-openapi/spec"
 )
 
 const (
@@ -45,7 +45,7 @@ func getParameter(sctx *scanner.ScanCtx, nm string) *scanner.EntityDecl {
 
 func TestScanFileParam(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
-	operations := make(map[string]*spec.Operation)
+	operations := make(map[string]*oaispec.Operation)
 	paramNames := []string{
 		"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams",
 		"NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams",
@@ -54,10 +54,7 @@ func TestScanFileParam(t *testing.T) {
 		td := getParameter(sctx, rn)
 		require.NotNil(t, td)
 
-		prs := &ParameterBuilder{
-			ctx:  sctx,
-			decl: td,
-		}
+		prs := NewBuilder(sctx, td)
 		require.NoError(t, prs.Build(operations))
 	}
 	assert.Len(t, operations, 10)
@@ -97,9 +94,65 @@ func TestScanFileParam(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, operations, "classification_params_file.json")
 }
 
+// TestParamsParser_OptionVariants captures (SkipExtensions,
+// DescWithRef) option permutations on the classification operations
+// corpus into separately-named goldens. The same set of parameter
+// names as TestParamsParser is built per combination, exercising the
+// $ref'd-field shape on each option pair:
+//
+//   - Default (false/false): description-only $ref'd fields render
+//     bare (matches v1 strict).
+//   - DescWithRef=true: description-only $ref'd fields render as
+//     single-arm allOf preserving the description.
+//   - SkipExtensions=true: scanner-derived x-go-name suppressed.
+//
+// The matching CompareOrDumpJSON files diverge wherever a $ref'd
+// field carries field-level decoration. Validation overrides keep
+// the allOf wrap regardless.
+func TestParamsParser_OptionVariants(t *testing.T) {
+	cases := []struct {
+		name       string
+		skipExt    bool
+		descRef    bool
+		goldenFile string
+	}{
+		{"default", false, false, "classification_params.json"},
+		{"DescWithRef", false, true, "classification_params_descwithref.json"},
+		{"SkipExt", true, false, "classification_params_skipext.json"},
+		{"SkipExt+DescWithRef", true, true, "classification_params_skipext_descwithref.json"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sctx, err := scanner.NewScanCtx(&scanner.Options{
+				Packages: []string{
+					"./goparsing/classification",
+					"./goparsing/classification/models",
+					"./goparsing/classification/operations",
+				},
+				WorkDir:        scantest.FixturesDir(),
+				SkipExtensions: tc.skipExt,
+				DescWithRef:    tc.descRef,
+			})
+			require.NoError(t, err)
+			operations := make(map[string]*oaispec.Operation)
+			paramNames := []string{
+				"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams",
+				"NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams",
+			}
+			for _, rn := range paramNames {
+				td := getParameter(sctx, rn)
+				require.NotNil(t, td)
+				prs := NewBuilder(sctx, td)
+				require.NoError(t, prs.Build(operations))
+			}
+			scantest.CompareOrDumpJSON(t, operations, tc.goldenFile)
+		})
+	}
+}
+
 func TestParamsParser(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
-	operations := make(map[string]*spec.Operation)
+	operations := make(map[string]*oaispec.Operation)
 	paramNames := []string{
 		"OrderBodyParams", "MultipleOrderParams", "ComplexerOneParams", "NoParams",
 		"NoParamsAlias", "MyFileParams", "MyFuncFileParams", "EmbeddedFileParams",
@@ -107,10 +160,7 @@ func TestParamsParser(t *testing.T) {
 	for _, rn := range paramNames {
 		td := getParameter(sctx, rn)
 
-		prs := &ParameterBuilder{
-			ctx:  sctx,
-			decl: td,
-		}
+		prs := NewBuilder(sctx, td)
 		require.NoError(t, prs.Build(operations))
 	}
 
@@ -154,7 +204,7 @@ func TestParamsParser(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, operations, "classification_params.json")
 }
 
-func assertYetAnotherOperationParams(t *testing.T, operations map[string]*spec.Operation) {
+func assertYetAnotherOperationParams(t *testing.T, operations map[string]*oaispec.Operation) {
 	t.Helper()
 	cr, okParam := operations["yetAnotherOperation"]
 	require.TrueT(t, okParam)
@@ -191,7 +241,7 @@ func assertYetAnotherOperationParams(t *testing.T, operations map[string]*spec.O
 	}
 }
 
-func assertSomeOperationParams(t *testing.T, operations map[string]*spec.Operation) {
+func assertSomeOperationParams(t *testing.T, operations map[string]*oaispec.Operation) {
 	t.Helper()
 	op, okParam := operations["someOperation"]
 	assert.TrueT(t, okParam)
@@ -410,7 +460,7 @@ func assertSomeOperationParams(t *testing.T, operations map[string]*spec.Operati
 	}
 }
 
-func assertAnotherOperationParamOrder(t *testing.T, operations map[string]*spec.Operation) {
+func assertAnotherOperationParamOrder(t *testing.T, operations map[string]*oaispec.Operation) {
 	t.Helper()
 
 	order, ok := operations["anotherOperation"]
@@ -451,7 +501,7 @@ func assertAnotherOperationParamOrder(t *testing.T, operations map[string]*spec.
 	}
 }
 
-func assertSomeAliasOperationParams(t *testing.T, operations map[string]*spec.Operation) {
+func assertSomeAliasOperationParams(t *testing.T, operations map[string]*oaispec.Operation) {
 	t.Helper()
 
 	aliasOp, ok := operations["someAliasOperation"]
@@ -498,18 +548,15 @@ func TestParamsParser_TransparentAliases(t *testing.T) {
 	require.NotNil(t, td)
 
 	// Build the operation map from the transparent alias fixtures.
-	operations := make(map[string]*spec.Operation)
-	prs := &ParameterBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	operations := make(map[string]*oaispec.Operation)
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(operations))
 
 	op, ok := operations["transparentAlias"]
 	require.TrueT(t, ok)
 	require.Len(t, op.Parameters, 2)
 
-	var bodyParam, queryParam *spec.Parameter
+	var bodyParam, queryParam *oaispec.Parameter
 	for i := range op.Parameters {
 		p := &op.Parameters[i]
 		switch p.In {
@@ -543,12 +590,9 @@ func TestParamsParser_TransparentAliases(t *testing.T) {
 
 func TestParameterParser_Issue2007(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
-	operations := make(map[string]*spec.Operation)
+	operations := make(map[string]*oaispec.Operation)
 	td := getParameter(sctx, "SetConfiguration")
-	prs := &ParameterBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(operations))
 
 	op := operations["getConfiguration"]
@@ -567,12 +611,9 @@ func TestParameterParser_Issue2007(t *testing.T) {
 
 func TestParameterParser_Issue2011(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
-	operations := make(map[string]*spec.Operation)
+	operations := make(map[string]*oaispec.Operation)
 	td := getParameter(sctx, "NumPlates")
-	prs := &ParameterBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(operations))
 
 	op := operations["putNumPlate"]
@@ -586,12 +627,9 @@ func TestParameterParser_Issue2011(t *testing.T) {
 
 func TestGo118ParameterParser_Issue2011(t *testing.T) {
 	sctx := scantest.LoadGo118ClassificationPkgsCtx(t)
-	operations := make(map[string]*spec.Operation)
+	operations := make(map[string]*oaispec.Operation)
 	td := getParameter(sctx, "NumPlates")
-	prs := &ParameterBuilder{
-		ctx:  sctx,
-		decl: td,
-	}
+	prs := NewBuilder(sctx, td)
 	require.NoError(t, prs.Build(operations))
 
 	op := operations["putNumPlate"]

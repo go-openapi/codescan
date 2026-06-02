@@ -1,0 +1,31 @@
+{
+  "Item": {
+    "type": "object",
+    "required": [
+      "value1",
+      "value2"
+    ],
+    "properties": {
+      "value1": {
+        "description": "Nullable value",
+        "allOf": [
+          {
+            "$ref": "#/definitions/ValueStruct"
+          }
+        ],
+        "x-nullable": true
+      },
+      "value2": {
+        "description": "Non-nullable value",
+        "allOf": [
+          {
+            "$ref": "#/definitions/ValueStruct"
+          },
+          {
+            "example": "{\"value\": 42}"
+          }
+        ]
+      }
+    }
+  }
+}

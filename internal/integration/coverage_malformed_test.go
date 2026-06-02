@@ -32,20 +32,35 @@ func TestMalformed_ExampleInt(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestMalformed_MetaBadExtensionKey was an error-returning test
+// against the legacy meta validateExtensionNames path. M6.5-E
+// aligns meta extension handling with routes — non-x-* keys emit
+// a CodeInvalidAnnotation diagnostic at grammar parse time and
+// drop, but Run still succeeds. The fixture's bad key ends up
+// absent from the captured golden.
 func TestMalformed_MetaBadExtensionKey(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/meta-bad-ext-key/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "malformed_meta_bad_ext_key.json")
 }
 
+// TestMalformed_InfoBadExtensionKey — see
+// TestMalformed_MetaBadExtensionKey. Same diagnose-and-drop shift,
+// here under the InfoExtensions: keyword.
 func TestMalformed_InfoBadExtensionKey(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/info-bad-ext-key/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "malformed_info_bad_ext_key.json")
 }
 
 func TestMalformed_BadContact(t *testing.T) {
@@ -56,20 +71,36 @@ func TestMalformed_BadContact(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestMalformed_DuplicateBodyTag was an error-returning test against
+// the legacy routes body parser. M6.5-C shifts the routes body
+// sub-language to a diagnose-and-continue contract (matching the
+// rest of the grammar2 surface): malformed lines emit
+// CodeInvalidAnnotation and the response is dropped, but Run still
+// succeeds. The fixture's malformed response line ends up absent
+// from the captured golden — the witness IS the dropped output.
 func TestMalformed_DuplicateBodyTag(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/duplicate-body-tag/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "malformed_duplicate_body_tag.json")
 }
 
+// TestMalformed_BadResponseTag — see TestMalformed_DuplicateBodyTag.
+// Unknown tag prefixes emit a diagnostic and drop the response line;
+// the rest of the route builds normally.
 func TestMalformed_BadResponseTag(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/bad-response-tag/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	scantest.CompareOrDumpJSON(t, doc, "malformed_bad_response_tag.json")
 }
 
 func TestMalformed_BadSecurityDefinitions(t *testing.T) {

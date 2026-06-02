@@ -26,12 +26,9 @@ func TestGo118SwaggerTypeNamed(t *testing.T) {
 	sctx := scantest.LoadGo118ClassificationPkgsCtx(t)
 	decl := getGo118ClassificationModel(sctx, "NamedWithType")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  sctx,
-		decl: decl,
-	}
+	prs := NewBuilder(sctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 	schema := models["namedWithType"]
 
 	scantest.AssertProperty(t, &schema, "object", "some_map", "", "SomeMap")
@@ -51,11 +48,8 @@ func TestGo118AliasedModels(t *testing.T) {
 		decl := getGo118ClassificationModel(sctx, nm)
 		require.NotNil(t, decl)
 
-		prs := &Builder{
-			decl: decl,
-			ctx:  sctx,
-		}
-		require.NoError(t, prs.Build(defs))
+		prs := NewBuilder(sctx, decl)
+		require.NoError(t, prs.Build(WithDefinitions(defs)))
 	}
 
 	for k := range defs {
@@ -78,12 +72,9 @@ func TestGo118InterfaceField(t *testing.T) {
 	sctx := scantest.LoadGo118ClassificationPkgsCtx(t)
 	decl := getGo118ClassificationModel(sctx, "Interfaced")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  sctx,
-		decl: decl,
-	}
+	prs := NewBuilder(sctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["Interfaced"]
 	scantest.AssertProperty(t, &schema, "", "custom_data", "", "CustomData")
@@ -95,12 +86,9 @@ func TestGo118_Issue2809(t *testing.T) {
 	sctx := scantest.LoadGo118ClassificationPkgsCtx(t)
 	decl := getGo118ClassificationModel(sctx, "transportErr")
 	require.NotNil(t, decl)
-	prs := &Builder{
-		ctx:  sctx,
-		decl: decl,
-	}
+	prs := NewBuilder(sctx, decl)
 	models := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(models))
+	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models["transportErr"]
 	scantest.AssertProperty(t, &schema, "", "data", "", "Data")

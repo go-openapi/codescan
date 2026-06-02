@@ -1,0 +1,20 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/things": {
+      "post": {
+        "description": "This endpoint:\n- accepts a thing payload\n- returns 201 on success\n- returns a problem document on failure",
+        "tags": [
+          "things"
+        ],
+        "summary": "Create a thing.",
+        "operationId": "createThing",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

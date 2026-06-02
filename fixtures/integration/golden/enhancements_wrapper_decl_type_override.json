@@ -1,0 +1,21 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "BareWrapperArray": {
+      "description": "No field references.",
+      "type": "array",
+      "title": "BareWrapperArray — named wrapper with `swagger:type array`.",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/wrapper-decl-type-override"
+    },
+    "BareWrapperObject": {
+      "description": "BareWrapperObject — named wrapper of json.RawMessage with\n`swagger:type object`. No field references it; the only schema\nthe scanner emits for this package is the top-level definition.",
+      "type": "object",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/wrapper-decl-type-override"
+    }
+  }
+}

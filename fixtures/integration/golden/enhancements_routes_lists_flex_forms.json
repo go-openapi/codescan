@@ -1,0 +1,94 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/alpha": {
+      "get": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "lists"
+        ],
+        "summary": "Inline comma-separated form.",
+        "operationId": "commaInline",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/beta": {
+      "get": {
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "lists"
+        ],
+        "summary": "Multi-line YAML-dash form.",
+        "operationId": "yamlDash",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/delta": {
+      "get": {
+        "schemes": [
+          "http",
+          "https",
+          "ws"
+        ],
+        "tags": [
+          "lists"
+        ],
+        "summary": "Inline-plus-indented continuation.",
+        "operationId": "mixedInlineYAML",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/gamma": {
+      "get": {
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "lists"
+        ],
+        "summary": "Multi-line indented bare-lines form (no `-` markers).",
+        "operationId": "bareLines",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

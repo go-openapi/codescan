@@ -134,14 +134,10 @@ func TestUnsupportedBuiltin(t *testing.T) {
 		assert.FalseT(t, UnsupportedBuiltin(m))
 	})
 
-	t.Run("builtin complex64 returns true", func(t *testing.T) {
-		tn := types.NewTypeName(token.NoPos, nil, "complex64", nil)
-		m := &mocks.MockObjecter{ObjFunc: func() *types.TypeName { return tn }}
-		assert.TrueT(t, UnsupportedBuiltin(m))
-	})
-
-	t.Run("builtin int returns false", func(t *testing.T) {
-		tn := types.NewTypeName(token.NoPos, nil, "int", nil)
+	t.Run("universe-scope object returns false", func(t *testing.T) {
+		// Pkg()==nil objects (predeclared error, any, etc.) never
+		// represent unsafe.Pointer and must therefore not match.
+		tn := types.NewTypeName(token.NoPos, nil, "error", nil)
 		m := &mocks.MockObjecter{ObjFunc: func() *types.TypeName { return tn }}
 		assert.FalseT(t, UnsupportedBuiltin(m))
 	})

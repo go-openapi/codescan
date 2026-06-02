@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "Filter items by price.",
+        "operationId": "filterItems",
+        "parameters": [
+          {
+            "maximum": 999.99,
+            "minimum": 0,
+            "type": "number",
+            "default": 100,
+            "description": "maximum price",
+            "name": "price",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}
