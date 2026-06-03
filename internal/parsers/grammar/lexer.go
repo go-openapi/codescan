@@ -649,13 +649,16 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 		bodyRaw = append(bodyRaw, head.Text)
 	}
 
-	// extensions / infoExtensions bodies are YAML-parsed downstream
-	// (yaml.TypedExtensions in parser.go), so every body line MUST
-	// preserve its original indentation. Flat raw blocks (consumes /
-	// produces / security / …) use the Text view (leading whitespace
-	// dropped, recognised keywords reformatted). Both branches
-	// converge on the same bodyText slice.
-	yamlBody := kw.Name == "extensions" || kw.Name == "infoExtensions"
+	// extensions / infoExtensions / securityDefinitions bodies are
+	// YAML-parsed downstream (yaml.TypedExtensions or yaml.UnmarshalBody
+	// via the meta walker), so every body line MUST preserve its
+	// original indentation. Flat raw blocks (consumes / produces /
+	// security / …) use the Text view (leading whitespace dropped,
+	// recognised keywords reformatted). Both branches converge on the
+	// same bodyText slice.
+	yamlBody := kw.Name == "extensions" ||
+		kw.Name == "infoExtensions" ||
+		kw.Name == "securityDefinitions"
 	bodyLine := func(t Token) string {
 		if yamlBody {
 			return strings.TrimRightFunc(t.Raw, unicode.IsSpace)

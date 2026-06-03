@@ -73,23 +73,15 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 	return pd
 }
 
-// validResponseIn enumerates the closed-vocabulary `in:` values the
-// response dispatcher accepts. Same vocabulary as parameters' — the
-// in:body distinguishes the response-body / response-header split,
-// the others are passed through verbatim.
-//
-//nolint:gochecknoglobals // closed-vocabulary lookup table; one allocation, read-only.
-var validResponseIn = map[string]struct{}{
-	"query":    {},
-	"path":     {},
-	"header":   {},
-	"body":     {},
-	"formData": {},
-}
-
 // scanInLocation finds the first `in: X` line in text and returns
-// the value (when valid) or the raw candidate (when present but
-// out-of-vocabulary). See [§in-discriminator](./README.md#in-discriminator).
+// the canonical OAS v2 form of X (when recognised, case-insensitive
+// via [grammar.NormalizeIn]) or the raw candidate (when present but
+// out-of-vocabulary). The `form` alias is NOT accepted here — it is
+// contained to the routes inline-param path. See
+// [§in-discriminator](./README.md#in-discriminator).
+//
+// Q29 (2026-06-03) — case-insensitive on the captured value (was
+// previously strict-case; go-swagger codegen emits `in: Body`).
 func scanInLocation(text string) (value string, valid bool, invalid string) {
 	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
@@ -105,8 +97,8 @@ func scanInLocation(text string) (value string, valid bool, invalid string) {
 		if v == "" {
 			continue
 		}
-		if _, ok := validResponseIn[v]; ok {
-			return v, true, ""
+		if canonical, ok := grammar.NormalizeIn(v, false); ok {
+			return canonical, true, ""
 		}
 		// First `in:` line with a non-vocab value — record so the
 		// caller can diagnose. Don't keep scanning: a later valid

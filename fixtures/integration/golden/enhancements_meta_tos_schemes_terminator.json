@@ -1,0 +1,13 @@
+{
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "Q26 was originally pinned when a pre-merge state of the genspec-tui\nbranch observed the petstore meta producing\n`\"termsOfService\": \"url\\nSchemes:\\nhttp\"` — Schemes absorbed into\nTOS body. Building this witness during the fix-quirks A2 pass\nrevealed the behaviour is now CORRECT on master (verified directly\nagainst the upstream go-swagger generated source). Some commit\nduring Stream M's merge sequence closed it; we never identified\nwhich. This fixture locks the corrected behaviour as a\nregression-detector golden so any future change to the terminator\nrule or to KwSchemes shape will turn this red.\n\nSource shape mirrors go-swagger's generated meta exactly:\ntab-indented overall, 2-space body indent under each keyword, no\nblank line between TOS body and Schemes.",
+    "title": "pins the sibling raw-block\nterminator rule for `Terms Of Service:` (KwTOS) when immediately\nfollowed by `Schemes:` (KwSchemes). Both keywords are asRawBlock\nsince M6.5-D widened KwSchemes from asCommaList; both share the\nCtxMeta family, so the family-based terminator rule must fire\n(lexer.go: isSiblingTerminatorFor → familyOf overlap on CtxMeta).",
+    "termsOfService": "http://example.com/terms/"
+  },
+  "paths": {}
+}

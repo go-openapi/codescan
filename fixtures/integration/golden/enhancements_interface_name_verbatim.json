@@ -1,0 +1,39 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "NameOverrides": {
+      "description": "- PascalCase user input must stay PascalCase.\n- snake_case user input must stay snake_case.\n- SCREAMING_CASE user input must stay SCREAMING_CASE.\n- A name that the mangler would rewrite (e.g. an all-caps\nacronym at the start) must not be touched.",
+      "type": "object",
+      "title": "NameOverrides exercises every shape of user-provided override we\nwant to lock against future re-mangling:",
+      "properties": {
+        "USER_ID": {
+          "description": "\nAll-caps user input. Re-mangling would lowercase to \"userId\"\nor \"user_id\".",
+          "type": "string",
+          "x-go-name": "ScreamingCaseOverride"
+        },
+        "UserIdentifier": {
+          "description": "\nOverride to the verbatim Go name. Re-mangling would lowercase\nto \"userIdentifier\" — the witness asserts on the capital U.",
+          "type": "string",
+          "x-go-name": "GoNameVerbatim"
+        },
+        "X-Custom-Header": {
+          "description": "\nHyphenated user input. Re-mangling would strip hyphens.",
+          "type": "string",
+          "x-go-name": "HyphenatedOverride"
+        },
+        "userIdentifier": {
+          "description": "Default — no swagger:name. The mangler should produce\n\"userIdentifier\" (lowercase-first camelCase).",
+          "type": "string",
+          "x-go-name": "UserIdentifier"
+        },
+        "user_identifier": {
+          "description": "\nSnake-case user input. Re-mangling would camelCase to\n\"userIdentifier\".",
+          "type": "string",
+          "x-go-name": "SnakeCaseOverride"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/interface-name-verbatim"
+    }
+  }
+}

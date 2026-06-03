@@ -26,27 +26,6 @@ type fieldDocSignals struct {
 	strfmtSet bool
 }
 
-// Parameter-location constants. The set matches v1's `rxIn` regex
-// alternation and OAS v2's parameter-location vocabulary.
-const (
-	inQuery    = "query"
-	inPath     = "path"
-	inHeader   = "header"
-	inFormData = "formData"
-)
-
-// validParamIn enumerates the closed-vocabulary `in:` values the
-// scanner accepts.
-//
-//nolint:gochecknoglobals // closed-vocabulary lookup table; one allocation, read-only.
-var validParamIn = map[string]struct{}{
-	inQuery:    {},
-	inPath:     {},
-	inHeader:   {},
-	inBody:     {},
-	inFormData: {},
-}
-
 // scanFieldDocSignals reads every signal the parameter dispatcher
 // needs out of a pre-parsed block slice and the raw doc text.
 // Callers should pass `p.ParseBlocks(afld.Doc)` so the
@@ -86,11 +65,18 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 	return pd
 }
 
-// scanInLocation finds the first `in: X` (case-insensitive on `in`)
-// line in text where X is one of the closed-vocabulary parameter
-// locations. Mirrors v1's `rxIn` semantics:
+// scanInLocation finds the first `in: X` (case-insensitive on `in`
+// and on X) line in text and returns X canonicalised to the OAS v2
+// closed vocabulary (`query` / `path` / `header` / `body` /
+// `formData`) via [grammar.NormalizeIn]. Mirrors v1's `rxIn`
+// semantics extended with Q29's case-insensitive value matching:
 //
 //	regexp: `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`
+//	  + case-insensitive on the captured group (go-swagger codegen
+//	    emits capitalised forms like `in: Body`).
+//
+// The `form` alias (Q27) is NOT accepted here — it is contained to
+// the routes inline-param path in `internal/parsers/routebody`.
 func scanInLocation(text string) (string, bool) {
 	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
@@ -103,8 +89,8 @@ func scanInLocation(text string) (string, bool) {
 		}
 		v := strings.TrimSpace(rest)
 		v = strings.TrimSuffix(v, ".")
-		if _, ok := validParamIn[v]; ok {
-			return v, true
+		if canonical, ok := grammar.NormalizeIn(v, false); ok {
+			return canonical, true
 		}
 	}
 	return "", false

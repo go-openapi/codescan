@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"github.com/go-openapi/swag/yamlutils"
-	"go.yaml.in/yaml/v3"
 )
 
 // Parse unmarshals the given raw YAML body into a generic value
@@ -45,8 +44,8 @@ func Parse(body string) (any, error) {
 		return nil, nil
 	}
 	var v any
-	if err := yaml.Unmarshal([]byte(body), &v); err != nil {
-		return nil, fmt.Errorf("yaml: %w", err)
+	if err := decodeYAMLBody([]byte(body), &v); err != nil {
+		return nil, err
 	}
 	return v, nil
 }
@@ -59,10 +58,7 @@ func ParseInto(body string, dst any) error {
 	if body == "" {
 		return nil
 	}
-	if err := yaml.Unmarshal([]byte(body), dst); err != nil {
-		return fmt.Errorf("yaml: %w", err)
-	}
-	return nil
+	return decodeYAMLBody([]byte(body), dst)
 }
 
 // TypedExtensions parses the body of an `extensions:` raw block and
@@ -88,8 +84,8 @@ func TypedExtensions(body string) (map[string]any, error) {
 	}
 	normalised := normaliseExtensionBody(body)
 	var yamlValue any
-	if err := yaml.Unmarshal([]byte(normalised), &yamlValue); err != nil {
-		return nil, fmt.Errorf("yaml: %w", err)
+	if err := decodeYAMLBody([]byte(normalised), &yamlValue); err != nil {
+		return nil, err
 	}
 	jsonValue, err := yamlutils.YAMLToJSON(yamlValue)
 	if err != nil {
