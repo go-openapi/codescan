@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/go-openapi/swag/yamlutils"
-	"go.yaml.in/yaml/v3"
 )
 
 // UnmarshalBody runs a raw godoc-comment YAML body through the
@@ -41,7 +40,7 @@ func UnmarshalBody(body string, unmarshal func([]byte) error) error {
 	normalised := strings.Join(lines, "\n")
 
 	yamlValue := make(map[any]any)
-	if err := yaml.Unmarshal([]byte(normalised), &yamlValue); err != nil {
+	if err := decodeYAMLBody([]byte(normalised), &yamlValue); err != nil {
 		return fmt.Errorf("yaml body: %w", err)
 	}
 
