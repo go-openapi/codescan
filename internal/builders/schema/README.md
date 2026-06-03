@@ -477,13 +477,54 @@ three cases.
 
 Interface methods can't carry struct tags. To pick a JSON property
 name for a method, `Builder.methodMangler` (a
-`mangling.NameMangler` from `go-openapi/swag`) applies the same
-acronym-aware lower-first transform go-swagger uses for tag-less
-struct fields: `CreatedAt → createdAt`, `ID → id`,
-`ExternalID → externalId`.
+`mangling.NameMangler` from `go-openapi/swag`) applies the
+acronym-aware lower-first transform: `CreatedAt → createdAt`,
+`ID → id`, `ExternalID → externalId`.
 
-`swagger:name X` still takes precedence when present
-([§dispatch-table](#dispatch-table) field-emission rules).
+### Principled asymmetry vs the struct path
+
+The struct-field path does NOT mangle: `resolvers.ParseJSONTag`
+returns the json-tag value when present, otherwise the Go field name
+verbatim. So `CreatedAt string` with no tag emits property
+`CreatedAt`, while `CreatedAt() string` on an interface emits
+property `createdAt`.
+
+This asymmetry is intentional, not a quirk:
+
+- **Struct fields mirror real serialization.** `encoding/json`
+  uses the tag-or-verbatim rule at runtime; codescan's emitted
+  spec is what `json.Marshal` would actually produce. Adding an
+  auto-mangle on the struct side would silently disagree with the
+  user's running program.
+- **Interface methods don't have a "natural" serialization.**
+  Go's `encoding/json` can't marshal embedded interface methods at
+  all without a custom `MarshalJSON`. There is no runtime ground
+  truth to mirror, so codescan invents a sensible default JSON
+  name. The mangler is the documentation convention, not a
+  serialization mirror.
+
+The "one size fits all" mangler on interfaces will not always be
+what the author wanted — a future global opt-out
+(`skip-jsonify-interfaces` or similar) is tracked in
+`.claude/plans/forthcoming-features.md`.
+
+### `swagger:name X` is verbatim
+
+When the author provides `swagger:name X` on an interface method,
+**X is emitted exactly as written** — the mangler is bypassed
+entirely. The carrier code
+(`fields.go:methodCarrier`) checks `fd.JSONName` first; only when
+empty does it call `s.interfaceJSONName(fld.Name())`.
+
+This contract matters for non-camelCase user input — a user who
+writes `swagger:name UserIdentifier` wants `UserIdentifier`, not
+`userIdentifier`. The regression-detector for this is
+`fixtures/enhancements/interface-name-verbatim/` +
+`integration/coverage_interface_name_verbatim_test.go`: PascalCase,
+snake_case, SCREAMING_CASE, and hyphenated user inputs all assert on
+the exact spelling reaching the spec.
+
+### Constructor invariant
 
 The mangler is initialised in `NewBuilder`; `&Builder{…}` literals
 that bypass the constructor will nil-panic in `interfaceJSONName`.
