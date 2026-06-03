@@ -12,23 +12,16 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "ExtendedID": {
+      "type": "object",
       "title": "ExtendedID should be discovered through dependency analysis.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/Empty"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "EvenMore": {},
-            "StillMore": {},
-            "more": {
-              "type": "string",
-              "x-go-name": "More"
-            }
-          }
+      "properties": {
+        "EvenMore": {},
+        "StillMore": {},
+        "more": {
+          "type": "string",
+          "x-go-name": "More"
         }
-      ],
+      },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "ShouldSee": {
@@ -75,25 +68,15 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "embedded_with_alias": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/Anything"
-        },
-        {
-          "$ref": "#/definitions/UUID"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "EvenMore": {},
-            "StillMore": {},
-            "more": {
-              "type": "string",
-              "x-go-name": "More"
-            }
-          }
+      "type": "object",
+      "properties": {
+        "EvenMore": {},
+        "StillMore": {},
+        "more": {
+          "type": "string",
+          "x-go-name": "More"
         }
-      ],
+      },
       "x-go-name": "EmbeddedWithAlias",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },

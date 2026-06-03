@@ -319,55 +319,42 @@ func testAliasedExtendedIDAllOf(t *testing.T, sp *oaispec.Swagger) {
 	extended, ok := sp.Definitions["ExtendedID"]
 	require.TrueT(t, ok)
 
-	t.Run("struct with an embedded alias should render as allOf", func(t *testing.T) {
-		require.Len(t, extended.AllOf, 2)
+	// Q-D fix: embedding an alias no longer auto-promotes to allOf.
+	// The documented rule is "allOf only when swagger:allOf-tagged."
+	// `ExtendedID` embeds `Empty = struct{}` (alias of an anonymous
+	// empty struct) without that annotation, so the embed contributes
+	// nothing — Empty has no fields to promote. The outer struct
+	// remains flat with just its own properties.
+	t.Run("struct with an embedded alias-of-anonymous-empty-struct contributes nothing", func(t *testing.T) {
+		assert.Empty(t, extended.AllOf, "no allOf without explicit swagger:allOf annotation")
 		assertHasTitle(t, extended)
 
-		foundAliased := false
-		foundProps := false
-		for idx, member := range extended.AllOf {
-			isProps := len(member.Properties) > 0
-			isAlias := member.Ref.String() != ""
+		t.Run("with property of type any", func(t *testing.T) {
+			evenMore, ok := extended.Properties["EvenMore"]
+			require.TrueT(t, ok)
+			assert.Equal(t, oaispec.Schema{}, evenMore)
+		})
 
-			switch {
-			case isProps:
-				props := member
-				t.Run("with property of type any", func(t *testing.T) {
-					evenMore, ok := props.Properties["EvenMore"]
-					require.TrueT(t, ok)
-					assert.Equal(t, oaispec.Schema{}, evenMore)
-				})
+		t.Run("with property of type interface{}", func(t *testing.T) {
+			stillMore, ok := extended.Properties["StillMore"]
+			require.TrueT(t, ok)
+			assert.Equal(t, oaispec.Schema{}, stillMore)
+		})
 
-				t.Run("with property of type interface{}", func(t *testing.T) {
-					evenMore, ok := props.Properties["StillMore"]
-					require.TrueT(t, ok)
-					assert.Equal(t, oaispec.Schema{}, evenMore)
-				})
+		t.Run("non-aliased properties remain unaffected", func(t *testing.T) {
+			more, ok := extended.Properties["more"]
+			require.TrueT(t, ok)
 
-				t.Run("non-aliased properties remain unaffected", func(t *testing.T) {
-					more, ok := props.Properties["more"]
-					require.TrueT(t, ok)
+			assertHasExtension(t, more, "x-go-name") // because we have a struct tag
+			assertHasNoTitle(t, more)
 
-					assertHasExtension(t, more, "x-go-name") // because we have a struct tag
-					assertHasNoTitle(t, more)
+			// after stripping extension and title, should be empty
+			more.VendorExtensible = oaispec.VendorExtensible{}
 
-					// after stripping extension and title, should be empty
-					more.VendorExtensible = oaispec.VendorExtensible{}
-
-					strSchema := &oaispec.Schema{}
-					strSchema = strSchema.Typed("string", "")
-					assert.Equal(t, *strSchema, more)
-				})
-				foundProps = true
-			case isAlias:
-				assertIsRef(t, &member, "#/definitions/Empty")
-				foundAliased = true
-			default:
-				assert.Failf(t, "embedded members in struct are not as expected", "unexpected member in allOf: %d", idx)
-			}
-		}
-		require.TrueT(t, foundProps)
-		require.TrueT(t, foundAliased)
+			strSchema := &oaispec.Schema{}
+			strSchema = strSchema.Typed("string", "")
+			assert.Equal(t, *strSchema, more)
+		})
 	})
 }
 
@@ -510,42 +497,26 @@ func testAliasedInterfaceVariants(t *testing.T, sp *oaispec.Swagger) {
 func testAliasedEmbeddedTypes(t *testing.T, sp *oaispec.Swagger) {
 	t.Helper()
 
-	t.Run("embedded alias should render as a $ref", func(t *testing.T) {
-		iface, ok := sp.Definitions["embedded_with_alias"]
+	// Q-D fix: embedding an alias no longer auto-promotes to allOf.
+	// `EmbeddedWithAlias` embeds `Anything = any` and `UUID = int64`
+	// without `swagger:allOf` annotation. Both are aliases of non-
+	// Named types (an interface and a primitive); embedding them in
+	// Go promotes nothing. The spec output reflects that: flat
+	// properties from non-aliased fields only, no allOf, no
+	// dangling $refs.
+	t.Run("embedded aliases of non-Named types contribute nothing without swagger:allOf", func(t *testing.T) {
+		got, ok := sp.Definitions["embedded_with_alias"]
 		require.TrueT(t, ok)
 
-		require.Len(t, iface.AllOf, 3)
-		foundAnything := false
-		foundUUID := false
-		foundProps := false
-		for idx, member := range iface.AllOf {
-			isProps := len(member.Properties) > 0
-			isRef := member.Ref.String() != ""
+		assert.Empty(t, got.AllOf,
+			"no allOf without swagger:allOf annotation; alias-embeds promote only what their unaliased type would")
+		assert.Empty(t, got.Ref.String(),
+			"outer schema must NOT carry a top-level $ref from a sibling embed")
 
-			switch {
-			case isProps:
-				require.TrueT(t, member.Type.Contains("object"))
-				require.Len(t, member.Properties, 3)
-				assert.MapContainsT(t, member.Properties, "EvenMore")
-				foundProps = true
-			case isRef:
-				switch member.Ref.String() {
-				case "#/definitions/Anything":
-					foundAnything = true
-				case "#/definitions/UUID":
-					foundUUID = true
-				default:
-					assert.Failf(t,
-						"embedded members in interface are not as expected", "unexpected $ref for member (%v): %d",
-						member.Ref, idx,
-					)
-				}
-			default:
-				assert.Failf(t, "embedded members in interface are not as expected", "unexpected member in allOf: %d", idx)
-			}
-		}
-		require.TrueT(t, foundAnything)
-		require.TrueT(t, foundUUID)
-		require.TrueT(t, foundProps)
+		require.TrueT(t, got.Type.Contains("object"))
+		// Properties from the struct's own (non-embed) fields survive.
+		assert.MapContainsT(t, got.Properties, "EvenMore")
+		assert.MapContainsT(t, got.Properties, "StillMore")
+		assert.MapContainsT(t, got.Properties, "more")
 	})
 }

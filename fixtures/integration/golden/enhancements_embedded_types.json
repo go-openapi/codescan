@@ -21,13 +21,17 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
     },
-    "BaseAlias": {
-      "description": "BaseAlias aliases Base so that embedding it exercises the alias branch\nof buildEmbedded.",
+    "EmbedsAlias": {
       "type": "object",
+      "title": "EmbedsAlias embeds an aliased named struct.",
       "required": [
         "id"
       ],
       "properties": {
+        "extra": {
+          "type": "string",
+          "x-go-name": "Extra"
+        },
         "id": {
           "type": "integer",
           "format": "int64",
@@ -38,24 +42,6 @@
           "x-go-name": "Name"
         }
       },
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
-    },
-    "EmbedsAlias": {
-      "title": "EmbedsAlias embeds an aliased named struct.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/BaseAlias"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "extra": {
-              "type": "string",
-              "x-go-name": "Extra"
-            }
-          }
-        }
-      ],
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embedded-types"
     },
     "EmbedsEmptyNamedInterface": {
