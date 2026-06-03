@@ -68,8 +68,10 @@ override the resolved defaults.
 ## <a id="in-discriminator"></a>§in-discriminator — reading `in:` and what it gates
 
 `in:` is the OAS v2 location discriminator —
-`query | path | header | body | formData` (closed vocabulary, see
-`validParamIn` in `doc_signals.go`). It drives three downstream
+`query | path | header | body | formData` (closed vocabulary; see
+`grammar.NormalizeIn` for the canonical normaliser used by both
+`parameters/doc_signals.go` and `responses/doc_signals.go`). It
+drives three downstream
 decisions:
 
 - **Schema vs SimpleSchema mode**: `in==body` ⇒ full Schema build;

@@ -40,22 +40,6 @@ type ParamDecl struct {
 	Pos         token.Position
 }
 
-// validIn lists the OAS v2 parameter-location values routebody
-// accepts on the `in:` head field. Mirrors the grammar.KwIn
-// closed-vocab table; kept private here because the orchestrator
-// reads ParamDecl.In as a string rather than going through the
-// dispatcher's ShapeEnumOption path.
-//
-//nolint:gochecknoglobals // immutable lookup table; read-only.
-var validIn = map[string]struct{}{
-	"path":     {},
-	"query":    {},
-	"header":   {},
-	"body":     {},
-	"form":     {}, // accepted as an alias for formData; normalised below.
-	"formData": {},
-}
-
 // chunkParseState tracks the in-flight param chunk while iterating
 // lines. The state machine: a `+` or `-` line opens a new chunk,
 // subsequent lines fill its fields, the next `+`/`-` (or end-of-body)
@@ -159,17 +143,17 @@ func applyParamLine(cur *ParamDecl, props *[]grammar.Property, key, value string
 	case "name":
 		cur.Name = value
 	case "in":
-		if _, ok := validIn[value]; !ok {
+		canonical, ok := grammar.NormalizeIn(value, true)
+		if !ok {
 			emitDiagf(diag, pos,
 				"in: %q is not one of path/query/header/body/formData", value)
 			return
 		}
-		// Normalise the "form" alias to "formData" so the resulting
-		// spec carries OAS v2's canonical value.
-		if value == "form" {
-			value = "formData"
-		}
-		cur.In = value
+		// allowFormAlias=true accepts the v1 routes affordance
+		// `form` and canonicalises to `formData`. See Q27 — the
+		// alias is contained to this parser; no other capture site
+		// passes allowFormAlias=true.
+		cur.In = canonical
 	case "type":
 		cur.TypeRef = value
 	case "format":

@@ -1,0 +1,80 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/mixed": {
+      "post": {
+        "tags": [
+          "handlers"
+        ],
+        "operationId": "mixedCaseParamsRequest",
+        "parameters": [
+          {
+            "x-go-name": "Payload",
+            "name": "payload",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "type": "string",
+            "x-go-name": "Search",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Token",
+            "name": "X-Token",
+            "in": "header"
+          },
+          {
+            "x-go-name": "Upload",
+            "name": "upload",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/mixedCaseResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Payload": {
+      "type": "object",
+      "title": "Payload is a small body struct exercised under in: Body.",
+      "properties": {
+        "note": {
+          "type": "string",
+          "x-go-name": "Note"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/in-case-insensitive"
+    },
+    "Reader": {
+      "description": "Read reads up to len(p) bytes into p. It returns the number of bytes\nread (0 \u003c= n \u003c= len(p)) and any error encountered. Even if Read\nreturns n \u003c len(p), it may use all of p as scratch space during the call.\nIf some data is available but not len(p) bytes, Read conventionally\nreturns what is available instead of waiting for more.\n\nWhen Read encounters an error or end-of-file condition after\nsuccessfully reading n \u003e 0 bytes, it returns the number of\nbytes read. It may return the (non-nil) error from the same call\nor return the error (and n == 0) from a subsequent call.\nAn instance of this general case is that a Reader returning\na non-zero number of bytes at the end of the input stream may\nreturn either err == EOF or err == nil. The next Read should\nreturn 0, EOF.\n\nCallers should always process the n \u003e 0 bytes returned before\nconsidering the error err. Doing so correctly handles I/O errors\nthat happen after reading some bytes and also both of the\nallowed EOF behaviors.\n\nIf len(p) == 0, Read should always return n == 0. It may return a\nnon-nil error if some error condition is known, such as EOF.\n\nImplementations of Read are discouraged from returning a\nzero byte count with a nil error, except when len(p) == 0.\nCallers should treat a return of 0 and nil as indicating that\nnothing happened; in particular it does not indicate EOF.\n\nImplementations must not retain p.",
+      "type": "object",
+      "title": "Reader is the interface that wraps the basic Read method.",
+      "x-go-package": "io"
+    }
+  },
+  "responses": {
+    "mixedCaseResponse": {
+      "description": "MixedCaseResponse declares a Body-shaped response with a\nmixed-case `in: Body` line — the response builder must route it\nthrough the body branch, not the header / invalidIn branch.",
+      "schema": {
+        "$ref": "#/definitions/Payload"
+      }
+    }
+  }
+}
