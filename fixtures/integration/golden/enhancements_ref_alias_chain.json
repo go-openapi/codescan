@@ -22,13 +22,13 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/ref-alias-chain"
     },
     "CountTyped": {
-      "description": "CountTyped probes the `swagger:type` override on an alias of\nany. `swagger:type` takes a Go-type name (per\n`SwaggerSchemaForType`); IS consulted today via\n`classifierNamedTypeOverride`. Baseline to confirm the patch\npreserves the existing handling.",
+      "description": "CountTyped probes the `swagger:type` override on an alias of\nany. `swagger:type` takes a Go-type name (per\n`SwaggerSchemaForType`); honoured via\n`classifierNamedTypeOverride`.",
       "type": "integer",
       "format": "int64",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/ref-alias-chain"
     },
     "Datestamp": {
-      "description": "Datestamp aliases any but the user provides a swagger:strfmt\nannotation expecting the alias to surface as `{string, date}`.\nQ13 witness: does the classifier-side override fire before the\nany-recognizer empties the schema?",
+      "description": "Datestamp aliases any with a user-provided `swagger:strfmt`\nannotation. Expected: the alias surfaces as `{string, date}` —\nthe decl-entry strfmt classifier fires before the any-recognizer\nwould otherwise empty the schema.",
       "type": "string",
       "format": "date",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/ref-alias-chain"
@@ -41,7 +41,7 @@
           "$ref": "#/definitions/Timestamp"
         },
         "drift": {
-          "description": "Drift uses an unannotated alias of any — R6 should dissolve\nit at the field site.",
+          "description": "Drift uses an unannotated alias of any — the field site\ndissolves the alias to the underlying.",
           "x-go-name": "Drift"
         },
         "first": {
@@ -74,9 +74,10 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/ref-alias-chain"
     },
     "UserIDStrf": {
-      "description": "UserIDStrf probes whether `swagger:strfmt` on an alias of a\nprimitive is honoured. Expected user intent: the alias surfaces\nas `{string, uuid}`. Q13-adjacent witness; tells us whether the\nclassifier-not-consulted bug also affects alias-of-primitive\n(it does, pre-patch).",
+      "description": "Expected: the alias surfaces as `{string, uuid}` — the\ndecl-entry strfmt classifier wins over the primitive underlying.",
       "type": "string",
       "format": "uuid",
+      "title": "UserIDStrf probes `swagger:strfmt` on an alias of a primitive.",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/ref-alias-chain"
     },
     "Wildcard": {

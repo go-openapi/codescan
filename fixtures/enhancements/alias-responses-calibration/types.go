@@ -1,37 +1,25 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package alias_responses_calibration is the cycle-5 calibration
-// fixture for the W3 alias workshop — the responses-builder
-// analogue of cycle-4 (alias-parameters-calibration).
-//
-// The fixture surfaces the responses-builder's current behaviour
-// for the three reach contexts the cycle-5 workshop has to cover:
+// Package alias_responses_calibration exercises the responses
+// builder's alias handling across three reach contexts:
 //
 //  1. Top-level alias annotated `swagger:response` —
-//     AliasedTopResponse = internalResponse. The existing
-//     alias-response/ fixture documents that the Default mode
-//     crashes on this path ("anonymous types are currently not
-//     supported for responses"); R8 should fix that as a side
-//     effect of routing through the alias's RHS.
+//     AliasedTopResponse = internalResponse.
 //  2. Body field typed as an alias, both annotated and unannotated
-//     — DirectResponse.BodyAliasPlain / .BodyAliasModeled.
-//  3. Non-body (header) field typed as an alias — DirectResponse
-//     header fields.
+//     — BodyAliasPlainResponse / BodyAliasModeledResponse.
+//  3. Non-body (header) field typed as an alias —
+//     DirectResponse.XHeaderPlain.
 //
 // `DirectResponse` carries the control case (BodyDirect typed as
 // the raw Envelope model) alongside the alias variants so the
-// comparison is on one canvas.
+// comparison is on one canvas. Two real `swagger:route` handlers
+// bind the responses to operations so the response shapes are
+// visible in the captured spec under the operations' `responses`
+// block.
 //
-// Two real `swagger:route` handlers bind the responses to
-// operations so the response shapes are visible in the captured
-// spec under the operations' `responses` block (and any
-// auto-discovered top-level entries under the spec's `responses`
-// block too).
-//
-// See `.claude/plans/workshops/alias-responses.md` §4 for the R8
-// rule candidate and `.claude/plans/workshops/alias-ledger.md`
-// cycle 5 for the running judgment record.
+// See the responses builder's alias-handling contract:
+// [§alias-handling](../../../internal/builders/responses/README.md#alias-handling).
 package alias_responses_calibration
 
 // Envelope is the canonical response body model.
@@ -45,14 +33,13 @@ type Envelope struct {
 }
 
 // HeaderID is a named string backing the non-body (header) alias
-// witnesses. SimpleSchema targets can't carry $ref, so R8 clause 3
-// always expands non-body aliases regardless of annotation.
+// witnesses. SimpleSchema targets can't carry $ref, so non-body
+// aliases always expand regardless of annotation.
 type HeaderID string
 
-// EnvelopeAlias is an UNANNOTATED alias of Envelope. Under R8 the
-// body field reference must dissolve to `$ref: Envelope` (not
-// `$ref: EnvelopeAlias`), and the alias must not produce its own
-// `definitions` entry.
+// EnvelopeAlias is an UNANNOTATED alias of Envelope. At body field
+// sites it dissolves to `$ref: Envelope` (not `$ref: EnvelopeAlias`),
+// and does not produce its own `definitions` entry.
 type EnvelopeAlias = Envelope
 
 // EnvelopeAliasModeled is the ANNOTATED counterpart of
@@ -65,7 +52,7 @@ type EnvelopeAlias = Envelope
 type EnvelopeAliasModeled = Envelope
 
 // EnvelopeAlias2 is a 2-link unannotated chain. Both links
-// dissolve under R8 → body fields land on `$ref: Envelope`.
+// dissolve → body fields land on `$ref: Envelope`.
 type EnvelopeAlias2 = EnvelopeAlias
 
 // HeaderIDAlias is an unannotated alias of HeaderID. Non-body
@@ -75,9 +62,9 @@ type EnvelopeAlias2 = EnvelopeAlias
 type HeaderIDAlias = HeaderID
 
 // internalResponse is the unexported backing struct for the
-// top-level aliased response below. Q12 witness — pre-R8 captures
-// surface this struct as a `definitions` entry under non-Transparent
-// modes despite carrying no `swagger:model` annotation.
+// top-level aliased response below. The contract: this backing
+// struct must not surface as a `definitions` entry even though
+// nothing else annotates it.
 type internalResponse struct {
 	// Body is the response body for the aliased top-level response.
 	//
@@ -91,9 +78,10 @@ type internalResponse struct {
 }
 
 // AliasedTopResponse is a top-level alias annotated
-// `swagger:response`. R8 clause 1 says neither this alias nor its
-// backing struct should surface in `definitions` — the response's
-// body / headers come from the fields of the unaliased target.
+// `swagger:response`. The responses builder is transparent re:
+// model creation at this layer — neither this alias nor its
+// backing struct surfaces in `definitions`. The response's body /
+// headers come from the fields of the unaliased target.
 //
 // swagger:response aliasedTopResponse
 type AliasedTopResponse = internalResponse
@@ -106,7 +94,7 @@ type AliasedTopResponse = internalResponse
 // swagger:response directResponse
 type DirectResponse struct {
 	// BodyDirect — body typed as the raw Envelope model (control
-	// case, R6/R7/R8-independent).
+	// case, alias-handling-independent).
 	//
 	// in: body
 	BodyDirect Envelope `json:"bodyDirect"`
@@ -121,8 +109,8 @@ type DirectResponse struct {
 }
 
 // BodyAliasPlainResponse — body response typed as the UNANNOTATED
-// alias EnvelopeAlias. Under R8 the body schema's $ref dissolves
-// to Envelope.
+// alias EnvelopeAlias. The body schema's $ref dissolves to
+// Envelope.
 //
 // swagger:response bodyAliasPlainResponse
 type BodyAliasPlainResponse struct {
@@ -131,9 +119,9 @@ type BodyAliasPlainResponse struct {
 }
 
 // BodyAliasModeledResponse — body response typed as the
-// ANNOTATED alias EnvelopeAliasModeled. Under R8 the body
-// schema's $ref preserves EnvelopeAliasModeled (and the alias
-// surfaces as its own definition).
+// ANNOTATED alias EnvelopeAliasModeled. The body schema's $ref
+// preserves EnvelopeAliasModeled (and the alias surfaces as its
+// own definition).
 //
 // swagger:response bodyAliasModeledResponse
 type BodyAliasModeledResponse struct {

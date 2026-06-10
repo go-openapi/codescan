@@ -22,7 +22,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "BaseAliasModeled": {
-      "description": "Q-E / R6 cuts the alias-handling rule along the annotation:\n\n- BaseAlias (no annotation): aliasing is a Go implementation\ndetail; field/element use sites dissolve to `Base`, the\nalias does not appear in `definitions`.\n- BaseAliasModeled (swagger:model): the alias is a first-class\nentity; field/element use sites keep `$ref:\nBaseAliasModeled` and the alias gets its own definition\n(chain under RefAliases, full structural under Expand,\ndissolved under TransparentAliases — modes only affect the\ndecl shape, not whether it exists).",
+      "description": "At field / element / allOf-member use sites:\n\n- BaseAlias (no annotation): aliasing is a Go implementation\ndetail; use sites dissolve to `Base`, the alias does not\nappear in `definitions`.\n- BaseAliasModeled (swagger:model): the alias is a first-class\nentity; use sites keep `$ref: BaseAliasModeled` and the alias\ngets its own definition (chain under RefAliases, full\nstructural under Expand, structural-copy under\nTransparentAliases — modes only affect the decl shape, not\nwhether the alias surfaces).",
       "type": "object",
       "title": "BaseAliasModeled is a transparent rename of Base — same Go type\nas BaseAlias above — but it CARRIES `swagger:model`. The\nannotation is the user's explicit opt-in to exposing the alias\nas a first-class spec entity.",
       "required": [
@@ -42,9 +42,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsAlias": {
-      "description": "[{$ref: BaseAlias}, {properties: {extra}}]`. Q8 OUTLIER — same\nGo type as EmbedsDirectStruct produces a DIFFERENT spec shape.",
+      "description": "Expected: FLAT — same shape as EmbedsDirectStruct, because the\naliased embed dissolves to its named target and contributes\ninline properties (not allOf composition).",
       "type": "object",
-      "title": "EmbedsAlias embeds BaseAlias. The B2 probe shape: `allOf:",
+      "title": "EmbedsAlias embeds BaseAlias (an unannotated alias of Base).",
       "required": [
         "id"
       ],
@@ -66,8 +66,8 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsAliasModeledOptIn": {
-      "description": "- EmbedsAliasOptIn        embeds BaseAlias        (UNannotated)\n→ allOf $ref dissolves to Base (R6 — alias name not exposed)\n- EmbedsAliasModeledOptIn embeds BaseAliasModeled (annotated)\n→ allOf $ref preserves BaseAliasModeled (R6 — annotated = first-class)\n\nThe pair pins both halves of the R6 contract under allOf\ncomposition. `swagger:allOf` governs the SHAPE (composition vs\nflat inline); `swagger:model` governs the IDENTITY (whether the\nalias name appears as a $ref target). They are orthogonal.",
-      "title": "EmbedsAliasModeledOptIn is the bidirectional sibling of\nEmbedsAliasOptIn. Both use `swagger:allOf` on the embedded\nalias to opt into allOf composition, but they differ in\nwhether the alias itself is annotated:",
+      "description": "- EmbedsAliasOptIn        embeds BaseAlias        (UNannotated)\n→ allOf $ref dissolves to Base (alias name not exposed)\n- EmbedsAliasModeledOptIn embeds BaseAliasModeled (annotated)\n→ allOf $ref preserves BaseAliasModeled (annotated → first-class)\n\n`swagger:allOf` governs the SHAPE (composition vs flat inline);\n`swagger:model` governs the IDENTITY (whether the alias name\nappears as a $ref target). They are orthogonal.",
+      "title": "EmbedsAliasModeledOptIn is the bidirectional sibling of\nEmbedsAliasOptIn. Both use `swagger:allOf` on the embedded\nalias to opt into allOf composition, but they differ in whether\nthe alias itself is annotated:",
       "allOf": [
         {
           "$ref": "#/definitions/BaseAliasModeled"
@@ -85,8 +85,8 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsAliasOptIn": {
-      "description": "Combined with EmbedsAlias above, this fixture asserts:\n\n- Without `swagger:allOf` → flat inline (EmbedsAlias)\n- With    `swagger:allOf` → allOf with $ref (EmbedsAliasOptIn)\n\nThe annotation is the SOLE gate; no other input flips composition.",
-      "title": "EmbedsAliasOptIn validates the bidirectional Q-D contract: when\nthe user EXPLICITLY annotates an aliased embed with\n`swagger:allOf`, the resulting spec MUST use allOf composition\nwith a $ref to the embedded type. This is the shape that was\nsilently produced (without annotation) before the Q-D fix; it\nremains available as an explicit opt-in.",
+      "description": "- Without `swagger:allOf` → flat inline (EmbedsAlias above)\n- With    `swagger:allOf` → allOf with $ref to Base",
+      "title": "EmbedsAliasOptIn pins the explicit-opt-in side of the embed\ncontract: when the user annotates an aliased embed with\n`swagger:allOf`, the spec uses allOf composition with a $ref.\nThe unannotated alias still dissolves to the unaliased target —\n`swagger:allOf` governs composition shape only, not identity.",
       "allOf": [
         {
           "$ref": "#/definitions/Base"
@@ -105,9 +105,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsDirectStruct": {
-      "description": "FLAT — `{type: object, properties: {id, name, extra}}` with no\nallOf composition. Q8 baseline.",
+      "description": "Expected: FLAT — `{type: object, properties: {id, name, extra}}`\nwith no allOf composition.",
       "type": "object",
-      "title": "EmbedsDirectStruct embeds Base directly. The B2 probe shape:",
+      "title": "EmbedsDirectStruct embeds Base directly.",
       "required": [
         "id"
       ],
@@ -130,7 +130,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsDirectStructOptIn": {
-      "description": "EmbedsDirectStructOptIn mirrors EmbedsAliasOptIn but with a\ndirect named-struct embed instead of an alias embed — checks\nthat the explicit annotation works on non-aliased embeds too.\nPre-Q-D this case ALREADY worked (named-direct embed with",
+      "description": "EmbedsDirectStructOptIn mirrors EmbedsAliasOptIn but with a\ndirect named-struct embed instead of an alias embed —\ntriangulates that the explicit annotation works on non-aliased\nembeds too. Same annotation, same shape, regardless of alias or\ndirect.",
       "allOf": [
         {
           "$ref": "#/definitions/Base"
@@ -148,8 +148,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsInterface": {
-      "description": "EmbedsInterface embeds the named Methods interface. The B2 probe\nshape: FLAT — method properties promoted into the outer schema\nalongside Tag. Consistent with EmbedsDirectStruct (named embed\nof any kind goes through buildNamedEmbedded which inlines).",
+      "description": "FLAT — method properties promoted into the outer schema\nalongside Tag.",
       "type": "object",
+      "title": "EmbedsInterface embeds the named Methods interface. Expected:",
       "properties": {
         "describe": {
           "description": "Describe returns a human-readable label.",
@@ -164,8 +165,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EmbedsPointer": {
-      "description": "EmbedsPointer embeds *Base. The B2 probe shape: FLAT (pointer is\npeeled, then takes the named-direct path). Consistent with\nEmbedsDirectStruct.",
+      "description": "then takes the named-direct path). Consistent with\nEmbedsDirectStruct.",
       "type": "object",
+      "title": "EmbedsPointer embeds *Base. Expected: FLAT (pointer is peeled,",
       "required": [
         "id"
       ],
@@ -187,9 +189,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "Envelope": {
-      "description": "Under R6 (the rule the W3 workshop converged on):\n\n- direct → {$ref: Base}\n- viaAlias → {$ref: Base}     (alias dissolves; unannotated → no entity)\n\nPre-R6 (current Default / Ref behaviour, witnessed by the golden\ncaptured at commit time) leaks the alias name into the field's\n$ref target and manufactures a dangling BaseAlias definition.",
+      "description": "- direct → {$ref: Base}\n- viaAlias → {$ref: Base}     (unannotated alias dissolves)",
       "type": "object",
-      "title": "Envelope compares Base and BaseAlias at the FIELD-reach site\n(not embed). BaseAlias is intentionally UNANNOTATED — Q-E asks\nwhether the spec should expose this implementation-detail alias\nor dissolve it to the unaliased target.",
+      "title": "Envelope compares Base and BaseAlias at the FIELD-reach site\n(not embed). BaseAlias is intentionally UNANNOTATED — at field\nsites the unannotated alias dissolves to its unaliased target,\nand the alias produces no `definitions` entry.",
       "properties": {
         "direct": {
           "$ref": "#/definitions/Base"
@@ -201,9 +203,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-calibration-embed"
     },
     "EnvelopeAnnotatedAlias": {
-      "description": "Envelope.direct          → {$ref: Base}\nEnvelope.viaAlias        → {$ref: Base}            (R6: unannotated dissolves)\nEnvelopeAnnotatedAlias.direct          → {$ref: Base}\nEnvelopeAnnotatedAlias.viaAliasModeled → {$ref: BaseAliasModeled}",
+      "description": "Envelope.direct          → {$ref: Base}\nEnvelope.viaAlias        → {$ref: Base}            (unannotated dissolves)\nEnvelopeAnnotatedAlias.direct          → {$ref: Base}\nEnvelopeAnnotatedAlias.viaAliasModeled → {$ref: BaseAliasModeled}",
       "type": "object",
-      "title": "EnvelopeAnnotatedAlias is the bidirectional sibling of Envelope.\nIt exposes the ANNOTATED alias `BaseAliasModeled` at a field\nsite, alongside a direct `Base` field for comparison. Combined\nwith Envelope (which exercises the UNANNOTATED `BaseAlias`),\nthe two structs pin both halves of the Q-E / R6 contract on one\ncanvas:",
+      "title": "EnvelopeAnnotatedAlias is the bidirectional sibling of Envelope.\nIt exposes the ANNOTATED alias `BaseAliasModeled` at a field\nsite, alongside a direct `Base` field for comparison. Combined\nwith Envelope (which exercises the UNANNOTATED `BaseAlias`),\nthe two structs pin both halves of the field-site contract on\none canvas:",
       "properties": {
         "direct": {
           "$ref": "#/definitions/Base"

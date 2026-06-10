@@ -31,7 +31,7 @@ import (
 //     dedupe layer is exercised in the captured spec.
 //
 // Diagnostic emission on duplicates is deferred to the yaml-library
-// swap (see .claude/plans/forthcoming-features.md §3.1).
+// swap (see the forthcoming-features roadmap).
 func TestCoverage_MetaSecurityDefsDuplicateKeys(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/meta-securitydefs-duplicate-keys/..."},

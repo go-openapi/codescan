@@ -282,8 +282,9 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
 	}
 
-	// Body field: annotation gates first-class identity at the use site
-	// (parameters analogue of the schema-builder R6 rule).
+	// Body field: annotation gates first-class identity at the use
+	// site. See [§alias-handling](./README.md#alias-handling) for
+	// the cross-builder rule.
 	//
 	//   - annotated   alias → $ref preserves the alias name; the alias
 	//     gets its own definition via MakeRef's AppendPostDecl side effect.

@@ -12,33 +12,27 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// Q-E witnesses — the field-reach axis of the W3 alias workshop.
-//
-// The cycle-3 fixture `alias-calibration-embed` pairs two
+// Field-reach witnesses for the schema builder's alias-handling
+// contract. The `alias-calibration-embed` fixture pairs two
 // envelopes:
 //
 //   - Envelope               → uses the UNANNOTATED `BaseAlias`
 //   - EnvelopeAnnotatedAlias → uses the ANNOTATED   `BaseAliasModeled`
 //
-// Same Go type behind both aliases (`types.Unalias` collapses them
-// to `Base`); the ONLY difference is the `swagger:model` annotation.
-// Per R6 (the rule the workshop converged on), that annotation
-// gates whether the alias is a first-class spec entity:
+// Same Go type behind both aliases (`types.Unalias` collapses
+// them to `Base`); the ONLY difference is the `swagger:model`
+// annotation. The annotation gates whether the alias is a
+// first-class spec entity at use sites:
 //
-//   - annotated   → preserves `$ref: <alias-name>` at use sites + own definition
-//   - unannotated → dissolves to `$ref: <unaliased-target>` at use sites; no definition
+//   - annotated   → preserves `$ref: <alias-name>` + own definition
+//   - unannotated → dissolves to `$ref: <unaliased-target>`; no definition
 //
-// `TransparentAliases=true` is the canonical "always dissolve"
-// mode; under R6 Default and Ref converge on Transparent's shape
-// for unannotated aliases, while preserving the alias identity
-// for annotated ones.
-//
-// Three tests below capture goldens per mode so the diff between
-// pre-R6 and post-R6 is the audit trail. The assertions are
-// minimal at this point — the goldens carry the full shape.
+// `TransparentAliases=true` overrides the gate (always dissolve at
+// use sites). See [§aliases](../builders/schema/README.md#aliases)
+// for the rule.
 
 // TestCoverage_AliasField_Default captures the Default-mode
-// (Expand) shape for the field-reach Q-E witnesses. Under R6:
+// (Expand) shape:
 //
 //   - Envelope.viaAlias (UNANNOTATED BaseAlias) → $ref: Base
 //     (alias dissolves at the use site); BaseAlias has no own def
@@ -53,15 +47,15 @@ func TestCoverage_AliasField_Default(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Unannotated half — R6 negative: dissolved at use site, no own def.
+	// Unannotated half — dissolved at use site, no own def.
 	assert.NotContains(t, doc.Definitions, "BaseAlias",
-		"R6: unannotated alias must not have a standalone definition")
+		"unannotated alias must not have a standalone definition")
 	require.Contains(t, doc.Definitions, "Envelope")
 	viaAlias := doc.Definitions["Envelope"].Properties["viaAlias"]
 	assert.Equal(t, "#/definitions/Base", viaAlias.Ref.String(),
-		"R6: unannotated alias dissolves to its unaliased target at field sites")
+		"unannotated alias dissolves to its unaliased target at field sites")
 
-	// Annotated half — R6 positive: kept as first-class spec entity.
+	// Annotated half — kept as first-class spec entity.
 	require.Contains(t, doc.Definitions, "BaseAliasModeled",
 		"annotated alias keeps its standalone definition")
 	require.Contains(t, doc.Definitions, "EnvelopeAnnotatedAlias")
@@ -72,10 +66,11 @@ func TestCoverage_AliasField_Default(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_field_default.json")
 }
 
-// TestCoverage_AliasField_Ref captures the RefAliases shape. R6
-// applies identically to Default — annotation gates first-class
-// status; the only mode-level effect is the chain shape of the
-// annotated decl itself (separately covered by the Q-C tests).
+// TestCoverage_AliasField_Ref captures the RefAliases shape. The
+// annotation gate fires identically to Default at use sites —
+// mode only affects the alias decl's own definition shape (chain
+// `$ref` instead of structural copy), not the field-site `$ref`
+// target.
 func TestCoverage_AliasField_Ref(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
@@ -86,14 +81,14 @@ func TestCoverage_AliasField_Ref(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Unannotated half — R6 negative under Ref.
+	// Unannotated half — dissolved under Ref.
 	assert.NotContains(t, doc.Definitions, "BaseAlias",
-		"R6: unannotated alias must not have a standalone definition under Ref")
+		"unannotated alias must not have a standalone definition under Ref")
 	viaAlias := doc.Definitions["Envelope"].Properties["viaAlias"]
 	assert.Equal(t, "#/definitions/Base", viaAlias.Ref.String(),
-		"R6: unannotated alias dissolves to its target under Ref as well")
+		"unannotated alias dissolves to its target under Ref as well")
 
-	// Annotated half — R6 positive under Ref.
+	// Annotated half — kept under Ref.
 	require.Contains(t, doc.Definitions, "BaseAliasModeled")
 	viaModeled := doc.Definitions["EnvelopeAnnotatedAlias"].Properties["viaAliasModeled"]
 	assert.Equal(t, "#/definitions/BaseAliasModeled", viaModeled.Ref.String(),
@@ -103,9 +98,9 @@ func TestCoverage_AliasField_Ref(t *testing.T) {
 }
 
 // TestCoverage_AliasField_Transparent captures the dissolve-all
-// shape. Both Envelope.viaAlias AND
+// shape. Both Envelope.viaAlias and
 // EnvelopeAnnotatedAlias.viaAliasModeled resolve to {$ref: Base}
-// because Transparent supersedes annotation by design.
+// because Transparent supersedes the annotation gate at use sites.
 func TestCoverage_AliasField_Transparent(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:           []string{"./enhancements/alias-calibration-embed/..."},
@@ -117,8 +112,8 @@ func TestCoverage_AliasField_Transparent(t *testing.T) {
 	require.NotNil(t, doc)
 
 	// Transparent dissolves regardless of annotation: both field
-	// types resolve to Base at the use site, and the aliases do
-	// not appear in definitions.
+	// types resolve to Base at the use site, and the unannotated
+	// alias does not appear in definitions.
 	require.Contains(t, doc.Definitions, "Envelope")
 	viaAlias := doc.Definitions["Envelope"].Properties["viaAlias"]
 	assert.Equal(t, "#/definitions/Base", viaAlias.Ref.String(),
@@ -131,14 +126,12 @@ func TestCoverage_AliasField_Transparent(t *testing.T) {
 
 	assert.NotContains(t, doc.Definitions, "BaseAlias",
 		"Transparent dissolves the unannotated alias decl")
-	// R2 still applies to annotated decls under Transparent: the
-	// `swagger:model` annotation forces decl-level registration
-	// regardless of mode. Transparent dissolves the alias at USE
-	// sites (the viaAliasModeled $ref above), leaving
-	// BaseAliasModeled as a "dangling annotated def" — a known
-	// trade-off accepted in cycle 1 (R2-implication).
+	// `swagger:model` forces decl-level registration regardless of
+	// mode. Under Transparent the alias dissolves at USE sites
+	// (the viaAliasModeled $ref above) but the decl entry
+	// survives — the dangling annotated def trade-off.
 	assert.Contains(t, doc.Definitions, "BaseAliasModeled",
-		"R2 holds even under Transparent: annotated alias keeps its decl entry")
+		"annotated decl entry survives Transparent (swagger:model forces registration)")
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_field_transparent.json")
 }

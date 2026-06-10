@@ -12,20 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_AliasEmbedInline witnesses the Q-D fix: a struct that
-// embeds an alias of a named type must produce the same flat inline
-// shape as a struct that embeds the named type directly. The
-// documented contract is "embeds always inline properties, never
-// $ref unless the embed is swagger:allOf-tagged"
-// (internal/builders/schema/embedded.go). The previous code violated
-// that contract for aliased embeds — they were silently promoted to
-// allOf composition without an explicit annotation.
-//
-// Discovered during the W3 alias workshop cycle 3 (Q8 confirmation +
-// resolution). The cycle-3 fixture types are designed for this
-// regression: same Base struct embedded direct, via alias, via
-// pointer, and via interface. Post-fix, all four produce structurally
-// equivalent inline shapes.
+// TestCoverage_AliasEmbedInline pins the embed-handling contract:
+// a struct that embeds an alias of a named type produces the same
+// flat inline shape as a struct that embeds the named type
+// directly. Embeds always inline properties, never `$ref` unless
+// the embed carries `swagger:allOf`
+// (internal/builders/schema/embedded.go). The fixture exercises
+// the same Base struct embedded direct, via alias, via pointer,
+// and via interface — all four produce structurally equivalent
+// inline shapes.
 func TestCoverage_AliasEmbedInline(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
@@ -48,7 +43,7 @@ func TestCoverage_AliasEmbedInline(t *testing.T) {
 	require.Contains(t, doc.Definitions, "EmbedsAlias")
 	aliased := doc.Definitions["EmbedsAlias"]
 	assert.Empty(t, aliased.AllOf,
-		"aliased embed must produce flat inline like direct (Q-D fix)")
+		"aliased embed must produce flat inline like the direct embed")
 	assert.Contains(t, aliased.Properties, "id")
 	assert.Contains(t, aliased.Properties, "name")
 	assert.Contains(t, aliased.Properties, "extra")
@@ -70,16 +65,12 @@ func TestCoverage_AliasEmbedInline(t *testing.T) {
 	assert.Contains(t, iface.Properties, "tag")
 }
 
-// TestCoverage_AliasEmbedAllOfOptIn witnesses the OTHER half of the
-// Q-D contract: when the user EXPLICITLY annotates an aliased embed
-// with `swagger:allOf`, the spec produces allOf composition with a
-// $ref to the embedded type. This is the shape that was silently
-// produced (without annotation) before the Q-D fix; it MUST remain
-// reachable as an explicit opt-in.
-//
-// Combined with TestCoverage_AliasEmbedInline, this asserts the
-// bidirectional contract: annotation is the sole gate of allOf
-// composition.
+// TestCoverage_AliasEmbedAllOfOptIn pins the other half of the
+// embed contract: when the user EXPLICITLY annotates an aliased
+// embed with `swagger:allOf`, the spec produces allOf composition
+// with a `$ref` to the embedded type. Together with
+// TestCoverage_AliasEmbedInline this asserts the bidirectional
+// contract: annotation is the sole gate of allOf composition.
 func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
@@ -95,16 +86,15 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 	// The `swagger:allOf` annotation governs COMPOSITION SHAPE
 	// (allOf vs flat inline). It does not preserve alias identity:
 	// the $ref target is the unaliased Base because the alias
-	// BaseAlias itself is unannotated (no `swagger:model`). Per the
-	// R6 rule, only `swagger:model` makes an alias a first-class
-	// spec entity; without it, the aliasing is a Go implementation
-	// detail and the spec carries the underlying name even inside
-	// an allOf composition.
+	// BaseAlias itself is unannotated (no `swagger:model`). Only
+	// `swagger:model` makes an alias a first-class spec entity;
+	// without it, the aliasing is a Go implementation detail and
+	// the spec carries the underlying name even inside an allOf
+	// composition.
 	//
 	// To preserve the alias name in allOf composition, the alias
-	// would need its own `swagger:model` annotation (see the
-	// EnvelopeAnnotatedAlias counterpart in the fixture for the
-	// non-embed witness of the same R6 contract).
+	// would need its own `swagger:model` annotation (see
+	// EmbedsAliasModeledOptIn below for the witness).
 	require.Contains(t, doc.Definitions, "EmbedsAliasOptIn")
 	optInAlias := doc.Definitions["EmbedsAliasOptIn"]
 	require.Len(t, optInAlias.AllOf, 2,
@@ -116,7 +106,7 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 		switch {
 		case member.Ref.String() != "":
 			assert.Equal(t, "#/definitions/Base", member.Ref.String(),
-				"R6: unannotated alias dissolves to its unaliased target even inside allOf composition")
+				"unannotated alias dissolves to its unaliased target even inside allOf composition")
 			foundRefToBase = true
 		case len(member.Properties) > 0:
 			assert.Contains(t, member.Properties, "extra",
@@ -124,13 +114,13 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 			foundInlineExtra = true
 		}
 	}
-	assert.True(t, foundRefToBase, "must find $ref member (pointing at Base under R6)")
+	assert.True(t, foundRefToBase, "must find $ref member pointing at Base")
 	assert.True(t, foundInlineExtra, "must find inline-properties member")
 
 	// EmbedsDirectStructOptIn (Base direct embed with swagger:allOf)
 	// → allOf with $ref to Base. Same annotation, same composition
-	// shape, regardless of whether the embed was aliased — Q-D
-	// makes alias and direct paths agree everywhere.
+	// shape, regardless of whether the embed was aliased — alias
+	// and direct paths agree everywhere.
 	require.Contains(t, doc.Definitions, "EmbedsDirectStructOptIn")
 	optInDirect := doc.Definitions["EmbedsDirectStructOptIn"]
 	require.Len(t, optInDirect.AllOf, 2)
@@ -153,11 +143,11 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 	// EmbedsAliasModeledOptIn (BaseAliasModeled embed with swagger:allOf)
 	// → allOf: [{$ref: BaseAliasModeled}, {properties: {extra inline}}].
 	//
-	// Bidirectional R6 witness against EmbedsAliasOptIn above: same
+	// Bidirectional witness against EmbedsAliasOptIn above: same
 	// allOf composition shape, same outer struct, but the embedded
-	// alias is ANNOTATED. The annotation recovers the pre-R6
-	// alias-name $ref behaviour — `swagger:model` is the SOLE knob
-	// that preserves alias identity inside an allOf member.
+	// alias is ANNOTATED. The annotation surfaces the alias name
+	// in the $ref target — `swagger:model` is the SOLE knob that
+	// preserves alias identity inside an allOf member.
 	require.Contains(t, doc.Definitions, "EmbedsAliasModeledOptIn")
 	optInAliasModeled := doc.Definitions["EmbedsAliasModeledOptIn"]
 	require.Len(t, optInAliasModeled.AllOf, 2,
@@ -169,7 +159,7 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 		switch {
 		case member.Ref.String() != "":
 			assert.Equal(t, "#/definitions/BaseAliasModeled", member.Ref.String(),
-				"R6: annotated alias preserves identity inside allOf composition")
+				"annotated alias preserves identity inside allOf composition")
 			foundRefToAliasModeled = true
 		case len(member.Properties) > 0:
 			assert.Contains(t, member.Properties, "extra")

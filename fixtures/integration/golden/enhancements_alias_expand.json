@@ -3,7 +3,7 @@
   "paths": {},
   "definitions": {
     "EnvelopeAliasModeled": {
-      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. With `swagger:model` the alias opts in as a\nfirst-class spec entity; R8 then preserves the alias name at\nbody field sites in `swagger:response` structs.",
+      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. With `swagger:model` the alias opts in as a\nfirst-class spec entity; the alias name is preserved at body\nfield sites in `swagger:response` structs.",
       "type": "object",
       "properties": {
         "payload": {
@@ -67,7 +67,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
     "ResponseEnvelope": {
-      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses. Its `payload` field is typed as the UNannotated `PayloadAlias`,\nso under R6 the field's $ref dissolves to `Payload`.",
+      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses. Its `payload` field is typed as the UNannotated `PayloadAlias`,\nso the field's $ref dissolves to `Payload` (annotation gate at use sites).",
       "type": "object",
       "properties": {
         "payload": {
@@ -77,7 +77,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
     "ResponseEnvelopeModeled": {
-      "description": "ResponseEnvelopeModeled is the bidirectional sibling of\n`ResponseEnvelope`. Same struct shape, but its `payload` field uses\nthe annotated alias `PayloadAliasModeled`. Per R6, the field's $ref\npreserves the alias identity (`$ref: PayloadAliasModeled`),\ndemonstrating that the explicit `swagger:model` opt-in recovers the\npre-R6 alias-name $ref behaviour.",
+      "description": "ResponseEnvelopeModeled is the bidirectional sibling of\n`ResponseEnvelope`. Same struct shape, but its `payload` field uses\nthe annotated alias `PayloadAliasModeled`. The field's $ref preserves\nthe alias identity (`$ref: PayloadAliasModeled`), demonstrating that\nthe explicit `swagger:model` opt-in surfaces the alias name at body\nfield sites.",
       "type": "object",
       "properties": {
         "payload": {
@@ -89,7 +89,7 @@
   },
   "responses": {
     "aliasedModeledResponse": {
-      "description": "AliasedModeledResponse is the bidirectional sibling of\nAliasedResponse: same shape, but its Body field uses the\nANNOTATED alias `EnvelopeAliasModeled`. Under R8 the body\nschema's `$ref` preserves `EnvelopeAliasModeled` (alongside\nthe alias's own definition), while AliasedResponse dissolves\nto `$ref: ResponseEnvelope`. Both halves on one canvas.",
+      "description": "AliasedModeledResponse is the bidirectional sibling of\nAliasedResponse: same shape, but its Body field uses the\nANNOTATED alias `EnvelopeAliasModeled`. The body schema's\n`$ref` preserves `EnvelopeAliasModeled` (alongside the alias's\nown definition), while AliasedResponse dissolves to\n`$ref: ResponseEnvelope`. Both halves on one canvas.",
       "schema": {
         "$ref": "#/definitions/EnvelopeAliasModeled"
       }

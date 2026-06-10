@@ -150,11 +150,10 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable) error {
 	resolvers.MustHaveRightHandSide(tpe)
 
-	// User-override classifier (Q13): the alias-dispatch path does not
-	// consult `swagger:strfmt` anywhere else, so a `type X = any` or
-	// `type X = int64` decorated with `// swagger:strfmt <format>`
-	// would otherwise fall through to the recognizer (`any` →
-	// empty body) or to the underlying primitive (`int64` →
+	// `swagger:strfmt` user-override on the alias decl. Without this
+	// check, an alias decl decorated with `// swagger:strfmt <format>`
+	// would fall through to the recognizer (`type X = any` → empty
+	// body) or to the underlying primitive (`type X = int64` →
 	// `{integer, int64}`), silently dropping the user's annotation.
 	// Honouring it here mirrors `classifierNamedTypeOverride`'s
 	// decl-entry treatment of `swagger:type`, and matches the
@@ -195,7 +194,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 		// "any JSON" idiom respectively. The TransparentAliases path
 		// at line 156 already gets this right via buildFromType(rhs);
 		// Expand needs the same recognizer call before its Underlying
-		// fallthrough. See R5 in the W3 alias workshop ledger.
+		// fallthrough.
 		if obj := rhsTypeName(rhs); obj != nil &&
 			applyStdlibSpecials(obj, target, s.skipExtensions) {
 			return nil
@@ -520,8 +519,7 @@ func hasNamedCore(tpe types.Type) bool {
 // has nothing to recognize on those.
 //
 // Used by buildDeclAlias's Expand branch to consult the stdlib
-// recognizers before walking Underlying — see R5 in the W3 alias
-// workshop ledger.
+// recognizers before walking Underlying.
 func rhsTypeName(rhs types.Type) *types.TypeName {
 	switch t := rhs.(type) {
 	case *types.Named:

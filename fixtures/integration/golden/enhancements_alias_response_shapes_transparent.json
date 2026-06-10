@@ -22,7 +22,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response-shapes"
     },
     "EnvelopeAliasModeled": {
-      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. R8 makes the annotation the gate for first-class\nalias identity at body field sites; this decl exists so the\nbidirectional contract is visible on the same canvas as the\nunannotated witnesses above.",
+      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. The annotation gates first-class alias identity\nat body field sites; this decl exists so the bidirectional\ncontract is visible on the same canvas as the unannotated\nwitnesses above.",
       "type": "object",
       "required": [
         "id"
@@ -43,7 +43,7 @@
   },
   "responses": {
     "bodyAliasModeledResponse": {
-      "description": "BodyAliasModeledResponse — body field uses the ANNOTATED alias\nEnvelopeAliasModeled. Under R8 the body schema's `$ref`\npreserves the alias name (`$ref: EnvelopeAliasModeled`),\nrecovering the pre-R8 alias-name $ref behaviour for users who\nexplicitly opt in via `swagger:model`. The unannotated\ncounterpart (BodyAliasResponse above) dissolves to\n`$ref: Envelope`.",
+      "description": "BodyAliasModeledResponse — body field uses the ANNOTATED alias\nEnvelopeAliasModeled. The body schema's `$ref` preserves the\nalias name (`$ref: EnvelopeAliasModeled`), surfacing the alias\nidentity for users who explicitly opt in via `swagger:model`.\nThe unannotated counterpart (BodyAliasResponse above) dissolves\nto `$ref: Envelope`.",
       "schema": {
         "$ref": "#/definitions/Envelope"
       }

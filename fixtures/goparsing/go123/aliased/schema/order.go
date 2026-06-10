@@ -16,12 +16,10 @@
 
 package schema
 
-// UUID should be discovered through dependency analysis.
-//
-// Pre-R6 this comment held: the (now-retired) discovery loop would
-// pull UUID into `definitions` as a side effect of being referenced
-// by `order.ID`. Post-R6 the unannotated alias dissolves at use
-// sites; see UUIDModeled below for the explicit-opt-in counterpart.
+// UUID is an unannotated alias of int64. It dissolves at use
+// sites (the field's $ref points at the underlying primitive
+// shape) and does not produce its own `definitions` entry. See
+// UUIDModeled below for the explicit-opt-in counterpart.
 type UUID = int64
 
 // Anything should be discovered through dependency analysis.
@@ -88,12 +86,12 @@ type StoreOrder struct {
 
 // StoreOrderModeled is the bidirectional sibling of StoreOrder.
 // Same field layout, but the alias-typed fields use the ANNOTATED
-// aliases (UUIDModeled / AnythingModeled). Per R6, each annotated
-// alias preserves its identity at the field site:
+// aliases (UUIDModeled / AnythingModeled). The annotation gate
+// preserves the alias identity at each field site:
 //
 //   - ID UUIDModeled               → $ref: #/definitions/UUIDModeled
 //   - DeliveryOption AnythingModeled → $ref: #/definitions/AnythingModeled
-//   - EID ExtendedID               → $ref: #/definitions/ExtendedID (named struct, R6-independent)
+//   - EID ExtendedID               → $ref: #/definitions/ExtendedID (named struct, unaffected by the alias rule)
 //
 // Compare with `StoreOrder` above, where the equivalent fields
 // dissolve to their primitive / open shapes because UUID and
@@ -110,6 +108,6 @@ type StoreOrderModeled struct {
 	// the delivery option for this order
 	DeliveryOption AnythingModeled `json:"deliveryOption"`
 
-	// the extended ID (named struct, included as the R6-independent control)
+	// the extended ID (named struct — alias rule doesn't apply; included as control)
 	EID ExtendedID `json:"extended_id"`
 }

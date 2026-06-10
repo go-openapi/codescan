@@ -54,7 +54,7 @@ type AliasedParams struct {
 
 // ResponseEnvelope is the canonical struct referenced by aliases used in
 // responses. Its `payload` field is typed as the UNannotated `PayloadAlias`,
-// so under R6 the field's $ref dissolves to `Payload`.
+// so the field's $ref dissolves to `Payload` (annotation gate at use sites).
 //
 // swagger:model ResponseEnvelope
 type ResponseEnvelope struct {
@@ -70,10 +70,10 @@ type PayloadAliasModeled = Payload
 
 // ResponseEnvelopeModeled is the bidirectional sibling of
 // `ResponseEnvelope`. Same struct shape, but its `payload` field uses
-// the annotated alias `PayloadAliasModeled`. Per R6, the field's $ref
-// preserves the alias identity (`$ref: PayloadAliasModeled`),
-// demonstrating that the explicit `swagger:model` opt-in recovers the
-// pre-R6 alias-name $ref behaviour.
+// the annotated alias `PayloadAliasModeled`. The field's $ref preserves
+// the alias identity (`$ref: PayloadAliasModeled`), demonstrating that
+// the explicit `swagger:model` opt-in surfaces the alias name at body
+// field sites.
 //
 // swagger:model ResponseEnvelopeModeled
 type ResponseEnvelopeModeled struct {
@@ -98,18 +98,18 @@ type AliasedResponse struct {
 
 // EnvelopeAliasModeled is the annotated counterpart of
 // EnvelopeAlias. With `swagger:model` the alias opts in as a
-// first-class spec entity; R8 then preserves the alias name at
-// body field sites in `swagger:response` structs.
+// first-class spec entity; the alias name is preserved at body
+// field sites in `swagger:response` structs.
 //
 // swagger:model EnvelopeAliasModeled
 type EnvelopeAliasModeled = ResponseEnvelope
 
 // AliasedModeledResponse is the bidirectional sibling of
 // AliasedResponse: same shape, but its Body field uses the
-// ANNOTATED alias `EnvelopeAliasModeled`. Under R8 the body
-// schema's `$ref` preserves `EnvelopeAliasModeled` (alongside
-// the alias's own definition), while AliasedResponse dissolves
-// to `$ref: ResponseEnvelope`. Both halves on one canvas.
+// ANNOTATED alias `EnvelopeAliasModeled`. The body schema's
+// `$ref` preserves `EnvelopeAliasModeled` (alongside the alias's
+// own definition), while AliasedResponse dissolves to
+// `$ref: ResponseEnvelope`. Both halves on one canvas.
 //
 // swagger:response aliasedModeledResponse
 type AliasedModeledResponse struct {

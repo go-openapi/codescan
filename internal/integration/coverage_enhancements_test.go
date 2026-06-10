@@ -105,7 +105,7 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// R6 bidirectional witness — same fixture, two body-payload
+	// Bidirectional witness — same fixture, two body-payload
 	// shapes side by side:
 	//
 	//   - ResponseEnvelope.payload typed PayloadAlias (UNannotated)
@@ -125,18 +125,18 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	assert.Equal(t, "#/definitions/PayloadAliasModeled", respAnn.Ref.String(),
 		"annotated PayloadAliasModeled preserves its identity in the field $ref")
 
-	// R8 bidirectional response-side witness — the same R6/R7 pattern
+	// Bidirectional response-side witness — the same pattern
 	// applied to top-level swagger:response body fields. The
 	// unannotated AliasedResponse and the annotated
 	// AliasedModeledResponse sit on the same fixture canvas.
 	assert.Equal(t, "#/definitions/ResponseEnvelope",
 		doc.Responses["aliasedResponse"].Schema.Ref.String(),
-		"R8: unannotated response body alias dissolves to canonical")
+		"unannotated response body alias dissolves to canonical")
 	assert.Equal(t, "#/definitions/EnvelopeAliasModeled",
 		doc.Responses["aliasedModeledResponse"].Schema.Ref.String(),
-		"R8: annotated response body alias preserves the alias name")
+		"annotated response body alias preserves the alias name")
 	require.Contains(t, doc.Definitions, "EnvelopeAliasModeled",
-		"R8: annotated alias has its own definition")
+		"annotated alias has its own definition")
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_expand.json")
 }
@@ -340,9 +340,8 @@ func TestCoverage_RefAliasChain(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Q13 — user annotations on alias decls. The alias-dispatch
-	// path now consults swagger:strfmt at the buildDeclAlias entry,
-	// so:
+	// User annotations on alias decls. The alias-dispatch path
+	// consults swagger:strfmt at the buildDeclAlias entry, so:
 	//   - `type X = any` + swagger:strfmt date → `{string, date}`
 	//   - `type X = int64` + swagger:strfmt uuid → `{string, uuid}`
 	// The unannotated case (Wildcard) stays as the documented "any
@@ -350,17 +349,17 @@ func TestCoverage_RefAliasChain(t *testing.T) {
 	// fire via classifierNamedTypeOverride (CountTyped baseline).
 	datestamp := doc.Definitions["Datestamp"]
 	assert.Equal(t, []string{"string"}, []string(datestamp.Type),
-		"Q13: swagger:strfmt date on `type X = any` must produce {string, date}")
+		"swagger:strfmt date on `type X = any` must produce {string, date}")
 	assert.Equal(t, "date", datestamp.Format)
 
 	userID := doc.Definitions["UserIDStrf"]
 	assert.Equal(t, []string{"string"}, []string(userID.Type),
-		"Q13: swagger:strfmt uuid on `type X = int64` must produce {string, uuid}")
+		"swagger:strfmt uuid on `type X = int64` must produce {string, uuid}")
 	assert.Equal(t, "uuid", userID.Format)
 
 	wildcard := doc.Definitions["Wildcard"]
 	assert.Empty(t, wildcard.Type,
-		"Q13 status quo: unannotated `type X = any` (no strfmt) keeps the open Swagger 2.0 shape")
+		"unannotated `type X = any` (no strfmt) keeps the open Swagger 2.0 shape")
 
 	countTyped := doc.Definitions["CountTyped"]
 	assert.Equal(t, []string{"integer"}, []string(countTyped.Type),

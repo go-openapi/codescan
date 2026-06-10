@@ -15,7 +15,7 @@
 // runs. Here api_key declares "type:" twice on purpose.
 //
 // Diagnostic emission on duplicates is deferred to the yaml-library
-// swap tracked in .claude/plans/forthcoming-features.md §3.1.
+// swap tracked in the forthcoming-features roadmap.
 //
 // swagger:meta
 //

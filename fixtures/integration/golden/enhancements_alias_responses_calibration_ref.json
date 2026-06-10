@@ -94,7 +94,7 @@
   },
   "responses": {
     "aliasedTopResponse": {
-      "description": "AliasedTopResponse is a top-level alias annotated\n`swagger:response`. R8 clause 1 says neither this alias nor its\nbacking struct should surface in `definitions` — the response's\nbody / headers come from the fields of the unaliased target.",
+      "description": "AliasedTopResponse is a top-level alias annotated\n`swagger:response`. The responses builder is transparent re:\nmodel creation at this layer — neither this alias nor its\nbacking struct surfaces in `definitions`. The response's body /\nheaders come from the fields of the unaliased target.",
       "schema": {
         "$ref": "#/definitions/Envelope"
       },
@@ -112,13 +112,13 @@
       }
     },
     "bodyAliasModeledResponse": {
-      "description": "BodyAliasModeledResponse — body response typed as the\nANNOTATED alias EnvelopeAliasModeled. Under R8 the body\nschema's $ref preserves EnvelopeAliasModeled (and the alias\nsurfaces as its own definition).",
+      "description": "BodyAliasModeledResponse — body response typed as the\nANNOTATED alias EnvelopeAliasModeled. The body schema's $ref\npreserves EnvelopeAliasModeled (and the alias surfaces as its\nown definition).",
       "schema": {
         "$ref": "#/definitions/EnvelopeAliasModeled"
       }
     },
     "bodyAliasPlainResponse": {
-      "description": "BodyAliasPlainResponse — body response typed as the UNANNOTATED\nalias EnvelopeAlias. Under R8 the body schema's $ref dissolves\nto Envelope.",
+      "description": "BodyAliasPlainResponse — body response typed as the UNANNOTATED\nalias EnvelopeAlias. The body schema's $ref dissolves to\nEnvelope.",
       "schema": {
         "$ref": "#/definitions/Envelope"
       }

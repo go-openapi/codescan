@@ -200,6 +200,18 @@ emitted `{}`. The new order recognizes stdlib types via
 
 ## <a id="aliases"></a>§aliases — `TransparentAliases` vs `RefAliases` vs default-expand
 
+Alias handling has two axes: **decl shape** (what does the alias's
+own definition look like?) and **use-site shape** (what does a
+field / element / body site that references the alias produce?).
+The same contract governs the schema, parameters and responses
+builders — both at the decl and at the use site — so the rules
+described here apply uniformly across all three layers
+(see [parameters/README.md](../parameters/README.md#alias-handling)
+and [responses/README.md](../responses/README.md#alias-handling)
+for the layer-specific dispatches that consume this contract).
+
+### Decl shape — `buildDeclAlias`
+
 `buildDeclAlias` handles top-level alias declarations. Independent
 flags with deterministic precedence:
 
@@ -209,9 +221,71 @@ flags with deterministic precedence:
 | false | true | **`$ref`** — `makeRef` to the RHS's named target. |
 | false | false (default) | **Expand** — `buildFromType(Underlying, target)`. LHS gets a structural definition. |
 
+`swagger:model` on an alias decl forces decl-level registration
+unconditionally — even under `TransparentAliases`, an annotated
+decl reaches `definitions` (with a structural shape via the
+`Spec.Assign.IsValid()` dissolve-named branch). The trade-off is
+that under Transparent the annotated decl exists but **nothing
+references it** at use sites — the orphan-annotated-decl shape.
+
 The dissolve case propagates to nested named types via the
 `Spec.Assign.IsValid()` disjunct in `buildNamedType`
 ([§dissolve-named](#dissolve-named)).
+
+`swagger:strfmt <format>` and `swagger:type <go-type>` on an alias
+decl are honoured at the decl entry — `swagger:strfmt` at the top
+of `buildDeclAlias`, `swagger:type` via
+`classifierNamedTypeOverride` in `buildFromDecl`. Both write the
+canonical shape (`{type: string, format: <format>}` or the
+Swagger shape for the named Go type) and short-circuit the
+underlying-kind dispatch.
+
+### Use-site shape — `buildAlias` (and the parameters / responses analogues)
+
+`buildAlias` is the use-site handler — called whenever an
+alias-typed value is encountered as a struct field, slice / array
+element, allOf member, body parameter or response body. The rule
+is **annotation-gated** and identical across the three builders:
+
+| Mode | `swagger:model` on the alias? | Use-site shape |
+|---|---|---|
+| `TransparentAliases=true` | (irrelevant) | Dissolves to the unaliased target. No definition for the alias. Wins outright. |
+| Default / `RefAliases=true` | yes | `$ref: <AliasName>` — the alias surfaces in `definitions` with shape per mode (decl shape table above). |
+| Default / `RefAliases=true` | no | Dissolves to the unaliased target via `types.Unalias` (full chain collapse in one step). The alias produces no definition entry. |
+
+The use-site `$ref` target is decided by **annotation alone**
+(with Transparent as the override) — the mode flags only shape
+the alias decl's own definition. A struct field typed with an
+annotated alias produces the same `$ref: <AliasName>` under both
+Default and Ref; the difference shows up downstream in the
+alias's own definition (Expand structural under Default vs chain
+`$ref` under Ref).
+
+The same applies inside allOf composition: `swagger:allOf` on an
+embed governs the *composition* shape (allOf vs flat inline);
+`swagger:model` on an embedded alias governs the *identity* of
+the allOf member's `$ref` target (alias name vs unaliased target).
+They are orthogonal.
+
+### SimpleSchema reach contexts
+
+Non-body parameters and response headers are SimpleSchema targets
+and **cannot carry `$ref`** (OpenAPI 2.0 constraint). At those
+sites the alias always expands to the unaliased target regardless
+of annotation. The annotation gate has no effect for SimpleSchema
+because the question "$ref to what" never arises.
+
+### Top-level alias parameters and responses
+
+When `swagger:parameters` or `swagger:response` is on an alias
+declaration, the alias is **transparent re: model creation** in
+all three modes — neither the alias nor any chain link of its
+backing struct surfaces in `definitions`. The fields of the
+unaliased target become the operation's parameters or the
+response's body / headers. This clause has no schema-builder
+analogue: `swagger:parameters` / `swagger:response` declare a
+parameter set or response, not a model, and never promote their
+backing chain to the spec's definitions section.
 
 ### `Rhs()` vs `Underlying()`
 
@@ -220,16 +294,22 @@ The dissolve case propagates to nested named types via the
   or `*types.Named`).
 - `tpe.Underlying()` — peels through aliases **and** named types to
   reach the structural form (`*types.Struct`, `*types.Basic`, …).
+- `types.Unalias(tpe)` — peels through aliases only, leaving Named
+  types intact. Used at use sites for full chain dissolve in one
+  step.
 
 Example: `type X = Y; type Y = Z; type Z = int` gives
-`X.Rhs() == Y (*types.Alias)` and `X.Underlying() == int (*types.Basic)`.
+`X.Rhs() == Y (*types.Alias)`, `X.Underlying() == int (*types.Basic)`,
+and `types.Unalias(X) == int (*types.Basic)` as well.
 
-The two branches use them intentionally:
+The branches use them intentionally:
 
-- **Dissolve** uses `rhs` — dissolves one layer at a time; if the
-  RHS is itself a named/aliased type, build from it (may recurse).
-- **Expand** uses `Underlying()` — fully expand the structural shape
-  onto the LHS definition.
+- **Dissolve (decl)** uses `rhs` — dissolves one layer at a time; if
+  the RHS is itself a named/aliased type, build from it (may recurse).
+- **Expand (decl)** uses `Underlying()` — fully expand the structural
+  shape onto the LHS definition.
+- **Dissolve (use site)** uses `types.Unalias` — collapses the whole
+  alias chain in one step at the field / element / body position.
 
 ---
 
@@ -505,8 +585,7 @@ This asymmetry is intentional, not a quirk:
 
 The "one size fits all" mangler on interfaces will not always be
 what the author wanted — a future global opt-out
-(`skip-jsonify-interfaces` or similar) is tracked in
-`.claude/plans/forthcoming-features.md`.
+(`skip-jsonify-interfaces` or similar) is on the roadmap.
 
 ### `swagger:name X` is verbatim
 

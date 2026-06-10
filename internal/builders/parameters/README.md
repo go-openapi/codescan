@@ -184,21 +184,45 @@ SimpleSchema vocabulary via `handlers.IsSimpleSchemaKeyword` (see
 [../schema/README.md#simple-schema-mode](../schema/README.md#simple-schema-mode)
 for the keyword surface).
 
-### Alias handling — when to `$ref` vs expand
+### <a id="alias-handling"></a>Alias handling
 
-`buildFieldAlias` carries a gate:
+The parameters builder shares the alias-handling contract with the
+schema and responses builders — annotation gates first-class alias
+identity at use sites; `TransparentAliases` overrides at use sites;
+mode flags only shape the alias's own definition. The full rule
+lives in
+[schema/README.md §aliases](../schema/README.md#aliases); below
+captures the parameters-specific reach contexts.
 
-```go
-if typable.In() != inBody || !p.Ctx.RefAliases() {
-    unaliased := types.Unalias(tpe)
-    return p.buildFromField(fld, unaliased, typable, seen)
-}
-```
+Two parameters-specific use-site handlers:
 
-Non-body parameters can't carry `$ref` (SimpleSchema forbids it), so
-they always expand the alias. Body parameters honour `RefAliases`:
-when set, the alias becomes a `$ref` to its target via
-`common.Builder.MakeRef`; otherwise the underlying is expanded.
+**Top-level alias annotated `swagger:parameters` (`buildAlias`).**
+The alias is **transparent re: model creation** in all modes —
+neither the alias nor any chain link of its backing struct
+surfaces in `definitions`. The fields of the unaliased target
+become the operation's parameters. The implementation just
+forwards `tpe.Rhs()` to `buildFromType`; recursion handles chains
+naturally. No mode-specific behaviour at this layer.
+
+**Alias as a field type within a parameters struct
+(`buildFieldAlias`).** Three branches:
+
+- `TransparentAliases=true` — dissolve via the schema sub-builder.
+- Non-body field (query / path / header / formData) — SimpleSchema
+  target cannot carry `$ref`; always expand to the unaliased
+  target via `types.Unalias`. Annotation has no effect at non-body
+  sites.
+- Body field — annotation gate decides:
+  - With `swagger:model`: `MakeRef` to the alias's decl —
+    `$ref: <AliasName>` preserves the alias name and the alias
+    surfaces in `definitions` via the discovery loop.
+  - Without `swagger:model`: dissolve via `types.Unalias` (full
+    chain collapse in one step) and build from the unaliased
+    target.
+
+The body-field gate is mode-agnostic: Default and Ref produce the
+same `$ref` target — annotation alone decides. The mode flag
+shapes only the alias decl's own definition downstream.
 
 ## <a id="quirks-history"></a>§quirks-history — resolved quirks
 

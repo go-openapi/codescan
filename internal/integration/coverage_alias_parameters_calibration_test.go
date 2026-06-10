@@ -15,7 +15,7 @@ import (
 
 // findBodyParam locates the body parameter named `name` on the
 // operation under (path, verb) in the spec — small helper to keep
-// the cycle-4 R7 assertions readable.
+// the parameters-builder alias-handling assertions readable.
 func findBodyParam(t *testing.T, doc *oaispec.Swagger, path, verb, name string) oaispec.Parameter {
 	t.Helper()
 	op := doc.Paths.Paths[path].PathItemProps
@@ -38,39 +38,22 @@ func findBodyParam(t *testing.T, doc *oaispec.Swagger, path, verb, name string) 
 	return oaispec.Parameter{}
 }
 
-// Cycle-4 W3 alias workshop — parameters analogue of cycle-3.
-//
-// The three tests below scan the cycle-4 calibration fixture under
-// the three alias modes (Default, RefAliases, TransparentAliases)
-// and dump golden files capturing the pre-R7 state. The diff
-// between these and the post-patch goldens will be the audit trail
-// for the parameters-builder fix.
+// Calibration coverage for the parameters builder's alias-handling
+// contract. The three tests below scan the calibration fixture
+// under all three alias modes (Default, RefAliases,
+// TransparentAliases) and pin both inline assertions and goldens.
 //
 // The fixture deliberately includes:
 //
 //   - a top-level alias annotated `swagger:parameters` whose RHS is
-//     an UNEXPORTED backing struct (Q12 witness — the unexported
-//     struct must not leak into `definitions`);
-//   - body fields typed as both unannotated and annotated aliases of
-//     the canonical Payload model (R7-clause-2 witness — annotation
-//     gates whether the alias surfaces as a first-class spec entity
-//     at body field sites);
+//     an UNEXPORTED backing struct (must not leak to definitions);
+//   - body fields typed as both unannotated and annotated aliases
+//     of the canonical Payload model (annotation gate witness);
 //   - a non-body field typed as an unannotated alias of a named
-//     primitive (SimpleSchema target — R7-clause-3 witness).
+//     primitive (SimpleSchema target — always inline).
 //
-// See `.claude/plans/workshops/alias-parameters.md` for the R7
-// rule candidate and `.claude/plans/workshops/alias-ledger.md`
-// cycle 4 for the running judgment.
-//
-// At this point (pre-patch), the goldens are expected to surface
-// at least:
-//
-//   - `internalParams` and `AliasedTopParams` as `definitions`
-//     entries (wrong under R7 clause 1);
-//   - `PayloadAlias` / `PayloadAlias2` / `QueryIDAlias` as
-//     `definitions` entries (wrong under R7 clause 2/3);
-//   - `paths` populated by the two `swagger:route` handlers, with
-//     whatever parameter shape the current alias dispatch produces.
+// See [§alias-handling](../builders/parameters/README.md#alias-handling)
+// for the contract.
 
 func TestCoverage_AliasParametersCalibration_Default(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
@@ -81,30 +64,30 @@ func TestCoverage_AliasParametersCalibration_Default(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// R7 clause 1 — neither the swagger:parameters alias nor its
-	// unexported backing struct surface as model definitions. The
-	// /aliased-top operation still gets its parameters built correctly:
-	// the fields of the unaliased backing struct become parameters,
-	// and `body` resolves to the canonical Payload model.
+	// Top-level `swagger:parameters` alias — neither the alias nor
+	// its unexported backing struct surface as model definitions.
+	// The /aliased-top operation still gets its parameters built
+	// correctly: the fields of the unaliased backing struct become
+	// parameters, and `body` resolves to the canonical Payload model.
 	assert.NotContains(t, doc.Definitions, "AliasedTopParams",
-		"R7 clause 1: top-level swagger:parameters alias must not produce a definition")
+		"top-level swagger:parameters alias must not produce a definition")
 	assert.NotContains(t, doc.Definitions, "internalParams",
-		"Q12 fix: unexported backing struct must not surface as a definition")
+		"unexported backing struct must not surface as a definition")
 	topBody := findBodyParam(t, doc, "/aliased-top", "get", "body")
 	assert.Equal(t, "#/definitions/Payload", topBody.Schema.Ref.String(),
-		"R7 clause 1: top-level alias's body param reaches the canonical Payload via the unaliased target's fields")
+		"top-level alias's body param reaches the canonical Payload via the unaliased target's fields")
 
-	// R7 clause 2 — annotation gates first-class identity at body field sites.
+	// Annotation gates first-class identity at body field sites.
 	assert.NotContains(t, doc.Definitions, "PayloadAlias",
-		"R7 clause 2: unannotated body-field alias must not produce a definition")
+		"unannotated body-field alias must not produce a definition")
 	assert.NotContains(t, doc.Definitions, "PayloadAlias2",
-		"R7 clause 2: unannotated alias chain must not produce a definition")
+		"unannotated alias chain must not produce a definition")
 	require.Contains(t, doc.Definitions, "PayloadAliasModeled",
-		"R7 clause 2: annotated alias keeps its own definition")
+		"annotated alias keeps its own definition")
 
-	// R7 clause 3 — non-body SimpleSchema target alias must not surface.
+	// Non-body SimpleSchema target alias must not surface.
 	assert.NotContains(t, doc.Definitions, "QueryIDAlias",
-		"R7 clause 3: non-body alias must not produce a definition (SimpleSchema target)")
+		"non-body alias must not produce a definition (SimpleSchema target)")
 
 	// Body-field $ref targets pin the annotation gate.
 	plainBody := findBodyParam(t, doc, "/direct", "post", "bodyAliasPlain")
@@ -132,9 +115,9 @@ func TestCoverage_AliasParametersCalibration_Ref(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// R7 behaviour at field sites is mode-agnostic: the annotation
-	// gate fires the same way under RefAliases as under Default. The
-	// mode only affects the alias decl's OWN definition shape
+	// Behaviour at field sites is mode-agnostic: the annotation
+	// gate fires the same way under RefAliases as under Default.
+	// The mode only affects the alias decl's OWN definition shape
 	// (PayloadAliasModeled's downstream representation), not the
 	// field $ref target.
 	assert.NotContains(t, doc.Definitions, "AliasedTopParams")
@@ -143,7 +126,7 @@ func TestCoverage_AliasParametersCalibration_Ref(t *testing.T) {
 	assert.NotContains(t, doc.Definitions, "PayloadAlias2")
 	assert.NotContains(t, doc.Definitions, "QueryIDAlias")
 	assert.NotContains(t, doc.Definitions, "QueryID",
-		"QueryID leak fix: the non-body chain target must not surface as a definition under Ref")
+		"the non-body chain target must not surface as a definition under Ref")
 	require.Contains(t, doc.Definitions, "PayloadAliasModeled")
 
 	plainBody := findBodyParam(t, doc, "/direct", "post", "bodyAliasPlain")
@@ -167,16 +150,16 @@ func TestCoverage_AliasParametersCalibration_Transparent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// TransparentAliases supersedes the annotation gate at use sites
-	// (every body alias dissolves to its unaliased target), but R2
-	// holds at the decl level — annotated aliases keep their
-	// definition entry.
+	// TransparentAliases supersedes the annotation gate at use
+	// sites (every body alias dissolves to its unaliased target),
+	// but `swagger:model` still forces decl-level registration —
+	// annotated aliases keep their definition entry.
 	assert.NotContains(t, doc.Definitions, "AliasedTopParams")
 	assert.NotContains(t, doc.Definitions, "internalParams")
 	assert.NotContains(t, doc.Definitions, "PayloadAlias")
 	assert.NotContains(t, doc.Definitions, "QueryIDAlias")
 	require.Contains(t, doc.Definitions, "PayloadAliasModeled",
-		"R2 holds even under Transparent: annotated alias keeps its decl entry")
+		"annotated alias keeps its decl entry even under Transparent")
 
 	// All body $refs dissolve to Payload — Transparent supersedes annotation.
 	plainBody := findBodyParam(t, doc, "/direct", "post", "bodyAliasPlain")

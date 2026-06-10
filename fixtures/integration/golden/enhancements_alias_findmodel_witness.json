@@ -3,7 +3,7 @@
   "paths": {},
   "definitions": {
     "AliasOfPlainModeled": {
-      "description": "Same underlying Named target (PlainTarget — still unannotated by\ndesign) but the alias itself carries `swagger:model`. Under\nR6 / R7 / R8 the annotation preserves the alias name at every\nuse site; without it the alias dissolves to PlainTarget. The\nwitness pair below pins both halves on one canvas.",
+      "description": "Same underlying Named target (PlainTarget — still unannotated by\ndesign) but the alias itself carries `swagger:model`. The\nannotation preserves the alias name at every use site; without\nit the alias dissolves to PlainTarget. The witness pair below\npins both halves on one canvas.",
       "title": "AliasOfPlainModeled is the ANNOTATED counterpart of AliasOfPlain.",
       "$ref": "#/definitions/PlainTarget"
     },
@@ -30,7 +30,7 @@
   },
   "responses": {
     "witnessModeledResponse": {
-      "description": "WitnessResponseModeled mirrors WitnessParamsModeled on the\nresponse side — R8 preserves the annotated alias's identity at\nthe body response schema, recovering the pre-R8 alias-name\n$ref behaviour for opted-in users.",
+      "description": "WitnessResponseModeled mirrors WitnessParamsModeled on the\nresponse side — the annotation preserves the alias's identity\nat the body response schema for opted-in users.",
       "schema": {
         "$ref": "#/definitions/AliasOfPlainModeled"
       }

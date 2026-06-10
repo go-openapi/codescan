@@ -1,47 +1,22 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package alias_calibration_embed is the cycle-3 calibration fixture
-// for the W3 alias workshop. It tests the composition axis: how the
-// schema builder shapes a struct that EMBEDS another type, in four
-// permutations of how the embedded type is referenced:
+// Package alias_calibration_embed exercises the schema builder's
+// alias handling at two reach contexts:
 //
-//   1. Named struct, direct       (EmbedsDirectStruct)
-//   2. Alias of struct            (EmbedsAlias)
-//   3. Pointer to named struct    (EmbedsPointer)
-//   4. Named interface            (EmbedsInterface)
+//   1. Struct embedding — how does an embed produce inline-vs-allOf
+//      shape across direct named, alias-of-struct, pointer, and
+//      named-interface embeds?
+//   2. Field site — how does an annotated alias differ from an
+//      unannotated alias when referenced as a struct field?
 //
-// In Go, (1), (2), and (3) refer to the SAME underlying type
-// (`Base`); `BaseAlias = Base` is a transparent rename, `*Base` is
-// just a pointer-to-Base. The type system cannot distinguish them.
-// Yet the schema builder today produces THREE different output
-// shapes for the same composition intent — the central Q8 question.
+// The decls below pair each direct / alias / pointer embed against
+// its bidirectional companion (annotated vs unannotated alias
+// variants) so the per-mode shapes are visible side by side in the
+// captured goldens.
 //
-// The B2 probe from fix-quirks revealed:
-//   - EmbedsDirectStruct → FLAT inline (id, name, extra)
-//   - EmbedsAlias        → allOf: [{$ref: BaseAlias}, {extra inline}]
-//   - EmbedsPointer      → FLAT inline (pointer peeled → named-direct)
-//   - EmbedsInterface    → FLAT inline (interface methods promoted)
-//
-// So the OUTLIER is alias-embed, not interface-embed (the Q8
-// original framing was wrong). Cycle 3 calibrates the workshop's
-// vocabulary on whether this asymmetry should hold, collapse, or
-// invert.
-//
-// Envelope and EnvelopeAnnotatedAlias bracket the FIELD-reach
-// site (Q-E): same Go type as BaseAlias / BaseAliasModeled, but
-// only one carries `swagger:model`. R6 makes the annotation the
-// gatekeeper for whether an alias surfaces as a first-class spec
-// entity (definition + $ref by alias name) or dissolves to its
-// unaliased target. The two envelopes pin both halves on one
-// canvas.
-//
-// 7 decls × 3 modes = 21 base cells, plus indirect impacts on Base /
-// BaseAlias / BaseAliasModeled / Methods which may surface as
-// standalone definitions.
-//
-// See `.claude/plans/workshops/alias-matrix.md` §5 and
-// `.claude/plans/workshops/alias-ledger.md` cycles 3 + 4.
+// See the schema builder's alias-handling contract for the rule:
+// [§aliases](../../../internal/builders/schema/README.md#aliases).
 package alias_calibration_embed
 
 // Base is the canonical struct used as the embedded target in
@@ -68,9 +43,9 @@ type Methods interface {
 	Describe() string
 }
 
-// EmbedsDirectStruct embeds Base directly. The B2 probe shape:
-// FLAT — `{type: object, properties: {id, name, extra}}` with no
-// allOf composition. Q8 baseline.
+// EmbedsDirectStruct embeds Base directly.
+// Expected: FLAT — `{type: object, properties: {id, name, extra}}`
+// with no allOf composition.
 //
 // swagger:model EmbedsDirectStruct
 type EmbedsDirectStruct struct {
@@ -80,9 +55,10 @@ type EmbedsDirectStruct struct {
 	Extra string `json:"extra"`
 }
 
-// EmbedsAlias embeds BaseAlias. The B2 probe shape: `allOf:
-// [{$ref: BaseAlias}, {properties: {extra}}]`. Q8 OUTLIER — same
-// Go type as EmbedsDirectStruct produces a DIFFERENT spec shape.
+// EmbedsAlias embeds BaseAlias (an unannotated alias of Base).
+// Expected: FLAT — same shape as EmbedsDirectStruct, because the
+// aliased embed dissolves to its named target and contributes
+// inline properties (not allOf composition).
 //
 // swagger:model EmbedsAlias
 type EmbedsAlias struct {
@@ -91,8 +67,8 @@ type EmbedsAlias struct {
 	Extra string `json:"extra"`
 }
 
-// EmbedsPointer embeds *Base. The B2 probe shape: FLAT (pointer is
-// peeled, then takes the named-direct path). Consistent with
+// EmbedsPointer embeds *Base. Expected: FLAT (pointer is peeled,
+// then takes the named-direct path). Consistent with
 // EmbedsDirectStruct.
 //
 // swagger:model EmbedsPointer
@@ -102,10 +78,9 @@ type EmbedsPointer struct {
 	Extra string `json:"extra"`
 }
 
-// EmbedsInterface embeds the named Methods interface. The B2 probe
-// shape: FLAT — method properties promoted into the outer schema
-// alongside Tag. Consistent with EmbedsDirectStruct (named embed
-// of any kind goes through buildNamedEmbedded which inlines).
+// EmbedsInterface embeds the named Methods interface. Expected:
+// FLAT — method properties promoted into the outer schema
+// alongside Tag.
 //
 // swagger:model EmbedsInterface
 type EmbedsInterface struct {
@@ -115,18 +90,12 @@ type EmbedsInterface struct {
 }
 
 // Envelope compares Base and BaseAlias at the FIELD-reach site
-// (not embed). BaseAlias is intentionally UNANNOTATED — Q-E asks
-// whether the spec should expose this implementation-detail alias
-// or dissolve it to the unaliased target.
-//
-// Under R6 (the rule the W3 workshop converged on):
+// (not embed). BaseAlias is intentionally UNANNOTATED — at field
+// sites the unannotated alias dissolves to its unaliased target,
+// and the alias produces no `definitions` entry.
 //
 //   - direct → {$ref: Base}
-//   - viaAlias → {$ref: Base}     (alias dissolves; unannotated → no entity)
-//
-// Pre-R6 (current Default / Ref behaviour, witnessed by the golden
-// captured at commit time) leaks the alias name into the field's
-// $ref target and manufactures a dangling BaseAlias definition.
+//   - viaAlias → {$ref: Base}     (unannotated alias dissolves)
 //
 // swagger:model Envelope
 type Envelope struct {
@@ -137,19 +106,14 @@ type Envelope struct {
 	ViaAlias BaseAlias `json:"viaAlias"`
 }
 
-// EmbedsAliasOptIn validates the bidirectional Q-D contract: when
-// the user EXPLICITLY annotates an aliased embed with
-// `swagger:allOf`, the resulting spec MUST use allOf composition
-// with a $ref to the embedded type. This is the shape that was
-// silently produced (without annotation) before the Q-D fix; it
-// remains available as an explicit opt-in.
+// EmbedsAliasOptIn pins the explicit-opt-in side of the embed
+// contract: when the user annotates an aliased embed with
+// `swagger:allOf`, the spec uses allOf composition with a $ref.
+// The unannotated alias still dissolves to the unaliased target —
+// `swagger:allOf` governs composition shape only, not identity.
 //
-// Combined with EmbedsAlias above, this fixture asserts:
-//
-//   - Without `swagger:allOf` → flat inline (EmbedsAlias)
-//   - With    `swagger:allOf` → allOf with $ref (EmbedsAliasOptIn)
-//
-// The annotation is the SOLE gate; no other input flips composition.
+//   - Without `swagger:allOf` → flat inline (EmbedsAlias above)
+//   - With    `swagger:allOf` → allOf with $ref to Base
 //
 // swagger:model EmbedsAliasOptIn
 type EmbedsAliasOptIn struct {
@@ -161,13 +125,10 @@ type EmbedsAliasOptIn struct {
 }
 
 // EmbedsDirectStructOptIn mirrors EmbedsAliasOptIn but with a
-// direct named-struct embed instead of an alias embed — checks
-// that the explicit annotation works on non-aliased embeds too.
-// Pre-Q-D this case ALREADY worked (named-direct embed with
-// swagger:allOf → allOf with $ref to Base) — the annotation path
-// was never broken; only the *implicit* aliased-embed promotion
-// was wrong. Including this here triangulates: same annotation,
-// same shape, regardless of alias or direct.
+// direct named-struct embed instead of an alias embed —
+// triangulates that the explicit annotation works on non-aliased
+// embeds too. Same annotation, same shape, regardless of alias or
+// direct.
 //
 // swagger:model EmbedsDirectStructOptIn
 type EmbedsDirectStructOptIn struct {
@@ -182,35 +143,34 @@ type EmbedsDirectStructOptIn struct {
 // annotation is the user's explicit opt-in to exposing the alias
 // as a first-class spec entity.
 //
-// Q-E / R6 cuts the alias-handling rule along the annotation:
+// At field / element / allOf-member use sites:
 //
 //   - BaseAlias (no annotation): aliasing is a Go implementation
-//     detail; field/element use sites dissolve to `Base`, the
-//     alias does not appear in `definitions`.
+//     detail; use sites dissolve to `Base`, the alias does not
+//     appear in `definitions`.
 //   - BaseAliasModeled (swagger:model): the alias is a first-class
-//     entity; field/element use sites keep `$ref:
-//     BaseAliasModeled` and the alias gets its own definition
-//     (chain under RefAliases, full structural under Expand,
-//     dissolved under TransparentAliases — modes only affect the
-//     decl shape, not whether it exists).
+//     entity; use sites keep `$ref: BaseAliasModeled` and the alias
+//     gets its own definition (chain under RefAliases, full
+//     structural under Expand, structural-copy under
+//     TransparentAliases — modes only affect the decl shape, not
+//     whether the alias surfaces).
 //
 // swagger:model BaseAliasModeled
 type BaseAliasModeled = Base
 
 // EmbedsAliasModeledOptIn is the bidirectional sibling of
 // EmbedsAliasOptIn. Both use `swagger:allOf` on the embedded
-// alias to opt into allOf composition, but they differ in
-// whether the alias itself is annotated:
+// alias to opt into allOf composition, but they differ in whether
+// the alias itself is annotated:
 //
 //   - EmbedsAliasOptIn        embeds BaseAlias        (UNannotated)
-//     → allOf $ref dissolves to Base (R6 — alias name not exposed)
+//     → allOf $ref dissolves to Base (alias name not exposed)
 //   - EmbedsAliasModeledOptIn embeds BaseAliasModeled (annotated)
-//     → allOf $ref preserves BaseAliasModeled (R6 — annotated = first-class)
+//     → allOf $ref preserves BaseAliasModeled (annotated → first-class)
 //
-// The pair pins both halves of the R6 contract under allOf
-// composition. `swagger:allOf` governs the SHAPE (composition vs
-// flat inline); `swagger:model` governs the IDENTITY (whether the
-// alias name appears as a $ref target). They are orthogonal.
+// `swagger:allOf` governs the SHAPE (composition vs flat inline);
+// `swagger:model` governs the IDENTITY (whether the alias name
+// appears as a $ref target). They are orthogonal.
 //
 // swagger:model EmbedsAliasModeledOptIn
 type EmbedsAliasModeledOptIn struct {
@@ -224,11 +184,11 @@ type EmbedsAliasModeledOptIn struct {
 // It exposes the ANNOTATED alias `BaseAliasModeled` at a field
 // site, alongside a direct `Base` field for comparison. Combined
 // with Envelope (which exercises the UNANNOTATED `BaseAlias`),
-// the two structs pin both halves of the Q-E / R6 contract on one
-// canvas:
+// the two structs pin both halves of the field-site contract on
+// one canvas:
 //
 //	Envelope.direct          → {$ref: Base}
-//	Envelope.viaAlias        → {$ref: Base}            (R6: unannotated dissolves)
+//	Envelope.viaAlias        → {$ref: Base}            (unannotated dissolves)
 //	EnvelopeAnnotatedAlias.direct          → {$ref: Base}
 //	EnvelopeAnnotatedAlias.viaAliasModeled → {$ref: BaseAliasModeled}
 //
@@ -237,9 +197,10 @@ type EnvelopeAnnotatedAlias struct {
 	// Direct field of type Base — control for comparison.
 	Direct Base `json:"direct"`
 
-	// ViaAliasModeled — annotated alias as a field type. Under R6
-	// this must keep its alias identity at the use site
+	// ViaAliasModeled — annotated alias as a field type. The
+	// annotated alias keeps its identity at the use site
 	// regardless of mode (Default / Ref); Transparent still
-	// dissolves it because Transparent supersedes annotation.
+	// dissolves at use sites because Transparent supersedes
+	// annotation.
 	ViaAliasModeled BaseAliasModeled `json:"viaAliasModeled"`
 }

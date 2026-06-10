@@ -24,7 +24,7 @@ import (
 // callers historically relied on. Diagnostic emission on duplicates is
 // intentionally NOT done here; it is tracked as a future enhancement
 // alongside the position-tracking yaml library swap (see
-// .claude/plans/forthcoming-features.md §3.1).
+// the forthcoming-features roadmap).
 func dropDuplicateMappingKeys(node *yaml.Node) {
 	if node == nil {
 		return

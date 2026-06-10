@@ -42,7 +42,7 @@
         "parameters": [
           {
             "x-go-name": "BodyDirect",
-            "description": "BodyDirect — body parameter typed as the raw Payload model\n(control case, R6/R7-independent).",
+            "description": "BodyDirect — body parameter typed as the raw Payload model\n(control case, alias-handling-independent).",
             "name": "bodyDirect",
             "in": "body",
             "required": true,
@@ -52,7 +52,7 @@
           },
           {
             "x-go-name": "BodyAliasPlain",
-            "description": "BodyAliasPlain — body parameter typed as the UNANNOTATED\nalias PayloadAlias. Under R7 the body schema's $ref\ndissolves to Payload.",
+            "description": "BodyAliasPlain — body parameter typed as the UNANNOTATED\nalias PayloadAlias. The body schema's $ref dissolves to\nPayload.",
             "name": "bodyAliasPlain",
             "in": "body",
             "schema": {
@@ -61,7 +61,7 @@
           },
           {
             "x-go-name": "BodyAliasModeled",
-            "description": "BodyAliasModeled — body parameter typed as the ANNOTATED\nalias PayloadAliasModeled. Under R7 the body schema's $ref\npreserves PayloadAliasModeled (and the alias surfaces as\nits own definition).",
+            "description": "BodyAliasModeled — body parameter typed as the ANNOTATED\nalias PayloadAliasModeled. The body schema's $ref preserves\nPayloadAliasModeled (and the alias surfaces as its own\ndefinition).",
             "name": "bodyAliasModeled",
             "in": "body",
             "schema": {

@@ -1,36 +1,26 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package alias_calibration_stdlib is the cycle-2 calibration fixture
-// for the W3 alias workshop. Same structural pattern as cycle 1
-// (annotated decls + Envelope using them as fields + one unannotated
-// case for the R4 confirmation), but with stdlib-special RHS types
-// instead of primitives.
+// Package alias_calibration_stdlib exercises the schema builder's
+// alias handling for stdlib-special RHS types (`time.Time`,
+// `error`, `json.RawMessage`, `any`). `applyStdlibSpecials`
+// recognises these types at the schema layer; this fixture
+// asserts the recognizer fires across the `buildDeclAlias`
+// dispatch paths regardless of mode.
 //
-// `applyStdlibSpecials` recognizes time.Time, error, json.RawMessage,
-// and any. The schema builder hits this recognizer in some code paths
-// but not all — Q3 is the bug that surfaces when `buildDeclAlias`'s
-// Expand branch walks `Underlying()` without checking specials first.
+// Cells exercised:
 //
-// Cells exercised (per mode):
+//   - decl × annotated × stdlib(time.Time) → Timestamp
+//   - decl × annotated × stdlib(error) → Err
+//   - decl × annotated × stdlib(json.RawMessage) → Raw
+//   - decl × unannotated × stdlib(time.Time) → SilentTime
+//   - field × annotated alias → Envelope.at / .failure / .payload
+//   - field × unannotated alias → Envelope.silent
 //
-//   - decl-as-model × RHS=stdlib(time.Time) → Timestamp
-//   - decl-as-model × RHS=stdlib(error) → Err
-//   - decl-as-model × RHS=stdlib(json.RawMessage) → Raw
-//   - decl × RHS=stdlib(time.Time) × UNANNOTATED → SilentTime
-//   - field × RHS=stdlib(time.Time) via annotated alias → Envelope.at
-//   - field × RHS=stdlib(error) via annotated alias → Envelope.failure
-//   - field × RHS=stdlib(json.RawMessage) via annotated alias → Envelope.payload
-//   - field × RHS=stdlib(time.Time) via unannotated alias → Envelope.silent
-//
-// 8 cells × 3 modes = 24 judgments. Designed to test where R1
-// (modes collapse for primitive RHS) breaks: stdlib-special RHS
-// produces *types.Named (not *types.Basic), so the $ref-branch
-// switch in schema.go:174 has a matching case — Default and Ref
-// may diverge.
-//
-// See `.claude/plans/workshops/alias-matrix.md` and
-// `.claude/plans/workshops/alias-ledger.md` cycle 2.
+// See the schema builder's alias-handling and special-types
+// contracts:
+// [§aliases](../../../internal/builders/schema/README.md#aliases),
+// [§special-types](../../../internal/builders/schema/README.md#special-types).
 package alias_calibration_stdlib
 
 import (
@@ -58,9 +48,11 @@ type Err = error
 type Raw = json.RawMessage
 
 // SilentTime is an alias to time.Time with NO swagger:model
-// annotation — reachable only via Envelope.Silent. Tests whether
-// R4 ("annotation gates definitions") holds for stdlib-special RHS
-// the way it did for primitive RHS in cycle 1.
+// annotation — reachable only via Envelope.Silent. Tests that the
+// annotation gate at use sites holds for stdlib-special RHS just
+// as it does for primitive RHS: the unannotated alias dissolves
+// and the recognizer's canonical shape lands inline at the
+// `Envelope.silent` field site.
 type SilentTime = time.Time
 
 // Envelope uses all four aliases as field types: three annotated,

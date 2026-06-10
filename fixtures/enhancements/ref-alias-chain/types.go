@@ -39,27 +39,23 @@ type Timestamp = time.Time
 // swagger:model Wildcard
 type Wildcard = any
 
-// Datestamp aliases any but the user provides a swagger:strfmt
-// annotation expecting the alias to surface as `{string, date}`.
-// Q13 witness: does the classifier-side override fire before the
-// any-recognizer empties the schema?
+// Datestamp aliases any with a user-provided `swagger:strfmt`
+// annotation. Expected: the alias surfaces as `{string, date}` —
+// the decl-entry strfmt classifier fires before the any-recognizer
+// would otherwise empty the schema.
 //
 // swagger:model Datestamp
 // swagger:strfmt date
 type Datestamp = any
 
 // Loose aliases any with NO swagger:model annotation. Reachable
-// only via Envelope.Drift below. Q13 witness for the unannotated
-// case: under R6 the use-site dispatch may or may not produce a
-// definition for the alias depending on whether the recognizer
-// fires before the annotation gate.
+// only via Envelope.Drift below. Witness for the unannotated case
+// at field sites: the alias dissolves and produces no definition.
 type Loose = any
 
-// UserIDStrf probes whether `swagger:strfmt` on an alias of a
-// primitive is honoured. Expected user intent: the alias surfaces
-// as `{string, uuid}`. Q13-adjacent witness; tells us whether the
-// classifier-not-consulted bug also affects alias-of-primitive
-// (it does, pre-patch).
+// UserIDStrf probes `swagger:strfmt` on an alias of a primitive.
+// Expected: the alias surfaces as `{string, uuid}` — the
+// decl-entry strfmt classifier wins over the primitive underlying.
 //
 // swagger:model UserIDStrf
 // swagger:strfmt uuid
@@ -67,9 +63,8 @@ type UserIDStrf = int64
 
 // CountTyped probes the `swagger:type` override on an alias of
 // any. `swagger:type` takes a Go-type name (per
-// `SwaggerSchemaForType`); IS consulted today via
-// `classifierNamedTypeOverride`. Baseline to confirm the patch
-// preserves the existing handling.
+// `SwaggerSchemaForType`); honoured via
+// `classifierNamedTypeOverride`.
 //
 // swagger:model CountTyped
 // swagger:type int64
@@ -91,7 +86,7 @@ type Envelope struct {
 	// Stamp is typed via the strfmt-annotated alias of `any`.
 	Stamp Datestamp `json:"stamp"`
 
-	// Drift uses an unannotated alias of any — R6 should dissolve
-	// it at the field site.
+	// Drift uses an unannotated alias of any — the field site
+	// dissolves the alias to the underlying.
 	Drift Loose `json:"drift"`
 }

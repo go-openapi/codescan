@@ -1,30 +1,26 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package alias_calibration_primitive is the cycle-1 calibration
-// fixture for the W3 alias workshop. It is intentionally the smallest
-// possible alias-decl scenario, designed to surface the annotation-vs-
-// auto-discovery distinction Fred surfaced in cycle 1.
+// Package alias_calibration_primitive exercises the schema
+// builder's alias handling at the simplest decl-level scenario:
+// aliases of primitives, with the annotation-vs-auto-discovery
+// distinction visible side by side.
 //
-// Three annotated aliases (UserID / Name / Active) sit alongside two
-// unannotated aliases (LegacyID / LegacyNick) — same primitive RHS,
-// only the swagger:model annotation differs. The Envelope struct
-// exposes both flavours as fields so the comparison is visible in
-// one spec output per mode.
+// Three annotated aliases (UserID / Name / Active) sit alongside
+// two unannotated aliases (LegacyID / LegacyNick) — same
+// primitive RHS, only the `swagger:model` annotation differs. The
+// Envelope struct exposes both flavours as fields so the
+// comparison is visible in one spec output per mode.
 //
-// Cells exercised (per mode):
+// Cells exercised:
 //
-//   - decl-as-model × RHS=Basic × annotated → UserID, Name, Active
-//   - field × RHS=Basic via annotated alias → Envelope.user, .nick, .on
-//   - decl × RHS=Basic × UNANNOTATED → LegacyID, LegacyNick
-//   - field × RHS=Basic via unannotated alias → Envelope.legacy, .legacyNick
+//   - decl × annotated → UserID, Name, Active have own definitions
+//   - field × annotated alias → Envelope.user, .nick, .on $ref the alias
+//   - decl × UNANNOTATED → LegacyID, LegacyNick have no definition
+//   - field × unannotated alias → Envelope.legacy, .legacyNick inline
 //
-// 10 cells × 3 modes = 30 judgments. The annotated/unannotated pair
-// directly tests Fred's rule: "swagger:model forces a definition + $ref;
-// auto-discovered should not produce a dangling definition."
-//
-// See `.claude/plans/workshops/alias-matrix.md` §6 and
-// `.claude/plans/workshops/alias-ledger.md` for the judgment record.
+// See the schema builder's alias-handling contract:
+// [§aliases](../../../internal/builders/schema/README.md#aliases).
 package alias_calibration_primitive
 
 // UserID is an alias to int64 exposed as a top-level model.

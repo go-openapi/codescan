@@ -54,18 +54,19 @@ type WitnessResponse struct {
 
 // AliasOfPlainModeled is the ANNOTATED counterpart of AliasOfPlain.
 // Same underlying Named target (PlainTarget — still unannotated by
-// design) but the alias itself carries `swagger:model`. Under
-// R6 / R7 / R8 the annotation preserves the alias name at every
-// use site; without it the alias dissolves to PlainTarget. The
-// witness pair below pins both halves on one canvas.
+// design) but the alias itself carries `swagger:model`. The
+// annotation preserves the alias name at every use site; without
+// it the alias dissolves to PlainTarget. The witness pair below
+// pins both halves on one canvas.
 //
 // swagger:model AliasOfPlainModeled
 type AliasOfPlainModeled = PlainTarget
 
 // WitnessParamsModeled is the bidirectional sibling of WitnessParams.
 // Same shape, but its Body field uses the ANNOTATED alias
-// `AliasOfPlainModeled`. R7 preserves the alias name in the body
-// parameter's $ref while WitnessParams.Body dissolves to PlainTarget.
+// `AliasOfPlainModeled`. The annotation preserves the alias name
+// in the body parameter's $ref while WitnessParams.Body dissolves
+// to PlainTarget.
 //
 // swagger:parameters witnessModeledRequest
 type WitnessParamsModeled struct {
@@ -75,9 +76,8 @@ type WitnessParamsModeled struct {
 }
 
 // WitnessResponseModeled mirrors WitnessParamsModeled on the
-// response side — R8 preserves the annotated alias's identity at
-// the body response schema, recovering the pre-R8 alias-name
-// $ref behaviour for opted-in users.
+// response side — the annotation preserves the alias's identity
+// at the body response schema for opted-in users.
 //
 // swagger:response witnessModeledResponse
 type WitnessResponseModeled struct {

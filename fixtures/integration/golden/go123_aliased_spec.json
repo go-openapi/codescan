@@ -257,9 +257,9 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "order_modeled": {
-      "description": "- ID UUIDModeled               → $ref: #/definitions/UUIDModeled\n- DeliveryOption AnythingModeled → $ref: #/definitions/AnythingModeled\n- EID ExtendedID               → $ref: #/definitions/ExtendedID (named struct, R6-independent)\n\nCompare with `StoreOrder` above, where the equivalent fields\ndissolve to their primitive / open shapes because UUID and\nAnything carry no `swagger:model`.",
+      "description": "- ID UUIDModeled               → $ref: #/definitions/UUIDModeled\n- DeliveryOption AnythingModeled → $ref: #/definitions/AnythingModeled\n- EID ExtendedID               → $ref: #/definitions/ExtendedID (named struct, unaffected by the alias rule)\n\nCompare with `StoreOrder` above, where the equivalent fields\ndissolve to their primitive / open shapes because UUID and\nAnything carry no `swagger:model`.",
       "type": "object",
-      "title": "StoreOrderModeled is the bidirectional sibling of StoreOrder.\nSame field layout, but the alias-typed fields use the ANNOTATED\naliases (UUIDModeled / AnythingModeled). Per R6, each annotated\nalias preserves its identity at the field site:",
+      "title": "StoreOrderModeled is the bidirectional sibling of StoreOrder.\nSame field layout, but the alias-typed fields use the ANNOTATED\naliases (UUIDModeled / AnythingModeled). The annotation gate\npreserves the alias identity at each field site:",
       "required": [
         "id"
       ],
