@@ -209,47 +209,20 @@ func (r *Builder) buildAlias(tpe *types.Alias, resp *oaispec.Response, seen map[
 	resolvers.MustNotBeABuiltinType(o)
 	resolvers.MustHaveRightHandSide(tpe)
 
-	rhs := tpe.Rhs()
-
-	// If transparent aliases are enabled, use the underlying type directly without creating a definition
-	if r.Ctx.TransparentAliases() {
-		return r.buildFromType(rhs, resp, seen)
-	}
-
-	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
-	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrResponses)
-	}
-	r.AppendPostDecl(decl) // mark the left-hand side as discovered
-
-	if !r.Ctx.RefAliases() {
-		// expand alias
-		unaliased := types.Unalias(tpe)
-		return r.buildFromType(unaliased.Underlying(), resp, seen)
-	}
-
-	switch rtpe := rhs.(type) {
-	// load declaration for named unaliased type
-	case *types.Named:
-		o := rtpe.Obj()
-		if o.Pkg() == nil {
-			break // builtin
-		}
-
-		typable := schema.NewTypable(&oaispec.Schema{}, 0, r.Ctx.SkipExtensions())
-		return r.MakeRef(decl, typable)
-	case *types.Alias:
-		o := rtpe.Obj()
-		if o.Pkg() == nil {
-			break // builtin
-		}
-
-		typable := schema.NewTypable(&oaispec.Schema{}, 0, r.Ctx.SkipExtensions())
-
-		return r.MakeRef(decl, typable)
-	}
-
-	return r.buildFromType(rhs, resp, seen)
+	// `swagger:response` declares a response, not a model. Neither the
+	// alias decl nor any chain link of its backing struct surfaces as a
+	// `definitions` entry — the fields of the unaliased target become
+	// the response's body / headers. The mode flags only affect alias
+	// *use* sites (field / element), not the top-level response-set
+	// declaration; TransparentAliases, RefAliases and Default share
+	// the same path here.
+	//
+	// Recursion handles alias chains naturally: buildFromType
+	// dispatches back here for any chain link whose RHS is itself an
+	// alias. The named-struct target is reached via buildNamedType ->
+	// buildFromStruct, the same path a directly-declared
+	// swagger:response struct takes.
+	return r.buildFromType(tpe.Rhs(), resp, seen)
 }
 
 func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
@@ -291,7 +264,8 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil // just leave an empty schema
 	}
 
-	// If transparent aliases are enabled, use the underlying type directly without creating a definition
+	// TransparentAliases supersedes annotation at use sites — dissolve
+	// to the unaliased target via the schema sub-builder.
 	if r.Ctx.TransparentAliases() {
 		sb := schema.NewBuilder(r.Ctx, r.Decl)
 		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable)); err != nil {
@@ -303,20 +277,36 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil
 	}
 
-	// Non-body or RefAliases-off ⇒ expand. See
-	// [§alias-handling](./README.md#alias-handling).
-	if typable.In() != inBody || !r.Ctx.RefAliases() {
-		unaliased := types.Unalias(tpe)
-		return r.buildFromField(fld, unaliased, typable, seen)
+	// Non-body fields are SimpleSchema targets and cannot carry $ref —
+	// always expand the alias to its unaliased target regardless of
+	// annotation. types.Unalias collapses chains in one step.
+	if typable.In() != inBody {
+		return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
 	}
 
 	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrResponses)
 	}
-	r.AppendPostDecl(decl) // mark the left-hand side as discovered
 
-	return r.MakeRef(decl, typable)
+	// Body field: annotation gates first-class identity at the use site
+	// (responses analogue of the schema-builder R6 rule).
+	//
+	//   - annotated   alias → $ref preserves the alias name; the alias
+	//     gets its own definition via MakeRef's AppendPostDecl side
+	//     effect.
+	//   - unannotated alias → dissolve fully to the unaliased target;
+	//     the alias produces no definition entry.
+	//
+	// The mode flag (RefAliases vs Default) only affects the shape of
+	// the alias decl's OWN definition downstream — it does not change
+	// the field-site $ref target, which is gated entirely by
+	// annotation.
+	if decl.HasModelAnnotation() {
+		return r.MakeRef(decl, typable)
+	}
+
+	return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
 }
 
 func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, resp *oaispec.Response, seen map[string]bool) error {

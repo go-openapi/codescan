@@ -96,6 +96,29 @@ type AliasedResponse struct {
 	Body EnvelopeAlias2 `json:"body"`
 }
 
+// EnvelopeAliasModeled is the annotated counterpart of
+// EnvelopeAlias. With `swagger:model` the alias opts in as a
+// first-class spec entity; R8 then preserves the alias name at
+// body field sites in `swagger:response` structs.
+//
+// swagger:model EnvelopeAliasModeled
+type EnvelopeAliasModeled = ResponseEnvelope
+
+// AliasedModeledResponse is the bidirectional sibling of
+// AliasedResponse: same shape, but its Body field uses the
+// ANNOTATED alias `EnvelopeAliasModeled`. Under R8 the body
+// schema's `$ref` preserves `EnvelopeAliasModeled` (alongside
+// the alias's own definition), while AliasedResponse dissolves
+// to `$ref: ResponseEnvelope`. Both halves on one canvas.
+//
+// swagger:response aliasedModeledResponse
+type AliasedModeledResponse struct {
+	// Body is an annotated alias.
+	//
+	// in: body
+	Body EnvelopeAliasModeled `json:"body"`
+}
+
 // exportedParams is the backing struct for an aliased swagger:parameters.
 type exportedParams struct {
 	// in: query

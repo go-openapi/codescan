@@ -42,6 +42,15 @@ func TestCoverage_AliasResponseShapes_Default(t *testing.T) {
 	assert.NotContains(t, doc.Definitions, "EnvelopeAlias2", "EnvelopeAlias2 should not pollute definitions under default mode")
 	assert.NotContains(t, doc.Definitions, "SessionIDAlias", "SessionIDAlias should not pollute definitions under default mode")
 
+	// R8 bidirectional companion — the annotated alias preserves
+	// its identity at the body response site; the unannotated
+	// alias above dissolves to canonical.
+	modeledRef := doc.Responses["bodyAliasModeledResponse"].Schema.Ref.String()
+	assert.Equal(t, "#/definitions/EnvelopeAliasModeled", modeledRef,
+		"R8: annotated body response alias keeps the alias name in the $ref")
+	assert.Contains(t, doc.Definitions, "EnvelopeAliasModeled",
+		"R8: annotated alias has its own definition")
+
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_response_shapes_default.json")
 }
 

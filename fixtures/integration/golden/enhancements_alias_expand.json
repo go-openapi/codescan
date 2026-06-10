@@ -2,6 +2,31 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
+    "EnvelopeAliasModeled": {
+      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. With `swagger:model` the alias opts in as a\nfirst-class spec entity; R8 then preserves the alias name at\nbody field sites in `swagger:response` structs.",
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "ID"
+            },
+            "name": {
+              "type": "string",
+              "x-go-name": "Name"
+            }
+          },
+          "x-go-name": "Payload"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
     "Payload": {
       "type": "object",
       "title": "Payload is the canonical struct referenced by aliases.",
@@ -63,6 +88,12 @@
     }
   },
   "responses": {
+    "aliasedModeledResponse": {
+      "description": "AliasedModeledResponse is the bidirectional sibling of\nAliasedResponse: same shape, but its Body field uses the\nANNOTATED alias `EnvelopeAliasModeled`. Under R8 the body\nschema's `$ref` preserves `EnvelopeAliasModeled` (alongside\nthe alias's own definition), while AliasedResponse dissolves\nto `$ref: ResponseEnvelope`. Both halves on one canvas.",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAliasModeled"
+      }
+    },
     "aliasedResponse": {
       "description": "AliasedResponse has a body field whose type is an alias chain.",
       "schema": {

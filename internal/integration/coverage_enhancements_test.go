@@ -125,6 +125,19 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	assert.Equal(t, "#/definitions/PayloadAliasModeled", respAnn.Ref.String(),
 		"annotated PayloadAliasModeled preserves its identity in the field $ref")
 
+	// R8 bidirectional response-side witness — the same R6/R7 pattern
+	// applied to top-level swagger:response body fields. The
+	// unannotated AliasedResponse and the annotated
+	// AliasedModeledResponse sit on the same fixture canvas.
+	assert.Equal(t, "#/definitions/ResponseEnvelope",
+		doc.Responses["aliasedResponse"].Schema.Ref.String(),
+		"R8: unannotated response body alias dissolves to canonical")
+	assert.Equal(t, "#/definitions/EnvelopeAliasModeled",
+		doc.Responses["aliasedModeledResponse"].Schema.Ref.String(),
+		"R8: annotated response body alias preserves the alias name")
+	require.Contains(t, doc.Definitions, "EnvelopeAliasModeled",
+		"R8: annotated alias has its own definition")
+
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_expand.json")
 }
 

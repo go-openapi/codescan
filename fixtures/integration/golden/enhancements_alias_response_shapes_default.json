@@ -20,9 +20,34 @@
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response-shapes"
+    },
+    "EnvelopeAliasModeled": {
+      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. R8 makes the annotation the gate for first-class\nalias identity at body field sites; this decl exists so the\nbidirectional contract is visible on the same canvas as the\nunannotated witnesses above.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response-shapes"
     }
   },
   "responses": {
+    "bodyAliasModeledResponse": {
+      "description": "BodyAliasModeledResponse — body field uses the ANNOTATED alias\nEnvelopeAliasModeled. Under R8 the body schema's `$ref`\npreserves the alias name (`$ref: EnvelopeAliasModeled`),\nrecovering the pre-R8 alias-name $ref behaviour for users who\nexplicitly opt in via `swagger:model`. The unannotated\ncounterpart (BodyAliasResponse above) dissolves to\n`$ref: Envelope`.",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAliasModeled"
+      }
+    },
     "bodyAliasResponse": {
       "description": "BodyAliasResponse — body field uses an alias-of-alias chain.",
       "schema": {

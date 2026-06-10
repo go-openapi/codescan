@@ -2,8 +2,9 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
-    "AliasOfPlain": {
-      "title": "AliasOfPlain is an alias pointing at the unannotated target.",
+    "AliasOfPlainModeled": {
+      "description": "Same underlying Named target (PlainTarget — still unannotated by\ndesign) but the alias itself carries `swagger:model`. Under\nR6 / R7 / R8 the annotation preserves the alias name at every\nuse site; without it the alias dissolves to PlainTarget. The\nwitness pair below pins both halves on one canvas.",
+      "title": "AliasOfPlainModeled is the ANNOTATED counterpart of AliasOfPlain.",
       "$ref": "#/definitions/PlainTarget"
     },
     "PlainTarget": {
@@ -28,10 +29,16 @@
     }
   },
   "responses": {
+    "witnessModeledResponse": {
+      "description": "WitnessResponseModeled mirrors WitnessParamsModeled on the\nresponse side — R8 preserves the annotated alias's identity at\nthe body response schema, recovering the pre-R8 alias-name\n$ref behaviour for opted-in users.",
+      "schema": {
+        "$ref": "#/definitions/AliasOfPlainModeled"
+      }
+    },
     "witnessResponse": {
       "description": "WitnessResponse has a response body whose Go type is the same\nalias — mirror witness on the response builder's\nbuildFieldAlias path.",
       "schema": {
-        "$ref": "#/definitions/AliasOfPlain"
+        "$ref": "#/definitions/PlainTarget"
       }
     }
   }

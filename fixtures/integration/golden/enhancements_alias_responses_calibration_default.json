@@ -1,0 +1,154 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/aliased-top": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "aliasedTopOp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/aliasedTopResponse"
+          }
+        }
+      }
+    },
+    "/body-alias-chain": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "bodyAliasChainOp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/bodyAliasChainResponse"
+          }
+        }
+      }
+    },
+    "/body-alias-modeled": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "bodyAliasModeledOp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/bodyAliasModeledResponse"
+          }
+        }
+      }
+    },
+    "/body-alias-plain": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "bodyAliasPlainOp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/bodyAliasPlainResponse"
+          }
+        }
+      }
+    },
+    "/direct": {
+      "post": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "directOp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/directResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Envelope": {
+      "type": "object",
+      "title": "Envelope is the canonical response body model.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-responses-calibration"
+    },
+    "EnvelopeAliasModeled": {
+      "description": "EnvelopeAliasModeled is the ANNOTATED counterpart of\nEnvelopeAlias. `swagger:model` opts the alias in as a\nfirst-class spec entity — body field sites preserve\n`$ref: EnvelopeAliasModeled` and the alias gets its own\ndefinition.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-responses-calibration"
+    }
+  },
+  "responses": {
+    "aliasedTopResponse": {
+      "description": "AliasedTopResponse is a top-level alias annotated\n`swagger:response`. R8 clause 1 says neither this alias nor its\nbacking struct should surface in `definitions` — the response's\nbody / headers come from the fields of the unaliased target.",
+      "schema": {
+        "$ref": "#/definitions/Envelope"
+      },
+      "headers": {
+        "X-Session": {
+          "type": "string",
+          "description": "XSession is a header on the aliased top-level response."
+        }
+      }
+    },
+    "bodyAliasChainResponse": {
+      "description": "BodyAliasChainResponse — body response typed as the 2-link\nunannotated chain EnvelopeAlias2. Both layers dissolve to\nEnvelope.",
+      "schema": {
+        "$ref": "#/definitions/Envelope"
+      }
+    },
+    "bodyAliasModeledResponse": {
+      "description": "BodyAliasModeledResponse — body response typed as the\nANNOTATED alias EnvelopeAliasModeled. Under R8 the body\nschema's $ref preserves EnvelopeAliasModeled (and the alias\nsurfaces as its own definition).",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAliasModeled"
+      }
+    },
+    "bodyAliasPlainResponse": {
+      "description": "BodyAliasPlainResponse — body response typed as the UNANNOTATED\nalias EnvelopeAlias. Under R8 the body schema's $ref dissolves\nto Envelope.",
+      "schema": {
+        "$ref": "#/definitions/Envelope"
+      }
+    },
+    "directResponse": {
+      "description": "DirectResponse is the control response: declared directly (not\nvia an alias), holding body and non-body fields typed as the\nalias variants above so every reach context is visible inside\none response.",
+      "schema": {
+        "$ref": "#/definitions/Envelope"
+      },
+      "headers": {
+        "X-Header-Plain": {
+          "type": "string",
+          "description": "XHeaderPlain — header typed as the UNANNOTATED alias\nHeaderIDAlias. SimpleSchema target — the alias must expand\nto its primitive type inline regardless of mode, and\nHeaderIDAlias must not appear in `definitions`."
+        }
+      }
+    }
+  }
+}

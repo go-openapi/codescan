@@ -2,13 +2,9 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
-    "EnvelopeAlias": {
-      "title": "EnvelopeAlias aliases ResponseEnvelope once.",
+    "EnvelopeAliasModeled": {
+      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. With `swagger:model` the alias opts in as a\nfirst-class spec entity; R8 then preserves the alias name at\nbody field sites in `swagger:response` structs.",
       "$ref": "#/definitions/ResponseEnvelope"
-    },
-    "EnvelopeAlias2": {
-      "title": "EnvelopeAlias2 aliases EnvelopeAlias (alias-of-alias).",
-      "$ref": "#/definitions/EnvelopeAlias"
     },
     "Payload": {
       "type": "object",
@@ -56,10 +52,16 @@
     }
   },
   "responses": {
+    "aliasedModeledResponse": {
+      "description": "AliasedModeledResponse is the bidirectional sibling of\nAliasedResponse: same shape, but its Body field uses the\nANNOTATED alias `EnvelopeAliasModeled`. Under R8 the body\nschema's `$ref` preserves `EnvelopeAliasModeled` (alongside\nthe alias's own definition), while AliasedResponse dissolves\nto `$ref: ResponseEnvelope`. Both halves on one canvas.",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAliasModeled"
+      }
+    },
     "aliasedResponse": {
       "description": "AliasedResponse has a body field whose type is an alias chain.",
       "schema": {
-        "$ref": "#/definitions/EnvelopeAlias2"
+        "$ref": "#/definitions/ResponseEnvelope"
       }
     },
     "namedTopResponse": {
