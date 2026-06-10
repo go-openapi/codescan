@@ -90,29 +90,41 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 	require.NotNil(t, doc)
 
 	// EmbedsAliasOptIn (BaseAlias embed with swagger:allOf) →
-	// allOf: [{$ref: BaseAlias}, {properties: {extra inline}}].
-	// Same shape that was silently produced for aliased embeds
-	// before the Q-D fix; explicit annotation preserves it.
+	// allOf: [{$ref: Base}, {properties: {extra inline}}].
+	//
+	// The `swagger:allOf` annotation governs COMPOSITION SHAPE
+	// (allOf vs flat inline). It does not preserve alias identity:
+	// the $ref target is the unaliased Base because the alias
+	// BaseAlias itself is unannotated (no `swagger:model`). Per the
+	// R6 rule, only `swagger:model` makes an alias a first-class
+	// spec entity; without it, the aliasing is a Go implementation
+	// detail and the spec carries the underlying name even inside
+	// an allOf composition.
+	//
+	// To preserve the alias name in allOf composition, the alias
+	// would need its own `swagger:model` annotation (see the
+	// EnvelopeAnnotatedAlias counterpart in the fixture for the
+	// non-embed witness of the same R6 contract).
 	require.Contains(t, doc.Definitions, "EmbedsAliasOptIn")
 	optInAlias := doc.Definitions["EmbedsAliasOptIn"]
 	require.Len(t, optInAlias.AllOf, 2,
 		"swagger:allOf on an aliased embed must produce 2-member allOf composition")
 
-	foundRefToAlias := false
+	foundRefToBase := false
 	foundInlineExtra := false
 	for _, member := range optInAlias.AllOf {
 		switch {
 		case member.Ref.String() != "":
-			assert.Equal(t, "#/definitions/BaseAlias", member.Ref.String(),
-				"$ref must point at the aliased type's own definition")
-			foundRefToAlias = true
+			assert.Equal(t, "#/definitions/Base", member.Ref.String(),
+				"R6: unannotated alias dissolves to its unaliased target even inside allOf composition")
+			foundRefToBase = true
 		case len(member.Properties) > 0:
 			assert.Contains(t, member.Properties, "extra",
 				"outer struct's own fields must appear inline alongside the $ref")
 			foundInlineExtra = true
 		}
 	}
-	assert.True(t, foundRefToAlias, "must find $ref member")
+	assert.True(t, foundRefToBase, "must find $ref member (pointing at Base under R6)")
 	assert.True(t, foundInlineExtra, "must find inline-properties member")
 
 	// EmbedsDirectStructOptIn (Base direct embed with swagger:allOf)
@@ -123,18 +135,47 @@ func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
 	optInDirect := doc.Definitions["EmbedsDirectStructOptIn"]
 	require.Len(t, optInDirect.AllOf, 2)
 
-	foundRefToBase := false
+	foundRefToBaseDirect := false
 	foundInlineExtraDirect := false
 	for _, member := range optInDirect.AllOf {
 		switch {
 		case member.Ref.String() != "":
 			assert.Equal(t, "#/definitions/Base", member.Ref.String())
-			foundRefToBase = true
+			foundRefToBaseDirect = true
 		case len(member.Properties) > 0:
 			assert.Contains(t, member.Properties, "extra")
 			foundInlineExtraDirect = true
 		}
 	}
-	assert.True(t, foundRefToBase)
+	assert.True(t, foundRefToBaseDirect)
 	assert.True(t, foundInlineExtraDirect)
+
+	// EmbedsAliasModeledOptIn (BaseAliasModeled embed with swagger:allOf)
+	// → allOf: [{$ref: BaseAliasModeled}, {properties: {extra inline}}].
+	//
+	// Bidirectional R6 witness against EmbedsAliasOptIn above: same
+	// allOf composition shape, same outer struct, but the embedded
+	// alias is ANNOTATED. The annotation recovers the pre-R6
+	// alias-name $ref behaviour — `swagger:model` is the SOLE knob
+	// that preserves alias identity inside an allOf member.
+	require.Contains(t, doc.Definitions, "EmbedsAliasModeledOptIn")
+	optInAliasModeled := doc.Definitions["EmbedsAliasModeledOptIn"]
+	require.Len(t, optInAliasModeled.AllOf, 2,
+		"swagger:allOf on an annotated aliased embed must produce 2-member allOf composition")
+
+	foundRefToAliasModeled := false
+	foundInlineExtraModeled := false
+	for _, member := range optInAliasModeled.AllOf {
+		switch {
+		case member.Ref.String() != "":
+			assert.Equal(t, "#/definitions/BaseAliasModeled", member.Ref.String(),
+				"R6: annotated alias preserves identity inside allOf composition")
+			foundRefToAliasModeled = true
+		case len(member.Properties) > 0:
+			assert.Contains(t, member.Properties, "extra")
+			foundInlineExtraModeled = true
+		}
+	}
+	assert.True(t, foundRefToAliasModeled, "must find $ref to BaseAliasModeled")
+	assert.True(t, foundInlineExtraModeled, "must find inline-properties member")
 }

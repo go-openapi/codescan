@@ -2,8 +2,8 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
-    "Anything": {
-      "title": "Anything should be discovered through dependency analysis.",
+    "AnythingModeled": {
+      "description": "AnythingModeled is the annotated counterpart of `Anything`. The\n`swagger:model` annotation preserves the alias identity at use\nsites despite the open `any` underlying type.",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "Empty": {
@@ -28,10 +28,10 @@
       "type": "boolean",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
-    "UUID": {
+    "UUIDModeled": {
+      "description": "UUIDModeled is the annotated counterpart of `UUID`. Same Go\ntype, but the `swagger:model` annotation makes it a first-class\nspec entity: it surfaces in `definitions`, and any field typed\n`UUIDModeled` produces `$ref: #/definitions/UUIDModeled` rather\nthan dissolving to the underlying primitive shape.",
       "type": "integer",
       "format": "int64",
-      "title": "UUID should be discovered through dependency analysis.",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "aliased_id": {
@@ -199,9 +199,7 @@
         "category"
       ],
       "properties": {
-        "DeliveryOption": {
-          "$ref": "#/definitions/Anything"
-        },
+        "DeliveryOption": {},
         "Extras": {},
         "MoreExtras": {},
         "category": {
@@ -220,14 +218,9 @@
         },
         "id": {
           "description": "the id for this order",
-          "allOf": [
-            {
-              "$ref": "#/definitions/UUID"
-            },
-            {
-              "minimum": 1
-            }
-          ],
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
           "x-go-name": "ID"
         },
         "items": {
@@ -261,6 +254,36 @@
         }
       },
       "x-go-name": "StoreOrder",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
+    },
+    "order_modeled": {
+      "description": "- ID UUIDModeled               → $ref: #/definitions/UUIDModeled\n- DeliveryOption AnythingModeled → $ref: #/definitions/AnythingModeled\n- EID ExtendedID               → $ref: #/definitions/ExtendedID (named struct, R6-independent)\n\nCompare with `StoreOrder` above, where the equivalent fields\ndissolve to their primitive / open shapes because UUID and\nAnything carry no `swagger:model`.",
+      "type": "object",
+      "title": "StoreOrderModeled is the bidirectional sibling of StoreOrder.\nSame field layout, but the alias-typed fields use the ANNOTATED\naliases (UUIDModeled / AnythingModeled). Per R6, each annotated\nalias preserves its identity at the field site:",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "deliveryOption": {
+          "$ref": "#/definitions/AnythingModeled"
+        },
+        "extended_id": {
+          "$ref": "#/definitions/ExtendedID"
+        },
+        "id": {
+          "description": "the id for this order",
+          "allOf": [
+            {
+              "$ref": "#/definitions/UUIDModeled"
+            },
+            {
+              "minimum": 1
+            }
+          ],
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-name": "StoreOrderModeled",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/aliased/schema"
     },
     "slice_alias": {

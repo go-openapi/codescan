@@ -318,6 +318,16 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrSchema)
 	}
+	// Unannotated alias at a use site: dissolve to the unaliased target.
+	// The annotation is the user's opt-in to exposing the alias as a
+	// first-class spec entity; without it the aliasing is a Go
+	// implementation detail and the spec carries the underlying name.
+	// Matches the dissolve already performed under TransparentAliases at
+	// line 313, but applied per-decl based on intent instead of per-mode.
+	// See [§aliases](./README.md#aliases).
+	if !decl.HasModelAnnotation() {
+		return s.buildFromType(tpe.Rhs(), target)
+	}
 	return s.MakeRef(decl, target)
 }
 

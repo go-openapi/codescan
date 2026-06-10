@@ -105,6 +105,26 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
+	// R6 bidirectional witness — same fixture, two body-payload
+	// shapes side by side:
+	//
+	//   - ResponseEnvelope.payload typed PayloadAlias (UNannotated)
+	//     → dissolves to $ref: Payload (the unaliased target)
+	//   - ResponseEnvelopeModeled.payload typed PayloadAliasModeled
+	//     (annotated) → preserves $ref: PayloadAliasModeled
+	//
+	// Together they pin the rule: `swagger:model` is the sole
+	// gate for whether an alias name surfaces in field-site $refs.
+	respUnann := doc.Definitions["ResponseEnvelope"].Properties["payload"]
+	assert.Equal(t, "#/definitions/Payload", respUnann.Ref.String(),
+		"unannotated PayloadAlias dissolves to its unaliased target")
+
+	require.Contains(t, doc.Definitions, "PayloadAliasModeled",
+		"annotated alias must surface as a first-class definition")
+	respAnn := doc.Definitions["ResponseEnvelopeModeled"].Properties["payload"]
+	assert.Equal(t, "#/definitions/PayloadAliasModeled", respAnn.Ref.String(),
+		"annotated PayloadAliasModeled preserves its identity in the field $ref")
+
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_expand.json")
 }
 

@@ -28,15 +28,20 @@
 // vocabulary on whether this asymmetry should hold, collapse, or
 // invert.
 //
-// Envelope also includes a field-site comparison (Base vs
-// BaseAlias as field types) so the field-reach behaviour is on
-// the same canvas as the embed-reach behaviour.
+// Envelope and EnvelopeAnnotatedAlias bracket the FIELD-reach
+// site (Q-E): same Go type as BaseAlias / BaseAliasModeled, but
+// only one carries `swagger:model`. R6 makes the annotation the
+// gatekeeper for whether an alias surfaces as a first-class spec
+// entity (definition + $ref by alias name) or dissolves to its
+// unaliased target. The two envelopes pin both halves on one
+// canvas.
 //
-// 5 decls × 3 modes = 15 base cells, plus indirect impacts on Base /
-// BaseAlias / Methods which may surface as standalone definitions.
+// 7 decls × 3 modes = 21 base cells, plus indirect impacts on Base /
+// BaseAlias / BaseAliasModeled / Methods which may surface as
+// standalone definitions.
 //
 // See `.claude/plans/workshops/alias-matrix.md` §5 and
-// `.claude/plans/workshops/alias-ledger.md` cycle 3.
+// `.claude/plans/workshops/alias-ledger.md` cycles 3 + 4.
 package alias_calibration_embed
 
 // Base is the canonical struct used as the embedded target in
@@ -110,10 +115,18 @@ type EmbedsInterface struct {
 }
 
 // Envelope compares Base and BaseAlias at the FIELD-reach site
-// (not embed). Cycles 1-2 showed annotated aliases produce a
-// $ref to the def at field sites; we want to see whether the
-// alias-vs-named asymmetry persists at the field site or only at
-// the embed site.
+// (not embed). BaseAlias is intentionally UNANNOTATED — Q-E asks
+// whether the spec should expose this implementation-detail alias
+// or dissolve it to the unaliased target.
+//
+// Under R6 (the rule the W3 workshop converged on):
+//
+//   - direct → {$ref: Base}
+//   - viaAlias → {$ref: Base}     (alias dissolves; unannotated → no entity)
+//
+// Pre-R6 (current Default / Ref behaviour, witnessed by the golden
+// captured at commit time) leaks the alias name into the field's
+// $ref target and manufactures a dangling BaseAlias definition.
 //
 // swagger:model Envelope
 type Envelope struct {
@@ -162,4 +175,71 @@ type EmbedsDirectStructOptIn struct {
 	Base
 
 	Extra string `json:"extra"`
+}
+
+// BaseAliasModeled is a transparent rename of Base — same Go type
+// as BaseAlias above — but it CARRIES `swagger:model`. The
+// annotation is the user's explicit opt-in to exposing the alias
+// as a first-class spec entity.
+//
+// Q-E / R6 cuts the alias-handling rule along the annotation:
+//
+//   - BaseAlias (no annotation): aliasing is a Go implementation
+//     detail; field/element use sites dissolve to `Base`, the
+//     alias does not appear in `definitions`.
+//   - BaseAliasModeled (swagger:model): the alias is a first-class
+//     entity; field/element use sites keep `$ref:
+//     BaseAliasModeled` and the alias gets its own definition
+//     (chain under RefAliases, full structural under Expand,
+//     dissolved under TransparentAliases — modes only affect the
+//     decl shape, not whether it exists).
+//
+// swagger:model BaseAliasModeled
+type BaseAliasModeled = Base
+
+// EmbedsAliasModeledOptIn is the bidirectional sibling of
+// EmbedsAliasOptIn. Both use `swagger:allOf` on the embedded
+// alias to opt into allOf composition, but they differ in
+// whether the alias itself is annotated:
+//
+//   - EmbedsAliasOptIn        embeds BaseAlias        (UNannotated)
+//     → allOf $ref dissolves to Base (R6 — alias name not exposed)
+//   - EmbedsAliasModeledOptIn embeds BaseAliasModeled (annotated)
+//     → allOf $ref preserves BaseAliasModeled (R6 — annotated = first-class)
+//
+// The pair pins both halves of the R6 contract under allOf
+// composition. `swagger:allOf` governs the SHAPE (composition vs
+// flat inline); `swagger:model` governs the IDENTITY (whether the
+// alias name appears as a $ref target). They are orthogonal.
+//
+// swagger:model EmbedsAliasModeledOptIn
+type EmbedsAliasModeledOptIn struct {
+	// swagger:allOf
+	BaseAliasModeled
+
+	Extra string `json:"extra"`
+}
+
+// EnvelopeAnnotatedAlias is the bidirectional sibling of Envelope.
+// It exposes the ANNOTATED alias `BaseAliasModeled` at a field
+// site, alongside a direct `Base` field for comparison. Combined
+// with Envelope (which exercises the UNANNOTATED `BaseAlias`),
+// the two structs pin both halves of the Q-E / R6 contract on one
+// canvas:
+//
+//	Envelope.direct          → {$ref: Base}
+//	Envelope.viaAlias        → {$ref: Base}            (R6: unannotated dissolves)
+//	EnvelopeAnnotatedAlias.direct          → {$ref: Base}
+//	EnvelopeAnnotatedAlias.viaAliasModeled → {$ref: BaseAliasModeled}
+//
+// swagger:model EnvelopeAnnotatedAlias
+type EnvelopeAnnotatedAlias struct {
+	// Direct field of type Base — control for comparison.
+	Direct Base `json:"direct"`
+
+	// ViaAliasModeled — annotated alias as a field type. Under R6
+	// this must keep its alias identity at the use site
+	// regardless of mode (Default / Ref); Transparent still
+	// dissolves it because Transparent supersedes annotation.
+	ViaAliasModeled BaseAliasModeled `json:"viaAliasModeled"`
 }

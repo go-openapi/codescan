@@ -53,11 +53,31 @@ type AliasedParams struct {
 }
 
 // ResponseEnvelope is the canonical struct referenced by aliases used in
-// responses.
+// responses. Its `payload` field is typed as the UNannotated `PayloadAlias`,
+// so under R6 the field's $ref dissolves to `Payload`.
 //
 // swagger:model ResponseEnvelope
 type ResponseEnvelope struct {
 	Payload PayloadAlias `json:"payload"`
+}
+
+// PayloadAliasModeled is the annotated counterpart of `PayloadAlias`.
+// Same underlying Go type, but `swagger:model` opts the alias in as a
+// first-class spec entity.
+//
+// swagger:model PayloadAliasModeled
+type PayloadAliasModeled = Payload
+
+// ResponseEnvelopeModeled is the bidirectional sibling of
+// `ResponseEnvelope`. Same struct shape, but its `payload` field uses
+// the annotated alias `PayloadAliasModeled`. Per R6, the field's $ref
+// preserves the alias identity (`$ref: PayloadAliasModeled`),
+// demonstrating that the explicit `swagger:model` opt-in recovers the
+// pre-R6 alias-name $ref behaviour.
+//
+// swagger:model ResponseEnvelopeModeled
+type ResponseEnvelopeModeled struct {
+	Payload PayloadAliasModeled `json:"payload"`
 }
 
 // EnvelopeAlias aliases ResponseEnvelope once.

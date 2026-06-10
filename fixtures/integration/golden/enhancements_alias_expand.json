@@ -123,17 +123,47 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
+    "PayloadAliasModeled": {
+      "description": "Same underlying Go type, but `swagger:model` opts the alias in as a\nfirst-class spec entity.",
+      "type": "object",
+      "title": "PayloadAliasModeled is the annotated counterpart of `PayloadAlias`.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
     "QueryIDAlias": {
       "type": "string",
       "title": "QueryIDAlias aliases QueryID for a non-body parameter field.",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
     "ResponseEnvelope": {
-      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses.",
+      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses. Its `payload` field is typed as the UNannotated `PayloadAlias`,\nso under R6 the field's $ref dissolves to `Payload`.",
       "type": "object",
       "properties": {
         "payload": {
-          "$ref": "#/definitions/PayloadAlias"
+          "$ref": "#/definitions/Payload"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
+    },
+    "ResponseEnvelopeModeled": {
+      "description": "ResponseEnvelopeModeled is the bidirectional sibling of\n`ResponseEnvelope`. Same struct shape, but its `payload` field uses\nthe annotated alias `PayloadAliasModeled`. Per R6, the field's $ref\npreserves the alias identity (`$ref: PayloadAliasModeled`),\ndemonstrating that the explicit `swagger:model` opt-in recovers the\npre-R6 alias-name $ref behaviour.",
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/PayloadAliasModeled"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"

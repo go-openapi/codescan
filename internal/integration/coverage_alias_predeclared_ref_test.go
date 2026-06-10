@@ -65,12 +65,20 @@ func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 	assert.Empty(t, raw.Ref.String(),
 		"Raw must NOT chain to a separate RawMessage definition under Ref")
 
-	require.Contains(t, doc.Definitions, "SilentTime")
-	silent := doc.Definitions["SilentTime"]
-	assert.Equal(t, []string{"string"}, []string(silent.Type))
-	assert.Equal(t, "date-time", silent.Format)
-	assert.Empty(t, silent.Ref.String(),
-		"SilentTime must NOT chain — recognizer wins regardless of annotation")
+	// Per R6 (Q-E): unannotated aliases are a Go implementation detail
+	// and must not surface as standalone definitions. SilentTime
+	// dissolves at its use site (Envelope.silent); the recognizer
+	// still wins for the inline shape.
+	assert.NotContains(t, doc.Definitions, "SilentTime",
+		"R6: unannotated alias of time.Time must not produce a standalone definition")
+	require.Contains(t, doc.Definitions, "Envelope")
+	silentField := doc.Definitions["Envelope"].Properties["silent"]
+	assert.Equal(t, []string{"string"}, []string(silentField.Type),
+		"Envelope.silent inlines recognizeTime's canonical type:string at the use site")
+	assert.Equal(t, "date-time", silentField.Format,
+		"Envelope.silent inlines recognizeTime's canonical format:date-time at the use site")
+	assert.Empty(t, silentField.Ref.String(),
+		"Envelope.silent must be inline; no $ref now that SilentTime is dissolved")
 
 	// Q30 side benefit: the chain targets no longer pollute definitions.
 	assert.NotContains(t, doc.Definitions, "Time",
@@ -121,16 +129,20 @@ func TestCoverage_AliasStdlibDefault(t *testing.T) {
 	assert.Equal(t, "error", errDef.Extensions["x-go-type"],
 		"Err must carry the x-go-type:error extension")
 
-	// SilentTime = time.Time (unannotated, reachable via field) →
-	// {type: string, format: date-time}. R4-strict reading holds:
-	// unannotated reachable alias produces a definition under
-	// Default mode; the recognizer canonicalises its shape.
-	require.Contains(t, doc.Definitions, "SilentTime",
-		"unannotated SilentTime must still surface (R4-strict under Default)")
-	silent := doc.Definitions["SilentTime"]
-	assert.Equal(t, []string{"string"}, []string(silent.Type),
-		"SilentTime must canonicalise via recognizeTime even when unannotated")
-	assert.Equal(t, "date-time", silent.Format)
+	// SilentTime = time.Time (UNANNOTATED, reachable via field) → R6
+	// supersedes the earlier R4-strict reading: unannotated aliases
+	// do not produce standalone definitions. The recognizer's
+	// canonical shape ({string, date-time}) lands inline at the use
+	// site (Envelope.silent) instead of on a SilentTime def.
+	assert.NotContains(t, doc.Definitions, "SilentTime",
+		"R6: unannotated alias of time.Time must not produce a standalone definition under Default")
+	require.Contains(t, doc.Definitions, "Envelope")
+	silentField := doc.Definitions["Envelope"].Properties["silent"]
+	assert.Equal(t, []string{"string"}, []string(silentField.Type),
+		"Envelope.silent inlines recognizeTime's canonical type:string at the use site")
+	assert.Equal(t, "date-time", silentField.Format)
+	assert.Empty(t, silentField.Ref.String(),
+		"Envelope.silent must be inline; no $ref now that SilentTime is dissolved")
 
 	// Raw = json.RawMessage → recognizeRawMessage produces the open
 	// "any JSON" shape (target.Schema() with no Typed() call). The

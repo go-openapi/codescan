@@ -38,17 +38,16 @@ func TestAliasedSchemas(t *testing.T) {
 		_, _ = os.Stdout.Write(yml)
 	}
 
-	t.Run("type aliased to any should yield an empty schema", func(t *testing.T) {
-		anything, ok := sp.Definitions["Anything"]
-		require.TrueT(t, ok)
-
-		assertHasGoPackageExt(t, anything)
-		assertHasTitle(t, anything)
-
-		// after stripping extension and title, should be empty
-		anything.VendorExtensible = oaispec.VendorExtensible{}
-		anything.Title = ""
-		assert.Equal(t, oaispec.Schema{}, anything)
+	t.Run("unannotated alias to any should not produce a standalone definition", func(t *testing.T) {
+		// R6: aliases without `swagger:model` are a Go implementation
+		// detail; they dissolve at use sites and do not surface as
+		// `definitions` entries. Previously the test asserted Anything
+		// in `definitions` (a discovery-driven artifact); the
+		// use-site shape is now what carries the open schema (see
+		// `with alias to any` subtest below).
+		_, ok := sp.Definitions["Anything"]
+		require.FalseT(t, ok,
+			"R6: unannotated alias to any must not appear in definitions")
 	})
 
 	t.Run("type aliased to an empty struct should yield an empty object", func(t *testing.T) {
@@ -70,42 +69,86 @@ func TestAliasedSchemas(t *testing.T) {
 		testAliasedExtendedIDAllOf(t, sp)
 	})
 
-	t.Run("aliased primitive types remain unaffected", func(t *testing.T) {
-		uuid, ok := sp.Definitions["UUID"]
-		require.TrueT(t, ok)
+	t.Run("unannotated aliased primitive types do not produce a standalone definition", func(t *testing.T) {
+		// R6: same as Anything above. UUID is `type UUID = int64`
+		// with no `swagger:model`; it dissolves at use sites. The
+		// inline integer shape now lives on each field that referred
+		// to it (see `with alias to primitive type` subtest below).
+		_, ok := sp.Definitions["UUID"]
+		require.FalseT(t, ok,
+			"R6: unannotated alias to a primitive must not appear in definitions")
+	})
 
-		assertHasGoPackageExt(t, uuid)
-		assertHasTitle(t, uuid)
+	t.Run("annotated alias companions recover the alias-name $ref shape", func(t *testing.T) {
+		// R6 bidirectional witness: UUIDModeled / AnythingModeled
+		// are the swagger:model-annotated counterparts of UUID /
+		// Anything. With the annotation, each alias surfaces as a
+		// first-class spec entity, and any field typed with the
+		// annotated alias keeps `$ref: <AliasName>` rather than
+		// dissolving to the underlying primitive / open shape.
+		//
+		// Compare with the UUID / Anything subtests above (and
+		// with the `field defined on an alias inlines its target
+		// shape` block below) — together they pin the rule:
+		// `swagger:model` is the SOLE gate for whether the alias
+		// name surfaces in the spec.
+		require.Contains(t, sp.Definitions, "UUIDModeled",
+			"annotated alias to int64 must have its own definition")
+		uuidModeled := sp.Definitions["UUIDModeled"]
+		assert.TrueT(t, uuidModeled.Type.Contains("integer"))
+		assert.Equal(t, "int64", uuidModeled.Format)
 
-		// after strip extension, should be equal to integer with format
-		uuid.VendorExtensible = oaispec.VendorExtensible{}
-		uuid.Title = ""
-		intSchema := &oaispec.Schema{}
-		intSchema = intSchema.Typed("integer", "int64")
-		assert.Equal(t, *intSchema, uuid)
+		require.Contains(t, sp.Definitions, "AnythingModeled",
+			"annotated alias to any must have its own definition")
+		anythingModeled := sp.Definitions["AnythingModeled"]
+		assert.Empty(t, anythingModeled.Type,
+			"AnythingModeled inlines the open `any` shape (no type keyword)")
+
+		require.Contains(t, sp.Definitions, "order_modeled",
+			"StoreOrderModeled must surface under its swagger:model name")
+		orderModeled := sp.Definitions["order_modeled"]
+		scantest.AssertRef(t, &orderModeled, "id", "", "#/definitions/UUIDModeled")
+		scantest.AssertRef(t, &orderModeled, "deliveryOption", "", "#/definitions/AnythingModeled")
+		// extended_id stays $ref'd to ExtendedID; ExtendedID is a
+		// named struct (not an alias) — R6-independent control.
+		scantest.AssertRef(t, &orderModeled, "extended_id", "", "#/definitions/ExtendedID")
 	})
 
 	t.Run("with struct having fields aliased to any or interface{}", func(t *testing.T) {
 		order, ok := sp.Definitions["order"]
 		require.TrueT(t, ok)
 
-		t.Run("field defined on an alias should produce a ref", func(t *testing.T) {
+		t.Run("field defined on an alias inlines its target shape", func(t *testing.T) {
+			// R6: unannotated aliases dissolve at use sites. The
+			// previous behaviour ($ref to a manufactured alias
+			// definition) is retired; the underlying shape now lives
+			// inline on each property. ExtendedID is a NAMED struct
+			// (not an alias), so it continues to surface as $ref —
+			// R6 only affects alias-as-use-type.
 			t.Run("with alias to any", func(t *testing.T) {
-				_, ok = order.Properties["DeliveryOption"]
+				delivery, ok := order.Properties["DeliveryOption"]
 				require.TrueT(t, ok)
-				scantest.AssertRef(t, &order, "DeliveryOption", "", "#/definitions/Anything") // points to an alias to any
+				assert.Empty(t, delivery.Ref.String(),
+					"R6: alias-to-any dissolves; no $ref at the use site")
+				assert.Empty(t, delivery.Type,
+					"alias-to-any inlines the open `any` shape (no `type` keyword)")
 			})
 
 			t.Run("with alias to primitive type", func(t *testing.T) {
-				_, ok = order.Properties["id"]
+				id, ok := order.Properties["id"]
 				require.TrueT(t, ok)
-				scantest.AssertRef(t, &order, "id", "", "#/definitions/UUID") // points to an alias to any
+				assert.Empty(t, id.Ref.String(),
+					"R6: alias-to-primitive dissolves; no $ref at the use site")
+				assert.TrueT(t, id.Type.Contains("integer"),
+					"alias-to-int64 inlines the primitive type")
+				assert.Equal(t, "int64", id.Format,
+					"alias-to-int64 inlines the int64 format")
 			})
 
-			t.Run("with alias to struct type", func(t *testing.T) {
+			t.Run("with named struct type (not affected by R6)", func(t *testing.T) {
 				_, ok = order.Properties["extended_id"]
 				require.TrueT(t, ok)
-				scantest.AssertRef(t, &order, "extended_id", "", "#/definitions/ExtendedID") // points to an alias to any
+				scantest.AssertRef(t, &order, "extended_id", "", "#/definitions/ExtendedID") // ExtendedID is a named struct, not an alias
 			})
 
 			t.Run("inside anonymous array", func(t *testing.T) {
