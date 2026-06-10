@@ -2,14 +2,6 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
-    "AliasedTopParams": {
-      "description": "AliasedTopParams annotates an alias as the parameters set: the scanner\nmust resolve the alias via parameterBuilder.buildAlias.",
-      "$ref": "#/definitions/exportedParams"
-    },
-    "AliasedTopParams2": {
-      "title": "AliasedTopParams2 chains AliasedTopParams through a second alias layer.",
-      "$ref": "#/definitions/AliasedTopParams"
-    },
     "EnvelopeAlias": {
       "title": "EnvelopeAlias aliases ResponseEnvelope once.",
       "$ref": "#/definitions/ResponseEnvelope"
@@ -37,27 +29,10 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
-    "PayloadAlias": {
-      "title": "PayloadAlias aliases Payload once.",
-      "$ref": "#/definitions/Payload"
-    },
-    "PayloadAlias2": {
-      "title": "PayloadAlias2 aliases PayloadAlias (alias-of-alias chain).",
-      "$ref": "#/definitions/PayloadAlias"
-    },
     "PayloadAliasModeled": {
       "description": "Same underlying Go type, but `swagger:model` opts the alias in as a\nfirst-class spec entity.",
       "title": "PayloadAliasModeled is the annotated counterpart of `PayloadAlias`.",
       "$ref": "#/definitions/Payload"
-    },
-    "QueryID": {
-      "type": "string",
-      "title": "QueryID is a named string used as the base of a non-body parameter alias.",
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
-    },
-    "QueryIDAlias": {
-      "title": "QueryIDAlias aliases QueryID for a non-body parameter field.",
-      "$ref": "#/definitions/QueryID"
     },
     "ResponseEnvelope": {
       "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses. Its `payload` field is typed as the UNannotated `PayloadAlias`,\nso under R6 the field's $ref dissolves to `Payload`.",
@@ -75,23 +50,6 @@
       "properties": {
         "payload": {
           "$ref": "#/definitions/PayloadAliasModeled"
-        }
-      },
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
-    },
-    "exportedParams": {
-      "type": "object",
-      "title": "exportedParams is the backing struct for an aliased swagger:parameters.",
-      "required": [
-        "data"
-      ],
-      "properties": {
-        "data": {
-          "$ref": "#/definitions/Payload"
-        },
-        "search": {
-          "type": "string",
-          "x-go-name": "Search"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
