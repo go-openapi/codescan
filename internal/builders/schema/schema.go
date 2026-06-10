@@ -14,6 +14,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -148,6 +149,25 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 // See [§aliases](./README.md#aliases) and [§discovery](./README.md#discovery).
 func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable) error {
 	resolvers.MustHaveRightHandSide(tpe)
+
+	// User-override classifier (Q13): the alias-dispatch path does not
+	// consult `swagger:strfmt` anywhere else, so a `type X = any` or
+	// `type X = int64` decorated with `// swagger:strfmt <format>`
+	// would otherwise fall through to the recognizer (`any` →
+	// empty body) or to the underlying primitive (`int64` →
+	// `{integer, int64}`), silently dropping the user's annotation.
+	// Honouring it here mirrors `classifierNamedTypeOverride`'s
+	// decl-entry treatment of `swagger:type`, and matches the
+	// strfmt-first cascade order from `classifierNamedBasic`.
+	//
+	// `swagger:strfmt` on a Named decl is unaffected — that path is
+	// covered by `classifierNamedStructStrfmt` (struct underlying)
+	// and `classifierNamedBasic` (primitive underlying), both fired
+	// from `buildNamedType` after the underlying-kind switch.
+	if name, ok := s.findAnnotationArg(s.Decl.Comments, grammar.AnnStrfmt); ok {
+		target.Typed("string", name)
+		return nil
+	}
 
 	rhs := tpe.Rhs()
 

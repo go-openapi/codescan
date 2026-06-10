@@ -340,6 +340,32 @@ func TestCoverage_RefAliasChain(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
+	// Q13 — user annotations on alias decls. The alias-dispatch
+	// path now consults swagger:strfmt at the buildDeclAlias entry,
+	// so:
+	//   - `type X = any` + swagger:strfmt date → `{string, date}`
+	//   - `type X = int64` + swagger:strfmt uuid → `{string, uuid}`
+	// The unannotated case (Wildcard) stays as the documented "any
+	// value allowed" empty body, and `swagger:type` continues to
+	// fire via classifierNamedTypeOverride (CountTyped baseline).
+	datestamp := doc.Definitions["Datestamp"]
+	assert.Equal(t, []string{"string"}, []string(datestamp.Type),
+		"Q13: swagger:strfmt date on `type X = any` must produce {string, date}")
+	assert.Equal(t, "date", datestamp.Format)
+
+	userID := doc.Definitions["UserIDStrf"]
+	assert.Equal(t, []string{"string"}, []string(userID.Type),
+		"Q13: swagger:strfmt uuid on `type X = int64` must produce {string, uuid}")
+	assert.Equal(t, "uuid", userID.Format)
+
+	wildcard := doc.Definitions["Wildcard"]
+	assert.Empty(t, wildcard.Type,
+		"Q13 status quo: unannotated `type X = any` (no strfmt) keeps the open Swagger 2.0 shape")
+
+	countTyped := doc.Definitions["CountTyped"]
+	assert.Equal(t, []string{"integer"}, []string(countTyped.Type),
+		"baseline: swagger:type on alias of any continues to work via classifierNamedTypeOverride")
+
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_ref_alias_chain.json")
 }
 
