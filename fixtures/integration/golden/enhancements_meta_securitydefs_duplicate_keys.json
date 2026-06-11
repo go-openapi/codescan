@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "description": "1. Grammar lexer: every body line MUST preserve its per-line\nstructural indentation — same as extensions / infoExtensions — so\nthe YAML nesting under each scheme name survives. Without that,\nboth schemes' fields collapse into one flat top-level mapping and\nthe spec decode aborts.\n\n2. yaml sub-parser: duplicate mapping keys at any depth are\nsilently last-wins dedupe'd before the strict yaml.v3 decoder\nruns. Here api_key declares \"type:\" twice on purpose.\n\nDiagnostic emission on duplicates is deferred to the yaml-library\nswap tracked in .claude/plans/forthcoming-features.md §3.1.",
+    "description": "1. Grammar lexer: every body line MUST preserve its per-line\nstructural indentation — same as extensions / infoExtensions — so\nthe YAML nesting under each scheme name survives. Without that,\nboth schemes' fields collapse into one flat top-level mapping and\nthe spec decode aborts.\n\n2. yaml sub-parser: duplicate mapping keys at any depth are\nsilently last-wins dedupe'd before the strict yaml.v3 decoder\nruns. Here api_key declares \"type:\" twice on purpose.\n\nDiagnostic emission on duplicates is deferred to the yaml-library\nswap tracked in the forthcoming-features roadmap.",
     "title": "witnesses two intertwined\nbehaviours of the swagger:meta SecurityDefinitions raw block."
   },
   "paths": {},

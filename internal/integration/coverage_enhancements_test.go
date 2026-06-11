@@ -105,6 +105,39 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
+	// Bidirectional witness — same fixture, two body-payload
+	// shapes side by side:
+	//
+	//   - ResponseEnvelope.payload typed PayloadAlias (UNannotated)
+	//     → dissolves to $ref: Payload (the unaliased target)
+	//   - ResponseEnvelopeModeled.payload typed PayloadAliasModeled
+	//     (annotated) → preserves $ref: PayloadAliasModeled
+	//
+	// Together they pin the rule: `swagger:model` is the sole
+	// gate for whether an alias name surfaces in field-site $refs.
+	respUnann := doc.Definitions["ResponseEnvelope"].Properties["payload"]
+	assert.Equal(t, "#/definitions/Payload", respUnann.Ref.String(),
+		"unannotated PayloadAlias dissolves to its unaliased target")
+
+	require.Contains(t, doc.Definitions, "PayloadAliasModeled",
+		"annotated alias must surface as a first-class definition")
+	respAnn := doc.Definitions["ResponseEnvelopeModeled"].Properties["payload"]
+	assert.Equal(t, "#/definitions/PayloadAliasModeled", respAnn.Ref.String(),
+		"annotated PayloadAliasModeled preserves its identity in the field $ref")
+
+	// Bidirectional response-side witness — the same pattern
+	// applied to top-level swagger:response body fields. The
+	// unannotated AliasedResponse and the annotated
+	// AliasedModeledResponse sit on the same fixture canvas.
+	assert.Equal(t, "#/definitions/ResponseEnvelope",
+		doc.Responses["aliasedResponse"].Schema.Ref.String(),
+		"unannotated response body alias dissolves to canonical")
+	assert.Equal(t, "#/definitions/EnvelopeAliasModeled",
+		doc.Responses["aliasedModeledResponse"].Schema.Ref.String(),
+		"annotated response body alias preserves the alias name")
+	require.Contains(t, doc.Definitions, "EnvelopeAliasModeled",
+		"annotated alias has its own definition")
+
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_expand.json")
 }
 
@@ -306,6 +339,31 @@ func TestCoverage_RefAliasChain(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, doc)
+
+	// User annotations on alias decls. The alias-dispatch path
+	// consults swagger:strfmt at the buildDeclAlias entry, so:
+	//   - `type X = any` + swagger:strfmt date → `{string, date}`
+	//   - `type X = int64` + swagger:strfmt uuid → `{string, uuid}`
+	// The unannotated case (Wildcard) stays as the documented "any
+	// value allowed" empty body, and `swagger:type` continues to
+	// fire via classifierNamedTypeOverride (CountTyped baseline).
+	datestamp := doc.Definitions["Datestamp"]
+	assert.Equal(t, []string{"string"}, []string(datestamp.Type),
+		"swagger:strfmt date on `type X = any` must produce {string, date}")
+	assert.Equal(t, "date", datestamp.Format)
+
+	userID := doc.Definitions["UserIDStrf"]
+	assert.Equal(t, []string{"string"}, []string(userID.Type),
+		"swagger:strfmt uuid on `type X = int64` must produce {string, uuid}")
+	assert.Equal(t, "uuid", userID.Format)
+
+	wildcard := doc.Definitions["Wildcard"]
+	assert.Empty(t, wildcard.Type,
+		"unannotated `type X = any` (no strfmt) keeps the open Swagger 2.0 shape")
+
+	countTyped := doc.Definitions["CountTyped"]
+	assert.Equal(t, []string{"integer"}, []string(countTyped.Type),
+		"baseline: swagger:type on alias of any continues to work via classifierNamedTypeOverride")
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_ref_alias_chain.json")
 }

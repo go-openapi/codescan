@@ -39,6 +39,37 @@ type Timestamp = time.Time
 // swagger:model Wildcard
 type Wildcard = any
 
+// Datestamp aliases any with a user-provided `swagger:strfmt`
+// annotation. Expected: the alias surfaces as `{string, date}` —
+// the decl-entry strfmt classifier fires before the any-recognizer
+// would otherwise empty the schema.
+//
+// swagger:model Datestamp
+// swagger:strfmt date
+type Datestamp = any
+
+// Loose aliases any with NO swagger:model annotation. Reachable
+// only via Envelope.Drift below. Witness for the unannotated case
+// at field sites: the alias dissolves and produces no definition.
+type Loose = any
+
+// UserIDStrf probes `swagger:strfmt` on an alias of a primitive.
+// Expected: the alias surfaces as `{string, uuid}` — the
+// decl-entry strfmt classifier wins over the primitive underlying.
+//
+// swagger:model UserIDStrf
+// swagger:strfmt uuid
+type UserIDStrf = int64
+
+// CountTyped probes the `swagger:type` override on an alias of
+// any. `swagger:type` takes a Go-type name (per
+// `SwaggerSchemaForType`); honoured via
+// `classifierNamedTypeOverride`.
+//
+// swagger:model CountTyped
+// swagger:type int64
+type CountTyped = any
+
 // Envelope references the aliases via its fields so the scanner also
 // walks the schemaBuilder.buildAlias path for each chain member.
 //
@@ -51,4 +82,11 @@ type Envelope struct {
 	CreatedAt Timestamp `json:"createdAt"`
 
 	Meta Wildcard `json:"meta"`
+
+	// Stamp is typed via the strfmt-annotated alias of `any`.
+	Stamp Datestamp `json:"stamp"`
+
+	// Drift uses an unannotated alias of any — the field site
+	// dissolves the alias to the underlying.
+	Drift Loose `json:"drift"`
 }

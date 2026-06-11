@@ -34,5 +34,32 @@ func TestCoverage_AliasFindModelWitness(t *testing.T) {
 	assert.Contains(t, doc.Definitions, "PlainTarget",
 		"unannotated alias target must reach definitions via the orchestrator's discovery path")
 
+	// Bidirectional witness — unannotated alias dissolves to its
+	// target at every use site; annotated alias preserves the
+	// alias name. AliasOfPlain (unannotated) and AliasOfPlainModeled
+	// (annotated) sit on the same fixture so both halves are
+	// visible side by side in this golden.
+	assert.NotContains(t, doc.Definitions, "AliasOfPlain",
+		"unannotated alias must not produce a definition")
+	require.Contains(t, doc.Definitions, "AliasOfPlainModeled",
+		"annotated alias keeps its own definition")
+
+	// Body-response $refs pin the gate on the responses side.
+	assert.Equal(t, "#/definitions/PlainTarget",
+		doc.Responses["witnessResponse"].Schema.Ref.String(),
+		"unannotated body response alias dissolves to the underlying target")
+	assert.Equal(t, "#/definitions/AliasOfPlainModeled",
+		doc.Responses["witnessModeledResponse"].Schema.Ref.String(),
+		"annotated body response alias preserves the alias name")
+
+	// The parameters-side bidirectional contract is observable in
+	// the golden but not in doc.Parameters here: this fixture has no
+	// swagger:route, so the swagger:parameters declarations don't
+	// bind to an operation and never reach spec.Parameters.
+	// witnessRequest / witnessModeledRequest live only in the
+	// scanner's internal parameter-set map; they show up in the
+	// golden via the WitnessParams / WitnessParamsModeled struct
+	// surfaces (or their absence under the parameters builder's
+	// no-definition rule for top-level alias parameters).
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_findmodel_witness.json")
 }

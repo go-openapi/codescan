@@ -70,3 +70,25 @@ type HeaderAliasedStructResponse struct {
 	// in: header
 	Detail EnvelopeAlias `json:"X-Detail"`
 }
+
+// EnvelopeAliasModeled is the annotated counterpart of
+// EnvelopeAlias. The annotation gates first-class alias identity
+// at body field sites; this decl exists so the bidirectional
+// contract is visible on the same canvas as the unannotated
+// witnesses above.
+//
+// swagger:model EnvelopeAliasModeled
+type EnvelopeAliasModeled = Envelope
+
+// BodyAliasModeledResponse — body field uses the ANNOTATED alias
+// EnvelopeAliasModeled. The body schema's `$ref` preserves the
+// alias name (`$ref: EnvelopeAliasModeled`), surfacing the alias
+// identity for users who explicitly opt in via `swagger:model`.
+// The unannotated counterpart (BodyAliasResponse above) dissolves
+// to `$ref: Envelope`.
+//
+// swagger:response bodyAliasModeledResponse
+type BodyAliasModeledResponse struct {
+	// in: body
+	Body EnvelopeAliasModeled `json:"body"`
+}

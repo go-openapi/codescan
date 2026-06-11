@@ -1,0 +1,136 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/aliased-top": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "aliasedTop",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "description": "Body is a body parameter on the aliased top-level params set.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "type": "string",
+            "x-go-name": "Search",
+            "description": "Search is a query parameter on the aliased top-level params set.",
+            "name": "search",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/direct": {
+      "post": {
+        "tags": [
+          "calibration"
+        ],
+        "operationId": "directParams",
+        "parameters": [
+          {
+            "x-go-name": "BodyDirect",
+            "description": "BodyDirect — body parameter typed as the raw Payload model\n(control case, alias-handling-independent).",
+            "name": "bodyDirect",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "x-go-name": "BodyAliasPlain",
+            "description": "BodyAliasPlain — body parameter typed as the UNANNOTATED\nalias PayloadAlias. The body schema's $ref dissolves to\nPayload.",
+            "name": "bodyAliasPlain",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "x-go-name": "BodyAliasModeled",
+            "description": "BodyAliasModeled — body parameter typed as the ANNOTATED\nalias PayloadAliasModeled. The body schema's $ref preserves\nPayloadAliasModeled (and the alias surfaces as its own\ndefinition).",
+            "name": "bodyAliasModeled",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "x-go-name": "BodyAliasChain",
+            "description": "BodyAliasChain — body parameter typed as the two-link\nunannotated chain PayloadAlias2. Both layers dissolve to\nPayload.",
+            "name": "bodyAliasChain",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "type": "string",
+            "x-go-name": "LookupPlain",
+            "description": "LookupPlain — query parameter typed as the UNANNOTATED\nalias QueryIDAlias. SimpleSchema target — the alias must\nexpand to its primitive type inline regardless of mode,\nand QueryIDAlias must not appear in `definitions`.",
+            "name": "lookupPlain",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Payload": {
+      "type": "object",
+      "title": "Payload is the canonical body model.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-parameters-calibration"
+    },
+    "PayloadAliasModeled": {
+      "description": "PayloadAliasModeled is the ANNOTATED counterpart of\nPayloadAlias. The `swagger:model` opt-in makes the alias a\nfirst-class spec entity — body field sites preserve\n`$ref: PayloadAliasModeled`, and the alias gets its own\ndefinition.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-parameters-calibration"
+    }
+  }
+}

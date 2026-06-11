@@ -2,21 +2,9 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
-    "AliasedTopParams": {
-      "description": "AliasedTopParams annotates an alias as the parameters set: the scanner\nmust resolve the alias via parameterBuilder.buildAlias.",
-      "$ref": "#/definitions/exportedParams"
-    },
-    "AliasedTopParams2": {
-      "title": "AliasedTopParams2 chains AliasedTopParams through a second alias layer.",
-      "$ref": "#/definitions/AliasedTopParams"
-    },
-    "EnvelopeAlias": {
-      "title": "EnvelopeAlias aliases ResponseEnvelope once.",
+    "EnvelopeAliasModeled": {
+      "description": "EnvelopeAliasModeled is the annotated counterpart of\nEnvelopeAlias. With `swagger:model` the alias opts in as a\nfirst-class spec entity; the alias name is preserved at body\nfield sites in `swagger:response` structs.",
       "$ref": "#/definitions/ResponseEnvelope"
-    },
-    "EnvelopeAlias2": {
-      "title": "EnvelopeAlias2 aliases EnvelopeAlias (alias-of-alias).",
-      "$ref": "#/definitions/EnvelopeAlias"
     },
     "Payload": {
       "type": "object",
@@ -37,56 +25,43 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
-    "PayloadAlias": {
-      "title": "PayloadAlias aliases Payload once.",
+    "PayloadAliasModeled": {
+      "description": "Same underlying Go type, but `swagger:model` opts the alias in as a\nfirst-class spec entity.",
+      "title": "PayloadAliasModeled is the annotated counterpart of `PayloadAlias`.",
       "$ref": "#/definitions/Payload"
     },
-    "PayloadAlias2": {
-      "title": "PayloadAlias2 aliases PayloadAlias (alias-of-alias chain).",
-      "$ref": "#/definitions/PayloadAlias"
-    },
-    "QueryID": {
-      "type": "string",
-      "title": "QueryID is a named string used as the base of a non-body parameter alias.",
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
-    },
-    "QueryIDAlias": {
-      "title": "QueryIDAlias aliases QueryID for a non-body parameter field.",
-      "$ref": "#/definitions/QueryID"
-    },
     "ResponseEnvelope": {
-      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses.",
+      "description": "ResponseEnvelope is the canonical struct referenced by aliases used in\nresponses. Its `payload` field is typed as the UNannotated `PayloadAlias`,\nso the field's $ref dissolves to `Payload` (annotation gate at use sites).",
       "type": "object",
       "properties": {
         "payload": {
-          "$ref": "#/definitions/PayloadAlias"
+          "$ref": "#/definitions/Payload"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     },
-    "exportedParams": {
+    "ResponseEnvelopeModeled": {
+      "description": "ResponseEnvelopeModeled is the bidirectional sibling of\n`ResponseEnvelope`. Same struct shape, but its `payload` field uses\nthe annotated alias `PayloadAliasModeled`. The field's $ref preserves\nthe alias identity (`$ref: PayloadAliasModeled`), demonstrating that\nthe explicit `swagger:model` opt-in surfaces the alias name at body\nfield sites.",
       "type": "object",
-      "title": "exportedParams is the backing struct for an aliased swagger:parameters.",
-      "required": [
-        "data"
-      ],
       "properties": {
-        "data": {
-          "$ref": "#/definitions/Payload"
-        },
-        "search": {
-          "type": "string",
-          "x-go-name": "Search"
+        "payload": {
+          "$ref": "#/definitions/PayloadAliasModeled"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/alias-expand"
     }
   },
   "responses": {
+    "aliasedModeledResponse": {
+      "description": "AliasedModeledResponse is the bidirectional sibling of\nAliasedResponse: same shape, but its Body field uses the\nANNOTATED alias `EnvelopeAliasModeled`. The body schema's\n`$ref` preserves `EnvelopeAliasModeled` (alongside the alias's\nown definition), while AliasedResponse dissolves to\n`$ref: ResponseEnvelope`. Both halves on one canvas.",
+      "schema": {
+        "$ref": "#/definitions/EnvelopeAliasModeled"
+      }
+    },
     "aliasedResponse": {
       "description": "AliasedResponse has a body field whose type is an alias chain.",
       "schema": {
-        "$ref": "#/definitions/EnvelopeAlias2"
+        "$ref": "#/definitions/ResponseEnvelope"
       }
     },
     "namedTopResponse": {

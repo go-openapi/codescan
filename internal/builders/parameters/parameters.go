@@ -107,44 +107,17 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 	resolvers.MustNotBeABuiltinType(o)
 	resolvers.MustHaveRightHandSide(tpe)
 
-	rhs := tpe.Rhs()
-
-	// If transparent aliases are enabled, use the underlying type directly without creating a definition
-	if p.Ctx.TransparentAliases() {
-		return p.buildFromType(rhs, op, seen)
-	}
-
-	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
-	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrParameters)
-	}
-	p.AppendPostDecl(decl) // mark the left-hand side as discovered
-
-	switch rtpe := rhs.(type) {
-	// load declaration for named unaliased type
-	case *types.Named:
-		o := rtpe.Obj()
-		if o.Pkg() == nil {
-			break // builtin
-		}
-		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
-		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
-		}
-		p.AppendPostDecl(decl)
-	case *types.Alias:
-		o := rtpe.Obj()
-		if o.Pkg() == nil {
-			break // builtin
-		}
-		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
-		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
-		}
-		p.AppendPostDecl(decl)
-	}
-
-	return p.buildFromType(rhs, op, seen)
+	// `swagger:parameters` declares a parameter SET, not a model. Neither
+	// the alias decl nor any chain link of its target surfaces as a
+	// `definitions` entry — the fields of the unaliased target become the
+	// operation's parameters. There is no mode-specific behaviour for this
+	// case: TransparentAliases takes the same path as Default and
+	// RefAliases. The mode flags only affect alias *use* sites (field /
+	// element), not the top-level parameter-set declaration.
+	//
+	// Recursion handles alias chains naturally: buildFromType dispatches
+	// back here for any chain link whose RHS is itself an alias.
+	return p.buildFromType(tpe.Rhs(), op, seen)
 }
 
 func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) error {
@@ -283,12 +256,11 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 	resolvers.MustNotBeABuiltinType(o)
 	resolvers.MustHaveRightHandSide(tpe)
 
-	rhs := tpe.Rhs()
-
-	// If transparent aliases are enabled, use the underlying type directly without creating a definition
+	// TransparentAliases supersedes annotation at use sites — dissolve
+	// to the unaliased target via the schema sub-builder.
 	if p.Ctx.TransparentAliases() {
 		sb := schema.NewBuilder(p.Ctx, p.Decl)
-		if err := sb.Build(schema.OptionFor(rhs, typable)); err != nil {
+		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable)); err != nil {
 			return err
 		}
 		for _, d := range sb.PostDeclarations() {
@@ -299,47 +271,35 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 
 	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
-		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, rhs, ErrParameters)
-	}
-	p.AppendPostDecl(decl) // mark the left-hand side as discovered
-
-	if typable.In() != inBody || !p.Ctx.RefAliases() {
-		// if ref option is disabled, and always for non-body parameters: just expand the alias
-		unaliased := types.Unalias(tpe)
-		return p.buildFromField(fld, unaliased, typable, seen)
+		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, tpe.Rhs(), ErrParameters)
 	}
 
-	// for parameters that are full-fledged schemas, consider expanding or ref'ing
-	switch rtpe := rhs.(type) {
-	// load declaration for named RHS type (might be an alias itself)
-	case *types.Named:
-		o := rtpe.Obj()
-		if o.Pkg() == nil {
-			break // builtin
-		}
+	// Non-body parameters are SimpleSchema targets and cannot carry $ref —
+	// always expand the alias to its unaliased target regardless of
+	// annotation. Walking through every alias layer (types.Unalias)
+	// dissolves chains fully in one step.
+	if typable.In() != inBody {
+		return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
+	}
 
-		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
-		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
-		}
-
-		return p.MakeRef(decl, typable)
-	case *types.Alias:
-		o := rtpe.Obj()
-		if o.Pkg() == nil {
-			break // builtin
-		}
-
-		decl, found := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
-		if !found {
-			return fmt.Errorf("can't find source file for target type of alias: %v -> %v: %w", tpe, rtpe, ErrParameters)
-		}
-
+	// Body field: annotation gates first-class identity at the use
+	// site. See [§alias-handling](./README.md#alias-handling) for
+	// the cross-builder rule.
+	//
+	//   - annotated   alias → $ref preserves the alias name; the alias
+	//     gets its own definition via MakeRef's AppendPostDecl side effect.
+	//   - unannotated alias → dissolve to the unaliased target (full
+	//     chain collapse via types.Unalias); the alias produces no
+	//     definition entry.
+	//
+	// The mode flag (RefAliases vs Default) only affects the shape of the
+	// alias decl's OWN definition downstream — it does not change the
+	// field-site $ref target, which is gated entirely by annotation.
+	if decl.HasModelAnnotation() {
 		return p.MakeRef(decl, typable)
 	}
 
-	// anonymous type: just expand it
-	return p.buildFromField(fld, rhs, typable, seen)
+	return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
 }
 
 func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {

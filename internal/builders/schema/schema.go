@@ -14,6 +14,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -149,6 +150,24 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable) error {
 	resolvers.MustHaveRightHandSide(tpe)
 
+	// `swagger:strfmt` user-override on the alias decl. Without this
+	// check, an alias decl decorated with `// swagger:strfmt <format>`
+	// would fall through to the recognizer (`type X = any` → empty
+	// body) or to the underlying primitive (`type X = int64` →
+	// `{integer, int64}`), silently dropping the user's annotation.
+	// Honouring it here mirrors `classifierNamedTypeOverride`'s
+	// decl-entry treatment of `swagger:type`, and matches the
+	// strfmt-first cascade order from `classifierNamedBasic`.
+	//
+	// `swagger:strfmt` on a Named decl is unaffected — that path is
+	// covered by `classifierNamedStructStrfmt` (struct underlying)
+	// and `classifierNamedBasic` (primitive underlying), both fired
+	// from `buildNamedType` after the underlying-kind switch.
+	if name, ok := s.findAnnotationArg(s.Decl.Comments, grammar.AnnStrfmt); ok {
+		target.Typed("string", name)
+		return nil
+	}
+
 	rhs := tpe.Rhs()
 
 	// Dissolve: no LHS definition, build directly from the RHS.
@@ -166,6 +185,20 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 	// underlying. tpe.Rhs() peels one alias layer; tpe.Underlying()
 	// peels through aliases AND named types to the structural form.
 	if !s.Ctx.RefAliases() {
+		// Consult the stdlib recognizers before walking Underlying().
+		// Without this, aliases of stdlib-special types (time.Time,
+		// error, json.RawMessage, any) lose their canonical shape:
+		// the structural walk produces {type:object} for time.Time
+		// and {type:array, items:{integer,uint8}} for json.RawMessage
+		// instead of {type:string, format:date-time} and the open
+		// "any JSON" idiom respectively. The TransparentAliases path
+		// at line 156 already gets this right via buildFromType(rhs);
+		// Expand needs the same recognizer call before its Underlying
+		// fallthrough.
+		if obj := rhsTypeName(rhs); obj != nil &&
+			applyStdlibSpecials(obj, target, s.skipExtensions) {
+			return nil
+		}
 		return s.buildFromType(tpe.Underlying(), target)
 	}
 
@@ -173,6 +206,29 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 	switch rtpe := rhs.(type) {
 	case *types.Named:
 		ro := rtpe.Obj()
+		// Consult the stdlib recognizers first. When the RHS is one of
+		// time.Time / error / json.RawMessage / any, emit the canonical
+		// inline shape on the alias's OWN definition rather than chaining
+		// a $ref to a separately-built definition. This matches what the
+		// sibling *types.Alias branch already does, what TransparentAliases
+		// mode already does for stdlib decls, and eliminates the Q30 noise
+		// from stdlib godocs landing on the chain targets (Time /
+		// RawMessage) — those targets no longer exist in the spec when
+		// the alias inlines the canonical shape directly.
+		//
+		// For predeclared `error`, this is also the only safe path: it has
+		// no package, so the GetModel lookup below would nil-panic on
+		// Pkg().Path(). User-defined named types (non-stdlib) fall through
+		// to the GetModel + MakeRef chain as before.
+		if applyStdlibSpecials(ro, target, s.skipExtensions) {
+			return nil
+		}
+		if ro.Pkg() == nil {
+			// Not a recognised special AND no package — predeclared but
+			// unsupported; degrade to missingSource so the build fails
+			// cleanly.
+			return missingSource(rtpe)
+		}
 		rdecl, found := s.Ctx.GetModel(ro.Pkg().Path(), ro.Name())
 		if !found {
 			return missingSource(rtpe)
@@ -280,6 +336,16 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	decl, ok := s.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrSchema)
+	}
+	// Unannotated alias at a use site: dissolve to the unaliased target.
+	// The annotation is the user's opt-in to exposing the alias as a
+	// first-class spec entity; without it the aliasing is a Go
+	// implementation detail and the spec carries the underlying name.
+	// Matches the dissolve already performed under TransparentAliases at
+	// line 313, but applied per-decl based on intent instead of per-mode.
+	// See [§aliases](./README.md#aliases).
+	if !decl.HasModelAnnotation() {
+		return s.buildFromType(tpe.Rhs(), target)
 	}
 	return s.MakeRef(decl, target)
 }
@@ -442,5 +508,25 @@ func hasNamedCore(tpe types.Type) bool {
 		default:
 			return false
 		}
+	}
+}
+
+// rhsTypeName extracts the *types.TypeName from an alias RHS when it
+// is one of the two kinds applyStdlibSpecials accepts: *types.Named
+// (the direct stdlib reference, e.g. `Timestamp = time.Time`) or
+// *types.Alias (the chained reference, e.g. `Wrap = Timestamp`).
+// Returns nil for anonymous and other RHS kinds — applyStdlibSpecials
+// has nothing to recognize on those.
+//
+// Used by buildDeclAlias's Expand branch to consult the stdlib
+// recognizers before walking Underlying.
+func rhsTypeName(rhs types.Type) *types.TypeName {
+	switch t := rhs.(type) {
+	case *types.Named:
+		return t.Obj()
+	case *types.Alias:
+		return t.Obj()
+	default:
+		return nil
 	}
 }

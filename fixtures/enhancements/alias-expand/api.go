@@ -53,11 +53,31 @@ type AliasedParams struct {
 }
 
 // ResponseEnvelope is the canonical struct referenced by aliases used in
-// responses.
+// responses. Its `payload` field is typed as the UNannotated `PayloadAlias`,
+// so the field's $ref dissolves to `Payload` (annotation gate at use sites).
 //
 // swagger:model ResponseEnvelope
 type ResponseEnvelope struct {
 	Payload PayloadAlias `json:"payload"`
+}
+
+// PayloadAliasModeled is the annotated counterpart of `PayloadAlias`.
+// Same underlying Go type, but `swagger:model` opts the alias in as a
+// first-class spec entity.
+//
+// swagger:model PayloadAliasModeled
+type PayloadAliasModeled = Payload
+
+// ResponseEnvelopeModeled is the bidirectional sibling of
+// `ResponseEnvelope`. Same struct shape, but its `payload` field uses
+// the annotated alias `PayloadAliasModeled`. The field's $ref preserves
+// the alias identity (`$ref: PayloadAliasModeled`), demonstrating that
+// the explicit `swagger:model` opt-in surfaces the alias name at body
+// field sites.
+//
+// swagger:model ResponseEnvelopeModeled
+type ResponseEnvelopeModeled struct {
+	Payload PayloadAliasModeled `json:"payload"`
 }
 
 // EnvelopeAlias aliases ResponseEnvelope once.
@@ -74,6 +94,29 @@ type AliasedResponse struct {
 	//
 	// in: body
 	Body EnvelopeAlias2 `json:"body"`
+}
+
+// EnvelopeAliasModeled is the annotated counterpart of
+// EnvelopeAlias. With `swagger:model` the alias opts in as a
+// first-class spec entity; the alias name is preserved at body
+// field sites in `swagger:response` structs.
+//
+// swagger:model EnvelopeAliasModeled
+type EnvelopeAliasModeled = ResponseEnvelope
+
+// AliasedModeledResponse is the bidirectional sibling of
+// AliasedResponse: same shape, but its Body field uses the
+// ANNOTATED alias `EnvelopeAliasModeled`. The body schema's
+// `$ref` preserves `EnvelopeAliasModeled` (alongside the alias's
+// own definition), while AliasedResponse dissolves to
+// `$ref: ResponseEnvelope`. Both halves on one canvas.
+//
+// swagger:response aliasedModeledResponse
+type AliasedModeledResponse struct {
+	// Body is an annotated alias.
+	//
+	// in: body
+	Body EnvelopeAliasModeled `json:"body"`
 }
 
 // exportedParams is the backing struct for an aliased swagger:parameters.

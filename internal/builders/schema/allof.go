@@ -53,9 +53,14 @@ func (s *Builder) scanEmbeddedFields(
 			continue
 		}
 
-		_, isAliased := fld.Type().(*types.Alias)
-
-		if !fd.IsAllOfMember && !isAliased {
+		if !fd.IsAllOfMember {
+			// Plain embed (no `swagger:allOf` annotation) — inline the
+			// embedded type's properties into the outer schema,
+			// regardless of whether the embed is a direct named type
+			// or an alias of one. The previous `!isAliased` guard here
+			// silently promoted aliased embeds to allOf composition,
+			// violating the documented contract that allOf is only
+			// produced for explicitly-annotated embeds.
 			if target == nil {
 				target = schema
 			}

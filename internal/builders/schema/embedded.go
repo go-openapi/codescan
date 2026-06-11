@@ -30,13 +30,16 @@ func (s *Builder) enterEmbed() func() {
 
 // buildEmbedded routes a struct's embedded-field type to the
 // appropriate emitter: pointers are peeled, named types descend into
-// `buildNamedEmbedded`, aliases go through `buildAlias`.
+// `buildNamedEmbedded`, aliases resolve transparently and dispatch as
+// the unaliased type would (so that `type BaseAlias = Base` embedded
+// in a struct produces the same inline shape as `Base` embedded
+// directly — both Go types are identical to the type system).
 //
 // # Details
 //
 // See [§embedded](./README.md#embedded) — the three-arm dispatch and
-// the deliberate asymmetry with `buildAllOf` (embeds always inline
-// properties, never $ref unless the embed is `swagger:allOf`-tagged).
+// the contract that embeds always inline properties, never $ref unless
+// the embed is `swagger:allOf`-tagged.
 func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, nameByJSON map[string]propOwner) error {
 	switch ftpe := tpe.(type) {
 	case *types.Pointer:
@@ -44,8 +47,18 @@ func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, nameByJS
 	case *types.Named:
 		return s.buildNamedEmbedded(ftpe, schema, nameByJSON)
 	case *types.Alias:
-		target := NewTypable(schema, 0, s.skipExtensions)
-		return s.buildAlias(ftpe, target)
+		// Aliases are transparent in Go; the spec should reflect that.
+		// Recurse on the unaliased type so the dispatch matches what
+		// the user would get if they had written the unaliased type
+		// directly:
+		//   - Alias-to-Named            → buildNamedEmbedded (inline)
+		//   - Alias-to-Pointer-to-Named → peel pointer, then inline
+		//   - Alias-to-anonymous-struct → falls to default (warn-skip);
+		//     embedding an anonymous struct via alias is unusual Go
+		//     code that doesn't promote any named fields.
+		//   - Alias-to-primitive / interface → also default; embedding
+		//     these promotes nothing.
+		return s.buildEmbedded(types.Unalias(ftpe), schema, nameByJSON)
 	default:
 		logger.UnsupportedTypeKind("buildEmbedded", ftpe)
 		return nil
