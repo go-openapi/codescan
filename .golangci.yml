@@ -7,6 +7,7 @@ linters:
     - gomoddirectives # mono-repo, multi-modules (docs/examples): local replace directives are needed for proper releasing
     - goconst # disabled, perhaps temporarily as this linter has become way too pick and noisy
     - godox
+    - gomoddirectives
     - gomodguard
     - gomodguard_v2
     - exhaustruct

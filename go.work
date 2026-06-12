@@ -1,0 +1,12 @@
+go 1.25.0
+
+// Workspace for the codescan monorepo: the main library module (.) and the
+// genspec-tui front-end module (./cmd/genspec-tui), kept in separate go.mod
+// files so the TUI's bubbletea dependency tree never pollutes the lean library.
+//
+// Dev-only: `go install .../cmd/genspec-tui@latest` ignores this file, so the
+// TUI module's own go.mod carries the real `require` on the library once wired.
+use (
+	.
+	./docs/examples
+)
