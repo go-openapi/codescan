@@ -1,0 +1,79 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "A tiny pet store, used to demonstrate codescan annotations: the package\ncomment is a `swagger:meta` block carrying the top-level metadata of the\ngenerated specification (title, description, version, base path, …).",
+    "title": "Petstore API",
+    "version": "1.0.0"
+  },
+  "basePath": "/v1",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Lists all the pets in the store.",
+        "operationId": "listPets",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/petsResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a single pet in the store.",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "description": "The id of the pet.",
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "x-go-name": "ID"
+        },
+        "name": {
+          "description": "The name of the pet.",
+          "type": "string",
+          "minLength": 1,
+          "x-go-name": "Name"
+        },
+        "tags": {
+          "description": "The tags associated with this pet.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Tags"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/petstore"
+    }
+  },
+  "responses": {
+    "petsResponse": {
+      "description": "petsResponse is the list of pets returned by listPets.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Pet"
+        }
+      }
+    }
+  }
+}
