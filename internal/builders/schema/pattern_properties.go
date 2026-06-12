@@ -53,6 +53,7 @@ func (s *Builder) classifierPatternProperties(schema *oaispec.Schema, pos token.
 		schema.PatternProperties = make(oaispec.SchemaProperties)
 	}
 
+	defer s.descend("additionalProperties")()
 	for _, pr := range pairs {
 		valSchema := new(oaispec.Schema)
 		if !s.resolveAdditionalPropertiesType(pr.spec, valSchema, pos) {

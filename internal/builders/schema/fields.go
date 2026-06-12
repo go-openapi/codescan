@@ -69,6 +69,19 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 		target.Properties = make(map[string]oaispec.Schema)
 	}
 
+	// Cross-ref linkage: advance the base path to this property's pointer for
+	// the duration of its value build, so anchors emitted within (enum values,
+	// nested-object properties, slice/map element fields) carry the correct
+	// pointer. parentPath is restored on exit; the property's own anchor is
+	// recorded at fieldPath below.
+	parentPath := s.path
+	fieldPath := ""
+	if parentPath != "" {
+		fieldPath = parentPath + scanner.JSONPointer("properties", c.name)
+	}
+	s.path = fieldPath
+	defer func() { s.path = parentPath }()
+
 	ps := target.Properties[c.name]
 	if err := s.buildFromType(c.propType, NewTypable(&ps, 0, s.skipExtensions)); err != nil {
 		return err
@@ -129,7 +142,40 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 		nameByJSON[c.name] = propOwner{goName: c.goName, depth: s.embedDepth}
 	}
 	target.Properties[c.name] = ps
+
+	// Cross-ref linkage: anchor the property to its struct field. Only when a
+	// base path was initiated (WithPath) for the parent node and a sink is
+	// wired. fieldPath is this property's pointer (s.path was advanced to it
+	// above and is restored to parentPath on exit).
+	if fieldPath != "" && c.afld != nil && s.Ctx.OriginEnabled() {
+		s.Ctx.RecordOrigin(fieldPath, s.Ctx.PosOf(c.afld.Pos()))
+	}
+
 	return nil
+}
+
+// repath swaps the cross-ref base path (s.path) for the duration of a child
+// build and returns a restore func, mirroring enterEmbed's idiom. Use
+// `defer s.repath("")()` to clear the path when descending into a subtree whose
+// node pointer isn't tracked (an allOf member, an aliased compound), so no
+// wrong anchor is emitted there; finer nodes resolve to the nearest anchored
+// ancestor instead.
+func (s *Builder) repath(base string) func() {
+	saved := s.path
+	s.path = base
+	return func() { s.path = saved }
+}
+
+// descend path-joins segments onto the cross-ref base path for the duration of
+// a child build (items, additionalProperties, …), keeping s.path aligned with
+// the schema node currently being filled so anchors emitted within — enum
+// values, nested-object properties — carry the correct pointer. No-op (and no
+// restore cost) when provenance is off (s.path == "").
+func (s *Builder) descend(segments ...string) func() {
+	if s.path == "" {
+		return func() {}
+	}
+	return s.repath(s.path + scanner.JSONPointer(segments...))
 }
 
 // diagnoseAmbiguousEmbed fires a SeverityWarning Diagnostic on

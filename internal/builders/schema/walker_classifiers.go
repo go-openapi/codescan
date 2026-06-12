@@ -9,12 +9,14 @@ import (
 	"go/types"
 	"log"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/scanner"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -139,6 +141,19 @@ func (s *Builder) enumName(cg *ast.CommentGroup, declTypeName string) (string, b
 //   - handled=true  → caller returns nil (target written, terminal)
 //   - handled=false → no classifier matched; caller continues to
 //     FindModel / SwaggerSchemaForType fallback
+// recordEnumOrigins anchors each enum value to its const source position, but
+// only when this is the canonical definition node (s.path set; cleared in field
+// context, where the enum is a $ref to that definition instead). No-op when no
+// provenance sink is wired. Cross-ref linkage only.
+func (s *Builder) recordEnumOrigins(enumPos []token.Pos) {
+	if s.path == "" || !s.Ctx.OriginEnabled() {
+		return
+	}
+	for i, pos := range enumPos {
+		s.Ctx.RecordOrigin(s.path+scanner.JSONPointer("enum", strconv.Itoa(i)), s.Ctx.PosOf(pos))
+	}
+}
+
 func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable, declTypeName string) (resolved bool) {
 	if name, ok := s.findAnnotationArg(cg, grammar.AnnStrfmt); ok {
 		tgt.Typed("string", name)
@@ -146,7 +161,7 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 	}
 
 	if enumName, ok := s.enumName(cg, declTypeName); ok {
-		enumValues, enumDesces, _ := s.Ctx.FindEnumValues(pkg, enumName)
+		enumValues, enumDesces, enumPos, _ := s.Ctx.FindEnumValues(pkg, enumName)
 		if len(enumValues) > 0 {
 			tgt.WithEnum(enumValues...)
 			enumTypeName := reflect.TypeOf(enumValues[0]).String()
@@ -154,6 +169,7 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 			if len(enumDesces) > 0 {
 				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
 			}
+			s.recordEnumOrigins(enumPos)
 			return true
 		}
 		// swagger:enum with no matching const values. Fall through so

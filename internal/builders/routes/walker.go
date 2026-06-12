@@ -14,6 +14,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/parsers/routebody"
+	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -89,6 +90,7 @@ func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
 		if err := r.dispatchRouteKeyword(prop, op); err != nil {
 			return err
 		}
+		r.recordRouteKeywordOrigin(prop)
 	}
 
 	// Extensions and security are read straight off the block —
@@ -104,6 +106,23 @@ func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
 	}
 
 	return nil
+}
+
+// recordRouteKeywordOrigin anchors one route-level keyword to its source line
+// under /paths/{path}/{method}/{seg}, when a provenance sink is wired. The
+// keyword→segment knowledge lives in the grammar ([grammar.PointerPath]); here
+// we prepend the operation base. parameters/responses (containers) and security
+// (consumed at lex time) are absent and resolve to the operation anchor.
+func (r *Builder) recordRouteKeywordOrigin(p grammar.Property) {
+	if !r.Ctx.OriginEnabled() {
+		return
+	}
+	segs, ok := grammar.PointerPath(p.Keyword, grammar.CtxRoute)
+	if !ok {
+		return
+	}
+	base := scanner.JSONPointer("paths", r.route.Path, strings.ToLower(r.route.Method))
+	r.Ctx.RecordOrigin(base+scanner.JSONPointer(segs...), p.Pos)
 }
 
 // dispatchRouteKeyword routes one grammar Property to the matching

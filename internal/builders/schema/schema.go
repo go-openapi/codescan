@@ -349,8 +349,10 @@ func (s *Builder) buildFromType(tpe types.Type, target ifaces.SwaggerTypable) er
 	case *types.Interface:
 		return s.buildFromInterface(s.Decl, titpe, target.Schema(), make(map[string]propOwner))
 	case *types.Slice:
+		defer s.descend("items")()
 		return s.buildFromType(titpe.Elem(), target.Items())
 	case *types.Array:
+		defer s.descend("items")()
 		return s.buildFromType(titpe.Elem(), target.Items())
 	case *types.Map:
 		return s.buildFromMap(titpe, target)
@@ -510,6 +512,7 @@ func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup
 	if !isModel {
 		if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, forSlice); handled {
 			if recurse {
+				defer s.descend("items")()
 				return s.buildFromType(elem, tgt.Items())
 			}
 			return nil
@@ -517,6 +520,7 @@ func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup
 	}
 
 	return s.resolveRefOr(tio, tgt, func() error {
+		defer s.descend("items")()
 		return s.buildFromType(elem, tgt.Items())
 	})
 }
@@ -549,6 +553,8 @@ func (s *Builder) buildFromMap(titpe *types.Map, tgt ifaces.SwaggerTypable) erro
 	}
 
 	eleProp := NewTypable(sch, tgt.Level(), s.skipExtensions)
+	defer s.descend("additionalProperties")()
+
 	return s.buildFromType(titpe.Elem(), eleProp.AdditionalProperties())
 }
 

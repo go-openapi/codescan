@@ -5,7 +5,9 @@ package spec
 
 import (
 	"go/ast"
+	"iter"
 	"sort"
+	"strconv"
 
 	"github.com/go-openapi/codescan/internal/builders/operations"
 	"github.com/go-openapi/codescan/internal/builders/parameters"
@@ -93,6 +95,12 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 		return nil, err
 	}
 
+	// Cross-ref linkage: parameter anchors are resolved here, once paths,
+	// methods and final array indices are all known (see emitParameterAnchors).
+	// Param anchors live under /paths/.../parameters/{i}, independent of the
+	// definition-name reduction below.
+	s.emitParameterAnchors()
+
 	// Final stage: shorten the fully-qualified, collision-proof
 	// definition keys produced during discovery back to user-facing
 	// names and re-point every $ref. Runs last because buildRoutes /
@@ -105,6 +113,62 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	}
 
 	return s.input, nil
+}
+
+// emitParameterAnchors fires the deferred /paths/{path}/{method}/parameters/{i}
+// anchors. Parameters are built before their operation is bound to a path and
+// before the parameter array order is final, so the parameters builder only
+// captured (opid → name → position) via ScanCtx.RecordParamOrigin; here the
+// absolute pointer is assembled from the finished paths tree. Finer parameter
+// sub-nodes resolve to the parameter (or the operation) anchor.
+func (s *Builder) emitParameterAnchors() {
+	if !s.ctx.OriginEnabled() || s.input.Paths == nil {
+		return
+	}
+
+	for path, item := range s.input.Paths.Paths {
+		for method, op := range operationsByMethod(&item) {
+			for i, prm := range op.Parameters {
+				pos, ok := s.ctx.ParamOrigin(op.ID, prm.Name)
+				if !ok {
+					continue
+				}
+				s.ctx.RecordOrigin(
+					scanner.JSONPointer("paths", path, method, "parameters", strconv.Itoa(i)),
+					pos,
+				)
+			}
+		}
+	}
+}
+
+// operationsByMethod yields each populated (lowercase method → operation) slot
+// of a path item, in a stable order. (Distinct from reduce.go's operationsOf,
+// which returns the bare operation pointers for ref rewriting; here the method
+// name is needed to build the /paths/{path}/{method}/... anchor pointer.)
+func operationsByMethod(item *oaispec.PathItem) iter.Seq2[string, *oaispec.Operation] {
+	return func(yield func(string, *oaispec.Operation) bool) {
+		slots := []struct {
+			method string
+			op     *oaispec.Operation
+		}{
+			{"get", item.Get},
+			{"put", item.Put},
+			{"post", item.Post},
+			{"delete", item.Delete},
+			{"options", item.Options},
+			{"head", item.Head},
+			{"patch", item.Patch},
+		}
+		for _, slot := range slots {
+			if slot.op == nil {
+				continue
+			}
+			if !yield(slot.method, slot.op) {
+				return
+			}
+		}
+	}
 }
 
 func (s *Builder) buildDiscovered() error {
@@ -150,8 +214,25 @@ func (s *Builder) buildDiscovered() error {
 func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	sb := schema.NewBuilder(s.ctx, decl)
 	sb.SetDiscovered(s.discovered)
-	if err := sb.Build(schema.WithDefinitions(s.definitions)); err != nil {
+
+	// Cross-ref linkage: initiate the base pointer for this definition so the
+	// schema builder path-joins its members (properties, …) under it, and anchor
+	// the definition node itself to its type declaration.
+	var defPtr string
+	opts := []schema.Option{schema.WithDefinitions(s.definitions)}
+	if s.ctx.OriginEnabled() {
+		if name, _ := decl.Names(); name != "" {
+			defPtr = scanner.JSONPointer("definitions", name)
+			opts = append(opts, schema.WithPath(defPtr))
+		}
+	}
+
+	if err := sb.Build(opts...); err != nil {
 		return err
+	}
+
+	if defPtr != "" {
+		s.ctx.RecordOrigin(defPtr, s.ctx.PosOf(decl.Ident.Pos()))
 	}
 
 	s.discovered = append(s.discovered, sb.PostDeclarations()...)
@@ -167,9 +248,33 @@ func (s *Builder) buildMeta() error {
 		if err := applyMetaBlock(s.input, block); err != nil {
 			return err
 		}
+
+		// Cross-ref linkage: anchor the info node to its swagger:meta block,
+		// then each meta keyword to its own line (the top-level fields —
+		// host/basePath/consumes/… — have no ancestor anchor otherwise, since
+		// /info is their sibling, not parent).
+		if s.ctx.OriginEnabled() {
+			s.ctx.RecordOrigin(scanner.JSONPointer("info"), s.ctx.PosOf(cg.Pos()))
+			s.recordMetaOrigins(block)
+		}
 	}
 
 	return nil
+}
+
+// recordMetaOrigins anchors each meta keyword in block to its source line. The
+// keyword→pointer knowledge lives in the grammar ([grammar.PointerPath]); meta
+// pointers are absolute (Info.* under /info, the rest at the document root), so
+// there is no base to prepend.
+func (s *Builder) recordMetaOrigins(block grammar.Block) {
+	for p := range block.Properties() {
+		if p.ItemsDepth != 0 {
+			continue
+		}
+		if segs, ok := grammar.PointerPath(p.Keyword, grammar.CtxMeta); ok {
+			s.ctx.RecordOrigin(scanner.JSONPointer(segs...), p.Pos)
+		}
+	}
 }
 
 func (s *Builder) buildOperations() error {
@@ -211,6 +316,14 @@ func (s *Builder) buildResponses() error {
 			return err
 		}
 		s.discovered = append(s.discovered, rb.PostDeclarations()...)
+
+		// Cross-ref linkage: anchor the top-level response node to its
+		// swagger:response declaration; headers/body resolve to it.
+		if s.ctx.OriginEnabled() {
+			if name, _ := decl.ResponseNames(); name != "" {
+				s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
+			}
+		}
 	}
 
 	return nil

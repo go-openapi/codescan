@@ -142,6 +142,11 @@ func (s *Builder) buildPlainEmbed(
 // non-Named / non-Alias inputs are dropped silently with a logger
 // warning rather than an error.
 func (s *Builder) buildAllOf(tpe types.Type, schema *oaispec.Schema) error {
+	// Cross-ref linkage: an allOf member is an untracked subtree
+	// (/allOf/{k}/…); clear the base path so nothing inside emits a wrong
+	// anchor. Members that are $refs anchor via their own definition.
+	defer s.repath("")()
+
 	switch ftpe := tpe.(type) {
 	case *types.Pointer:
 		return s.buildAllOf(ftpe.Elem(), schema)
