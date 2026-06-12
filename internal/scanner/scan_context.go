@@ -39,6 +39,17 @@ type ScanCtx struct {
 	debug bool
 
 	opts *Options
+
+	// paramOrigins captures (operationID → parameterName → source position)
+	// during the parameters build. Parameter anchors can't be emitted inline:
+	// at parameters-build time the operation isn't yet bound to a path/method
+	// and the array index isn't final. They are resolved in a deferred pass
+	// (see the spec builder) once paths are built. Cross-ref linkage only.
+	paramOrigins map[string]map[string]token.Position
+
+	// seenDiags suppresses exact-duplicate diagnostics on the OnDiagnostic
+	// stream over one scan (see EmitDiagnostic).
+	seenDiags map[diagKey]struct{}
 }
 
 func NewScanCtx(opts *Options) (*ScanCtx, error) {
@@ -145,6 +156,37 @@ func (s *ScanCtx) Debug() bool {
 	return s.debug
 }
 
+// diagKey identifies a diagnostic by its source location and content, for
+// suppressing exact duplicates over the lifetime of one scan.
+type diagKey struct {
+	pos  string
+	code grammar.Code
+	msg  string
+}
+
+// EmitDiagnostic delivers d to the consumer's [Options.OnDiagnostic] sink,
+// suppressing exact duplicates — same position, code and message — for the
+// lifetime of the scan. The build re-processes the same field/annotation in
+// several passes (most visibly a swagger:parameters struct applied to multiple
+// operation ids, which rebuilds every field once per id), so the identical
+// diagnostic would otherwise surface once per visit. The accumulator returned by
+// common.Builder.Diagnostics() is unaffected — only the callback stream dedups.
+func (s *ScanCtx) EmitDiagnostic(d grammar.Diagnostic) {
+	cb := s.opts.OnDiagnostic
+	if cb == nil {
+		return
+	}
+	k := diagKey{pos: d.Pos.String(), code: d.Code, msg: d.Message}
+	if _, dup := s.seenDiags[k]; dup { // read from a nil map is safe
+		return
+	}
+	if s.seenDiags == nil {
+		s.seenDiags = make(map[diagKey]struct{})
+	}
+	s.seenDiags[k] = struct{}{}
+	cb(d)
+}
+
 // OnDiagnostic returns the user-supplied diagnostic sink, or nil when
 // the consumer has not opted into diagnostic delivery.
 //
@@ -167,6 +209,52 @@ func (s *ScanCtx) NameConcatBudget() float64 {
 // hierarchical fail-safe for over-budget collision groups.
 func (s *ScanCtx) EmitHierarchicalNames() bool {
 	return s.opts.EmitHierarchicalNames
+}
+
+// OriginEnabled reports whether a provenance sink is wired, so callers can skip
+// JSON-pointer construction entirely when no consumer is listening.
+func (s *ScanCtx) OriginEnabled() bool {
+	return s.opts.OnProvenance != nil
+}
+
+// RecordOrigin fires the consumer's [Options.OnProvenance] callback for one
+// anchor node, when wired. Unlike diagnostics it accumulates nothing — the
+// cross-ref index is owned by the consumer (see the genspec-tui linkage design).
+func (s *ScanCtx) RecordOrigin(pointer string, pos token.Position) {
+	if cb := s.opts.OnProvenance; cb != nil {
+		cb(Provenance{Pointer: pointer, Pos: pos})
+	}
+}
+
+// RecordParamOrigin stashes the source position of one parameter field, keyed
+// by the operation id it applies to and the parameter name, for deferred anchor
+// emission. No-op when no provenance sink is wired. See [ParamOrigin].
+func (s *ScanCtx) RecordParamOrigin(opID, name string, pos token.Position) {
+	if s.opts.OnProvenance == nil {
+		return
+	}
+	if s.paramOrigins == nil {
+		s.paramOrigins = make(map[string]map[string]token.Position)
+	}
+	byName := s.paramOrigins[opID]
+	if byName == nil {
+		byName = make(map[string]token.Position)
+		s.paramOrigins[opID] = byName
+	}
+	byName[name] = pos
+}
+
+// ParamOrigin returns the captured source position for parameter name on
+// operation opID, recorded earlier via [RecordParamOrigin]. The spec builder's
+// deferred pass uses it to emit /paths/{path}/{method}/parameters/{i} anchors
+// once the final path binding and array index are known.
+func (s *ScanCtx) ParamOrigin(opID, name string) (token.Position, bool) {
+	byName := s.paramOrigins[opID]
+	if byName == nil {
+		return token.Position{}, false
+	}
+	pos, ok := byName[name]
+	return pos, ok
 }
 
 func (s *ScanCtx) Meta() iter.Seq[*ast.CommentGroup] {
@@ -485,7 +573,12 @@ func (s *ScanCtx) FindComments(pkg *packages.Package, name string) (*ast.Comment
 	return nil, false
 }
 
-func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list []any, descList []string, _ bool) {
+// FindEnumValues returns the enum values, per-value descriptions and per-value
+// source positions for the constants typed enumName, plus ok. The positions are
+// parallel to the values (one token.Pos per value, the const identifier) and
+// feed the cross-ref /…/enum/{i} anchors; callers that don't need them ignore
+// the third result.
+func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list []any, descList []string, posList []token.Pos, _ bool) {
 	for _, f := range pkg.Syntax {
 		for _, d := range f.Decls {
 			gd, ok := d.(*ast.GenDecl)
@@ -498,18 +591,19 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 			}
 
 			for _, spec := range gd.Specs {
-				values, descriptions := s.findEnumValue(spec, enumName)
+				values, descriptions, positions := s.findEnumValue(spec, enumName)
 				if len(values) == 0 {
 					continue
 				}
 
 				list = append(list, values...)
 				descList = append(descList, descriptions...)
+				posList = append(posList, positions...)
 			}
 		}
 	}
 
-	return list, descList, true
+	return list, descList, posList, true
 }
 
 // findEnumValue extracts one (value, description) pair per (name, value)
@@ -518,23 +612,23 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 // sharing the spec's doc comment. The Go compiler guarantees
 // len(Names) == len(Values) when Values is non-empty, so out-of-parity
 // specs are ignored defensively.
-func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string) {
+func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string, positions []token.Pos) {
 	vs, ok := spec.(*ast.ValueSpec)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	vsIdent, ok := vs.Type.(*ast.Ident)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if vsIdent.Name != enumName {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if len(vs.Values) == 0 || len(vs.Values) != len(vs.Names) {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	docSuffix := buildEnumDocSuffix(vs.Doc, vs.Names)
@@ -553,9 +647,10 @@ func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, d
 
 		values = append(values, literalValue)
 		descriptions = append(descriptions, desc.String())
+		positions = append(positions, nameIdent.Pos())
 	}
 
-	return values, descriptions
+	return values, descriptions, positions
 }
 
 // buildEnumDocSuffix renders the shared doc comment as " <line1> <line2>..."
