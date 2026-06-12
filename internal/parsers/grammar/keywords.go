@@ -3,7 +3,10 @@
 
 package grammar
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // ValueShape names the lexical shape of a keyword's value, mapping
 // directly onto the value terminals:
@@ -380,6 +383,77 @@ var keywords = []Keyword{
 	// walker unmarshals objects, the route walker reads AsList). See
 	// go-swagger/go-swagger#2655.
 	keyword(KwTags, asRawBlock(), ctx(CtxMeta, CtxRoute, CtxOperation)),
+}
+
+// specPointer records where a keyword's value renders in the produced spec:
+// the JSON-pointer segments (relative to the node the keyword decorates, or the
+// document root for the meta-only keywords) and, optionally, the contexts where
+// that node is actually produced when they differ from the keyword's lexical
+// Contexts.
+type specPointer struct {
+	segs []string
+	// ctxs overrides the render contexts; nil means "use the keyword's Contexts".
+	// Set only where lexical legality and node production diverge — e.g.
+	// `deprecated` is legal on a schema but only renders a node on operations.
+	ctxs []KeywordContext
+}
+
+// specPointers is the single source of truth mapping each keyword that produces
+// an addressable spec node to its pointer segments. It keeps the keyword→spec-
+// location knowledge in the grammar (beside Name/Shape/Contexts) instead of
+// re-encoded in every builder walker; cross-ref provenance reads it via
+// [PointerPath]. Keywords absent here produce no directly-addressable node
+// (required → parent array, in/collectionFormat → simple-schema, prose, …) and
+// resolve to their enclosing node's anchor.
+//
+//nolint:gochecknoglobals // canonical lookup table, mirrors keywords above
+var specPointers = map[string]specPointer{
+	// Schema / param / header / items validations (segment == keyword name).
+	KwMaximum:    {segs: []string{KwMaximum}},
+	KwMinimum:    {segs: []string{KwMinimum}},
+	KwMultipleOf: {segs: []string{KwMultipleOf}},
+	KwMaxLength:  {segs: []string{KwMaxLength}},
+	KwMinLength:  {segs: []string{KwMinLength}},
+	KwPattern:    {segs: []string{KwPattern}},
+	KwMaxItems:   {segs: []string{KwMaxItems}},
+	KwMinItems:   {segs: []string{KwMinItems}},
+	KwUnique:     {segs: []string{"uniqueItems"}}, // the lone name≠segment case
+	KwDefault:    {segs: []string{KwDefault}},
+	KwExample:    {segs: []string{KwExample}},
+	KwEnum:       {segs: []string{KwEnum}},
+	KwReadOnly:   {segs: []string{KwReadOnly}},
+	// Operation / route header keywords (child of the operation node).
+	KwConsumes:   {segs: []string{KwConsumes}},
+	KwProduces:   {segs: []string{KwProduces}},
+	KwSchemes:    {segs: []string{KwSchemes}},
+	KwDeprecated: {segs: []string{KwDeprecated}, ctxs: []KeywordContext{CtxOperation, CtxRoute}},
+	// Meta keywords. Info.* nest under /info; the rest land at the document root.
+	KwVersion:  {segs: []string{"info", KwVersion}},
+	KwTOS:      {segs: []string{"info", "termsOfService"}},
+	KwContact:  {segs: []string{"info", KwContact}},
+	KwLicense:  {segs: []string{"info", KwLicense}},
+	KwHost:     {segs: []string{KwHost}},
+	KwBasePath: {segs: []string{KwBasePath}},
+}
+
+// PointerPath returns the JSON-pointer segments where kw's value renders, when
+// kw produces an addressable node legal in ctx. Consumers (the builder walkers)
+// prepend the decorated node's base pointer and any items depth. The ctx gate
+// reuses the keyword's lexical Contexts unless the entry overrides them, so a
+// keyword is never anchored in a context where its node does not exist.
+func PointerPath(kw Keyword, ctx KeywordContext) ([]string, bool) {
+	sp, ok := specPointers[kw.Name]
+	if !ok {
+		return nil, false
+	}
+	ctxs := sp.ctxs
+	if ctxs == nil {
+		ctxs = kw.Contexts
+	}
+	if slices.Contains(ctxs, ctx) {
+		return sp.segs, true
+	}
+	return nil, false
 }
 
 // Lookup returns the Keyword matching name (canonical or alias),
