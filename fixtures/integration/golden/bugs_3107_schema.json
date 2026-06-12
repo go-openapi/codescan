@@ -1,0 +1,42 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/things": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "listThings",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/thingResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "MyStruct": {
+      "type": "object",
+      "properties": {
+        "field1": {
+          "type": "string",
+          "x-go-name": "Field1"
+        },
+        "field2": {
+          "type": "string",
+          "x-go-name": "Field2"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3107/model"
+    }
+  },
+  "responses": {
+    "thingResponse": {
+      "description": "",
+      "schema": {
+        "$ref": "#/definitions/MyStruct"
+      }
+    }
+  }
+}
