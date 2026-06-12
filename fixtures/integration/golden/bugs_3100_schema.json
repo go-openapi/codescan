@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/v1/example/route": {
+      "post": {
+        "description": "Very important operation",
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "operationId": "operationName",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Public key of the referee client.",
+            "name": "encryption_public_key",
+            "in": "formData",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Detached signature of the payload.",
+            "name": "signature",
+            "in": "formData"
+          },
+          {
+            "type": "boolean",
+            "description": "Echo the request back in the response.",
+            "name": "verbose",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
