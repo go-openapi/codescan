@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/types"
+	"log"
 	"regexp"
 
 	"github.com/go-openapi/codescan/internal/logger"
@@ -329,6 +330,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				n |= operationNode
 			case "model": // annotation keyword matched from swagger comment.
 				n |= modelNode
+				warnMalformedStructName(annotation, cline.Text)
 				if err := checkStructConflict(&seenStruct, annotation, cline.Text); err != nil {
 					return 0, err
 				}
@@ -341,6 +343,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				}
 			case "response":
 				n |= responseNode
+				warnMalformedStructName(annotation, cline.Text)
 				if err := checkStructConflict(&seenStruct, annotation, cline.Text); err != nil {
 					return 0, err
 				}
@@ -355,6 +358,29 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 	}
 
 	return n, nil
+}
+
+// warnMalformedStructName emits a warning when a single-name struct
+// marker (swagger:model / swagger:response) on line carries a name that is
+// not a plain identifier — e.g. a package-qualified "utils.Error"
+// (go-swagger#874). Such names are JSON labels, not Go-qualified
+// identifiers; the strict override matcher rejects them and the marker is
+// ignored. Warning rather than silently dropping it gives the author a
+// clue. The type's package is resolved automatically, so a plain name
+// suffices regardless of which package the type lives in.
+func warnMalformedStructName(annotation, line string) {
+	switch annotation {
+	case "model":
+		if bad, ok := parsers.MalformedModelName(line); ok {
+			log.Printf("WARNING: swagger:model name %q is not a plain identifier "+
+				"(definition names are JSON labels, not Go-qualified); annotation ignored", bad)
+		}
+	case "response":
+		if bad, ok := parsers.MalformedResponseName(line); ok {
+			log.Printf("WARNING: swagger:response name %q is not a plain identifier "+
+				"(response names are JSON labels, not Go-qualified); annotation ignored", bad)
+		}
+	}
 }
 
 func checkStructConflict(seenStruct *string, annotation string, text string) error {
