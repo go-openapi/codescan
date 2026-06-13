@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AllOfModel": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SimpleOne"
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2875"
+    },
+    "SimpleOne": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2875"
+    }
+  }
+}
