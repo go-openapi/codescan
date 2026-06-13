@@ -1,0 +1,8 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "- keep markdown list\n- in the description",
+    "title": "An example API"
+  },
+  "paths": {}
+}
