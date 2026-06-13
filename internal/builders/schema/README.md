@@ -743,6 +743,11 @@ replaces siblings. The correct shape is an **allOf compound**:
   same level as scanner-derived metadata (`x-go-name`,
   `x-go-package`) for consistency. See `refOverrideCollector`'s
   flag explanation below.
+- **externalDocs** (the `externalDocs:` raw block) is likewise an
+  annotation sibling of the `$ref` and is **lifted onto the outer
+  compound** alongside the description and `x-*` keys, not nested
+  inside `allOf[1]` (go-swagger#2655). A non-ref field emits its
+  externalDocs via `handlers.schemaRawHandler` instead.
 
 ### The `DescWithRef` toggle and the description-only case
 
@@ -766,7 +771,7 @@ would be lost otherwise.
 
 The collector accumulates field-level overrides into a scratch
 schema so `applyToRefField` can pick the final shape after the
-Walker has finished firing. Two flags track what was collected:
+Walker has finished firing. Three flags track what was collected:
 
 - **`collectedValidation`** — a JSON-Schema validation keyword
   fired (`maximum`, `pattern`, `enum`, …). When true, the override
@@ -775,6 +780,9 @@ Walker has finished firing. Two flags track what was collected:
   the collected extensions are **lifted onto the outer compound**
   (not the override arm) so `x-*` keys live alongside the
   scanner-derived `x-go-name` / `x-go-package`.
+- **`collectedExternalDoc`** — an `externalDocs:` block fired. When
+  true, the parsed `*ExternalDocumentation` is set on the outer
+  compound (sibling of the `$ref`), mirroring the extension lift.
 
 Splitting the collector out of `applyToRefField` keeps the
 per-shape Walker callbacks short and the orchestrator's cognitive

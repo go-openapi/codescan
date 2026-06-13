@@ -4,6 +4,7 @@
 package yaml_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/go-openapi/codescan/internal/parsers/yaml"
@@ -69,5 +70,48 @@ func TestUnmarshalBody_TabIndent(t *testing.T) {
 	}
 	if len(op.Parameters) != 1 || op.Parameters[0].Name != "limit" {
 		t.Fatalf("parameters: %+v", op.Parameters)
+	}
+}
+
+// TestUnmarshalListBody_Tags checks the sequence-shaped pipeline used
+// by the meta `Tags:` bridge: a YAML list of tag objects (with a
+// nested externalDocs mapping and a vendor extension) round-trips into
+// []spec.Tag. Tab-indented like a real godoc comment body.
+func TestUnmarshalListBody_Tags(t *testing.T) {
+	body := "\t- name: pet\n" +
+		"\t  description: Everything about your Pets\n" +
+		"\t  externalDocs:\n" +
+		"\t    description: Find out more\n" +
+		"\t    url: http://swagger.io\n" +
+		"\t- name: store\n" +
+		"\t  x-display-name: Store\n"
+	var tags []oaispec.Tag
+	err := yaml.UnmarshalListBody(body, func(data []byte) error {
+		return json.Unmarshal(data, &tags)
+	})
+	if err != nil {
+		t.Fatalf("UnmarshalListBody: %v", err)
+	}
+	if len(tags) != 2 {
+		t.Fatalf("tags: got %d, want 2", len(tags))
+	}
+	if tags[0].Name != "pet" || tags[0].Description != "Everything about your Pets" {
+		t.Errorf("tag[0]: %+v", tags[0].TagProps)
+	}
+	if tags[0].ExternalDocs == nil || tags[0].ExternalDocs.URL != "http://swagger.io" {
+		t.Errorf("tag[0].externalDocs: %+v", tags[0].ExternalDocs)
+	}
+	if tags[1].Name != "store" || tags[1].Extensions["x-display-name"] != "Store" {
+		t.Errorf("tag[1]: %+v / %+v", tags[1].TagProps, tags[1].Extensions)
+	}
+}
+
+func TestUnmarshalListBody_EmptyBody(t *testing.T) {
+	var tags []oaispec.Tag
+	if err := yaml.UnmarshalListBody("", func([]byte) error { return nil }); err != nil {
+		t.Errorf("empty body should not error: %v", err)
+	}
+	if tags != nil {
+		t.Errorf("empty body should leave target untouched, got %+v", tags)
 	}
 }

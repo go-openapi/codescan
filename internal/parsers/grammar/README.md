@@ -295,6 +295,20 @@ A keyword whose name is recognisable but whose family does not
 overlap is absorbed as body text — this matches the permissive
 shape of nested YAML-like content under e.g. `security:`.
 
+**Indentation override (YAML-bodied blocks only).** Inside a
+YAML-bodied block (`extensions`, `infoExtensions`,
+`securityDefinitions`, `tags`), a same-family keyword indented
+*strictly deeper* than the block head is treated as a nested YAML
+key, not a sibling — e.g. `externalDocs:` under a `Tags:` list
+item, where both are meta-family. Such a key is absorbed so the
+nested YAML structure survives. Flat raw blocks (`tos`, `consumes`,
+…) do **not** apply this: their keyword indentation is purely
+cosmetic (the petstore meta indents `Schemes:`/`Host:` deeper than
+a column-0 `Terms Of Service:`, yet they are siblings), so any
+sibling-family keyword terminates them regardless of depth.
+Indentation is measured from the `Raw` view via
+`leadingIndentWidth` (tabs expand to 8-column stops).
+
 ### Inline-value capture on raw-block heads
 
 `Consumes: application/json` on a single line carries its value
@@ -305,10 +319,13 @@ would be silently lost.
 
 ### Per-body indentation handling
 
-- `extensions:` and `infoExtensions:` bodies are YAML-parsed
-  downstream (`yaml.TypedExtensions`), so every body line
-  preserves its original indentation — `collectRawBlock` reads
-  the `Raw` view (right-trimmed only).
+- `extensions:`, `infoExtensions:`, `securityDefinitions:` and
+  `tags:` bodies are YAML-parsed downstream (`yaml.TypedExtensions`
+  or `yaml.UnmarshalBody`/`UnmarshalListBody` via the meta walker),
+  so every body line preserves its original indentation —
+  `collectRawBlock` reads the `Raw` view (right-trimmed only). The
+  `tags:` body in particular is a sequence of mappings whose nesting
+  collapses if per-line indent is dropped.
 - Flat raw blocks (`consumes:`, `produces:`, `security:`, …) use
   the `Text` view (leading whitespace dropped, keyword lines
   reformatted via `formatKeywordLine`).
@@ -733,10 +750,16 @@ for tooling that needs to enumerate it.
 
 `KwConsumes`, `KwProduces`, `KwSecurity`, `KwSecurityDefinitions`,
 `KwResponses`, `KwParameters`, `KwExtensions`, `KwInfoExtensions`,
-`KwTOS`, `KwExternalDocs` are all `ShapeRawBlock`. Their bodies
-travel through the lexer's body accumulator and surface on the
-Block as raw Properties; downstream sub-parsers (yaml,
-routebody, security) consume the body content.
+`KwTOS`, `KwExternalDocs`, `KwTags` are all `ShapeRawBlock`. Their
+bodies travel through the lexer's body accumulator and surface on
+the Block as raw Properties; downstream sub-parsers (yaml,
+routebody, security) consume the body content. `KwTags` carries two
+shapes by context: on swagger:meta it is a list of tag **objects**
+({name, description, externalDocs, x-*}) populating
+`spec.Swagger.Tags`; on swagger:route/operation it is a plain list of
+tag-name **strings** unioned onto `op.Tags` (alongside any names on
+the route header line). The single keyword, two consumers — the meta
+walker unmarshals objects, the route walker reads `AsList`.
 
 ### `in:` is a parameter-location directive
 

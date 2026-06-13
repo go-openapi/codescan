@@ -60,12 +60,31 @@
   },
   "definitions": {
     "Model": {
+      "description": "a plain primitive field and a $ref'd field (whose sibling\nexternalDocs must lift onto the allOf compound).",
       "type": "object",
-      "title": "Model carries externalDocs at the schema level.",
+      "title": "Model carries externalDocs at the schema level and on its fields:",
       "properties": {
         "name": {
+          "description": "Name carries field-level externalDocs.",
           "type": "string",
-          "x-go-name": "Name"
+          "x-go-name": "Name",
+          "externalDocs": {
+            "description": "name docs",
+            "url": "https://name.example.org"
+          }
+        },
+        "ref": {
+          "description": "Ref is a $ref'd field carrying a sibling externalDocs.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Nested"
+            }
+          ],
+          "x-go-name": "Ref",
+          "externalDocs": {
+            "description": "ref docs",
+            "url": "https://ref.example.org"
+          }
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/external-docs-objects",
@@ -73,6 +92,17 @@
         "description": "model docs",
         "url": "https://model.example.org"
       }
+    },
+    "Nested": {
+      "type": "object",
+      "title": "Nested is referenced by Model.Ref.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/external-docs-objects"
     }
   }
 }

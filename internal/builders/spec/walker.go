@@ -144,6 +144,17 @@ func dispatchMetaYAMLBlock(p grammar.Property, swspec *spec.Swagger) error {
 			}
 			return nil
 		})
+	case grammar.KwTags:
+		// `Tags:` is a YAML list of tag objects ({name, description,
+		// externalDocs, x-*}) → spec.Swagger.Tags (go-swagger#2655).
+		return yamlparser.UnmarshalListBody(p.Body, func(data []byte) error {
+			var tags []spec.Tag
+			if err := json.Unmarshal(data, &tags); err != nil {
+				return err
+			}
+			swspec.Tags = append(swspec.Tags, tags...)
+			return nil
+		})
 	}
 	return nil
 }

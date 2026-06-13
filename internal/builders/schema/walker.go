@@ -146,6 +146,12 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 			Description: description,
 			AllOf:       allOf,
 		},
+		// externalDocs is an annotation sibling of the $ref, like
+		// description and x-* — it lifts onto the outer compound
+		// rather than into the allOf override (go-swagger#2655).
+		SwaggerSchemaProps: oaispec.SwaggerSchemaProps{
+			ExternalDocs: c.externalDocs,
+		},
 	}
 }
 
@@ -155,20 +161,23 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 // # Details
 //
 // See [§ref-override](./README.md#ref-override) — collector role,
-// the two flags (`collectedValidation`, `collectedExtension`) and
-// the lift-onto-outer behaviour for vendor extensions.
+// the flags (`collectedValidation`, `collectedExtension`,
+// `collectedExternalDoc`) and the lift-onto-outer behaviour for
+// vendor extensions and externalDocs.
 type refOverrideCollector struct {
-	builder             *Builder
-	enclosing           *oaispec.Schema
-	name                string
-	override            oaispec.Schema
-	valid               handlers.SchemaValidations
-	collectedValidation bool
-	collectedExtension  bool
+	builder              *Builder
+	enclosing            *oaispec.Schema
+	name                 string
+	override             oaispec.Schema
+	valid                handlers.SchemaValidations
+	externalDocs         *oaispec.ExternalDocumentation
+	collectedValidation  bool
+	collectedExtension   bool
+	collectedExternalDoc bool
 }
 
 func (c *refOverrideCollector) anyCollected() bool {
-	return c.collectedValidation || c.collectedExtension
+	return c.collectedValidation || c.collectedExtension || c.collectedExternalDoc
 }
 
 func (c *refOverrideCollector) markValidation() { c.collectedValidation = true }
@@ -288,6 +297,19 @@ func (c *refOverrideCollector) onRaw(p grammar.Property) {
 	case grammar.KwEnum:
 		c.valid.SetEnum(p.Value)
 		c.markValidation()
+	case grammar.KwExternalDocs:
+		// externalDocs on a $ref'd field lifts onto the outer allOf
+		// compound (see applyToRefField). A non-ref field handles it
+		// via handlers.schemaRawHandler instead (go-swagger#2655).
+		ed, err := handlers.ParseExternalDocs(p.Body)
+		if err != nil {
+			c.builder.RecordDiagnostic(grammar.Warnf(p.Pos, grammar.CodeInvalidAnnotation, "externalDocs: %v", err))
+			return
+		}
+		if ed != nil {
+			c.externalDocs = ed
+			c.collectedExternalDoc = true
+		}
 	}
 }
 

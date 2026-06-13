@@ -50,6 +50,19 @@ func TestCoverage_ExternalDocsObjects(t *testing.T) {
 	assert.Equal(t, "model docs", model.ExternalDocs.Description)
 	assert.Equal(t, "https://model.example.org", model.ExternalDocs.URL)
 
+	// Plain field-level externalDocs.
+	name := model.Properties["name"]
+	require.NotNil(t, name.ExternalDocs)
+	assert.Equal(t, "https://name.example.org", name.ExternalDocs.URL)
+
+	// $ref'd field: the sibling externalDocs lifts onto the allOf
+	// compound (sibling of the $ref), not into the override schema.
+	ref := model.Properties["ref"]
+	require.Len(t, ref.AllOf, 1)
+	assert.Equal(t, "#/definitions/Nested", ref.AllOf[0].Ref.String())
+	require.NotNil(t, ref.ExternalDocs, "$ref'd field externalDocs must survive on the compound")
+	assert.Equal(t, "https://ref.example.org", ref.ExternalDocs.URL)
+
 	// Simple-schema query param: dropped + diagnostic, param stays clean.
 	list := doc.Paths.Paths["/list"].Get
 	require.NotNil(t, list)

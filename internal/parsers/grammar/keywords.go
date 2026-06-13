@@ -198,6 +198,7 @@ const (
 	KwInfoExtensions      = "infoExtensions"
 	KwTOS                 = "tos"
 	KwExternalDocs        = "externalDocs"
+	KwTags                = "tags"
 )
 
 // keywords is the authoritative table. Additions land here.
@@ -343,6 +344,15 @@ var keywords = []Keyword{
 		aka("external docs", "external-docs"),
 		asRawBlock(),
 		ctx(CtxMeta, CtxRoute, CtxOperation, CtxSchema)),
+	// `Tags:` block. On swagger:meta it is a YAML list of tag objects
+	// ({name, description, externalDocs}) populating spec.Swagger.Tags.
+	// On swagger:route/operation it is a plain string list of tag
+	// names, unioned onto the operation's tags (the same names may also
+	// appear on the swagger:route header line). The single keyword
+	// carries two shapes; the consuming builder decides which (the meta
+	// walker unmarshals objects, the route walker reads AsList). See
+	// go-swagger/go-swagger#2655.
+	keyword(KwTags, asRawBlock(), ctx(CtxMeta, CtxRoute, CtxOperation)),
 }
 
 // Lookup returns the Keyword matching name (canonical or alias),
