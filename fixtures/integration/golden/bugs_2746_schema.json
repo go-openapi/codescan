@@ -1,0 +1,20 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "FilterBy": {
+      "type": "object",
+      "properties": {
+        "vehicleTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "x-go-name": "VehicleTypes"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2746"
+    }
+  }
+}
