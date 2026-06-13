@@ -1,0 +1,49 @@
+{{- /*
+  example: a side-by-side pane pairing an annotated Go snippet (left) with the
+  spec it produces (right) — "annotation in, spec concept out". Both panes are
+  rendered from the test-covered docs/examples module via the shared
+  code-block partial, so neither can drift from real scanner output.
+
+  The grid collapses to stacked panes on narrow screens (see the
+  .example-grid rule in themes/codescan-assets/css).
+
+  Parameters:
+    go        (required) Go source path relative to docs/examples.
+    goregion  Named // snippet region for the Go pane.
+    golines   "N-M" slice for the Go pane (mutually exclusive with goregion).
+    golang    Chroma lexer for the left pane. Default "go".
+    golabel   Caption above the left pane. Default "Annotated Go".
+
+    json      (required) Output path relative to docs/examples (usually a
+              golden file under testdata/).
+    jsonregion / jsonlines  Optional slice of the output pane.
+    jsonlang  Chroma lexer for the right pane. Default "json".
+    jsonlabel Caption above the right pane. Default "Generated spec".
+
+    nolink    "true" to suppress the "Full source" links on both panes.
+*/ -}}
+{{- $nolink := eq (.Get "nolink") "true" -}}
+<div class="example-grid">
+  <div class="example-pane">
+    <div class="example-label">{{ .Get "golabel" | default "Annotated Go" }}</div>
+    {{- partial "code-block.html" (dict
+          "file" (.Get "go")
+          "lang" (.Get "golang" | default "go")
+          "region" (.Get "goregion")
+          "lines" (.Get "golines")
+          "nolink" $nolink
+          "position" .Position
+    ) -}}
+  </div>
+  <div class="example-pane">
+    <div class="example-label">{{ .Get "jsonlabel" | default "Generated spec" }}</div>
+    {{- partial "code-block.html" (dict
+          "file" (.Get "json")
+          "lang" (.Get "jsonlang" | default "json")
+          "region" (.Get "jsonregion")
+          "lines" (.Get "jsonlines")
+          "nolink" $nolink
+          "position" .Position
+    ) -}}
+  </div>
+</div>

@@ -1,0 +1,36 @@
+{{- /*
+  compare: two side-by-side panes for a before/after comparison — typically the
+  same source scanned under different codescan Options. Both panes default to
+  JSON and render via the shared code-block partial. Collapses to stacked panes
+  on narrow screens (shares the .example-grid rule with the `example` shortcode).
+
+  Parameters:
+    left       (required) Path relative to docs/examples for the left pane.
+    leftlang   Chroma lexer for the left pane. Default "json".
+    leftlabel  Caption above the left pane. Default "Default".
+    right      (required) Path for the right pane.
+    rightlang  Chroma lexer for the right pane. Default "json".
+    rightlabel Caption above the right pane. Default "Option enabled".
+    nolink     "true" to suppress the "Full source" links on both panes.
+*/ -}}
+{{- $nolink := eq (.Get "nolink") "true" -}}
+<div class="example-grid">
+  <div class="example-pane">
+    <div class="example-label">{{ .Get "leftlabel" | default "Default" }}</div>
+    {{- partial "code-block.html" (dict
+          "file" (.Get "left")
+          "lang" (.Get "leftlang" | default "json")
+          "nolink" $nolink
+          "position" .Position
+    ) -}}
+  </div>
+  <div class="example-pane">
+    <div class="example-label">{{ .Get "rightlabel" | default "Option enabled" }}</div>
+    {{- partial "code-block.html" (dict
+          "file" (.Get "right")
+          "lang" (.Get "rightlang" | default "json")
+          "nolink" $nolink
+          "position" .Position
+    ) -}}
+  </div>
+</div>
