@@ -76,12 +76,7 @@ func (p *Builder) applyBlockToField(afld *ast.Field, param *oaispec.Parameter) e
 	block := p.ParseBlock(afld.Doc)
 
 	param.Description = block.Prose()
-	if enumDesc := resolvers.GetEnumDesc(param.Extensions); enumDesc != "" {
-		if param.Description != "" {
-			param.Description += "\n"
-		}
-		param.Description += enumDesc
-	}
+	param.Description = resolvers.AppendEnumDesc(param.Description, param.Extensions, p.Ctx.SkipEnumDescriptions())
 
 	if err := handlers.DispatchParamLevel0(block, param, p.RecordDiagnostic); err != nil {
 		return err

@@ -38,12 +38,7 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 
 	schema.Title = block.PreambleTitle()
 	schema.Description = block.PreambleDescription()
-	if enumDesc := resolvers.GetEnumDesc(schema.Extensions); enumDesc != "" {
-		if schema.Description != "" {
-			schema.Description += "\n"
-		}
-		schema.Description += enumDesc
-	}
+	schema.Description = resolvers.AppendEnumDesc(schema.Description, schema.Extensions, s.Ctx.SkipEnumDescriptions())
 
 	handlers.DispatchSchemaLevel0(block, schema, schema, "", s.RecordDiagnostic, s.schemaOpts())
 
@@ -66,12 +61,7 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 	}
 
 	ps.Description = block.Prose()
-	if enumDesc := resolvers.GetEnumDesc(ps.Extensions); enumDesc != "" {
-		if ps.Description != "" {
-			ps.Description += "\n"
-		}
-		ps.Description += enumDesc
-	}
+	ps.Description = resolvers.AppendEnumDesc(ps.Description, ps.Extensions, s.Ctx.SkipEnumDescriptions())
 
 	handlers.DispatchSchemaLevel0(block, enclosing, ps, name, s.RecordDiagnostic, s.schemaOpts())
 

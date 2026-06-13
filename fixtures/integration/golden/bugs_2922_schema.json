@@ -1,0 +1,68 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/enum/test": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "GetEnumTest",
+        "parameters": [
+          {
+            "enum": [
+              "FIRST",
+              "SECOND"
+            ],
+            "type": "string",
+            "x-go-enum-desc": "FIRST TestEnumFirst\nSECOND TestEnumSecond",
+            "x-go-name": "TestEnumInQueryParam",
+            "description": "The description of the test enum param\nFIRST TestEnumFirst\nSECOND TestEnumSecond",
+            "name": "testEnumInQueryParam",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "GetEnumTestResponse",
+            "schema": {
+              "$ref": "#/definitions/GetEnumTestResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "GetEnumTestResponse": {
+      "type": "object",
+      "properties": {
+        "testEnumInBody": {
+          "description": "The description of the test enum in the response body\nFIRST TestEnumFirst\nSECOND TestEnumSecond",
+          "type": "string",
+          "enum": [
+            "FIRST",
+            "SECOND"
+          ],
+          "x-go-enum-desc": "FIRST TestEnumFirst\nSECOND TestEnumSecond",
+          "x-go-name": "TestEnumInBody"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2922"
+    }
+  },
+  "responses": {
+    "enumHeaderResponse": {
+      "description": "EnumHeaderResponse carries an enum-typed response header.",
+      "headers": {
+        "X-Test-Enum": {
+          "enum": [
+            "FIRST",
+            "SECOND"
+          ],
+          "type": "string",
+          "description": "The description of the enum header"
+        }
+      }
+    }
+  }
+}

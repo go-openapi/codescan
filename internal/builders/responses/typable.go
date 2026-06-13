@@ -81,11 +81,27 @@ func (ht responseTypable) AddExtension(key string, value any) {
 }
 
 func (ht responseTypable) WithEnum(values ...any) {
-	ht.header.WithEnum(values)
+	// Spread the variadic through: passing the slice itself would nest it
+	// one level deep (enum: [[FIRST, SECOND]]), producing malformed OAS2.
+	// Mirrors paramTypable / schema.Typable / ItemsTypable.
+	ht.header.WithEnum(values...)
 }
 
 func (ht responseTypable) WithEnumDescription(_ string) {
-	// no
+	// Intentionally a no-op. A response header is an OAS v2 SimpleSchema
+	// target, but go-openapi/spec's Header.MarshalJSON serializes only
+	// CommonValidations + SimpleSchema + HeaderProps — it does NOT emit the
+	// embedded VendorExtensible. So a header cannot carry x-go-enum-desc (or
+	// any x-go-* extension) in the output spec; setting one would be dead
+	// in-memory state silently dropped at marshal time. The enum *values*
+	// still ship via WithEnum. This is the one SimpleSchema target where the
+	// const-name mapping is unrepresentable. See go-swagger/go-swagger#2922.
+	//
+	// TODO: tracked by go-openapi/spec#277 (Header.MarshalJSON drops
+	// VendorExtensible). Once that lands and the dependency is bumped, wire
+	// this to emit x-go-enum-desc (mirroring paramTypable.WithEnumDescription)
+	// and flip the header assertion in coverage_bug_2922_test.go from
+	// "no x-go-enum-desc" to "extension present".
 }
 
 // SimpleSchemaShape satisfies schema.SimpleSchemaProbe (non-body

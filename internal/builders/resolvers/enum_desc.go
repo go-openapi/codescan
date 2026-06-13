@@ -26,3 +26,27 @@ func GetEnumDesc(extensions oaispec.Extensions) string {
 	desc, _ := extensions.GetString(ExtEnumDesc)
 	return desc
 }
+
+// AppendEnumDesc folds the x-go-enum-desc const-name mapping (if any)
+// into description, returning the resulting description. A newline
+// separates the authored prose from the appended mapping.
+//
+// When skip is true the description is returned unchanged — the mapping
+// then rides x-go-enum-desc only. This is the single gate shared by the
+// schema (model decl + struct field) and parameter builders so the
+// SkipEnumDescriptions option behaves identically across every target
+// that folds the mapping in. (Response headers discard enum descriptions
+// entirely, so they don't call this.) See go-swagger/go-swagger#2922.
+func AppendEnumDesc(description string, extensions oaispec.Extensions, skip bool) string {
+	if skip {
+		return description
+	}
+	enumDesc := GetEnumDesc(extensions)
+	if enumDesc == "" {
+		return description
+	}
+	if description != "" {
+		description += "\n"
+	}
+	return description + enumDesc
+}

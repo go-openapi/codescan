@@ -52,7 +52,22 @@ type Options struct {
 	// See [§descwithref](./README.md#descwithref).
 	DescWithRef    bool
 	SkipExtensions bool // skip generating x-go-* vendor extensions in the spec
-	Debug          bool // enable verbose debug logging during scanning
+
+	// SkipEnumDescriptions controls whether the per-enum-value const-name
+	// mapping built from `swagger:enum` (e.g. "FIRST TestEnumFirst") is
+	// folded into the property / parameter / header `description`.
+	//
+	//   - false (default): the mapping is appended to the authored
+	//     description AND exposed via the `x-go-enum-desc` vendor extension
+	//     (backward-compatible behaviour).
+	//   - true: the description is left as the authored prose; the mapping
+	//     rides `x-go-enum-desc` only.
+	//
+	// Independent of SkipExtensions: with SkipExtensions also set, the
+	// mapping is suppressed everywhere. See go-swagger/go-swagger#2922.
+	SkipEnumDescriptions bool
+
+	Debug bool // enable verbose debug logging during scanning
 
 	// OnDiagnostic, when non-nil, is invoked for every diagnostic the
 	// builder layer records (lexer/parser warnings, semantic-validation
