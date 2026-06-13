@@ -1,0 +1,32 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Sample": {
+      "type": "object",
+      "properties": {
+        "example": {
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "x-go-name": "Example"
+        },
+        "example2": {
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            10,
+            20,
+            30
+          ],
+          "x-go-name": "Example2"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2961"
+    }
+  }
+}
