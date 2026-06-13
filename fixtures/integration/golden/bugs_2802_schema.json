@@ -1,0 +1,48 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "intVal": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "IntVal"
+        },
+        "strVal": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "StrVal"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2802"
+    },
+    "WrappedRequest": {
+      "type": "object",
+      "properties": {
+        "Body": {
+          "type": "object",
+          "properties": {
+            "Body": {}
+          }
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2802"
+    },
+    "WrappedRequestInstance": {
+      "type": "object",
+      "properties": {
+        "Body": {
+          "type": "object",
+          "properties": {
+            "Body": {
+              "$ref": "#/definitions/Request"
+            }
+          }
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2802"
+    }
+  }
+}
