@@ -1,0 +1,22 @@
+{
+  "description": "Dog composes two base models plus its own fields: each embedded base becomes\na $ref arm of the allOf, and the struct's own (non-embedded) fields — which\nare new and cannot be a $ref — form the final inline arm.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Animal"
+    },
+    {
+      "$ref": "#/definitions/Tagged"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "breed": {
+          "description": "Breed is the dog's breed.",
+          "type": "string",
+          "x-go-name": "Breed"
+        }
+      }
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

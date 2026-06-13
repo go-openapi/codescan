@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "title": "Pet is a single pet in the store.",
+  "properties": {
+    "id": {
+      "description": "ID is the unique identifier.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "ID"
+    },
+    "name": {
+      "description": "Name is the pet's display name.",
+      "type": "string",
+      "x-go-name": "Name"
+    },
+    "tags": {
+      "description": "Tags categorise the pet.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "x-go-name": "Tags"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

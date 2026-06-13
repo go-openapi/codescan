@@ -1,0 +1,19 @@
+[
+  {
+    "type": "string",
+    "x-go-name": "Tag",
+    "description": "Tag filters pets by tag.",
+    "name": "tag",
+    "in": "query"
+  },
+  {
+    "maximum": 100,
+    "minimum": 1,
+    "type": "integer",
+    "format": "int32",
+    "x-go-name": "Limit",
+    "description": "Limit caps the number of results.",
+    "name": "limit",
+    "in": "query"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "title": "Token carries a field whose inferred type is overridden, inline.",
+  "properties": {
+    "id": {
+      "description": "ID renders as a string despite its [16]byte Go type.",
+      "type": "string",
+      "x-go-name": "ID"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

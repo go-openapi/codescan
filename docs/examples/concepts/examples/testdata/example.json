@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "title": "Greeting carries an example value for documentation.",
+  "properties": {
+    "count": {
+      "description": "Count is how many times to repeat it.",
+      "type": "integer",
+      "format": "int32",
+      "x-go-name": "Count",
+      "example": 3
+    },
+    "message": {
+      "description": "Message is the greeting text.",
+      "type": "string",
+      "x-go-name": "Message",
+      "example": "Hello, world!"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+}

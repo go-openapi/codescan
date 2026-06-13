@@ -1,0 +1,17 @@
+{
+  "description": "Car is exposed as a schema via its method set. Interface methods cannot carry\na json tag, so by default each property takes the camelCased method name;",
+  "type": "object",
+  "properties": {
+    "jsonClass": {
+      "description": "StructType is the polymorphic class. Without the override the property\nwould be \"structType\"; swagger:name publishes it as \"jsonClass\".",
+      "type": "string",
+      "x-go-name": "StructType"
+    },
+    "maker": {
+      "description": "Maker is the manufacturer. With no override the property is the\ncamelCased method name, \"maker\".",
+      "type": "string",
+      "x-go-name": "Maker"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

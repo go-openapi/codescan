@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "title": "Profile has required and optional (pointer) fields.",
+  "properties": {
+    "age": {
+      "description": "Age is optional.",
+      "type": "integer",
+      "format": "int32",
+      "x-go-name": "Age"
+    },
+    "name": {
+      "description": "Name is always present.",
+      "type": "string",
+      "x-go-name": "Name"
+    },
+    "nickname": {
+      "description": "Nickname is optional.",
+      "type": "string",
+      "x-go-name": "Nickname"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/nullable"
+}

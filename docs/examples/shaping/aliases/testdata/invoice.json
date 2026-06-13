@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "title": "Invoice references Price; the field resolves to Money.",
+  "properties": {
+    "total": {
+      "$ref": "#/definitions/Money"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/aliases"
+}

@@ -1,0 +1,29 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "A small API that demonstrates the document-level swagger:meta block: the\npackage doc comment carries the spec's top-level metadata.",
+    "title": "Pet Store.",
+    "contact": {
+      "name": "API Team",
+      "url": "https://example.com/support",
+      "email": "api@example.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.2.0"
+  },
+  "host": "api.example.com",
+  "basePath": "/v1",
+  "paths": {}
+}

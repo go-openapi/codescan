@@ -1,0 +1,16 @@
+{
+  "description": "codescan records each field's Go origin as vendor extensions unless\nSkipExtensions is set.",
+  "type": "object",
+  "title": "Widget is a small model.",
+  "properties": {
+    "label": {
+      "description": "Label is the display label.",
+      "type": "string"
+    },
+    "size": {
+      "description": "Size is the widget size in pixels.",
+      "type": "integer",
+      "format": "int32"
+    }
+  }
+}

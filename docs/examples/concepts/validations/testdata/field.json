@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "title": "Product is a model whose fields carry the full JSON-schema validation surface.",
+  "required": [
+    "sku"
+  ],
+  "properties": {
+    "grade": {
+      "description": "Grade is a quality band.",
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C"
+      ],
+      "x-go-name": "Grade"
+    },
+    "name": {
+      "description": "Name is the display name.",
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "x-go-name": "Name"
+    },
+    "price": {
+      "description": "Price is the price in cents.",
+      "type": "integer",
+      "format": "int64",
+      "maximum": 1000000,
+      "minimum": 1,
+      "multipleOf": 1,
+      "x-go-name": "Price"
+    },
+    "sku": {
+      "description": "SKU is the stock code.",
+      "type": "string",
+      "pattern": "^[A-Z]{3}-[0-9]{4}$",
+      "x-go-name": "SKU"
+    },
+    "tags": {
+      "description": "Tags label the product.",
+      "type": "array",
+      "maxItems": 10,
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      },
+      "x-go-name": "Tags"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/validations"
+}

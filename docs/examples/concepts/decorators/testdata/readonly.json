@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Token is issued by the server.",
+  "properties": {
+    "id": {
+      "description": "ID is assigned by the server and cannot be set by clients.",
+      "type": "string",
+      "x-go-name": "ID",
+      "readOnly": true
+    },
+    "value": {
+      "description": "Value is the token value.",
+      "type": "string",
+      "x-go-name": "Value"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/decorators"
+}
