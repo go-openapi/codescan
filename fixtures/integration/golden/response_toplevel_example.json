@@ -1,0 +1,53 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/array": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "getArray",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ArrayResp"
+          }
+        }
+      }
+    },
+    "/scalar": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "getScalar",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ScalarResp"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "ArrayResp": {
+      "description": "ArrayResp is an array response with the example on its own paragraph.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "example": [
+          "10.10.10.10",
+          "20.20.20.20"
+        ]
+      }
+    },
+    "ScalarResp": {
+      "description": "ScalarResp is a scalar (string) response with a trailing example line.",
+      "schema": {
+        "type": "string",
+        "example": "hello"
+      }
+    }
+  }
+}

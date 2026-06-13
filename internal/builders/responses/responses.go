@@ -9,6 +9,7 @@ import (
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
+	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -64,9 +65,43 @@ func (r *Builder) Build(responses map[string]oaispec.Response) error {
 	if err := r.buildFromType(r.Decl.ObjType(), &response, make(map[string]bool)); err != nil {
 		return err
 	}
+
+	// Carry decl-comment schema keywords (example:, default:, validations)
+	// onto a top-level non-struct response body schema. applyBlockToDecl
+	// only takes the prose/description; without this, an `example:` on a
+	// `swagger:response` whose body is a bare array/scalar type is dropped
+	// (go-swagger#3013). Struct responses carry these on their fields, not
+	// the decl, and a $ref body must not gain sibling keywords — both skipped.
+	if response.Schema != nil && response.Schema.Ref.String() == "" && !underlyingIsStruct(r.Decl.ObjType()) {
+		handlers.DispatchSchemaLevel0(
+			r.ParseBlock(r.Decl.Comments), nil, response.Schema, "",
+			r.RecordDiagnostic, handlers.SchemaOptions{},
+		)
+	}
+
 	responses[name] = response
 
 	return nil
+}
+
+// underlyingIsStruct reports whether t resolves (through named/alias/
+// pointer layers) to a struct — i.e. a struct-bodied response whose
+// fields, not the decl comment, carry schema keywords.
+func underlyingIsStruct(t types.Type) bool {
+	for {
+		switch tt := t.(type) {
+		case *types.Named:
+			t = tt.Underlying()
+		case *types.Alias:
+			t = tt.Underlying()
+		case *types.Pointer:
+			t = tt.Elem()
+		case *types.Struct:
+			return true
+		default:
+			return false
+		}
+	}
 }
 
 func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]bool) error {
@@ -438,19 +473,36 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		}
 	}
 
+	if in == inBody {
+		// Body field: schema-level keywords (example/default/validations,
+		// strfmt) belong on the body schema. Non-body fields route them
+		// through the header, but body responses discard the header, so a
+		// body field's `example:` would be lost (go-swagger#3013, same
+		// family as #2942). Skip a $ref body — siblings on a $ref are
+		// invalid.
+		if resp.Schema != nil && resp.Schema.Ref.String() == "" {
+			if signals.strfmtSet {
+				resp.Schema.Typed("string", signals.strfmt)
+			}
+			handlers.DispatchSchemaLevel0(
+				r.ParseBlock(afld.Doc), nil, resp.Schema, "",
+				r.RecordDiagnostic, handlers.SchemaOptions{},
+			)
+		}
+		return nil
+	}
+
 	if signals.strfmtSet {
 		ps.Typed("string", signals.strfmt)
 	}
 
 	r.applyBlockToHeader(afld, &ps)
 
-	if in != "body" {
-		seen[name] = true
-		if resp.Headers == nil {
-			resp.Headers = make(map[string]oaispec.Header)
-		}
-		resp.Headers[name] = ps
+	seen[name] = true
+	if resp.Headers == nil {
+		resp.Headers = make(map[string]oaispec.Header)
 	}
+	resp.Headers[name] = ps
 
 	return nil
 }
