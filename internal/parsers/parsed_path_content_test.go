@@ -142,3 +142,70 @@ func TestParsePathAnnotation_NoMatch(t *testing.T) {
 	assert.EqualT(t, "", cnt.Path)
 	assert.EqualT(t, "", cnt.ID)
 }
+
+func TestStripPathParamRegex(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		in           string
+		wantCleaned  string
+		wantStripped []string
+	}{
+		{name: "no params", in: "/items", wantCleaned: "/items"},
+		{name: "plain template untouched", in: "/items/{id}", wantCleaned: "/items/{id}"},
+		{
+			name: "simple regex", in: "/items/{id:[0-9]+}",
+			wantCleaned: "/items/{id}", wantStripped: []string{"id"},
+		},
+		{
+			name: "regex with slash class", in: "/files/{path:[^/]+}",
+			wantCleaned: "/files/{path}", wantStripped: []string{"path"},
+		},
+		{
+			name: "nested-brace quantifier", in: "/codes/{code:[0-9]{2,4}}",
+			wantCleaned: "/codes/{code}", wantStripped: []string{"code"},
+		},
+		{
+			name: "multiple params, mixed", in: "/a/{x:[0-9]+}/b/{y}/c/{z:[a-z]+}",
+			wantCleaned: "/a/{x}/b/{y}/c/{z}", wantStripped: []string{"x", "z"},
+		},
+		{
+			name: "whole route line", in: "// swagger:route GET /items/{id:[0-9]+} items getItem",
+			wantCleaned: "// swagger:route GET /items/{id} items getItem", wantStripped: []string{"id"},
+		},
+		{
+			name: "unbalanced brace left verbatim", in: "/items/{id:[0-9]+",
+			wantCleaned: "/items/{id:[0-9]+",
+		},
+		{
+			name: "empty name with colon left verbatim", in: "/items/{:[0-9]+}",
+			wantCleaned: "/items/{:[0-9]+}",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cleaned, stripped := stripPathParamRegex(tc.in)
+			assert.EqualT(t, tc.wantCleaned, cleaned)
+			if tc.wantStripped == nil {
+				assert.Nil(t, stripped)
+			} else {
+				assert.Equal(t, tc.wantStripped, stripped)
+			}
+		})
+	}
+}
+
+func TestParseRoutePathAnnotation_RegexSegments(t *testing.T) {
+	t.Parallel()
+
+	comments := []*ast.Comment{
+		{Text: "// swagger:route GET /a/{x:[0-9]+}/b/{y:[a-z]+} items getThings"},
+	}
+	cnt := ParseRoutePathAnnotation(comments)
+	assert.EqualT(t, "GET", cnt.Method)
+	assert.EqualT(t, "/a/{x}/b/{y}", cnt.Path)
+	assert.EqualT(t, "getThings", cnt.ID)
+	assert.Equal(t, []string{"x", "y"}, cnt.StrippedParams)
+}

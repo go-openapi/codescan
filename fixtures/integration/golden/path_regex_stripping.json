@@ -1,0 +1,44 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/a/{x}/b/{y}": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "multiParam",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/codes/{code}": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "getCode",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/plain/{id}": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "plainRoute",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@ package common
 
 import (
 	"go/ast"
+	"go/token"
 	"log/slog"
 
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -96,6 +97,27 @@ func (s *Builder) RecordDiagnostic(d grammar.Diagnostic) {
 	if cb := s.Ctx.OnDiagnostic(); cb != nil {
 		cb(d)
 	}
+}
+
+// WarnStrippedPathRegex records a warning that one or more inline
+// regex path-parameter constraints (`{id:[0-9]+}`) were stripped to the
+// bare `{id}` template form. OpenAPI 2.0 path templating follows
+// RFC 6570 URI Template Level-1 expansion (simple `{name}`
+// substitution) only — it cannot express regex/operator constraints —
+// so the route is still emitted, with the constraint dropped. No-op
+// when params is empty. Shared by the routes and operations builders.
+func (s *Builder) WarnStrippedPathRegex(pos token.Pos, params []string) {
+	if len(params) == 0 {
+		return
+	}
+	s.RecordDiagnostic(grammar.Warnf(
+		s.Ctx.PosOf(pos),
+		grammar.CodeInvalidAnnotation,
+		"inline regex constraint on path parameter(s) %v is unsupported: OpenAPI 2.0 path "+
+			"templating follows RFC 6570 URI Template Level-1 expansion (bare {name}) only; "+
+			"the constraint was stripped",
+		params,
+	))
 }
 
 // ParseBlocks returns the cached grammar.Block slice for cg (one

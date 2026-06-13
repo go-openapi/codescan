@@ -45,6 +45,8 @@ func NewBuilder(ctx *scanner.ScanCtx, route parsers.ParsedPathContent, inputs In
 }
 
 func (r *Builder) Build(tgt *oaispec.Paths) error {
+	r.WarnStrippedPathRegex(r.route.Pos, r.route.StrippedParams)
+
 	pthObj := tgt.Paths[r.route.Path]
 	op := operations.SetPathOperation(
 		r.route.Method, r.route.ID,

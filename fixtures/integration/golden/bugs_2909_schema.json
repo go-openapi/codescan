@@ -1,0 +1,18 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items/{id}": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "operationId": "getItem",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

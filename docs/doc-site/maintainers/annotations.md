@@ -454,7 +454,14 @@ swagger:route <METHOD> <path> [tag1 tag2 …] <operationID>
 - `<METHOD>` — `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`,
   `OPTIONS`. Case insensitive.
 - `<path>` — starts with `/`. Supports path-parameter braces:
-  `/items/{id}`.
+  `/items/{id}`. Path templating follows
+  [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI Template
+  **Level-1 expansion** only (simple `{name}` substitution), as
+  required by OpenAPI 2.0. An inline regex constraint written in the
+  gorilla/chi style (`/items/{id:[0-9]+}`) is **stripped** to the bare
+  `/items/{id}` form and a warning is emitted — OpenAPI 2.0 cannot
+  express the constraint, so it is dropped rather than silently failing
+  the whole route. The same applies to `swagger:operation`.
 - `[tag1 tag2 …]` — optional whitespace-separated list of tags. At
   least two characters each.
 - `<operationID>` — the unique operation identifier.
