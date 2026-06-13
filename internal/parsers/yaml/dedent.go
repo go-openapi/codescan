@@ -6,16 +6,28 @@ package yaml
 import "strings"
 
 // RemoveIndent normalises the common leading indentation of a YAML
-// body lifted from a godoc comment block: the first line's indent
-// length is treated as the canonical strip width and applied to every
-// subsequent line. Any tabs in the stripped lines' leading-whitespace
-// run are then expanded to two spaces, because YAML refuses tab
+// body lifted from a godoc comment block: the first non-blank line's
+// indent length is treated as the canonical strip width and applied to
+// every line. Any tabs in the stripped lines' leading-whitespace run
+// are then expanded to two spaces, because YAML refuses tab
 // indentation.
 //
-// The first-line dedent (vs "shortest leading-whitespace run across
-// every non-blank line") is the operations / meta path's contract —
-// the existing operation goldens depend on it. The typed-extensions
-// path uses common-prefix dedent instead; see README.md §dedent.
+// The first-(non-blank-)line dedent (vs "shortest leading-whitespace
+// run across every non-blank line") is the operations / meta path's
+// contract — the existing operation goldens depend on it. The
+// typed-extensions path uses common-prefix dedent instead; see
+// README.md §dedent.
+//
+// Leading blank lines are skipped when choosing the canonical line:
+// gofmt inserts a blank "//" line directly under a column-0
+// doc-comment key (its code-block rule), so the gofmt-canonical
+// swagger:meta form is `key:` at column 0, a blank line, then
+// tab-indented children. Keying the strip width off the literal first
+// line would see the blank line, derive a zero strip width, and leave
+// the children's tabs intact for the YAML parser to reject ("found
+// character that cannot start any token"). Skipping the blank line
+// makes that form dedent and retab identically to the all-indented
+// variant (quirk F7).
 //
 // Whitespace tokens recognised here are space (' '), tab ('\t'), and
 // the leading `/` characters that survive when the lexer hasn't
@@ -28,7 +40,15 @@ func RemoveIndent(lines []string) []string {
 		return lines
 	}
 
-	indent := leadingIndent(lines[0])
+	first := 0
+	for first < len(lines) && strings.TrimSpace(lines[first]) == "" {
+		first++
+	}
+	if first == len(lines) {
+		return lines
+	}
+
+	indent := leadingIndent(lines[first])
 	if indent == 0 {
 		return lines
 	}
