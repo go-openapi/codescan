@@ -1,0 +1,20 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "MyResponse": {
+      "type": "object",
+      "properties": {
+        "complexType": {
+          "description": "List of complex types.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "ComplexType"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3069"
+    }
+  }
+}
