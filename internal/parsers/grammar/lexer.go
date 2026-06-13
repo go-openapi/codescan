@@ -472,6 +472,18 @@ func lexKeyword(text, raw string, pos token.Position) (Token, bool) {
 	value := strings.TrimSpace(after)
 	value = stripTrailingDot(value)
 
+	// A `deprecated:` line whose argument is not a bool is the godoc
+	// "Deprecated: <reason>" convention, not the bool keyword. Leave it as
+	// prose (Block.IsDeprecated detects it via the godoc regexp) instead of
+	// forcing a bool parse that would spuriously error and strip the reason
+	// from the description. The bool form keeps being a keyword (and drives
+	// the native operation `deprecated` field). See go-swagger/go-swagger#3138.
+	if kw.Name == KwDeprecated {
+		if _, isBool := parseBool(value); !isBool {
+			return Token{}, false
+		}
+	}
+
 	return Token{
 		Kind:       tokenKeywordPre,
 		Pos:        kwPos,

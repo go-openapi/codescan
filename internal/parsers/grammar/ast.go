@@ -42,6 +42,11 @@ type Block interface {
 	Contact() (Contact, error)
 	License() (License, bool)
 
+	// IsDeprecated reports whether the block marks its subject
+	// deprecated — via the explicit `deprecated: true` keyword or a
+	// godoc-style "Deprecated:" paragraph. See deprecated.go.
+	IsDeprecated() bool
+
 	// Walk dispatches properties / prose / extensions / diagnostics
 	// through the callbacks set on w. See walker.go for the contract.
 	Walk(w Walker)

@@ -40,6 +40,13 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 	schema.Description = block.PreambleDescription()
 	schema.Description = resolvers.AppendEnumDesc(schema.Description, schema.Extensions, s.Ctx.SkipEnumDescriptions())
 
+	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
+	// model deprecated (go-swagger#3138). The grammar block unifies both
+	// triggers; OAS2 has no native schema `deprecated`, so emit x-deprecated.
+	if block.IsDeprecated() {
+		resolvers.MarkDeprecated(schema)
+	}
+
 	handlers.DispatchSchemaLevel0(block, schema, schema, "", s.RecordDiagnostic, s.schemaOpts())
 
 	return false
@@ -62,6 +69,12 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 
 	ps.Description = block.Prose()
 	ps.Description = resolvers.AppendEnumDesc(ps.Description, ps.Extensions, s.Ctx.SkipEnumDescriptions())
+
+	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
+	// field deprecated (go-swagger#3138) — see the model-level note above.
+	if block.IsDeprecated() {
+		resolvers.MarkDeprecated(ps)
+	}
 
 	handlers.DispatchSchemaLevel0(block, enclosing, ps, name, s.RecordDiagnostic, s.schemaOpts())
 
