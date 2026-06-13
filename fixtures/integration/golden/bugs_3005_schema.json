@@ -1,0 +1,17 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "TestAdditionalProperties": {
+      "type": "object",
+      "properties": {
+        "field1": {
+          "description": "field1",
+          "type": "string",
+          "x-go-name": "Field1"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3005"
+    }
+  }
+}
