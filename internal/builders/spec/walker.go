@@ -111,18 +111,37 @@ func dispatchMetaSimple(p grammar.Property, swspec *spec.Swagger) bool {
 }
 
 // dispatchMetaYAMLBlock handles the keywords whose bodies are
-// structurally YAML and not amenable to the flex-list union. Today
-// only securityDefinitions falls here; extensions / infoExtensions
+// structurally YAML and not amenable to the flex-list union:
+// securityDefinitions and externalDocs. extensions / infoExtensions
 // ride grammar's typed Extensions surface (see applyMetaBlock —
 // the block.Extensions() loop routes each entry by ext.Source).
+//
+// externalDocs is wired for swagger:meta only (top-level
+// spec.ExternalDocs); the keyword is also grammar-legal on
+// route/operation/schema, but emitting it there is a separate feature
+// (forthcoming-features.md §9).
 func dispatchMetaYAMLBlock(p grammar.Property, swspec *spec.Swagger) error {
-	if p.Keyword.Name == grammar.KwSecurityDefinitions {
+	switch p.Keyword.Name {
+	case grammar.KwSecurityDefinitions:
 		return yamlparser.UnmarshalBody(p.Body, func(data []byte) error {
 			var d spec.SecurityDefinitions
 			if err := json.Unmarshal(data, &d); err != nil {
 				return err
 			}
 			swspec.SecurityDefinitions = d
+			return nil
+		})
+	case grammar.KwExternalDocs:
+		return yamlparser.UnmarshalBody(p.Body, func(data []byte) error {
+			var d spec.ExternalDocumentation
+			if err := json.Unmarshal(data, &d); err != nil {
+				return err
+			}
+			// Skip an empty/blank block so we don't emit a useless
+			// `externalDocs: {}` (the OAS object requires `url`).
+			if d != (spec.ExternalDocumentation{}) {
+				swspec.ExternalDocs = &d
+			}
 			return nil
 		})
 	}

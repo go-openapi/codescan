@@ -667,8 +667,13 @@ Terms-of-service prose paragraph. Multi-line body is joined with
 ### `externalDocs`
 
 External documentation pointer as a YAML map with `description` and
-`url` keys. Aliases: `external docs`, `external-docs`. Multi-context
-(meta, route, operation, schema).
+`url` keys. Aliases: `external docs`, `external-docs`.
+
+Currently **emitted on `swagger:meta` only** — it lands on the
+top-level `externalDocs` object. An empty block (no `description`/`url`)
+is skipped rather than emitting a bare `externalDocs: {}`. The keyword
+is grammar-legal on route / operation / schema contexts too, but
+emitting it there is a separate forthcoming feature.
 
 ```
 ExternalDocs:

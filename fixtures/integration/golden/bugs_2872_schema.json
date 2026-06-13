@@ -1,0 +1,12 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Package bug2872 reproduces go-swagger issue #2872 (\"ExternalDocs are not\ngenerating the 2.0 spec on swagger:meta\"): an ExternalDocs block in\nwired into the meta/info builder).",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "externalDocs": {
+    "description": "foo bar",
+    "url": "https://example.org"
+  }
+}
