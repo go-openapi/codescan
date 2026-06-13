@@ -43,6 +43,12 @@ swaggerSpec, err := codescan.Run(&codescan.Options{
 ### Where to go next
 
 {{< cards >}}
+{{% card title="About" %}}
+What codescan is, why scan source to a spec, and how it relates to go-swagger.
+
+→ [about]({{% relref "/about" %}})
+{{% /card %}}
+
 {{% card title="Getting started" %}}
 Install the scanner, annotate a package, and produce your first spec.
 
