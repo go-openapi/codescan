@@ -1,6 +1,6 @@
 ---
 title: Getting started
-weight: 1
+weight: 10
 description: |
   Install codescan and choose how to drive it. Today the scanner is consumed
   as a Go library; more usage modes will be added here as siblings.

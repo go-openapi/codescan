@@ -54,6 +54,6 @@ type Settings struct {
 // swagger:default annotation is a narrow value-only discovery hint.
 //
 // swagger:default
-var DefaultPort = 8080
+var DefaultPort = 8080 //nolint:gochecknoglobals // demo example
 
 // endsnippet:swaggerdefault

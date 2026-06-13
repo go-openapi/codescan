@@ -1,9 +1,9 @@
 ---
 title: "Grammar"
 weight: 40
+description: "The formal ISO-14977 EBNF the parser implements, from comment preprocessing through the typed walker."
 ---
 
-# Grammar
 
 The formal grammar of the codescan annotation surface. This document
 specifies the language a Go comment must conform to so that the
@@ -12,7 +12,7 @@ populates the OpenAPI spec deterministically.
 
 **Audience.** Implementers — anyone porting, extending, or debugging
 the parser. Annotation authors typically need
-[annotations.md](./annotations.md) and [keywords.md](./keywords.md)
+[annotations.md]({{% relref "annotations" %}}) and [keywords.md]({{% relref "keywords" %}})
 instead.
 
 The grammar is layered:
@@ -146,7 +146,7 @@ are emitted as separate terminals.
 #### Keyword head terminals (`TokenKeyword`)
 
 Each recognises the keyword **name** only. See
-[keywords.md](./keywords.md) for the complete keyword surface.
+[keywords.md]({{% relref "keywords" %}}) for the complete keyword surface.
 
 #### Inline value terminals
 
@@ -174,13 +174,13 @@ head and the body lines.
 
 | Terminal | Parent keyword | Body shape |
 |----------|----------------|------------|
-| `RAW_BLOCK_CONSUMES` | `consumes` | Flat token list (see [sub-languages §flex-list](./sub-languages.md#flex-list)) |
+| `RAW_BLOCK_CONSUMES` | `consumes` | Flat token list (see [sub-languages §flex-list]({{% relref "sub-languages#flex-list" %}})) |
 | `RAW_BLOCK_PRODUCES` | `produces` | Flat token list |
 | `RAW_BLOCK_SCHEMES` | `schemes` | Flat token list |
-| `RAW_BLOCK_SECURITY` | `security` | Security requirements (see [sub-languages §security-requirements](./sub-languages.md#security-requirements)) |
+| `RAW_BLOCK_SECURITY` | `security` | Security requirements (see [sub-languages §security-requirements]({{% relref "sub-languages#security-requirements" %}})) |
 | `RAW_BLOCK_SECURITY_DEFINITIONS` | `securityDefinitions` | YAML map |
-| `RAW_BLOCK_RESPONSES` | `responses` | Response sub-language (see [sub-languages §responses](./sub-languages.md#responses)) |
-| `RAW_BLOCK_PARAMETERS` | `parameters` | Parameter chunk sub-language (see [sub-languages §parameters](./sub-languages.md#parameters)) |
+| `RAW_BLOCK_RESPONSES` | `responses` | Response sub-language (see [sub-languages §responses]({{% relref "sub-languages#responses" %}})) |
+| `RAW_BLOCK_PARAMETERS` | `parameters` | Parameter chunk sub-language (see [sub-languages §parameters]({{% relref "sub-languages#parameters" %}})) |
 | `RAW_BLOCK_EXTENSIONS` | `extensions` | YAML map of `x-*` entries |
 | `RAW_BLOCK_INFO_EXTENSIONS` | `infoExtensions` | YAML map of `x-*` entries |
 | `RAW_BLOCK_TOS` | `tos` | Free-form prose paragraph |
@@ -236,7 +236,7 @@ annotation or keyword head) re-type as either `TokenTitle` or
 
 When no heuristic fires, the entire prose run is title.
 
-See [sub-languages.md §prose-classification](./sub-languages.md#prose-classification)
+See [sub-languages.md §prose-classification]({{% relref "sub-languages#prose-classification" %}})
 for the author-facing description.
 
 ---

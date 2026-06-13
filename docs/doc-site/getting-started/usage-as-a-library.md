@@ -54,9 +54,12 @@ See the [godoc][godoc] for the full list.
 
 ## Next
 
-- [Examples](../../examples/) — the worked end-to-end version of the above,
-  including the generated spec.
-- [Reference](../../reference/) — the full annotation vocabulary and grammar.
+- [Tutorials]({{% relref "/tutorials" %}}) — the worked, by-concept version of
+  the above, each with the spec it produces.
+- [Annotation index]({{% relref "/annotation-index" %}}) — every annotation at a
+  glance, linked to its example and its full reference.
+- [Maintainers reference]({{% relref "/maintainers" %}}) — the complete
+  annotation vocabulary, keywords, and grammar.
 
 [go-swagger]: https://github.com/go-swagger/go-swagger
 [godoc]: https://pkg.go.dev/github.com/go-openapi/codescan#Options

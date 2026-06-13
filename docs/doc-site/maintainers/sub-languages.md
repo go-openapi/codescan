@@ -1,9 +1,9 @@
 ---
 title: "Sub-languages"
 weight: 30
+description: "The smaller languages embedded in annotation bodies: the Parameters/Responses grammars, YAML surfaces, and prose classification."
 ---
 
-# Sub-languages
 
 The annotation body grammar is not a single language — it's a
 top-level keyword grammar that embeds several smaller languages
@@ -12,8 +12,8 @@ shape rules.
 
 This document catalogs the embedded languages and how they fit
 together. For the per-keyword surface, see
-[keywords.md](./keywords.md); for the formal grammar that hosts
-them, see [grammar.md](./grammar.md).
+[keywords.md]({{% relref "keywords" %}}); for the formal grammar that hosts
+them, see [grammar.md]({{% relref "grammar" %}}).
 
 ---
 
@@ -95,7 +95,7 @@ func CreatePet() {}
 ```
 
 The lexer strips the leading whitespace (`\t`, `*`, `/`, `|`) per
-line via [`trimContentPrefix`](./grammar.md#preprocess) before
+line via [`trimContentPrefix`]({{% relref "grammar#preprocess" %}}) before
 classification.
 
 ### Markdown semantics that survive
@@ -219,7 +219,7 @@ through the standard validation pipeline).
 | `allowempty:` / `allowemptyvalue:` | `parameter.allowEmptyValue` | Boolean. |
 
 **Validation fields:** any other recognised
-[keyword](./keywords.md) — `min`, `max`, `minLength`, `maxLength`,
+[keyword]({{% relref "keywords" %}}) — `min`, `max`, `minLength`, `maxLength`,
 `minItems`, `maxItems`, `pattern`, `unique`, `collectionFormat`,
 `default`, `example`, `enum`. These are looked up via
 `grammar.Lookup` (which accepts canonical names + aliases) and

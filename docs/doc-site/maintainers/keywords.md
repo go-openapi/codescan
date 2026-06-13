@@ -1,9 +1,9 @@
 ---
 title: "Keyword reference"
 weight: 20
+description: "Per-keyword reference card: every keyword form, its value shape, and the contexts where it is legal."
 ---
 
-# Keyword reference
 
 This document catalogs the `keyword: value` forms recognised inside
 annotation blocks. The keywords come in two flavours:
@@ -17,10 +17,10 @@ annotation blocks. The keywords come in two flavours:
   a per-line sub-language for `Parameters:` / `Responses:` on
   `swagger:route`).
 
-The reader-friendly orientation is in [annotations.md](./annotations.md)
+The reader-friendly orientation is in [annotations.md]({{% relref "annotations" %}})
 (which annotation accepts which keywords, with examples); this file
 is the **per-keyword reference card**. Implementers wanting the
-formal productions should read [grammar.md](./grammar.md).
+formal productions should read [grammar.md]({{% relref "grammar" %}}).
 
 ---
 
@@ -442,7 +442,7 @@ Schemes: http
   - https
 ```
 
-Maps to `spec.schemes`. See [sub-languages.md](./sub-languages.md)
+Maps to `spec.schemes`. See [sub-languages.md]({{% relref "sub-languages" %}})
 §flex-lists for the unified rule.
 
 ### `version`
@@ -489,7 +489,7 @@ Aliases: `contact info`, `contact-info`. Maps to `info.contact`.
 
 Body keywords have a header line ending in `:` and indented
 continuation lines. The body's structure depends on the keyword.
-See [sub-languages.md](./sub-languages.md) for the full
+See [sub-languages.md]({{% relref "sub-languages" %}}) for the full
 sub-language specifications; this section covers the keyword
 shape.
 
@@ -549,7 +549,7 @@ Aliases: `security definitions`, `security-definitions`. Meta-only.
 
 Per-route / per-operation response declarations. Each line is one
 response in the form `<code>: <tokens>`. See
-[sub-languages.md §responses](./sub-languages.md#responses) for the
+[sub-languages.md §responses]({{% relref "sub-languages#responses" %}}) for the
 full per-line grammar.
 
 ```
@@ -564,7 +564,7 @@ Responses:
 Per-route / per-operation parameter declarations. Body is a sequence
 of `+ name:` chunks (the `+` is the chunk-start sigil; `-` is
 accepted as an alias). See
-[sub-languages.md §parameters](./sub-languages.md#parameters) for
+[sub-languages.md §parameters]({{% relref "sub-languages#parameters" %}}) for
 the full per-chunk grammar.
 
 ```
@@ -642,4 +642,4 @@ A handful of keyword interactions are worth flagging:
   schema's `required` array (the standard JSON-Schema-draft-4
   shape). If the field has sibling overrides, the `$ref` rewrites
   into an `allOf` compound — see
-  [grammar.md](./grammar.md) §refoverride.
+  [grammar.md]({{% relref "grammar" %}}) §refoverride.

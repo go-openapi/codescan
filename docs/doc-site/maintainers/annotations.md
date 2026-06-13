@@ -1,15 +1,15 @@
 ---
 title: "Annotations"
 weight: 10
+description: "The swagger:* annotation vocabulary: what each produces, where it attaches, and the keywords it admits."
 ---
 
-# Annotations
 
 Annotations are the `swagger:<name>` markers the scanner recognises in
 Go doc comments. Each annotation classifies the surrounding
 declaration — telling the scanner "this is a model definition", "this
 is a route handler", "this is meta-information about the API" — and
-opens the door for [keywords](./keywords.md) inside the same comment
+opens the door for [keywords]({{% relref "keywords" %}}) inside the same comment
 block.
 
 There are twelve annotations. They divide cleanly by what they
@@ -33,11 +33,11 @@ This file is the **author-first reference**. Each entry covers:
 - A pointer to a real fixture in this repo for the full executable
   example.
 
-For the per-keyword reference, see [keywords.md](./keywords.md).
+For the per-keyword reference, see [keywords.md]({{% relref "keywords" %}}).
 For the embedded sub-languages (`Parameters:` and `Responses:` body
 grammars, YAML extensions, etc.), see
-[sub-languages.md](./sub-languages.md). For the formal grammar,
-see [grammar.md](./grammar.md).
+[sub-languages.md]({{% relref "sub-languages" %}}). For the formal grammar,
+see [grammar.md]({{% relref "grammar" %}}).
 
 ---
 
@@ -84,7 +84,7 @@ group:
   `var DoIt = func() { … }`) — carries `swagger:route`,
   `swagger:operation`.
 - **Struct field doc** — carries `swagger:name`, `swagger:type`,
-  `swagger:ignore`, plus any of the [keyword reference](./keywords.md)
+  `swagger:ignore`, plus any of the [keyword reference]({{% relref "keywords" %}})
   entries legal in `schema` / `param` / `header` context.
 
 One comment group may carry MORE than one annotation when the
@@ -128,7 +128,7 @@ arguments. The shapes:
 
 **What it does.** Declares the package as the OpenAPI spec
 container. The scanner reads the package doc comment for top-level
-spec fields: title (via [stripPackagePrefix](./grammar.md#prose) of
+spec fields: title (via [stripPackagePrefix]({{% relref "grammar#prose" %}}) of
 the doc's first line), description, license, contact, host,
 basePath, version, schemes, consumes, produces, securityDefinitions,
 extensions, and the rest of the meta keyword surface.
@@ -160,9 +160,9 @@ extensions, and the rest of the meta keyword surface.
 package petstore
 ```
 
-**Legal keywords.** All [meta single-line keywords](./keywords.md#meta-single-line-keywords)
+**Legal keywords.** All [meta single-line keywords]({{% relref "keywords#meta-single-line-keywords" %}})
 (`schemes`, `version`, `host`, `basePath`, `license`, `contact`) plus
-the meta-scope [body keywords](./keywords.md#body-keywords)
+the meta-scope [body keywords]({{% relref "keywords#body-keywords" %}})
 (`consumes`, `produces`, `security`, `securityDefinitions`,
 `extensions`, `infoExtensions`, `tos`, `externalDocs`).
 
@@ -209,9 +209,9 @@ type DetailedPet struct { … }
 
 The type is published as `#/definitions/PetWithExtras`.
 
-**Legal keywords.** All [schema](./keywords.md#schema-decorators)
+**Legal keywords.** All [schema]({{% relref "keywords#schema-decorators" %}})
 keywords plus the
-[length / array / numeric validations](./keywords.md#numeric-validations)
+[length / array / numeric validations]({{% relref "keywords#numeric-validations" %}})
 on field doc comments.
 
 **Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
@@ -260,25 +260,32 @@ itself; the format name is the entire surface.
 ## `swagger:enum`
 
 **What it does.** Marks a string-typed (or integer-typed) named type
-as an enum. The scanner collects the type's `const` declarations,
-emits each value into the schema's `enum` array, and produces an
-`x-go-enum-desc` extension carrying the per-value godoc descriptions
-in `<value> <doc-text>` shape — useful for downstream tooling that
-renders enum option labels.
+as an enum and collects the type's `const` declarations. The values
+are applied **inline on each model field that references the type**:
+the property gets an `enum` array plus an `x-go-enum-desc` extension
+carrying the per-value godoc descriptions in `<value> <doc-text>`
+shape. The enum type itself is **not** emitted as a standalone
+definition — the values travel with each referencing property.
+
+(Edge case: if `swagger:enum` names a type for which no matching
+`const` values are found, the enum semantics are dropped and the type
+falls through to ordinary type resolution — typically a plain
+definition referenced by `$ref`, with no `enum` array.)
 
 **Where it goes.** On a named type declaration. The type's `const`
 values are discovered via Go's type-system traversal; they do not
-need to live in the same file.
+need to live in the same file. The values surface only when a model
+reaches the enum type through a field.
 
-**Argument shape.** Optional IDENT — when omitted, the surrounding
-type's name is used.
+**Argument shape.** IDENT naming the type whose `const` values to
+collect (its own name).
 
 **Sample.**
 
 ```go
 // Priority is the urgency level on a task.
 //
-// swagger:enum
+// swagger:enum Priority
 type Priority string
 
 const (
@@ -291,16 +298,29 @@ const (
 	// PriorityHigh is for tasks that must run soon.
 	PriorityHigh Priority = "high"
 )
+
+// Task references Priority, which is what makes the enum reachable.
+//
+// swagger:model
+type Task struct {
+	Priority Priority `json:"priority"`
+}
 ```
 
-Produces (extract):
+Produces (extract) — the values land on `Task`'s `priority` property,
+not on a `Priority` definition:
 
 ```json
 {
-  "Priority": {
-    "type": "string",
-    "enum": ["low", "medium", "high"],
-    "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon."
+  "Task": {
+    "type": "object",
+    "properties": {
+      "priority": {
+        "type": "string",
+        "enum": ["low", "medium", "high"],
+        "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon."
+      }
+    }
   }
 }
 ```
@@ -482,13 +502,13 @@ func ListPets() {}
 ```
 
 **Legal keywords.** All
-[body keywords](./keywords.md#body-keywords) legal in route context
+[body keywords]({{% relref "keywords#body-keywords" %}}) legal in route context
 (`consumes`, `produces`, `schemes`, `security`, `parameters`,
 `responses`, `extensions`) plus inline `deprecated:`.
 
 The `Parameters:` and `Responses:` sub-languages are documented in
-[sub-languages.md §parameters](./sub-languages.md#parameters) and
-[sub-languages.md §responses](./sub-languages.md#responses).
+[sub-languages.md §parameters]({{% relref "sub-languages#parameters" %}}) and
+[sub-languages.md §responses]({{% relref "sub-languages#responses" %}}).
 
 **Full example.** `fixtures/enhancements/routes-full-petstore-shape/handlers.go`.
 
@@ -593,7 +613,7 @@ type ListItemsParams struct {
 }
 ```
 
-**Legal keywords on fields.** [param-context keywords](./keywords.md#parameter-location)
+**Legal keywords on fields.** [param-context keywords]({{% relref "keywords#parameter-location" %}})
 (`in`, `required`, the numeric / length / format validations,
 `default`, `example`, `enum`, `allowEmptyValue`, `collectionFormat`).
 
@@ -850,7 +870,7 @@ the relevant field.
 ## Annotation × keyword compatibility matrix
 
 A quick orientation for which annotations can carry which keyword
-families. See [keywords.md](./keywords.md) for the per-keyword
+families. See [keywords.md]({{% relref "keywords" %}}) for the per-keyword
 contracts.
 
 | Annotation | Numeric/length validations | Schema decorators | `in:` | Meta keywords | `Parameters:` body | `Responses:` body | YAML body |

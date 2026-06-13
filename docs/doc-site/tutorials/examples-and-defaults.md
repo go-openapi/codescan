@@ -1,0 +1,50 @@
+---
+title: Examples & defaults
+weight: 40
+description: |
+  Attach example values and defaults to properties — and understand the narrow
+  swagger:default hint.
+---
+
+Example values and defaults are documentation that travels with the schema: an
+`example:` shows a caller what a value looks like, a `default:` declares what the
+field is when the caller omits it. Both are typed to the field — a numeric
+default on an integer field is a JSON number, not a string. The panes below pair
+the annotated Go with the fragment the scanner emits, from the test-covered
+[`docs/examples/concepts/examples`](https://github.com/go-openapi/codescan/tree/master/docs/examples/concepts/examples)
+package.
+
+For the exact value shapes these keywords accept, see
+[Keywords]({{% relref "/maintainers/keywords" %}}).
+
+## example
+
+`example: <value>` attaches an `example` to the property, coerced to the field's
+type — `Hello, world!` stays a string, `3` becomes a number.
+
+{{< example go="concepts/examples/examples.go" goregion="example"
+            json="concepts/examples/testdata/example.json" jsonlabel="#/definitions/Greeting" >}}
+
+## default
+
+`default: <value>` sets the property's `default`, again typed to the field — `8080`
+is a number, `false` a boolean, `auto` a string.
+
+{{< example go="concepts/examples/examples.go" goregion="default"
+            json="concepts/examples/testdata/default.json" jsonlabel="#/definitions/Settings" >}}
+
+## swagger:default
+
+`swagger:default` is a narrow, value-only classifier hint placed on a `var` or
+`const`. It does not publish a spec entity of its own — it has no standalone
+output — so most spec defaults are carried by the `default:` keyword above
+rather than this annotation.
+
+{{< code file="concepts/examples/examples.go" lang="go" region="swaggerdefault" >}}
+
+## What's next
+
+- [Other type decorators]({{% relref "/tutorials/other-type-decorators" %}}) —
+  `readOnly` and `deprecated`.
+- [Validations]({{% relref "/tutorials/validations" %}}) — constrain the values
+  these examples illustrate.

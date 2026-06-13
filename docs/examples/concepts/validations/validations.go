@@ -92,7 +92,7 @@ type RateLimited struct {
 	// XRateRemaining is the remaining request budget.
 	//
 	// minimum: 0
-	XRateRemaining int32 `json:"X-Rate-Remaining"`
+	XRateRemaining int32 `json:"X-Rate-Remaining"` //nolint:tagliatelle // this is the canonicalized header name
 }
 
 // endsnippet:header
