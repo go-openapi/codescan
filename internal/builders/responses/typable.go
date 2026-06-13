@@ -25,7 +25,17 @@ func (ht responseTypable) In() string { return ht.in }
 
 func (ht responseTypable) Level() int { return 0 }
 
+// Typed writes the primitive type onto the body schema in body mode,
+// or onto the header in SimpleSchema mode. Without the body branch a
+// primitive `Body` field (e.g. `Body string`) lands its type on the
+// header, which body responses discard — leaving the response with no
+// schema at all (go-swagger#2942). Mirrors SetRef's body/non-body
+// split.
 func (ht responseTypable) Typed(tpe, format string) {
+	if ht.in == inBody {
+		ht.Schema().Typed(tpe, format)
+		return
+	}
 	ht.header.Typed(tpe, format)
 }
 

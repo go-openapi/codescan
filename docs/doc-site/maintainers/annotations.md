@@ -639,7 +639,9 @@ body in `swagger:route`, or the YAML `$ref` form in
 The struct's fields contribute the response shape:
 
 - A field named `Body` (or carrying `in: body`) becomes the response
-  body schema.
+  body schema. The body may be a struct, a `$ref`'d model, **or a
+  primitive** — e.g. `Body string` emits `schema: {type: string}` and
+  `Body []int` emits `schema: {type: array, items: {type: integer}}`.
 - Other fields carrying `in: header` become response headers.
 
 **Where it goes.** On a struct declaration.

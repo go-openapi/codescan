@@ -31,6 +31,35 @@ var primitiveTypes = map[string]struct{}{
 	"object":  {},
 }
 
+// responseBodyPrimitives are the OAS v2 scalar primitive type spellings
+// accepted as a `body:` type on a swagger:route response line. Arrays
+// are expressed with the `[]` prefix (`body:[]string`), so the bare
+// word `array` is intentionally absent. `object` is absent too — a
+// free-form/structured object body is declared by referencing a model
+// (`body:MyType`), not by the bare keyword.
+//
+//nolint:gochecknoglobals // immutable lookup table; read-only.
+var responseBodyPrimitives = map[string]struct{}{
+	"string":  {},
+	"number":  {},
+	"integer": {},
+	"boolean": {},
+}
+
+// responseBodyReservedTypes are OAS/JSON type keywords that look like a
+// body type but are NOT valid as a `body:` response type: `array` /
+// `object` (use `[]T` / a model name) and `file` / `null` (unsupported
+// in this context — `file` would need extra produces/context checks).
+// They draw a diagnostic instead of being resolved as a model $ref.
+//
+//nolint:gochecknoglobals // immutable lookup table; read-only.
+var responseBodyReservedTypes = map[string]struct{}{
+	"array":  {},
+	"object": {},
+	"file":   {},
+	"null":   {},
+}
+
 // applyBlockToRoute parses route.Remaining through grammar and
 // writes Summary / Description / per-keyword content onto op.
 //
@@ -272,6 +301,32 @@ func normaliseSimpleType(t string) string {
 	return t
 }
 
+// primitiveBodySchema returns a typed primitive Schema when name is an
+// OAS v2 scalar primitive type spelling (per responseBodyPrimitives),
+// wrapped in `arrays` nested array layers; it returns nil otherwise so
+// the caller can diagnose a reserved keyword or fall back to model
+// reference resolution.
+//
+// This gives swagger:route responses a path to a primitive body via the
+// unambiguous `body:` tag — `200: body:string` → {schema: {type: string}},
+// `200: body:[]integer` → {schema: {type: array, items: {type: integer}}}
+// — mirroring buildBodySchema's primitive handling for body parameters
+// (go-swagger#2942). The bare/untagged `200: string` form is NOT promoted
+// (an untagged token is a response name, not a type).
+func primitiveBodySchema(name string, arrays int) *oaispec.Schema {
+	if _, ok := responseBodyPrimitives[name]; !ok {
+		return nil
+	}
+	leaf := &oaispec.Schema{SchemaProps: oaispec.SchemaProps{Type: oaispec.StringOrArray{name}}}
+	for range arrays {
+		leaf = &oaispec.Schema{SchemaProps: oaispec.SchemaProps{
+			Type:  oaispec.StringOrArray{"array"},
+			Items: &oaispec.SchemaOrArray{Schema: leaf},
+		}}
+	}
+	return leaf
+}
+
 // resolveBodySchema builds a Schema for a body param/response's
 // type reference. arrayLayer is the number of `[]` array wrappers
 // already stripped from the ref; the function applies them as nested
@@ -373,7 +428,21 @@ func (r *Builder) dispatchResponses(p grammar.Property, op *oaispec.Operation) e
 func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Response, bool) {
 	switch {
 	case decl.BodyTypeRef != "":
-		schema := r.resolveBodySchema(decl.BodyTypeRef, decl.Arrays)
+		schema := primitiveBodySchema(decl.BodyTypeRef, decl.Arrays)
+		if schema == nil {
+			if _, reserved := responseBodyReservedTypes[decl.BodyTypeRef]; reserved {
+				r.RecordDiagnostic(grammar.Diagnostic{
+					Pos:      decl.Pos,
+					Severity: grammar.SeverityWarning,
+					Code:     grammar.CodeInvalidAnnotation,
+					Message: "response " + decl.Code + ": body:" + decl.BodyTypeRef + " — " +
+						decl.BodyTypeRef + " is not a supported response body type; use a primitive " +
+						"(string/number/integer/boolean), an array of those (body:[]string), or a model name",
+				})
+				return oaispec.Response{}, false
+			}
+			schema = r.resolveBodySchema(decl.BodyTypeRef, decl.Arrays)
+		}
 		if schema == nil {
 			r.RecordDiagnostic(grammar.Diagnostic{
 				Pos:      decl.Pos,
@@ -415,12 +484,23 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 			}
 			// Dangling refs (not in responses, not in definitions)
 			// emit a diagnostic and are dropped rather than silently
-			// emitting an invalid $ref.
+			// emitting an invalid $ref. A bare primitive type spelling
+			// (`200: string`) is intentionally NOT promoted to a typed
+			// schema — an untagged token is a response/model NAME, and
+			// reading it as a type would make the syntax ambiguous. The
+			// unambiguous form is `body:<type>` (no Go type name carries
+			// a `:`), so point the author there.
+			msg := "response ref " + decl.ResponseRef + " not found in responses or definitions; dropped"
+			if _, isPrim := responseBodyPrimitives[decl.ResponseRef]; isPrim {
+				msg = "response " + decl.Code + ": " + decl.ResponseRef +
+					" reads " + decl.ResponseRef + " as a response name, not a type; " +
+					"for a primitive body write `" + decl.Code + ": body:" + decl.ResponseRef + "`"
+			}
 			r.RecordDiagnostic(grammar.Diagnostic{
 				Pos:      decl.Pos,
 				Severity: grammar.SeverityWarning,
 				Code:     grammar.CodeInvalidAnnotation,
-				Message:  "response ref " + decl.ResponseRef + " not found in responses or definitions; dropped",
+				Message:  msg,
 			})
 			return oaispec.Response{}, false
 		}

@@ -1,0 +1,111 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/array": {
+      "get": {
+        "tags": [
+          "misc"
+        ],
+        "operationId": "getArray",
+        "responses": {
+          "200": {
+            "description": "string",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bare": {
+      "get": {
+        "tags": [
+          "misc"
+        ],
+        "operationId": "getBare",
+        "responses": {}
+      }
+    },
+    "/named": {
+      "get": {
+        "tags": [
+          "misc"
+        ],
+        "operationId": "getNamed",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/arrayBodyResponse"
+          }
+        }
+      }
+    },
+    "/reserved": {
+      "get": {
+        "tags": [
+          "misc"
+        ],
+        "operationId": "getReserved",
+        "responses": {}
+      }
+    },
+    "/tagged": {
+      "get": {
+        "tags": [
+          "misc"
+        ],
+        "operationId": "getTagged",
+        "responses": {
+          "200": {
+            "description": "integer",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "/thing": {
+      "get": {
+        "tags": [
+          "misc"
+        ],
+        "operationId": "getThing",
+        "responses": {
+          "200": {
+            "description": "Thing",
+            "schema": {
+              "$ref": "#/definitions/Thing"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Thing": {
+      "type": "object",
+      "title": "Thing is the model-ref control.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/primitive-response"
+    }
+  },
+  "responses": {
+    "arrayBodyResponse": {
+      "description": "arrayBodyResponse is a swagger:response whose body is an array of a\nprimitive type.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
