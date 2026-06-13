@@ -949,6 +949,40 @@ so the contract can't drift silently.
 
 ---
 
+## <a id="decl-shape-recheck"></a>§decl-shape-recheck — top-level model shape re-check after type resolution
+
+For a top-level model declaration, `buildFromDecl` dispatches the
+doc-comment block (`applyDeclCommentBlock` → `DispatchSchemaLevel0`)
+**before** `buildFromType` resolves the Go type onto the schema. So at
+dispatch time `schema.Type` is still empty, and the inline `checkShape`
+guard — which gates a validation keyword on the schema's resolved type —
+sees `""` ("type unknown") and accepts everything. A shape-constrained
+keyword on a mismatched scalar model (e.g. `minProperties:` on a
+`type Foo string`) would therefore be written and never flagged.
+
+Field- and items-level dispatch don't have this problem: their target's
+type is already set when their block is dispatched, so `checkShape`
+gates correctly inline.
+
+To close the top-level gap, `Build` calls
+`handlers.RecheckSchemaShape(&schema, pos, diag)` after `buildFromDecl`
+returns. It re-validates the shape-constrained validations now present on
+the schema against the resolved `schema.Type`, stripping any that are
+illegal for that type and emitting one `CodeShapeMismatch` warning per
+strip (at the decl position). `uniqueItems` is intentionally not
+rechecked — its grammar keyword (`unique`) carries no type-domain rule,
+matching the field/items paths which likewise never shape-gate it.
+
+This is a deliberate post-hoc strip rather than a reorder of
+`buildFromDecl`: moving the validation dispatch after type-building would
+also move `default:` / `enum:` coercion (which reads `schema.Type` /
+`schema.Format`), changing coercion results for top-level scalar models
+and rippling through goldens. The recheck is purely additive — it only
+removes already-illegal validations — so it leaves every valid case (and
+its golden) untouched.
+
+---
+
 ## <a id="classifier-walkers"></a>§classifier-walkers — per-call-site classifier walkers and `findAnnotationArg`'s single-word filter
 
 The schema builder dispatches user-classifier annotations

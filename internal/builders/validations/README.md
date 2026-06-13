@@ -148,7 +148,7 @@ dialect Swagger 2.0 inherits):
 | `pattern`, `minLength`, `maxLength` | `string` |
 | `maximum`, `minimum`, `multipleOf` | `integer`, `number` |
 | `minItems`, `maxItems`, `uniqueItems` | `array` |
-| `minProperties`, `maxProperties` | `object` |
+| `minProperties`, `maxProperties`, `patternProperties` | `object` |
 
 Keywords intentionally absent from the table:
 

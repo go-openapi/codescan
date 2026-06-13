@@ -171,6 +171,9 @@ const (
 	KwMinItems            = "minItems"
 	KwUnique              = "unique"
 	KwCollectionFormat    = "collectionFormat"
+	KwMaxProperties       = "maxProperties"
+	KwMinProperties       = "minProperties"
+	KwPatternProperties   = "patternProperties"
 	KwDefault             = "default"
 	KwExample             = "example"
 	KwEnum                = "enum"
@@ -244,6 +247,25 @@ var keywords = []Keyword{
 		aka("collection format", "collection-format"),
 		asEnumOption("csv", "ssv", "tsv", "pipes", "multi"),
 		ctx(CtxParam, CtxHeader, CtxItems)),
+
+	// Object validations. Full-Schema-only (CtxSchema): object
+	// property-count bounds have no SimpleSchema (param/header/items)
+	// equivalent in OAS v2. Shape-restricted to `object` schemas by
+	// validations.keywordTypeRules.
+	keyword(KwMaxProperties,
+		aka("max properties", "max-properties",
+			"maximum properties", "maximum-properties", "maximumProperties"),
+		asInt(),
+		ctx(CtxSchema)),
+	keyword(KwMinProperties,
+		aka("min properties", "min-properties",
+			"minimum properties", "minimum-properties", "minimumProperties"),
+		asInt(),
+		ctx(CtxSchema)),
+	keyword(KwPatternProperties,
+		aka("pattern properties", "pattern-properties"),
+		asString(),
+		ctx(CtxSchema)),
 
 	// Schema decorators with body-accepting bodies (default/example/enum).
 	keyword(KwDefault,

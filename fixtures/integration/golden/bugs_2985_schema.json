@@ -1,0 +1,14 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "MyObjectType": {
+      "type": "object",
+      "title": "MyObjectType is a free-form object with property-count bounds.",
+      "maxProperties": 10,
+      "minProperties": 1,
+      "additionalProperties": {},
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2985"
+    }
+  }
+}

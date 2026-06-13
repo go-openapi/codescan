@@ -205,6 +205,12 @@ func (c *refOverrideCollector) onInteger(p grammar.Property, val int64) {
 	case grammar.KwMaxItems:
 		c.valid.SetMaxItems(val)
 		c.markValidation()
+	case grammar.KwMinProperties:
+		c.valid.SetMinProperties(val)
+		c.markValidation()
+	case grammar.KwMaxProperties:
+		c.valid.SetMaxProperties(val)
+		c.markValidation()
 	}
 }
 
@@ -230,6 +236,9 @@ func (c *refOverrideCollector) onString(p grammar.Property, val string) {
 	switch p.Keyword.Name {
 	case grammar.KwPattern:
 		handlers.ApplyPattern(p, c.valid, val, c.builder.RecordDiagnostic)
+		c.markValidation()
+	case grammar.KwPatternProperties:
+		handlers.ApplyPatternProperties(p, c.valid, val, c.builder.RecordDiagnostic)
 		c.markValidation()
 	case grammar.KwDefault:
 		if v, err := validations.ParseDefault(val, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {

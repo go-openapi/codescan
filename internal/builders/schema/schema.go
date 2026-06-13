@@ -12,6 +12,7 @@ import (
 	"github.com/go-openapi/swag/mangling"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
+	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
@@ -68,6 +69,13 @@ func (s *Builder) Build(opts ...Option) error {
 		if err != nil {
 			return err
 		}
+
+		// The decl-comment block is dispatched before the Go type is
+		// resolved onto the schema (see buildFromDecl), so the inline
+		// checkShape ran against an empty type. Re-gate now that the
+		// type is known: strip validations illegal for the resolved
+		// type and warn. See [§decl-shape-recheck](./README.md#decl-shape-recheck).
+		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
 
 		s.definitions[s.Name] = schema
 

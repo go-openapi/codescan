@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "InvalidPattern": {
+      "description": "InvalidPattern carries a regex that does not compile under Go's RE2\nengine. The value is preserved on the schema but a CodeInvalidAnnotation\ndiagnostic is emitted (the keyword is NOT dropped silently).",
+      "type": "object",
+      "additionalProperties": {},
+      "patternProperties": {
+        "[unclosed(": {}
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pattern-properties"
+    },
+    "ValidPatterns": {
+      "description": "ValidPatterns is a free-form object constrained by two property-name\nregexes.",
+      "type": "object",
+      "additionalProperties": {},
+      "patternProperties": {
+        "^[a-z]+$": {},
+        "^x-": {}
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pattern-properties"
+    }
+  }
+}

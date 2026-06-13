@@ -1,0 +1,45 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/things": {
+      "get": {
+        "operationId": "listThings",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Filter",
+            "description": "Filter is a simple query parameter.",
+            "name": "filter",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "string",
+            "schema": {
+              "$ref": "#/definitions/string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ObjectModel": {
+      "description": "ObjectModel is a free-form object that legitimately carries the object\nvalidation keywords — they are kept on the schema.",
+      "type": "object",
+      "maxProperties": 9,
+      "minProperties": 1,
+      "additionalProperties": {},
+      "patternProperties": {
+        "^x-": {}
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/object-keywords-context"
+    },
+    "ScalarModel": {
+      "description": "ScalarModel is a string model that wrongly carries object validation\nkeywords. They are stripped (with a shape-mismatch diagnostic) because\nthe resolved type is string, not object.",
+      "type": "string",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/object-keywords-context"
+    }
+  }
+}

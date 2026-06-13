@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"go/token"
 	"regexp"
 	"strings"
 
@@ -53,15 +54,30 @@ func (sv SchemaValidations) SetMinimum(val float64, exclusive bool) {
 	sv.current.Minimum = &val
 	sv.current.ExclusiveMinimum = exclusive
 }
-func (sv SchemaValidations) SetMultipleOf(val float64) { sv.current.MultipleOf = &val }
-func (sv SchemaValidations) SetMinItems(val int64)     { sv.current.MinItems = &val }
-func (sv SchemaValidations) SetMaxItems(val int64)     { sv.current.MaxItems = &val }
-func (sv SchemaValidations) SetMinLength(val int64)    { sv.current.MinLength = &val }
-func (sv SchemaValidations) SetMaxLength(val int64)    { sv.current.MaxLength = &val }
-func (sv SchemaValidations) SetPattern(val string)     { sv.current.Pattern = val }
-func (sv SchemaValidations) SetUnique(val bool)        { sv.current.UniqueItems = val }
-func (sv SchemaValidations) SetDefault(val any)        { sv.current.Default = val }
-func (sv SchemaValidations) SetExample(val any)        { sv.current.Example = val }
+func (sv SchemaValidations) SetMultipleOf(val float64)  { sv.current.MultipleOf = &val }
+func (sv SchemaValidations) SetMinItems(val int64)      { sv.current.MinItems = &val }
+func (sv SchemaValidations) SetMaxItems(val int64)      { sv.current.MaxItems = &val }
+func (sv SchemaValidations) SetMinProperties(val int64) { sv.current.MinProperties = &val }
+func (sv SchemaValidations) SetMaxProperties(val int64) { sv.current.MaxProperties = &val }
+func (sv SchemaValidations) SetMinLength(val int64)     { sv.current.MinLength = &val }
+func (sv SchemaValidations) SetMaxLength(val int64)     { sv.current.MaxLength = &val }
+func (sv SchemaValidations) SetPattern(val string)      { sv.current.Pattern = val }
+
+// SetPatternProperties adds one regex → empty-schema entry to the
+// schema's patternProperties map. The empty value schema (`{}`) means
+// "properties whose name matches pattern are allowed (any value)" —
+// the annotation surface carries only the regex, not a per-pattern
+// value schema. Repeated patternProperties lines accumulate distinct
+// entries.
+func (sv SchemaValidations) SetPatternProperties(pattern string) {
+	if sv.current.PatternProperties == nil {
+		sv.current.PatternProperties = make(oaispec.SchemaProperties)
+	}
+	sv.current.PatternProperties[pattern] = oaispec.Schema{}
+}
+func (sv SchemaValidations) SetUnique(val bool) { sv.current.UniqueItems = val }
+func (sv SchemaValidations) SetDefault(val any) { sv.current.Default = val }
+func (sv SchemaValidations) SetExample(val any) { sv.current.Example = val }
 
 // SetEnum writes the parsed enum onto the schema and strips any
 // inherited x-go-enum-desc that the field-level override has made
@@ -151,16 +167,41 @@ func DispatchSchemaItemsLevel(block grammar.Block, target *oaispec.Schema, depth
 // diag may be nil; when nil, the RE2 mismatch warning is dropped.
 func ApplyPattern(p grammar.Property, valid SchemaValidations, val string, diag func(grammar.Diagnostic)) {
 	valid.SetPattern(val)
-	if val == "" {
+	warnInvalidRE2(p, grammar.KwPattern, val, diag)
+}
+
+// ApplyPatternProperties adds a regex → empty-schema entry to the
+// schema's patternProperties map and runs the same best-effort RE2
+// hygiene check as ApplyPattern: a regex that does not compile in Go's
+// RE2 engine emits CodeInvalidAnnotation but is preserved on the schema
+// (downstream tools may use JSON Schema's wider regex dialect).
+//
+// Exported for symmetry with ApplyPattern; the schema package's
+// refOverrideCollector applies the same semantics on $ref overrides.
+//
+// diag may be nil; when nil, the RE2 mismatch warning is dropped.
+func ApplyPatternProperties(p grammar.Property, valid SchemaValidations, val string, diag func(grammar.Diagnostic)) {
+	valid.SetPatternProperties(val)
+	warnInvalidRE2(p, grammar.KwPatternProperties, val, diag)
+}
+
+// warnInvalidRE2 emits a CodeInvalidAnnotation warning when val is a
+// non-empty string that does not compile under Go's RE2 engine. The
+// keyword name is used to prefix the message so pattern and
+// patternProperties produce parallel diagnostics. No-op on empty val
+// or nil diag — the value is always preserved on the schema by the
+// caller regardless.
+func warnInvalidRE2(p grammar.Property, keyword, val string, diag func(grammar.Diagnostic)) {
+	if val == "" || diag == nil {
 		return
 	}
-	if _, err := regexp.Compile(val); err != nil && diag != nil {
+	if _, err := regexp.Compile(val); err != nil {
 		diag(grammar.Diagnostic{
 			Pos:      p.Pos,
 			Severity: grammar.SeverityWarning,
 			Code:     grammar.CodeInvalidAnnotation,
 			Message: strings.TrimSpace(
-				"pattern: " + val + " is not a valid Go RE2 regex (" + err.Error() + "); " +
+				keyword + ": " + val + " is not a valid Go RE2 regex (" + err.Error() + "); " +
 					"the value is preserved on the schema but downstream RE2 validators will fail",
 			),
 		})
@@ -247,8 +288,9 @@ func schemaNumberHandler(ps *oaispec.Schema, valid SchemaValidations,
 }
 
 // schemaIntegerHandler returns a Walker.Integer callback bound to
-// valid. Recognises minLength / maxLength / minItems / maxItems.
-// Skips on typing failure or shape mismatch.
+// valid. Recognises minLength / maxLength / minItems / maxItems /
+// minProperties / maxProperties. Skips on typing failure or shape
+// mismatch.
 func schemaIntegerHandler(ps *oaispec.Schema, valid SchemaValidations,
 	diag func(grammar.Diagnostic),
 ) func(grammar.Property, int64) {
@@ -268,6 +310,10 @@ func schemaIntegerHandler(ps *oaispec.Schema, valid SchemaValidations,
 			valid.SetMinItems(val)
 		case grammar.KwMaxItems:
 			valid.SetMaxItems(val)
+		case grammar.KwMinProperties:
+			valid.SetMinProperties(val)
+		case grammar.KwMaxProperties:
+			valid.SetMaxProperties(val)
 		}
 	}
 }
@@ -323,11 +369,13 @@ func schemaBoolHandler(enclosing, ps *oaispec.Schema, name string, valid SchemaV
 
 // schemaStringHandler returns a Walker.String callback.
 //
-// Recognises pattern (raw regex) and the enum keyword's pre-typed enum-option
-// form (rare; comma-list / JSON-array forms travel through Raw).
+// Recognises pattern (raw regex), patternProperties (object regex key)
+// and the enum keyword's pre-typed enum-option form (rare; comma-list /
+// JSON-array forms travel through Raw).
 //
-// Shape-checks pattern (string-only); default/example/enum are
-// type-independent (ParseDefault handles the type-specific coercion).
+// Shape-checks pattern (string-only) and patternProperties (object-only);
+// default/example/enum are type-independent (ParseDefault handles the
+// type-specific coercion).
 func schemaStringHandler(ps *oaispec.Schema, valid SchemaValidations,
 	diag func(grammar.Diagnostic),
 ) func(grammar.Property, string) {
@@ -338,6 +386,8 @@ func schemaStringHandler(ps *oaispec.Schema, valid SchemaValidations,
 		switch p.Keyword.Name {
 		case grammar.KwPattern:
 			ApplyPattern(p, valid, val, diag)
+		case grammar.KwPatternProperties:
+			ApplyPatternProperties(p, valid, val, diag)
 		case grammar.KwDefault:
 			if v, err := validations.ParseDefault(val, SchemaTypeOf(ps), ps.Format); err == nil {
 				valid.SetDefault(v)
@@ -395,6 +445,49 @@ func checkShape(p grammar.Property, ps *oaispec.Schema, diag func(grammar.Diagno
 		})
 	}
 	return false
+}
+
+// RecheckSchemaShape re-validates the shape-constrained validations
+// already written onto sch against sch's now-resolved type, stripping
+// any that are illegal for that type and emitting CodeShapeMismatch for
+// each (at pos).
+//
+// This exists for the top-level model decl path only: there the
+// doc-comment block is dispatched (via DispatchSchemaLevel0) before the
+// Go type has been built onto the schema, so the inline checkShape sees
+// an empty type and cannot gate. Field- and items-level dispatch
+// already run after their target's type is set, so they don't need it.
+//
+// uniqueItems is intentionally not rechecked: its grammar keyword
+// (`unique`) carries no type-domain rule, matching the field/items
+// paths which likewise never shape-gate it. diag may be nil.
+func RecheckSchemaShape(sch *oaispec.Schema, pos token.Position, diag func(grammar.Diagnostic)) {
+	if sch == nil || len(sch.Type) == 0 {
+		return
+	}
+	typ := sch.Type[0]
+	drop := func(keyword string, set bool, unset func()) {
+		if !set {
+			return
+		}
+		if ok, hint := validations.IsLegalForType(grammar.Keyword{Name: keyword}, typ); !ok {
+			unset()
+			if diag != nil {
+				diag(grammar.Warnf(pos, grammar.CodeShapeMismatch, "%s", hint))
+			}
+		}
+	}
+	drop(grammar.KwPattern, sch.Pattern != "", func() { sch.Pattern = "" })
+	drop(grammar.KwMinLength, sch.MinLength != nil, func() { sch.MinLength = nil })
+	drop(grammar.KwMaxLength, sch.MaxLength != nil, func() { sch.MaxLength = nil })
+	drop(grammar.KwMaximum, sch.Maximum != nil, func() { sch.Maximum = nil; sch.ExclusiveMaximum = false })
+	drop(grammar.KwMinimum, sch.Minimum != nil, func() { sch.Minimum = nil; sch.ExclusiveMinimum = false })
+	drop(grammar.KwMultipleOf, sch.MultipleOf != nil, func() { sch.MultipleOf = nil })
+	drop(grammar.KwMinItems, sch.MinItems != nil, func() { sch.MinItems = nil })
+	drop(grammar.KwMaxItems, sch.MaxItems != nil, func() { sch.MaxItems = nil })
+	drop(grammar.KwMinProperties, sch.MinProperties != nil, func() { sch.MinProperties = nil })
+	drop(grammar.KwMaxProperties, sch.MaxProperties != nil, func() { sch.MaxProperties = nil })
+	drop(grammar.KwPatternProperties, len(sch.PatternProperties) > 0, func() { sch.PatternProperties = nil })
 }
 
 // clearStaleEnumDesc removes the x-go-enum-desc extension and strips

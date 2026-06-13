@@ -108,7 +108,7 @@ func DispatchParamLevel0(block grammar.Block, param *oaispec.Parameter, diag fun
 	block.Walk(grammar.Walker{
 		FilterDepth: 0,
 		Number:      Number(valid),
-		Integer:     Integer(valid),
+		Integer:     Integer(valid, diag),
 		Bool: ComposeBool(
 			UniqueBool(valid),
 			paramRequiredBool(param),
@@ -116,6 +116,7 @@ func DispatchParamLevel0(block grammar.Block, param *oaispec.Parameter, diag fun
 		String: ComposeString(
 			PatternString(valid),
 			CollectionFormatString(valid),
+			UnsupportedSimpleSchemaString(diag),
 		),
 		Raw: Raw(valid, scheme, func(err error) bool {
 			firstErr = err
@@ -142,11 +143,12 @@ func DispatchHeaderLevel0(block grammar.Block, header *oaispec.Header, diag func
 	block.Walk(grammar.Walker{
 		FilterDepth: 0,
 		Number:      Number(valid),
-		Integer:     Integer(valid),
+		Integer:     Integer(valid, diag),
 		Bool:        UniqueBool(valid),
 		String: ComposeString(
 			PatternString(valid),
 			CollectionFormatString(valid),
+			UnsupportedSimpleSchemaString(diag),
 		),
 		Raw:        Raw(valid, scheme, nil),
 		Extension:  Extension(header),
@@ -166,11 +168,12 @@ func DispatchItemsLevel(block grammar.Block, target *oaispec.Items, depth int, d
 	block.Walk(grammar.Walker{
 		FilterDepth: depth,
 		Number:      Number(valid),
-		Integer:     Integer(valid),
+		Integer:     Integer(valid, diag),
 		Bool:        UniqueBool(valid),
 		String: ComposeString(
 			PatternString(valid),
 			CollectionFormatString(valid),
+			UnsupportedSimpleSchemaString(diag),
 		),
 		Raw:        Raw(valid, scheme, nil),
 		Diagnostic: diag,
