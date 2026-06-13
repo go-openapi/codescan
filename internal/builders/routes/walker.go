@@ -130,6 +130,15 @@ func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation
 		return r.dispatchParameters(p, op)
 	case grammar.KwResponses:
 		return r.dispatchResponses(p, op)
+	case grammar.KwExternalDocs:
+		ed, err := handlers.ParseExternalDocs(p.Body)
+		if err != nil {
+			r.RecordDiagnostic(grammar.Warnf(p.Pos, grammar.CodeInvalidAnnotation, "externalDocs: %v", err))
+			return nil
+		}
+		if ed != nil {
+			op.ExternalDocs = ed
+		}
 	}
 	return nil
 }

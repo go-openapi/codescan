@@ -121,7 +121,7 @@ func DispatchParamLevel0(block grammar.Block, param *oaispec.Parameter, diag fun
 		Raw: Raw(valid, scheme, func(err error) bool {
 			firstErr = err
 			return true
-		}),
+		}, diag),
 		Extension:  Extension(param),
 		Diagnostic: diag,
 	})
@@ -150,7 +150,7 @@ func DispatchHeaderLevel0(block grammar.Block, header *oaispec.Header, diag func
 			CollectionFormatString(valid),
 			UnsupportedSimpleSchemaString(diag),
 		),
-		Raw:        Raw(valid, scheme, nil),
+		Raw:        Raw(valid, scheme, nil, diag),
 		Extension:  Extension(header),
 		Diagnostic: diag,
 	})
@@ -175,7 +175,7 @@ func DispatchItemsLevel(block grammar.Block, target *oaispec.Items, depth int, d
 			CollectionFormatString(valid),
 			UnsupportedSimpleSchemaString(diag),
 		),
-		Raw:        Raw(valid, scheme, nil),
+		Raw:        Raw(valid, scheme, nil, diag),
 		Diagnostic: diag,
 	})
 }

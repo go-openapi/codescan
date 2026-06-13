@@ -669,11 +669,18 @@ Terms-of-service prose paragraph. Multi-line body is joined with
 External documentation pointer as a YAML map with `description` and
 `url` keys. Aliases: `external docs`, `external-docs`.
 
-Currently **emitted on `swagger:meta` only** — it lands on the
-top-level `externalDocs` object. An empty block (no `description`/`url`)
-is skipped rather than emitting a bare `externalDocs: {}`. The keyword
-is grammar-legal on route / operation / schema contexts too, but
-emitting it there is a separate forthcoming feature.
+Emitted on:
+
+- **`swagger:meta`** → the top-level `externalDocs` object;
+- **`swagger:route` / `swagger:operation`** → the operation's `externalDocs`;
+- **`swagger:model`** (and any full Schema, e.g. a body parameter's schema)
+  → the schema's `externalDocs`.
+
+An empty block (no `description`/`url`) is skipped rather than emitting a
+bare `externalDocs: {}`. It is a **full-Schema-only** keyword: on a
+SimpleSchema site (a non-body parameter, response header, or items
+chain) it is dropped with a `CodeUnsupportedInSimpleSchema` diagnostic.
+`swagger:meta`'s `tags` do not yet carry `externalDocs`.
 
 ```
 ExternalDocs:

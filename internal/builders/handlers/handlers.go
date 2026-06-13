@@ -255,12 +255,18 @@ func ComposeString(hs ...func(grammar.Property, string)) func(grammar.Property, 
 //     error up so the build surfaces a malformed default/example
 //     as a hard failure.
 //
+// diag receives a CodeUnsupportedInSimpleSchema warning when a
+// full-Schema-only raw keyword (e.g. externalDocs:) appears on this
+// SimpleSchema site; the keyword is dropped. diag may be nil.
+//
 // # Details
 //
 // See [§raw-errsink](./README.md#raw-errsink) for the per-dispatcher
 // wiring and the integration tests that exercise the parameter-path
 // hard-failure behaviour.
-func Raw(v ifaces.ValidationBuilder, scheme *oaispec.SimpleSchema, errSink func(error) bool) func(grammar.Property) {
+func Raw(v ifaces.ValidationBuilder, scheme *oaispec.SimpleSchema, errSink func(error) bool,
+	diag func(grammar.Diagnostic),
+) func(grammar.Property) {
 	stopped := false
 	return func(pr grammar.Property) {
 		if stopped {
@@ -287,6 +293,17 @@ func Raw(v ifaces.ValidationBuilder, scheme *oaispec.SimpleSchema, errSink func(
 			v.SetExample(val)
 		case grammar.KwEnum:
 			v.SetEnum(pr.Value)
+		default:
+			// Full-Schema-only raw keyword (externalDocs:) on a
+			// SimpleSchema site — drop with a diagnostic.
+			if diag != nil && !IsSimpleSchemaKeyword(pr.Keyword.Name) {
+				diag(grammar.Warnf(
+					pr.Pos,
+					grammar.CodeUnsupportedInSimpleSchema,
+					"%q is a full-Schema-only keyword and is not allowed under SimpleSchema mode; ignored",
+					pr.Keyword.Name,
+				))
+			}
 		}
 	}
 }

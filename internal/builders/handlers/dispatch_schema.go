@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"go/token"
 	"regexp"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	yamlparser "github.com/go-openapi/codescan/internal/parsers/yaml"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -112,7 +114,7 @@ func DispatchSchemaLevel0(block grammar.Block, enclosing, ps *oaispec.Schema, na
 		Integer:     schemaIntegerHandler(ps, valid, diag),
 		Bool:        schemaBoolHandler(enclosing, ps, name, valid, diag, opts),
 		String:      schemaStringHandler(ps, valid, diag),
-		Raw:         schemaRawHandler(ps, valid),
+		Raw:         schemaRawHandler(ps, valid, diag, opts),
 		Extension:   Extension(ps),
 		Diagnostic:  diag,
 	})
@@ -124,12 +126,13 @@ func DispatchSchemaLevel0(block grammar.Block, enclosing, ps *oaispec.Schema, na
 // dispatcher is narrower than the level-0 entry — only number/
 // integer/bool(unique)/string/raw handlers fire.
 //
-// opts.SimpleSchemaMode is accepted for symmetry but currently
-// doesn't alter items-level behaviour.
+// opts.SimpleSchemaMode is threaded to the raw handler so the
+// full-Schema-only externalDocs keyword is gated consistently; the
+// other items-level handlers are unaffected by it.
 //
 // diag may be nil; when nil, all diagnostics are dropped.
 func DispatchSchemaItemsLevel(block grammar.Block, target *oaispec.Schema, depth int,
-	diag func(grammar.Diagnostic), _ SchemaOptions,
+	diag func(grammar.Diagnostic), opts SchemaOptions,
 ) {
 	valid := NewSchemaValidations(target)
 
@@ -149,7 +152,7 @@ func DispatchSchemaItemsLevel(block grammar.Block, target *oaispec.Schema, depth
 			}
 		},
 		String:     schemaStringHandler(target, valid, diag),
-		Raw:        schemaRawHandler(target, valid),
+		Raw:        schemaRawHandler(target, valid, diag, opts),
 		Diagnostic: diag,
 	})
 }
@@ -404,9 +407,17 @@ func schemaStringHandler(ps *oaispec.Schema, valid SchemaValidations,
 
 // schemaRawHandler routes ShapeRawBlock / ShapeRawValue / ShapeNone /
 // ShapeCommaList properties — default:, example:, enum: when
-// expressed as raw bodies. Extensions travel through Walker.Extension
-// with YAML-typed values, so the KwExtensions arm is absent here.
-func schemaRawHandler(ps *oaispec.Schema, valid SchemaValidations) func(grammar.Property) {
+// expressed as raw bodies, plus externalDocs: (a YAML map body).
+// Extensions travel through Walker.Extension with YAML-typed values, so
+// the KwExtensions arm is absent here.
+//
+// externalDocs is full-Schema-only: under opts.SimpleSchemaMode it
+// emits CodeUnsupportedInSimpleSchema and is dropped (mirroring the
+// Bool handler's readOnly/discriminator gating). A malformed body emits
+// CodeInvalidAnnotation. diag may be nil.
+func schemaRawHandler(ps *oaispec.Schema, valid SchemaValidations,
+	diag func(grammar.Diagnostic), opts SchemaOptions,
+) func(grammar.Property) {
 	return func(p grammar.Property) {
 		switch p.Keyword.Name {
 		case grammar.KwDefault:
@@ -419,8 +430,50 @@ func schemaRawHandler(ps *oaispec.Schema, valid SchemaValidations) func(grammar.
 			}
 		case grammar.KwEnum:
 			valid.SetEnum(p.Value)
+		case grammar.KwExternalDocs:
+			if opts.SimpleSchemaMode {
+				if diag != nil {
+					diag(grammar.Warnf(
+						p.Pos,
+						grammar.CodeUnsupportedInSimpleSchema,
+						"%q is a full-Schema-only keyword and is not allowed under SimpleSchema mode; ignored",
+						p.Keyword.Name,
+					))
+				}
+				return
+			}
+			ed, err := ParseExternalDocs(p.Body)
+			if err != nil {
+				if diag != nil {
+					diag(grammar.Warnf(p.Pos, grammar.CodeInvalidAnnotation, "externalDocs: %v", err))
+				}
+				return
+			}
+			if ed != nil {
+				ps.ExternalDocs = ed
+			}
 		}
 	}
+}
+
+// ParseExternalDocs unmarshals an `externalDocs:` block body (a YAML
+// map with description/url keys) into a *spec.ExternalDocumentation.
+// Returns (nil, nil) for an empty/blank block so callers don't emit a
+// useless `externalDocs: {}` (the OAS object requires url). Shared by
+// the schema raw handler and the routes builder.
+func ParseExternalDocs(body string) (*oaispec.ExternalDocumentation, error) {
+	var out *oaispec.ExternalDocumentation
+	err := yamlparser.UnmarshalBody(body, func(data []byte) error {
+		var d oaispec.ExternalDocumentation
+		if err := json.Unmarshal(data, &d); err != nil {
+			return err
+		}
+		if d != (oaispec.ExternalDocumentation{}) {
+			out = &d
+		}
+		return nil
+	})
+	return out, err
 }
 
 // checkShape gates a Walker callback on
