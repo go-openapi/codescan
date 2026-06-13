@@ -1,0 +1,18 @@
+{
+  "description": "Task is a unit of work carrying an enum-typed field. Referencing Priority\nfrom a model is what makes the enum reachable, and so emitted.",
+  "type": "object",
+  "properties": {
+    "priority": {
+      "description": "Priority is the task's urgency.\nlow PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon.",
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon.",
+      "x-go-name": "Priority"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

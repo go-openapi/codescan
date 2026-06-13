@@ -1,0 +1,36 @@
+{
+  "get": {
+    "tags": [
+      "pets"
+    ],
+    "summary": "Lists pets in the store, optionally filtered by tag.",
+    "operationId": "listPets",
+    "parameters": [
+      {
+        "type": "string",
+        "x-go-name": "Tag",
+        "description": "Tag filters pets by tag.",
+        "name": "tag",
+        "in": "query"
+      },
+      {
+        "maximum": 100,
+        "minimum": 1,
+        "type": "integer",
+        "format": "int32",
+        "x-go-name": "Limit",
+        "description": "Limit caps the number of results.",
+        "name": "limit",
+        "in": "query"
+      }
+    ],
+    "responses": {
+      "200": {
+        "$ref": "#/responses/petsResponse"
+      },
+      "default": {
+        "$ref": "#/responses/errorResponse"
+      }
+    }
+  }
+}

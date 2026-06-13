@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package examples
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
+
+	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/testify/v2/assert"
+	"github.com/go-openapi/testify/v2/require"
+)
+
+func examplesRoot(t *testing.T) string {
+	t.Helper()
+	_, thisFile, _, ok := runtime.Caller(0)
+	require.True(t, ok)
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
+}
+
+func scanExamples(t *testing.T) *spec.Swagger {
+	t.Helper()
+	doc, err := codescan.Run(&codescan.Options{
+		WorkDir:    examplesRoot(t),
+		Packages:   []string{"./concepts/examples"},
+		ScanModels: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	return doc
+}
+
+// goldenJSON marshals one definition and compares it to (or, under
+// UPDATE_GOLDEN, rewrites) testdata/<feature>.json.
+//
+// Regenerate with: UPDATE_GOLDEN=1 go test ./...
+func goldenJSON(t *testing.T, doc *spec.Swagger, feature, defName string) {
+	t.Helper()
+	schema, ok := doc.Definitions[defName]
+	require.Truef(t, ok, "definition %q not found", defName)
+
+	got, err := json.MarshalIndent(schema, "", "  ")
+	require.NoError(t, err)
+	got = append(got, '\n')
+
+	golden := filepath.Join("testdata", feature+".json")
+	if os.Getenv("UPDATE_GOLDEN") != "" {
+		require.NoError(t, os.WriteFile(golden, got, 0o600))
+	}
+	want, err := os.ReadFile(golden)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(want), string(got))
+}
+
+// TestExampleFragments emits and verifies the golden fragments the tutorial
+// pairs with each source region. It also confirms example/default values are
+// coerced to the field's type rather than left as strings.
+func TestExampleFragments(t *testing.T) {
+	doc := scanExamples(t)
+
+	goldenJSON(t, doc, "example", "Greeting") // example: values, typed
+	goldenJSON(t, doc, "default", "Settings") // default: values, typed
+
+	// Type coercion: a numeric default on an int field is a JSON number, a
+	// boolean default a JSON bool — not strings.
+	port := doc.Definitions["Settings"].Properties["port"]
+	assert.EqualValues(t, 8080, port.Default)
+	verbose := doc.Definitions["Settings"].Properties["verbose"]
+	assert.Equal(t, false, verbose.Default)
+}

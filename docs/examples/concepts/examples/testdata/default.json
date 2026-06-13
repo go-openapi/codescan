@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "title": "Settings carries default values applied when a field is omitted.",
+  "properties": {
+    "mode": {
+      "description": "Mode is the run mode.",
+      "type": "string",
+      "default": "auto",
+      "x-go-name": "Mode"
+    },
+    "port": {
+      "description": "Port is the listen port.",
+      "type": "integer",
+      "format": "int32",
+      "default": 8080,
+      "x-go-name": "Port"
+    },
+    "verbose": {
+      "description": "Verbose toggles verbose logging.",
+      "type": "boolean",
+      "default": false,
+      "x-go-name": "Verbose"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+}

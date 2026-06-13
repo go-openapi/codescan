@@ -1,0 +1,11 @@
+{
+  "description": "RateLimited is a response carrying a validated header (a simple schema).",
+  "headers": {
+    "X-Rate-Remaining": {
+      "minimum": 0,
+      "type": "integer",
+      "format": "int32",
+      "description": "XRateRemaining is the remaining request budget."
+    }
+  }
+}

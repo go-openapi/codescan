@@ -1,0 +1,29 @@
+{
+  "get": {
+    "tags": [
+      "pets"
+    ],
+    "summary": "Get a pet by ID.",
+    "operationId": "getPet",
+    "parameters": [
+      {
+        "type": "integer",
+        "format": "int64",
+        "name": "id",
+        "in": "path",
+        "required": true
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "the requested pet",
+        "schema": {
+          "$ref": "#/definitions/Pet"
+        }
+      },
+      "default": {
+        "$ref": "#/responses/errorResponse"
+      }
+    }
+  }
+}

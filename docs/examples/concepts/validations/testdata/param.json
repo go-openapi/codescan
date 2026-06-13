@@ -1,0 +1,33 @@
+[
+  {
+    "maxLength": 50,
+    "minLength": 3,
+    "type": "string",
+    "x-go-name": "Q",
+    "description": "Q is the search text.",
+    "name": "q",
+    "in": "query"
+  },
+  {
+    "maximum": 100,
+    "minimum": 1,
+    "type": "integer",
+    "format": "int32",
+    "x-go-name": "Limit",
+    "description": "Limit caps the number of results.",
+    "name": "limit",
+    "in": "query"
+  },
+  {
+    "uniqueItems": true,
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "collectionFormat": "csv",
+    "x-go-name": "Sort",
+    "description": "Sort lists the sort fields.",
+    "name": "sort",
+    "in": "query"
+  }
+]

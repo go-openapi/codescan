@@ -1,0 +1,9 @@
+[
+  {
+    "type": "file",
+    "x-go-name": "Photo",
+    "description": "Photo is the image to upload.",
+    "name": "photo",
+    "in": "formData"
+  }
+]

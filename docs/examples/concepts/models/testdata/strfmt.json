@@ -1,0 +1,13 @@
+{
+  "description": "Device exposes a strfmt-typed field: wherever MAC appears it renders inline\nas {type: string, format: mac}.",
+  "type": "object",
+  "properties": {
+    "addr": {
+      "description": "Addr is the hardware address.",
+      "type": "string",
+      "format": "mac",
+      "x-go-name": "Addr"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

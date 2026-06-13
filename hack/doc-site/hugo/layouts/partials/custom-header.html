@@ -27,4 +27,34 @@
   overflow-x: auto;
   white-space: pre;
 }
+.example-grid {
+  /* The `example` shortcode: annotated Go (left) next to the spec it
+     produces (right). Two columns on wide screens, stacked on narrow. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+@media (max-width: 60rem) {
+  .example-grid { grid-template-columns: 1fr; }
+}
+.example-grid .example-pane {
+  min-width: 0; /* let code blocks shrink and scroll, not overflow the grid */
+}
+.example-grid .example-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  margin-bottom: 0.25rem;
+}
+.example-grid pre {
+  overflow-x: auto;
+  white-space: pre;
+}
+.example-grid .code-source {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
 </style>

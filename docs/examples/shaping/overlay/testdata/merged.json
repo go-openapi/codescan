@@ -1,0 +1,32 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Inventory API",
+    "version": "1.0.0"
+  },
+  "host": "api.example.com",
+  "basePath": "/v1",
+  "paths": {},
+  "definitions": {
+    "Health": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Widget": {
+      "type": "object",
+      "title": "Widget is discovered by the scan and merged onto the input spec.",
+      "properties": {
+        "id": {
+          "description": "ID identifies the widget.",
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/overlay"
+    }
+  }
+}

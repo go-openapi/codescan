@@ -1,0 +1,36 @@
+{
+  "Cart": {
+    "type": "object",
+    "title": "Cart references Order, so Order gets a definition and the field a $ref.",
+    "properties": {
+      "order": {
+        "$ref": "#/definitions/Order"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/discovery"
+  },
+  "Order": {
+    "description": "Order is reached only through Cart below. A referenced named type is emitted\nas a $ref target even without swagger:model.",
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "ID is the order identifier.",
+        "type": "string",
+        "x-go-name": "ID"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/discovery"
+  },
+  "Standalone": {
+    "description": "Standalone is never referenced, but swagger:model together with ScanModels\npublishes it anyway.",
+    "type": "object",
+    "properties": {
+      "label": {
+        "description": "Label is a free-text label.",
+        "type": "string",
+        "x-go-name": "Label"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/discovery"
+  }
+}

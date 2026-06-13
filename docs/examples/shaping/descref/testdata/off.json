@@ -1,0 +1,10 @@
+{
+  "description": "Person references Address through a field whose only decoration is a\ndescription.",
+  "type": "object",
+  "properties": {
+    "home": {
+      "$ref": "#/definitions/Address"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/descref"
+}

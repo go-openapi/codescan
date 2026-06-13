@@ -1,0 +1,15 @@
+{
+  "get": {
+    "tags": [
+      "legacy"
+    ],
+    "summary": "Ping is the legacy health check.",
+    "operationId": "ping",
+    "deprecated": true,
+    "responses": {
+      "200": {
+        "$ref": "#/responses/pingResponse"
+      }
+    }
+  }
+}

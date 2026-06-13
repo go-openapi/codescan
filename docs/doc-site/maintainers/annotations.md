@@ -1,0 +1,896 @@
+---
+title: "Annotations"
+weight: 10
+description: "The swagger:* annotation vocabulary: what each produces, where it attaches, and the keywords it admits."
+---
+
+
+Annotations are the `swagger:<name>` markers the scanner recognises in
+Go doc comments. Each annotation classifies the surrounding
+declaration — telling the scanner "this is a model definition", "this
+is a route handler", "this is meta-information about the API" — and
+opens the door for [keywords]({{% relref "keywords" %}}) inside the same comment
+block.
+
+There are twelve annotations. They divide cleanly by what they
+attach to:
+
+- **Spec-level**: `swagger:meta`.
+- **Model declarations**: `swagger:model`, `swagger:strfmt`,
+  `swagger:enum`, `swagger:allOf`, `swagger:alias`.
+- **Operation declarations**: `swagger:route`, `swagger:operation`.
+- **Companion declarations**: `swagger:parameters`, `swagger:response`.
+- **Local hints**: `swagger:ignore`, `swagger:name`, `swagger:type`,
+  `swagger:file`, `swagger:default`.
+
+This file is the **author-first reference**. Each entry covers:
+
+- What the annotation does and what it produces in the spec.
+- Where in the Go source it goes (package doc, type doc, field doc).
+- The shape of any argument the annotation accepts.
+- A short Go sample.
+- A pointer to the keywords that are legal inside the block.
+- A pointer to a real fixture in this repo for the full executable
+  example.
+
+For the per-keyword reference, see [keywords.md]({{% relref "keywords" %}}).
+For the embedded sub-languages (`Parameters:` and `Responses:` body
+grammars, YAML extensions, etc.), see
+[sub-languages.md]({{% relref "sub-languages" %}}). For the formal grammar,
+see [grammar.md]({{% relref "grammar" %}}).
+
+---
+
+## Table of contents
+
+- [How annotations attach](#how-annotations-attach)
+- [Annotation argument shapes](#annotation-argument-shapes)
+- [`swagger:meta`](#swaggermeta)
+- [`swagger:model`](#swaggermodel)
+- [`swagger:strfmt`](#swaggerstrfmt)
+- [`swagger:enum`](#swaggerenum)
+- [`swagger:allOf`](#swaggerallof)
+- [`swagger:alias`](#swaggeralias)
+- [`swagger:route`](#swaggerroute)
+- [`swagger:operation`](#swaggeroperation)
+- [`swagger:parameters`](#swaggerparameters)
+- [`swagger:response`](#swaggerresponse)
+- [`swagger:ignore`](#swaggerignore)
+- [`swagger:name`](#swaggername)
+- [`swagger:type`](#swaggertype)
+- [`swagger:file`](#swaggerfile)
+- [`swagger:default`](#swaggerdefault)
+
+---
+
+## How annotations attach
+
+An annotation is recognised when it appears at the start of a comment
+line in a doc comment. Leading whitespace, the `//` marker, and any
+`/* */` block-comment continuation noise are stripped — the lexer
+applies the same content-prefix-trim that every other godoc-aware
+tool does.
+
+Annotations attach to whichever Go declaration owns the comment
+group:
+
+- **Package doc** (`// Package foo …` followed by `package foo`) —
+  carries `swagger:meta`.
+- **Type declaration** (`type T struct { … }`, `type T int`,
+  `type T = Other`) — carries `swagger:model`, `swagger:strfmt`,
+  `swagger:enum`, `swagger:allOf`, `swagger:alias`, `swagger:ignore`,
+  `swagger:type`.
+- **Function or variable declaration** (`func ServeAPI() { … }`,
+  `var DoIt = func() { … }`) — carries `swagger:route`,
+  `swagger:operation`.
+- **Struct field doc** — carries `swagger:name`, `swagger:type`,
+  `swagger:ignore`, plus any of the [keyword reference]({{% relref "keywords" %}})
+  entries legal in `schema` / `param` / `header` context.
+
+One comment group may carry MORE than one annotation when the
+combinations are semantically compatible — e.g. `swagger:model` +
+`swagger:type` together overrides the auto-detected Go type while
+still publishing the model. The grammar parses both and the builder
+honours both.
+
+The **first** annotation in source order wins as the "primary"
+classifier — for example, a comment carrying `swagger:model` followed
+by `swagger:ignore` produces a model (the ignore is silently
+overridden because only the source-order-first annotation drives the
+short-circuit). Subsequent annotations are still parsed and visible
+via `Block.AnnotationKind()`-iteration, but the primary classifier
+determines which builder owns the decl.
+
+## Annotation argument shapes
+
+After the `swagger:<name>` head, an annotation may carry positional
+arguments. The shapes:
+
+- **No args**: `swagger:meta`, `swagger:ignore`, `swagger:enum`,
+  `swagger:allOf`, `swagger:file`, `swagger:default` — bare
+  annotation, the surrounding decl supplies the entity name.
+- **One IDENT arg**: `swagger:model Pet`, `swagger:response
+  errorResponse`, `swagger:strfmt uuid`, `swagger:name fullName`,
+  `swagger:type integer`, `swagger:alias TimestampAlias` — the
+  argument overrides or names the entity.
+- **One IDENT arg, optional**: `swagger:model` (bare — derives the
+  name from the Go decl) vs `swagger:model Pet` (overrides).
+- **List of IDENT args**: `swagger:parameters listItems createItem`
+  — declares the parameters group as legal for multiple operations.
+- **Header line**: `swagger:route GET /pets pets users listPets` and
+  `swagger:operation GET /pets users listPets` — a structured header
+  carrying method, path, tags, and operation ID. See the
+  per-annotation entries for the exact rules.
+
+---
+
+## `swagger:meta`
+
+**What it does.** Declares the package as the OpenAPI spec
+container. The scanner reads the package doc comment for top-level
+spec fields: title (via [stripPackagePrefix]({{% relref "grammar#prose" %}}) of
+the doc's first line), description, license, contact, host,
+basePath, version, schemes, consumes, produces, securityDefinitions,
+extensions, and the rest of the meta keyword surface.
+
+**Where it goes.** On the package doc comment.
+
+**Argument shape.** No args. Bare annotation.
+
+**Sample.**
+
+```go
+// Package petstore Petstore API.
+//
+// The purpose of this application is to provide an application
+// that is using plain Go code to define an API.
+//
+//     Schemes: http, https
+//     Host: petstore.swagger.io
+//     BasePath: /v2
+//     Version: 1.0.0
+//
+//     Consumes:
+//       - application/json
+//
+//     Produces:
+//       - application/json
+//
+// swagger:meta
+package petstore
+```
+
+**Legal keywords.** All [meta single-line keywords]({{% relref "keywords#meta-single-line-keywords" %}})
+(`schemes`, `version`, `host`, `basePath`, `license`, `contact`) plus
+the meta-scope [body keywords]({{% relref "keywords#body-keywords" %}})
+(`consumes`, `produces`, `security`, `securityDefinitions`,
+`extensions`, `infoExtensions`, `tos`, `externalDocs`).
+
+**Full example.** `fixtures/goparsing/spec/api.go`.
+
+---
+
+## `swagger:model`
+
+**What it does.** Declares a Go type as a published model. The
+scanner walks the type, emits a schema into the spec's `definitions`
+map, and resolves cross-references between models.
+
+**Where it goes.** On a type declaration (`type T struct { … }`,
+`type T int`, `type T = Other`, …).
+
+**Argument shape.** Optional IDENT — the name the model takes in
+`definitions`. Default: the Go type's name.
+
+**Sample.**
+
+```go
+// Pet is the petstore's primary entity.
+//
+// swagger:model
+type Pet struct {
+	// ID is the unique identifier.
+	ID int64 `json:"id"`
+
+	// Name is the pet's display name.
+	Name string `json:"name"`
+
+	// Tags categorise the pet.
+	Tags []string `json:"tags,omitempty"`
+}
+```
+
+With a name override:
+
+```go
+// swagger:model PetWithExtras
+type DetailedPet struct { … }
+```
+
+The type is published as `#/definitions/PetWithExtras`.
+
+**Legal keywords.** All [schema]({{% relref "keywords#schema-decorators" %}})
+keywords plus the
+[length / array / numeric validations]({{% relref "keywords#numeric-validations" %}})
+on field doc comments.
+
+**Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
+
+---
+
+## `swagger:strfmt`
+
+**What it does.** Marks a named type as a custom string format.
+Wherever the type appears as a field, the emitted schema is
+`{type: string, format: <name>}`. Useful for `UUID`, `Email`,
+`URL`-style types that have a Go type but should serialise as a
+JSON string with a known format.
+
+**Where it goes.** On a type declaration whose underlying form is a
+string-marshalable type (typically implementing `encoding.TextMarshaler`
+or `encoding.TextUnmarshaler`).
+
+**Argument shape.** Required IDENT — the format name (`uuid`, `email`,
+`mac`, etc.).
+
+**Sample.**
+
+```go
+// MAC is a hardware address rendered as a colon-separated hex string.
+//
+// swagger:strfmt mac
+type MAC string
+
+func (m MAC) MarshalText() ([]byte, error) { return []byte(m), nil }
+func (m *MAC) UnmarshalText(b []byte) error { *m = MAC(b); return nil }
+```
+
+A field typed `MAC` emits as `{type: string, format: mac}`. The
+underlying `MAC` type does NOT appear as a top-level model definition
+(strfmt-tagged structs are replaced by their format at every
+reference).
+
+**Legal keywords.** None at the type level beyond `swagger:strfmt`
+itself; the format name is the entire surface.
+
+**Full example.** `fixtures/enhancements/text-marshal/types.go`.
+
+---
+
+## `swagger:enum`
+
+**What it does.** Marks a string-typed (or integer-typed) named type
+as an enum and collects the type's `const` declarations. The values
+are applied **inline on each model field that references the type**:
+the property gets an `enum` array plus an `x-go-enum-desc` extension
+carrying the per-value godoc descriptions in `<value> <doc-text>`
+shape. The enum type itself is **not** emitted as a standalone
+definition — the values travel with each referencing property.
+
+(Edge case: if `swagger:enum` names a type for which no matching
+`const` values are found, the enum semantics are dropped and the type
+falls through to ordinary type resolution — typically a plain
+definition referenced by `$ref`, with no `enum` array.)
+
+**Where it goes.** On a named type declaration. The type's `const`
+values are discovered via Go's type-system traversal; they do not
+need to live in the same file. The values surface only when a model
+reaches the enum type through a field.
+
+**Argument shape.** IDENT naming the type whose `const` values to
+collect (its own name).
+
+**Sample.**
+
+```go
+// Priority is the urgency level on a task.
+//
+// swagger:enum Priority
+type Priority string
+
+const (
+	// PriorityLow is for tasks that can wait.
+	PriorityLow Priority = "low"
+
+	// PriorityMedium is the default.
+	PriorityMedium Priority = "medium"
+
+	// PriorityHigh is for tasks that must run soon.
+	PriorityHigh Priority = "high"
+)
+
+// Task references Priority, which is what makes the enum reachable.
+//
+// swagger:model
+type Task struct {
+	Priority Priority `json:"priority"`
+}
+```
+
+Produces (extract) — the values land on `Task`'s `priority` property,
+not on a `Priority` definition:
+
+```json
+{
+  "Task": {
+    "type": "object",
+    "properties": {
+      "priority": {
+        "type": "string",
+        "enum": ["low", "medium", "high"],
+        "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon."
+      }
+    }
+  }
+}
+```
+
+**Legal keywords.** Schema-context keywords. The `enum:` keyword can
+ALSO be used inline on the type doc to force a value set; when present,
+it overrides the const-derived values and the `x-go-enum-desc` is
+recomputed (or dropped) accordingly.
+
+**Full example.** `fixtures/enhancements/enum-overrides/types.go`.
+
+---
+
+## `swagger:allOf`
+
+**What it does.** Marks a struct as participating in an `allOf`
+composition. The struct's fields plus any embedded
+`swagger:model`-tagged base produce an `allOf: [$ref base, {inline
+fields}]` schema. The companion convention is to embed the base
+type as an anonymous field with this annotation on the embedding's
+doc comment (or on the embedded type itself).
+
+**Where it goes.** On a struct field that embeds another type, or on
+a struct type that has at least one embedded base.
+
+**Argument shape.** No args.
+
+**Sample.**
+
+```go
+// Animal is the abstract base.
+//
+// swagger:model
+type Animal struct {
+	Kind string `json:"kind"`
+}
+
+// Dog is an Animal with a breed.
+//
+// swagger:model
+type Dog struct {
+	// swagger:allOf
+	Animal
+
+	Breed string `json:"breed"`
+}
+```
+
+Produces:
+
+```json
+"Dog": {
+  "allOf": [
+    {"$ref": "#/definitions/Animal"},
+    {
+      "type": "object",
+      "properties": {
+        "breed": {"type": "string", "x-go-name": "Breed"}
+      }
+    }
+  ]
+}
+```
+
+**Legal keywords.** Schema-context keywords on the inline-object
+member (the second `allOf` element).
+
+**Full example.** `fixtures/enhancements/allof-edges/types.go`.
+
+---
+
+## `swagger:alias`
+
+**What it does.** Marks a Go alias declaration (`type T = Other`) as
+a model that should publish as a `$ref` to `Other`'s definition
+rather than as a duplicate of Other's schema.
+
+The scanner also honours `RefAliases` and `TransparentAliases`
+top-level options, which can globally enable alias-as-ref behaviour
+without per-decl annotation. `swagger:alias` is the per-decl override
+for cases where the global mode isn't appropriate.
+
+**Where it goes.** On a type alias declaration.
+
+**Argument shape.** Optional IDENT — the published name. Default:
+the alias's Go name.
+
+**Sample.**
+
+```go
+// Timestamp aliases time.Time. The published model carries
+// format: date-time via the time.Time → strfmt resolution.
+//
+// swagger:alias
+type Timestamp = time.Time
+```
+
+Without the annotation (and without global `RefAliases`), the alias
+either expands the target's full schema or is silently ignored
+depending on context.
+
+**Legal keywords.** Schema-context keywords.
+
+**Full example.** `fixtures/enhancements/ref-alias-chain/types.go`.
+
+---
+
+## `swagger:route`
+
+**What it does.** Declares an HTTP route + operation in one
+annotation. The header line carries the method, path, optional tags,
+and the operation ID; the comment body carries the operation's
+metadata (consumes / produces / schemes / security / parameters /
+responses / extensions).
+
+This is the **terser of the two operation-declaration annotations**.
+Most go-swagger projects use `swagger:route` for hand-written
+operations.
+
+**Where it goes.** On a function or variable declaration whose doc
+comment carries the annotation. The Go entity itself doesn't have to
+be a handler — the annotation publishes a path/operation independent
+of the carrier.
+
+**Argument shape.** Header line:
+
+```
+swagger:route <METHOD> <path> [tag1 tag2 …] <operationID>
+```
+
+- `<METHOD>` — `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`,
+  `OPTIONS`. Case insensitive.
+- `<path>` — starts with `/`. Supports path-parameter braces:
+  `/items/{id}`.
+- `[tag1 tag2 …]` — optional whitespace-separated list of tags. At
+  least two characters each.
+- `<operationID>` — the unique operation identifier.
+
+A godoc-style identifier may precede the annotation on the same
+comment line:
+
+```go
+// ListPets swagger:route GET /pets pets users listPets
+```
+
+That leading identifier is recognised as a godoc convention and is
+not part of the annotation surface.
+
+**Sample.**
+
+```go
+// ListPets swagger:route GET /pets pets users listPets
+//
+// List pets filtered by some parameters.
+//
+//     Consumes:
+//       - application/json
+//
+//     Produces:
+//       - application/json
+//
+//     Schemes: http, https
+//
+//     Security:
+//       api_key:
+//       oauth: read, write
+//
+//     Parameters:
+//       + name: limit
+//         in: query
+//         type: integer
+//         minimum: 1
+//         maximum: 100
+//
+//     Responses:
+//       200: body:[]Pet the pet list
+//       default: response:genericError
+func ListPets() {}
+```
+
+**Legal keywords.** All
+[body keywords]({{% relref "keywords#body-keywords" %}}) legal in route context
+(`consumes`, `produces`, `schemes`, `security`, `parameters`,
+`responses`, `extensions`) plus inline `deprecated:`.
+
+The `Parameters:` and `Responses:` sub-languages are documented in
+[sub-languages.md §parameters]({{% relref "sub-languages#parameters" %}}) and
+[sub-languages.md §responses]({{% relref "sub-languages#responses" %}}).
+
+**Full example.** `fixtures/enhancements/routes-full-petstore-shape/handlers.go`.
+
+---
+
+## `swagger:operation`
+
+**What it does.** Same payload as `swagger:route` but with a
+different body shape: instead of the structured `Parameters:` /
+`Responses:` keyword surface, `swagger:operation`'s body is a
+single YAML document spelling out the OpenAPI operation object
+directly.
+
+Use `swagger:operation` when you want to author the operation in
+YAML (closer to the OpenAPI spec text) or when the operation has
+shapes the keyword surface doesn't cover.
+
+**Where it goes.** Same as `swagger:route` — function or variable
+doc comment.
+
+**Argument shape.** Same header shape as `swagger:route`:
+
+```
+swagger:operation <METHOD> <path> [tag1 tag2 …] <operationID>
+```
+
+**Sample.**
+
+```go
+// swagger:operation GET /items/{id} items getItem
+//
+// ---
+// summary: Get item by ID
+// parameters:
+//   - name: id
+//     in: path
+//     required: true
+//     type: integer
+// responses:
+//   '200':
+//     description: the requested item
+//     schema:
+//       $ref: '#/definitions/Item'
+//   default:
+//     $ref: '#/responses/genericError'
+func GetItem() {}
+```
+
+The `---` delimits the YAML body; everything between the fences is
+parsed as an OpenAPI 2.0 operation object.
+
+**Legal keywords.** None inside the YAML body (it's structurally
+YAML, not the keyword grammar). The header line is the entire
+annotation surface.
+
+**Full example.** `fixtures/enhancements/parameters-map-postdecl/api.go`.
+
+---
+
+## `swagger:parameters`
+
+**What it does.** Declares a Go struct as the parameters set for one
+or more operations. Each field of the struct becomes one parameter
+on the named operation(s). The field's doc comment carries the
+parameter's `in:`, `required:`, validation, and description.
+
+**Where it goes.** On a struct declaration.
+
+**Argument shape.** Required IDENTs — the operation IDs this
+parameters set applies to. At least one. The same operation ID may
+appear in multiple `swagger:parameters` annotations to compose a
+parameter set from several structs.
+
+**Sample.**
+
+```go
+// ListItemsParams declares pagination + filter parameters for the
+// listItems operation.
+//
+// swagger:parameters listItems
+type ListItemsParams struct {
+	// Offset is the page offset.
+	//
+	// in: query
+	// minimum: 0
+	// default: 0
+	Offset int `json:"offset"`
+
+	// Limit is the page size.
+	//
+	// in: query
+	// minimum: 1
+	// maximum: 100
+	// default: 20
+	Limit int `json:"limit"`
+
+	// Tag is the filter tag.
+	//
+	// in: query
+	// required: false
+	Tag string `json:"tag,omitempty"`
+}
+```
+
+**Legal keywords on fields.** [param-context keywords]({{% relref "keywords#parameter-location" %}})
+(`in`, `required`, the numeric / length / format validations,
+`default`, `example`, `enum`, `allowEmptyValue`, `collectionFormat`).
+
+**Full example.** `fixtures/enhancements/simple-schema-violation/api.go`.
+
+---
+
+## `swagger:response`
+
+**What it does.** Declares a Go struct as a named response object,
+emitted into the spec's top-level `responses` map. Routes / operations
+reference it by name via the response sub-language (`Responses:`
+body in `swagger:route`, or the YAML `$ref` form in
+`swagger:operation`).
+
+The struct's fields contribute the response shape:
+
+- A field named `Body` (or carrying `in: body`) becomes the response
+  body schema.
+- Other fields carrying `in: header` become response headers.
+
+**Where it goes.** On a struct declaration.
+
+**Argument shape.** Optional IDENT — the published response name.
+Default: the Go type's name.
+
+**Sample.**
+
+```go
+// GenericError is the catch-all error response.
+//
+// swagger:response genericError
+type GenericError struct {
+	// in: body
+	Body struct {
+		// Message is the human-readable error message.
+		Message string `json:"message"`
+
+		// Code is the machine-readable error category.
+		Code string `json:"code,omitempty"`
+	}
+
+	// X-Request-ID echoes the request correlation header.
+	//
+	// in: header
+	XRequestID string `json:"X-Request-ID"`
+}
+```
+
+Routes can then reference it via `response:genericError` in their
+`Responses:` body.
+
+**Legal keywords on body field.** Schema-context keywords.
+**Legal keywords on header field.** Header-context keywords —
+numeric / length / format validations, `pattern`, `enum`, `default`,
+`example`, `collectionFormat`. `required:` is silently dropped on
+headers (the OAS v2 Header object does not carry a `required` field).
+
+**Full example.** `fixtures/enhancements/routes-full-petstore-shape/handlers.go`.
+
+---
+
+## `swagger:ignore`
+
+**What it does.** Excludes the surrounding declaration from the
+generated spec. The scanner sees the decl and the doc, classifies
+it, then drops it.
+
+**Where it goes.** On a type declaration to exclude the whole type,
+or on a struct field doc to exclude that one field.
+
+**Argument shape.** No args.
+
+**Sample (type):**
+
+```go
+// Internal is not exposed.
+//
+// swagger:ignore
+type Internal struct {
+	SecretField string
+}
+```
+
+**Sample (field):**
+
+```go
+type User struct {
+	Name string `json:"name"`
+
+	// PasswordHash is internal.
+	//
+	// swagger:ignore
+	PasswordHash string `json:"-"`
+}
+```
+
+**Interaction:** when `swagger:ignore` appears AFTER another
+classifier on the same comment block (e.g., `swagger:model` first,
+then `swagger:ignore`), the first annotation wins and the ignore is
+silently overridden. Place `swagger:ignore` first if you genuinely
+want the decl excluded.
+
+**Full example.** `fixtures/enhancements/top-level-kinds/types.go`.
+
+---
+
+## `swagger:name`
+
+**What it does.** Overrides the JSON property name that a struct
+field or interface method renders as. By default the scanner derives
+names from `json:"…"` struct tags (or the Go identifier for fields /
+methods with no tag); `swagger:name` is the per-field override when
+the tag-based shape isn't appropriate — typically on **interface
+methods**, which cannot carry struct tags.
+
+**Where it goes.** On a struct field doc OR an interface method doc.
+
+**Argument shape.** Required IDENT — the JSON property name to use.
+
+**Sample (interface method):**
+
+```go
+// UserProfile is the user's profile interface.
+//
+// swagger:model
+type UserProfile interface {
+	// ID is the user identifier.
+	ID() string
+
+	// FullName is the user's display name.
+	//
+	// swagger:name fullName
+	FullName() string
+}
+```
+
+Without `swagger:name`, the method `FullName()` would publish as
+property `FullName` (PascalCase). The annotation renames it to
+`fullName`.
+
+**Legal keywords.** None — the override name is the entire surface.
+
+**Full example.** `fixtures/enhancements/interface-methods/types.go`.
+
+---
+
+## `swagger:type`
+
+**What it does.** Overrides the inferred Swagger type for a named
+type or struct field. The Go type's natural inference (struct →
+object, named string → string, `time.Time` → date-time, …) is
+replaced with the annotation's argument.
+
+**Where it goes.** On a type declaration OR a struct field doc.
+
+**Argument shape.** Required IDENT — the Swagger type name (`string`,
+`integer`, `number`, `boolean`, `array`, `object`).
+
+**Sample (type-level override):**
+
+```go
+// ULID is a Crockford-base32 unique identifier rendered as a string.
+//
+// swagger:type string
+type ULID [16]byte
+```
+
+Fields typed `ULID` emit as `{type: string}` regardless of the
+underlying `[16]byte` shape.
+
+**Sample (field-level override):**
+
+```go
+type Document struct {
+	// Body is an opaque payload published as a string blob.
+	//
+	// swagger:type string
+	Body json.RawMessage `json:"body"`
+}
+```
+
+**Interaction:** when combined with `swagger:strfmt` on the same
+type, both apply — the strfmt format goes onto the published
+`{type: string, format: …}`.
+
+**Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
+
+---
+
+## `swagger:file`
+
+**What it does.** Marks a parameter or response body as a binary file
+(`{type: file}`). The scanner emits the file-type marker without
+further introspection of the Go type.
+
+**Where it goes.** On a struct field doc inside a
+`swagger:parameters` (multipart file upload) or `swagger:response`
+(file download) struct.
+
+**Argument shape.** No args.
+
+**Sample.**
+
+```go
+// UploadParams declares a multipart file upload.
+//
+// swagger:parameters uploadFile
+type UploadParams struct {
+	// File is the uploaded asset.
+	//
+	// in: formData
+	// swagger:file
+	File io.ReadCloser `json:"file"`
+}
+```
+
+**Legal keywords.** Standard parameter / response keywords; the file
+marker stacks with `in:` and other parameter shape keywords.
+
+---
+
+## `swagger:default`
+
+**What it does.** Marks the surrounding declaration as the spec's
+default value for the corresponding shape. Used in narrow contexts
+where the scanner expects an explicit anchor for a default.
+
+This annotation is **value-only** — there's no exported entity it
+publishes; it's a classifier hint the scanner consumes during
+discovery.
+
+**Where it goes.** On a value declaration (`var`, `const`) or a
+struct field.
+
+**Argument shape.** No args.
+
+**Sample.**
+
+```go
+// DefaultLimit is the default page size used wherever Limit is not
+// supplied by the caller.
+//
+// swagger:default
+var DefaultLimit = 20
+```
+
+This annotation has a narrow surface and is not commonly authored
+directly. Most spec defaults are carried by the `default:` keyword on
+the relevant field.
+
+---
+
+## Annotation × keyword compatibility matrix
+
+A quick orientation for which annotations can carry which keyword
+families. See [keywords.md]({{% relref "keywords" %}}) for the per-keyword
+contracts.
+
+| Annotation | Numeric/length validations | Schema decorators | `in:` | Meta keywords | `Parameters:` body | `Responses:` body | YAML body |
+|------------|----------------------------|-------------------|-------|---------------|--------------------|-------------------|-----------|
+| `swagger:meta` | — | — | — | ✅ | — | — | ✅ (security defs, extensions) |
+| `swagger:model` | ✅ (on fields) | ✅ | — | — | — | — | — |
+| `swagger:strfmt` | — | — | — | — | — | — | — |
+| `swagger:enum` | — | (enum keyword via const) | — | — | — | — | — |
+| `swagger:allOf` | ✅ (on member fields) | ✅ | — | — | — | — | — |
+| `swagger:alias` | — | — | — | — | — | — | — |
+| `swagger:route` | — | (deprecated only) | — | (schemes/consumes/produces/security) | ✅ | ✅ | (extensions) |
+| `swagger:operation` | — | — | — | — | — | — | ✅ (full op as YAML) |
+| `swagger:parameters` | ✅ (on fields) | ✅ (on fields) | ✅ | — | — | — | — |
+| `swagger:response` | ✅ (on header fields) | ✅ (on body field) | ✅ (body/header) | — | — | — | — |
+| `swagger:ignore` | — | — | — | — | — | — | — |
+| `swagger:name` | — | — | — | — | — | — | — |
+| `swagger:type` | — | — | — | — | — | — | — |
+| `swagger:file` | — | — | — | — | — | — | — |
+| `swagger:default` | — | — | — | — | — | — | — |
+
+A blank cell means the keyword family is not legal in that context;
+attempting to use it emits `CodeContextInvalid` and the keyword is
+dropped.

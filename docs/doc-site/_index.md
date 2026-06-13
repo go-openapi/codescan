@@ -46,26 +46,41 @@ swaggerSpec, err := codescan.Run(&codescan.Options{
 {{% card title="Getting started" %}}
 Install the scanner, annotate a package, and produce your first spec.
 
-→ [usage/getting-started](./usage/getting-started/)
+→ [getting-started]({{% relref "/getting-started" %}})
 {{% /card %}}
 
-{{% card title="Examples" %}}
-Runnable, test-covered Go examples — surfaced straight from source.
+{{% card title="Tutorials" %}}
+Learn by spec concept — model definitions, routes, validations — annotated Go
+next to the spec it produces.
 
-→ [usage/examples](./usage/examples/)
+→ [tutorials]({{% relref "/tutorials" %}})
 {{% /card %}}
 
-{{% card title="Annotations & grammar" %}}
-The annotation vocabulary, keyword reference and the formal grammar the
-scanner parses.
+{{% card title="Shaping the output" %}}
+How-to guides for the rendering knobs: $ref vs inline, aliases, nullable
+pointers, extensions.
 
-→ [usage/reference](./usage/reference/)
+→ [shaping-the-output]({{% relref "/shaping-the-output" %}})
+{{% /card %}}
+
+{{% card title="Annotation index" %}}
+Every annotation at a glance, linked to its worked example and its full
+reference.
+
+→ [annotation-index]({{% relref "/annotation-index" %}})
+{{% /card %}}
+
+{{% card title="Reference (maintainers)" %}}
+The complete compendium — annotations, keywords, sub-languages and the formal
+grammar.
+
+→ [maintainers]({{% relref "/maintainers" %}})
 {{% /card %}}
 
 {{% card title="Project" %}}
 Repo overview, license and links to the shared go-openapi guides.
 
-→ [project](./project/)
+→ [project]({{% relref "/project" %}})
 {{% /card %}}
 {{< /cards >}}
 

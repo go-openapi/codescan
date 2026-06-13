@@ -1,0 +1,14 @@
+{
+  "Stable": {
+    "type": "object",
+    "title": "Stable is always scanned.",
+    "properties": {
+      "name": {
+        "description": "Name is the feature name.",
+        "type": "string",
+        "x-go-name": "Name"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/buildtags"
+  }
+}

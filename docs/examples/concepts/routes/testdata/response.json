@@ -1,0 +1,9 @@
+{
+  "description": "PetsResponse is the list returned by listPets.",
+  "schema": {
+    "type": "array",
+    "items": {
+      "$ref": "#/definitions/Pet"
+    }
+  }
+}
