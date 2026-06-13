@@ -4,6 +4,7 @@
 package parameters
 
 import (
+	"errors"
 	"fmt"
 	"go/types"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/logger"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -161,8 +163,17 @@ func (p *Builder) buildFromFieldStruct(tpe *types.Struct, typable ifaces.Swagger
 }
 
 func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
-	// Map fields are only legal under in=body — paramTypable.Schema()
-	// returns nil for non-body. No SimpleSchema variant needed.
+	// A Go map is only representable under in=body (object +
+	// additionalProperties). In any OAS v2 SimpleSchema location
+	// (query/formData/path/header) it has no representation: paramTypable
+	// (and ItemsTypable) return a nil schema there, so dereferencing it
+	// would panic (go-swagger#2804). Signal the field-level caller to skip
+	// the field with a diagnostic instead. Same rule as
+	// responses.buildFromFieldMap for SimpleSchema response headers.
+	if typable.In() != inBody {
+		return errUnrepresentableParam
+	}
+
 	sch := new(oaispec.Schema)
 	typable.Schema().Typed("object", "").AdditionalProperties = &oaispec.SchemaOrBool{
 		Schema: sch,
@@ -385,6 +396,19 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 	if in == "formData" && signals.file {
 		pty.Typed("file", "")
 	} else if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
+		if errors.Is(err, errUnrepresentableParam) {
+			// The field type has no OAS v2 SimpleSchema representation in
+			// this non-body location (e.g. a map under in=query). Record a
+			// located diagnostic and skip the field instead of panicking or
+			// failing the whole scan. See go-swagger/go-swagger#2804.
+			p.RecordDiagnostic(grammar.Warnf(
+				p.Ctx.PosOf(fld.Pos()),
+				grammar.CodeUnsupportedInSimpleSchema,
+				"parameter %q (in=%q) has Go type %s, which has no OAS v2 SimpleSchema representation; parameter skipped",
+				name, in, fld.Type().String(),
+			))
+			return "", nil
+		}
 		return "", err
 	}
 

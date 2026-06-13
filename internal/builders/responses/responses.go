@@ -4,6 +4,7 @@
 package responses
 
 import (
+	"errors"
 	"fmt"
 	"go/types"
 
@@ -110,6 +111,18 @@ func (r *Builder) buildFromFieldStruct(ftpe *types.Struct, typable ifaces.Swagge
 }
 
 func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
+	// A Go map is only representable under in=body (object +
+	// additionalProperties). A response header is an OAS v2 SimpleSchema
+	// target with no map representation. Unlike paramTypable,
+	// responseTypable.Schema() always returns the *body* schema, so the
+	// non-body path would not panic but silently corrupt the response body
+	// and leave the header untyped. Signal the field-level caller to skip
+	// the header with a diagnostic instead. Same rule as
+	// parameters.buildFromFieldMap. See go-swagger/go-swagger#2804.
+	if typable.In() != inBody {
+		return errUnrepresentableHeader
+	}
+
 	sch := new(oaispec.Schema)
 	typable.Schema().Typed("object", "").AdditionalProperties = &oaispec.SchemaOrBool{
 		Schema: sch,
@@ -408,6 +421,19 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 			skipExt:      r.Ctx.SkipExtensions(),
 			refAttempted: &refAttempted,
 		}, seen); err != nil {
+			if errors.Is(err, errUnrepresentableHeader) {
+				// The field type has no OAS v2 SimpleSchema representation in
+				// this header (non-body) location (e.g. a map). Record a
+				// located diagnostic and skip the header instead of corrupting
+				// the response body schema. See go-swagger/go-swagger#2804.
+				r.RecordDiagnostic(grammar.Warnf(
+					r.Ctx.PosOf(afld.Pos()),
+					grammar.CodeUnsupportedInSimpleSchema,
+					"response header %q (in=%q) has Go type %s, which has no OAS v2 SimpleSchema representation; header skipped",
+					name, in, fld.Type().String(),
+				))
+				return nil
+			}
 			return err
 		}
 	}
