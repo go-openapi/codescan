@@ -64,7 +64,15 @@ func (s *Builder) scanEmbeddedFields(
 			if target == nil {
 				target = schema
 			}
-			if err := s.buildEmbedded(fld.Type(), target, nameByJSON); err != nil {
+			// A `required:` annotation on the embed applies to the
+			// properties it promotes (go-swagger#2701). Thread it through
+			// the recursion, restoring afterwards so sibling fields are
+			// unaffected.
+			saved := s.embedInherited
+			s.embedInherited = s.ReadEmbedInheritance(afld.Doc, saved)
+			err := s.buildEmbedded(fld.Type(), target, nameByJSON)
+			s.embedInherited = saved
+			if err != nil {
 				return nil, false, err
 			}
 			continue

@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
@@ -61,7 +62,7 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 		}
 	}
 
-	v, ok, invalid := scanInLocation(doc.Text())
+	v, ok, invalid := common.ScanInLocation(doc.Text())
 	switch {
 	case ok:
 		pd.in = v
@@ -71,42 +72,6 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 	}
 
 	return pd
-}
-
-// scanInLocation finds the first `in: X` line in text and returns
-// the canonical OAS v2 form of X (when recognised, case-insensitive
-// via [grammar.NormalizeIn]) or the raw candidate (when present but
-// out-of-vocabulary). The `form` alias is NOT accepted here — it is
-// contained to the routes inline-param path. See
-// [§in-discriminator](./README.md#in-discriminator).
-//
-// Q29 (2026-06-03) — case-insensitive on the captured value (was
-// previously strict-case; go-swagger codegen emits `in: Body`).
-func scanInLocation(text string) (value string, valid bool, invalid string) {
-	for line := range strings.SplitSeq(text, "\n") {
-		line = strings.TrimSpace(line)
-		rest, ok := strings.CutPrefix(line, "in:")
-		if !ok {
-			rest, ok = strings.CutPrefix(line, "In:")
-		}
-		if !ok {
-			continue
-		}
-		v := strings.TrimSpace(rest)
-		v = strings.TrimSuffix(v, ".")
-		if v == "" {
-			continue
-		}
-		if canonical, ok := grammar.NormalizeIn(v, false); ok {
-			return canonical, true, ""
-		}
-		// First `in:` line with a non-vocab value — record so the
-		// caller can diagnose. Don't keep scanning: a later valid
-		// `in:` after an invalid one would be a bizarre input we
-		// don't need to model.
-		return "", false, v
-	}
-	return "", false, ""
 }
 
 // strfmtFromDoc returns the argument of a `swagger:strfmt <name>`

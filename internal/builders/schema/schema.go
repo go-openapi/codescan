@@ -39,6 +39,14 @@ type Builder struct {
 	// Embed-recursion depth for ambiguous-embed diagnostics;
 	// see [§embed-depth](./README.md#embed-depth).
 	embedDepth int
+
+	// embedInherited carries a `required:` annotation on an embedded field
+	// down to the properties it promotes (go-swagger#2701). Set with
+	// save/restore around the embed recursion in scanEmbeddedFields. The
+	// mechanism is shared with the parameters and responses builders via
+	// common.EmbedInheritance; the schema builder consumes only Required
+	// (it has no `in:` location concept).
+	embedInherited common.EmbedInheritance
 }
 
 // NewBuilder constructs an initialized [Builder].

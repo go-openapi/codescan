@@ -1,0 +1,101 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/widget": {
+      "get": {
+        "operationId": "getWidget",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/widgetResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Base": {
+      "type": "object",
+      "title": "Base carries the fields promoted into its embedders.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embed-inheritance"
+    },
+    "Widget": {
+      "description": "Widget embeds Base with a `required:` annotation on the embed, so the\npromoted id/name become required on Widget.",
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "extra": {
+          "description": "Extra is a normal field that is NOT required.",
+          "type": "string",
+          "x-go-name": "Extra"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embed-inheritance"
+    },
+    "envelope": {
+      "type": "object",
+      "title": "envelope is the response body payload; it embeds Base as required too.",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embed-inheritance"
+    }
+  },
+  "responses": {
+    "embeddedBodyResponse": {
+      "description": "",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "embeddedHeadersResponse": {
+      "description": "",
+      "headers": {
+        "X-Count": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "X-Request-Id": {
+          "type": "string"
+        }
+      }
+    },
+    "widgetResponse": {
+      "description": "",
+      "schema": {
+        "$ref": "#/definitions/envelope"
+      }
+    }
+  }
+}

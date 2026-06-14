@@ -520,6 +520,20 @@ FileSet, so its json tag and doc are read correctly. The fallback only
 fires when the primary lookup misses, so the common single-file path is
 unchanged.
 
+### Inherited `required:` from an embed (go-swagger#2701)
+
+A `required:` annotation on a plain embed applies to the properties it
+promotes. `scanEmbeddedFields` reads it via the shared
+`common.EmbedInheritance` kernel (`ReadEmbedInheritance`) and threads it
+through the embed recursion with save/restore; `applyFieldCarrier` then
+adds each promoted property to the **enclosing** object's required list
+(via `handlers.SetRequired`) unless the property set its own `required:`.
+This is the schema half of the cross-builder rule shared with parameters
+and responses — the schema builder consumes only `Required` (it has no
+`in:` location). Response bodies inherit through this same path, since a
+body is built by the schema builder. See
+[common §embed-inheritance](../common/README.md#embed-inheritance).
+
 ### `AddDiscoveredModel` pairing
 
 Both arms call `s.Ctx.AddDiscoveredModel(decl)` before recursing.

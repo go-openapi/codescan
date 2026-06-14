@@ -30,6 +30,14 @@ const (
 // cache).
 type Builder struct {
 	*common.Builder
+
+	// inherited carries an embedded field's in: annotation down to the
+	// response fields it promotes (go-swagger#2701) — the body/header
+	// routing discriminator. Set with save/restore around the embedded-
+	// field recursion in buildFromStruct. The mechanism is shared with the
+	// schema and parameters builders via common.EmbedInheritance; responses
+	// consume only In (OAS2 response headers carry no required).
+	inherited common.EmbedInheritance
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -365,7 +373,17 @@ func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, r
 
 	for fld := range tpe.Fields() {
 		if fld.Embedded() {
-			if err := r.buildFromType(fld.Type(), resp, seen); err != nil {
+			// An in: annotation on the embed applies to the response fields
+			// it promotes (go-swagger#2701) — body/header routing. Thread it
+			// through the recursion, restoring afterwards so siblings are
+			// unaffected.
+			saved := r.inherited
+			if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+				r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
+			}
+			err := r.buildFromType(fld.Type(), resp, seen)
+			r.inherited = saved
+			if err != nil {
 				return err
 			}
 			continue
@@ -416,9 +434,16 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 	}
 
 	// `in:` is the body/header annotation switch (Q1, default header).
+	// A field's own in: wins; otherwise an enclosing embed's inherited in:
+	// applies (go-swagger#2701); otherwise default header.
 	// See [§in-discriminator](./README.md#in-discriminator).
-	in := signals.in
-	if !signals.inSet {
+	var in string
+	switch {
+	case signals.inSet:
+		in = signals.in
+	case r.inherited.InSet:
+		in = r.inherited.In
+	default:
 		in = inHeader
 	}
 	if signals.invalidIn != "" {

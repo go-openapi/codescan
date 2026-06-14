@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
@@ -57,43 +58,12 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 		}
 	}
 
-	if v, ok := scanInLocation(doc.Text()); ok {
+	if v, ok, _ := common.ScanInLocation(doc.Text()); ok {
 		pd.in = v
 		pd.inSet = true
 	}
 
 	return pd
-}
-
-// scanInLocation finds the first `in: X` (case-insensitive on `in`
-// and on X) line in text and returns X canonicalised to the OAS v2
-// closed vocabulary (`query` / `path` / `header` / `body` /
-// `formData`) via [grammar.NormalizeIn]. Mirrors v1's `rxIn`
-// semantics extended with Q29's case-insensitive value matching:
-//
-//	regexp: `[Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$`
-//	  + case-insensitive on the captured group (go-swagger codegen
-//	    emits capitalised forms like `in: Body`).
-//
-// The `form` alias (Q27) is NOT accepted here — it is contained to
-// the routes inline-param path in `internal/parsers/routebody`.
-func scanInLocation(text string) (string, bool) {
-	for line := range strings.SplitSeq(text, "\n") {
-		line = strings.TrimSpace(line)
-		rest, ok := strings.CutPrefix(line, "in:")
-		if !ok {
-			rest, ok = strings.CutPrefix(line, "In:")
-		}
-		if !ok {
-			continue
-		}
-		v := strings.TrimSpace(rest)
-		v = strings.TrimSuffix(v, ".")
-		if canonical, ok := grammar.NormalizeIn(v, false); ok {
-			return canonical, true
-		}
-	}
-	return "", false
 }
 
 // strfmtFromDoc returns the argument of a `swagger:strfmt <name>`
