@@ -1,0 +1,28 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Annotated": {
+      "type": "object",
+      "title": "Annotated is the only swagger:model in this package.",
+      "properties": {
+        "ref": {
+          "$ref": "#/definitions/Referenced"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1079"
+    },
+    "Referenced": {
+      "type": "object",
+      "title": "Referenced is NOT annotated but is referenced by Annotated.Ref.",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "X"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1079"
+    }
+  }
+}
