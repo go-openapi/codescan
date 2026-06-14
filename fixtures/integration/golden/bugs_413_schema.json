@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/places/nearby": {
+      "post": {
+        "tags": [
+          "places"
+        ],
+        "summary": "Search for a place nearby.",
+        "operationId": "Nearby",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Keyword",
+            "name": "keyword",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "RankBy",
+            "name": "rankby",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
