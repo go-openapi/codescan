@@ -1,0 +1,27 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/status": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Service status.",
+        "operationId": "GetServiceStatus",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/serviceStatusResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "serviceStatusResponse": {
+      "description": "ServiceStatusResponse is a response with a plain string body. The reporter\nsaw the response emitted with no schema (description only).",
+      "schema": {
+        "type": "string"
+      }
+    }
+  }
+}
