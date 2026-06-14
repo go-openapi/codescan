@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/test": {
+      "get": {
+        "tags": [
+          "test"
+        ],
+        "summary": "Test.",
+        "operationId": "testOp",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "examples": {
+              "application/json": {
+                "hello": "world",
+                "test": "blah"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
