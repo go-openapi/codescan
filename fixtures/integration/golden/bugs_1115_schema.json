@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Thing": {
+      "type": "object",
+      "title": "Thing stands in for some.Thing in the issue.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1115"
+    },
+    "barResponse": {
+      "description": "BarResponse is a bar response (alias to a POINTER — used to warn\n\"Missing parser for a *ast.StarExpr\" and be omitted).",
+      "$ref": "#/definitions/Thing"
+    },
+    "fooResponse": {
+      "title": "FooResponse is a foo response (non-pointer alias — always worked).",
+      "$ref": "#/definitions/Thing"
+    }
+  }
+}
