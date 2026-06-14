@@ -323,6 +323,52 @@ swagger:meta`
 	assert.Contains(t, strings.Join(secDef, "\n"), "type: apiKey")
 }
 
+// TestFixtures_Meta_TagsBlock pins the meta `Tags:` raw block
+// (go-swagger#2655): the body is a YAML sequence of tag objects whose
+// nested `externalDocs:` mapping — itself a meta-family keyword —
+// must be absorbed as body text via the YAML-bodied indentation
+// override, not terminate the block. A following sibling keyword at
+// the same indent as `Tags:` still terminates it.
+func TestFixtures_Meta_TagsBlock(t *testing.T) {
+	src := "\tTags:\n" +
+		"\t- name: pet\n" +
+		"\t  description: Everything about your Pets\n" +
+		"\t  externalDocs:\n" +
+		"\t    description: Find out more\n" +
+		"\t    url: http://swagger.io\n" +
+		"\t- name: store\n" +
+		"\tVersion: 1.0.0\n" +
+		"\nswagger:meta"
+
+	b := parseString(t, src)
+	mb, ok := b.(*MetaBlock)
+	require.True(t, ok, "expected *MetaBlock, got %T", b)
+
+	// The sibling `Version:` at the same indent terminated the block.
+	version, ok := mb.GetString("version")
+	require.True(t, ok, "Version sibling must terminate the Tags block")
+	assert.Equal(t, "1.0.0", version)
+
+	// The raw Tags body preserves per-line indentation: the nested
+	// externalDocs mapping is absorbed (indentation override) and the
+	// list markers/depth survive, so the downstream YAML list parses.
+	var tagsBody string
+	var found bool
+	for p := range mb.Properties() {
+		if p.Keyword.Name == KwTags {
+			tagsBody = p.Body
+			found = true
+		}
+	}
+	require.True(t, found, "Tags block must be present")
+	assert.Contains(t, tagsBody, "- name: pet")
+	assert.Contains(t, tagsBody, "  externalDocs:")
+	assert.Contains(t, tagsBody, "    url: http://swagger.io")
+	assert.Contains(t, tagsBody, "- name: store")
+	assert.NotContains(t, tagsBody, "Version", "sibling must not bleed into the body")
+	assert.Empty(t, b.Diagnostics())
+}
+
 // TestFixtures_Meta_TosKeywordVariants exercises the trailing-dot,
 // alias spelling ("Terms Of Service" / "TermsOfService" / "tos") that
 // the meta v3 / v4 fixtures show.

@@ -126,6 +126,13 @@ func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation
 		op.Consumes = p.AsList()
 	case grammar.KwProduces:
 		op.Produces = p.AsList()
+	case grammar.KwTags:
+		// `Tags:` on a route is a plain string list of tag names,
+		// unioned onto any tags already parsed off the swagger:route
+		// header line (go-swagger#2655). Duplicates are dropped,
+		// source order preserved. The meta `Tags:` object shape is
+		// handled by a different builder (the spec/meta walker).
+		op.Tags = unionTags(op.Tags, p.AsList())
 	case grammar.KwParameters:
 		return r.dispatchParameters(p, op)
 	case grammar.KwResponses:
@@ -141,6 +148,28 @@ func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation
 		}
 	}
 	return nil
+}
+
+// unionTags appends src tag names to dst, dropping any already
+// present, and returns the merged slice. Source order is preserved:
+// header-line tags (in dst) come first, then any new `Tags:`-keyword
+// names. Used to merge route-header and route-body tag sources.
+func unionTags(dst, src []string) []string {
+	if len(src) == 0 {
+		return dst
+	}
+	seen := make(map[string]struct{}, len(dst)+len(src))
+	for _, t := range dst {
+		seen[t] = struct{}{}
+	}
+	for _, t := range src {
+		if _, dup := seen[t]; dup {
+			continue
+		}
+		seen[t] = struct{}{}
+		dst = append(dst, t)
+	}
+	return dst
 }
 
 // dispatchParameters lowers a `Parameters:` raw body via routebody

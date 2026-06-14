@@ -684,16 +684,19 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 		bodyRaw = append(bodyRaw, head.Text)
 	}
 
-	// extensions / infoExtensions / securityDefinitions bodies are
-	// YAML-parsed downstream (yaml.TypedExtensions or yaml.UnmarshalBody
-	// via the meta walker), so every body line MUST preserve its
-	// original indentation. Flat raw blocks (consumes / produces /
+	// extensions / infoExtensions / securityDefinitions / Tags bodies
+	// are YAML-parsed downstream (yaml.TypedExtensions or
+	// yaml.UnmarshalBody via the meta walker), so every body line MUST
+	// preserve its original indentation — Tags in particular is a
+	// sequence of mappings whose nesting collapses if the per-item
+	// indent is dropped. Flat raw blocks (consumes / produces /
 	// security / …) use the Text view (leading whitespace dropped,
 	// recognised keywords reformatted). Both branches converge on the
 	// same bodyText slice.
 	yamlBody := kw.Name == "extensions" ||
 		kw.Name == "infoExtensions" ||
-		kw.Name == "securityDefinitions"
+		kw.Name == "securityDefinitions" ||
+		kw.Name == KwTags
 	bodyLine := func(t Token) string {
 		if yamlBody {
 			return strings.TrimRightFunc(t.Raw, unicode.IsSpace)
@@ -724,7 +727,22 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 			// body text. Rule: same family / a sub-context keyword
 			// is body; another route/operation/meta-context keyword
 			// is a sibling.
-			if isSiblingTerminatorFor(kw, next.Name) {
+			//
+			// Indentation override (YAML-bodied blocks only): inside a
+			// YAML body — Tags / securityDefinitions / extensions — a
+			// same-family keyword indented strictly deeper than the head
+			// is a nested YAML key, not a sibling (e.g. `externalDocs:`
+			// under a `Tags:` list item, both meta-family). Absorb it so
+			// the YAML structure survives. Flat raw blocks (TOS /
+			// consumes / …) do NOT apply this: their keyword indentation
+			// is cosmetic — the petstore meta indents Schemes/Host deeper
+			// than a column-0 `Terms Of Service:`, yet they are siblings.
+			sibling := isSiblingTerminatorFor(kw, next.Name)
+			if sibling && yamlBody &&
+				leadingIndentWidth(next.Raw) > leadingIndentWidth(head.Raw) {
+				sibling = false
+			}
+			if sibling {
 				emitRawBlock(out, headPos, head, kw, bodyText, bodyRaw)
 				return i
 			}
@@ -928,6 +946,30 @@ func formatKeywordLine(t Token) string {
 //
 // Look-up uses the keyword table's Contexts. See README
 // §raw-block-terminators.
+// tabStopWidth is the column width a tab advances to when measuring
+// leading indentation — the conventional 8-column tab stop.
+const tabStopWidth = 8
+
+// leadingIndentWidth measures the visual width of raw's leading
+// whitespace run, expanding tabs to 8-column tab stops and counting
+// spaces as one column each. Used by the raw-block terminator to tell
+// a nested YAML key (indented deeper than its block head) from a true
+// sibling keyword at the same indentation. Non-whitespace ends the run.
+func leadingIndentWidth(raw string) int {
+	w := 0
+	for _, r := range raw {
+		switch r {
+		case ' ':
+			w++
+		case '\t':
+			w += tabStopWidth - (w % tabStopWidth)
+		default:
+			return w
+		}
+	}
+	return w
+}
+
 func isSiblingTerminatorFor(kw Keyword, nextName string) bool {
 	nextKw, ok := Lookup(nextName)
 	if !ok {

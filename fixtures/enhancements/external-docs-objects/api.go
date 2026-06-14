@@ -27,7 +27,9 @@ func routeOp() {}
 //     description: ok
 func operationOp() {}
 
-// Model carries externalDocs at the schema level.
+// Model carries externalDocs at the schema level and on its fields:
+// a plain primitive field and a $ref'd field (whose sibling
+// externalDocs must lift onto the allOf compound).
 //
 // externalDocs:
 //   description: model docs
@@ -35,7 +37,26 @@ func operationOp() {}
 //
 // swagger:model Model
 type Model struct {
+	// Name carries field-level externalDocs.
+	//
+	// externalDocs:
+	//   description: name docs
+	//   url: https://name.example.org
 	Name string `json:"name"`
+
+	// Ref is a $ref'd field carrying a sibling externalDocs.
+	//
+	// externalDocs:
+	//   description: ref docs
+	//   url: https://ref.example.org
+	Ref Nested `json:"ref"`
+}
+
+// Nested is referenced by Model.Ref.
+//
+// swagger:model Nested
+type Nested struct {
+	ID string `json:"id"`
 }
 
 // QueryParams has a simple (query) parameter wrongly carrying externalDocs;
