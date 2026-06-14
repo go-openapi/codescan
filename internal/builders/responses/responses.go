@@ -425,7 +425,7 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		return nil
 	}
 
-	name, ignore, _, _, err := resolvers.ParseJSONTag(afld)
+	name, ignore, _, _, err := resolvers.ParseJSONTag(afld, fld.Name())
 	if err != nil {
 		return err
 	}

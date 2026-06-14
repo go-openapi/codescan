@@ -603,6 +603,16 @@ verbatim. So `CreatedAt string` with no tag emits property
 `CreatedAt`, while `CreatedAt() string` on an interface emits
 property `createdAt`.
 
+The "Go field name" is the per-field name reported by `go/types`, not
+the first identifier of the AST field group. A field group declaring
+several names on one line (`R, G, B, A uint8`) expands to one
+`*types.Var` per name, each promoted to its own property; the shared
+AST `*ast.Field` is the same node for all of them, so the name must
+come from the var, not `field.Names[0]` (go-swagger#2638). A json
+rename names a single field, so it is dropped for a multi-name group
+(each member keeps its Go name) while `-`, `,omitempty` and `,string`
+still apply to every member.
+
 This asymmetry is intentional, not a quirk:
 
 - **Struct fields mirror real serialization.** `encoding/json`

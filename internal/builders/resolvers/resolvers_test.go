@@ -228,9 +228,17 @@ func TestParseJSONTag(t *testing.T) {
 		}
 	}
 
-	t.Run("no tag uses field name", func(t *testing.T) {
+	multi := func(names ...string) *ast.Field {
+		idents := make([]*ast.Ident, 0, len(names))
+		for _, n := range names {
+			idents = append(idents, ast.NewIdent(n))
+		}
+		return &ast.Field{Names: idents, Type: ast.NewIdent("int")}
+	}
+
+	t.Run("no tag uses goName", func(t *testing.T) {
 		f := ident("Foo")
-		name, ignore, isString, omitEmpty, err := ParseJSONTag(f)
+		name, ignore, isString, omitEmpty, err := ParseJSONTag(f, "Foo")
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.FalseT(t, ignore)
@@ -238,10 +246,17 @@ func TestParseJSONTag(t *testing.T) {
 		assert.FalseT(t, omitEmpty)
 	})
 
+	t.Run("empty goName falls back to first AST name", func(t *testing.T) {
+		f := ident("Foo")
+		name, _, _, _, err := ParseJSONTag(f, "")
+		require.NoError(t, err)
+		assert.EqualT(t, "Foo", name)
+	})
+
 	t.Run("json tag renames", func(t *testing.T) {
 		f := ident("Foo")
 		f.Tag = &ast.BasicLit{Value: "`json:\"foo,omitempty\"`"}
-		name, ignore, isString, omitEmpty, err := ParseJSONTag(f)
+		name, ignore, isString, omitEmpty, err := ParseJSONTag(f, "Foo")
 		require.NoError(t, err)
 		assert.EqualT(t, "foo", name)
 		assert.FalseT(t, ignore)
@@ -252,7 +267,7 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("json:\"-\" marks ignored", func(t *testing.T) {
 		f := ident("Foo")
 		f.Tag = &ast.BasicLit{Value: "`json:\"-\"`"}
-		name, ignore, _, _, err := ParseJSONTag(f)
+		name, ignore, _, _, err := ParseJSONTag(f, "Foo")
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.TrueT(t, ignore)
@@ -261,7 +276,7 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("json:\",string\" on scalar sets isString", func(t *testing.T) {
 		f := ident("Foo")
 		f.Tag = &ast.BasicLit{Value: "`json:\",string\"`"}
-		name, _, isString, _, err := ParseJSONTag(f)
+		name, _, isString, _, err := ParseJSONTag(f, "Foo")
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.TrueT(t, isString)
@@ -273,7 +288,7 @@ func TestParseJSONTag(t *testing.T) {
 		// passes), but Unquote yields " " which does TrimSpace to empty — hits
 		// the final fallthrough.
 		f.Tag = &ast.BasicLit{Value: "` `"}
-		name, ignore, isString, omitEmpty, err := ParseJSONTag(f)
+		name, ignore, isString, omitEmpty, err := ParseJSONTag(f, "Foo")
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.FalseT(t, ignore)
@@ -285,8 +300,37 @@ func TestParseJSONTag(t *testing.T) {
 		f := ident("Foo")
 		// Unquote requires surrounding backticks/quotes. Bare word is invalid.
 		f.Tag = &ast.BasicLit{Value: "not-a-quoted-tag"}
-		_, _, _, _, err := ParseJSONTag(f)
+		_, _, _, _, err := ParseJSONTag(f, "Foo")
 		require.Error(t, err)
+	})
+
+	t.Run("multi-name group keeps each goName (go-swagger#2638)", func(t *testing.T) {
+		// `R, G, B, A uint8` — go/types yields one var per name sharing the
+		// same AST field; each member must keep its own name.
+		f := multi("R", "G", "B", "A")
+		for _, n := range []string{"R", "G", "B", "A"} {
+			name, _, _, _, err := ParseJSONTag(f, n)
+			require.NoError(t, err)
+			assert.EqualT(t, n, name)
+		}
+	})
+
+	t.Run("rename ignored on multi-name group, options still apply", func(t *testing.T) {
+		f := multi("R", "G")
+		f.Tag = &ast.BasicLit{Value: "`json:\"renamed,omitempty\"`"}
+		name, ignore, _, omitEmpty, err := ParseJSONTag(f, "G")
+		require.NoError(t, err)
+		assert.EqualT(t, "G", name, "a single rename cannot name N members")
+		assert.FalseT(t, ignore)
+		assert.TrueT(t, omitEmpty, "omitempty still applies to every member")
+	})
+
+	t.Run("json:\"-\" on multi-name group ignores all members", func(t *testing.T) {
+		f := multi("R", "G")
+		f.Tag = &ast.BasicLit{Value: "`json:\"-\"`"}
+		_, ignore, _, _, err := ParseJSONTag(f, "R")
+		require.NoError(t, err)
+		assert.TrueT(t, ignore)
 	})
 }
 

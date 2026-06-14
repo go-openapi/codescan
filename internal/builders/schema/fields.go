@@ -195,7 +195,7 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 		return fieldCarrier{}, false, nil
 	}
 
-	name, ignore, isString, omitEmpty, err := resolvers.ParseJSONTag(afld)
+	name, ignore, isString, omitEmpty, err := resolvers.ParseJSONTag(afld, fld.Name())
 	if err != nil {
 		return fieldCarrier{}, false, err
 	}
