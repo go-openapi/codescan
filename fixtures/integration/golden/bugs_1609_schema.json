@@ -1,0 +1,42 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/users/{user_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete a user.",
+        "operationId": "UserDestroy",
+        "parameters": [
+          {
+            "type": "string",
+            "x-example": "USERID",
+            "x-go-name": "UserID",
+            "name": "user_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/statusResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "statusResponse": {
+      "description": "StatusResponse carries a header with an Extensions: block. Response headers do\nNOT yet honor Extensions: (the #1609 gap, reframed): the x-units extension is\ndropped from the emitted header.",
+      "headers": {
+        "X-Rate-Limit": {
+          "type": "integer",
+          "format": "int64",
+          "description": "requests allowed per window",
+          "x-units": "requests-per-minute"
+        }
+      }
+    }
+  }
+}
