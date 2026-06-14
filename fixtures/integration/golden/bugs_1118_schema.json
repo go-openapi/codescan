@@ -1,0 +1,43 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "MultiLine": {
+      "description": "And here is a longer description spanning a separate paragraph.",
+      "type": "object",
+      "title": "MultiLine is a thing.",
+      "properties": {
+        "c": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "C"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1118"
+    },
+    "WithPeriod": {
+      "type": "object",
+      "title": "WithPeriod is a thing.",
+      "properties": {
+        "a": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "A"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1118"
+    },
+    "WithoutPeriod": {
+      "description": "WithoutPeriod is a thing",
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1118"
+    }
+  }
+}
