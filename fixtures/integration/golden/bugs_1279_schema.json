@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/{country}": {
+      "get": {
+        "summary": "Returns details for the given country.",
+        "operationId": "getCountryDetails",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "country",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
