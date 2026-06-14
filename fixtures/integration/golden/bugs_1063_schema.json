@@ -1,0 +1,23 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "User": {
+      "description": "User has a read-only field that should appear in GET responses but be marked\nreadOnly (clients/codegen exclude it from request bodies).",
+      "type": "object",
+      "properties": {
+        "companyID": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "CompanyID",
+          "readOnly": true
+        },
+        "firstname": {
+          "type": "string",
+          "x-go-name": "Firstname"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1063"
+    }
+  }
+}
