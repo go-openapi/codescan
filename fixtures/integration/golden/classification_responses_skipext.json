@@ -84,9 +84,7 @@
     "headers": {
       "ones": {
         "type": "array",
-        "items": {
-          "$ref": "#/definitions/SimpleOne"
-        }
+        "items": {}
       }
     }
   },
@@ -95,9 +93,7 @@
     "headers": {
       "ones": {
         "type": "array",
-        "items": {
-          "$ref": "#/definitions/SimpleOne"
-        }
+        "items": {}
       }
     }
   },

@@ -942,15 +942,38 @@ type SimpleSchemaProbe interface {
 ```
 
 Implemented structurally by `paramTypable` in
-`internal/builders/parameters` and (forthcoming with M2)
-`headerTypable` in `internal/builders/responses`. Consumers don't
-need to import the schema package — the interface is satisfied by
-method set.
+`internal/builders/parameters`, the response header typable in
+`internal/builders/responses`, and `resolvers.ItemsTypable` (the
+shared array-items adapter). Consumers don't need to import the schema
+package — the interface is satisfied by method set.
 
 A target that doesn't implement `SimpleSchemaProbe` is trusted: the
 validator no-ops. A `nil` `SimpleSchemaShape` is also trusted — the
 caller chose SimpleSchema mode for something that can't surface a
 violation, by intent.
+
+#### Array element shapes (go-swagger#1088)
+
+`ItemsTypable` implementing the probe is what extends the catch-at-exit
+contract **one level down**, to array element shapes. An array IS legal
+under SimpleSchema, but its `items` are themselves a SimpleSchema and so
+may not be a `$ref`. A named object element (`[]Ele` under `in: query`,
+or an array-of-object response header) otherwise resolves to
+`items: {$ref}`, which the Swagger 2.0 editor rejects. Because the
+element is built through a fresh `WithSimpleSchema` sub-build whose
+target is the `ItemsTypable`, the same validator now inspects the items
+shape and dissolves the illegal `$ref` to an empty `{}` (named
+primitives like `[]Label` still expand inline to `{type: string}` and
+are untouched).
+
+When the dissolved shape was a `$ref`, the validator also calls
+`ResetPostDeclarations` on the sub-builder: `MakeRef` had discovered the
+target's decl and enqueued it, and once the reference is gone that decl
+would linger as an orphan definition. A single-type sub-build renders
+exactly one target, so every queued decl is reachable only through it;
+a decl genuinely referenced elsewhere is re-discovered by that site and
+deduplicated by the orchestrator. This is why a `[]Ele` query parameter
+no longer drags an unreferenced `Ele` into `definitions`.
 
 ### Knock-on cleanups this contract enables
 

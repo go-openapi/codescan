@@ -181,6 +181,25 @@ func (s *Builder) AppendPostDecl(decl *scanner.EntityDecl) {
 	s.postDecls = append(s.postDecls, decl)
 }
 
+// ResetPostDeclarations drops every decl this Builder enqueued during
+// the current Build pass. Used by the SimpleSchema catch-at-exit
+// validator: when a non-body parameter / response-header element
+// dissolves an illegal $ref, the decl that MakeRef discovered for that
+// ref is a byproduct of the now-removed reference and would otherwise
+// linger as an orphan definition (go-swagger#1088). A single-type Build
+// renders exactly one target, so every queued decl is reachable only
+// through it; clearing the whole queue is correct. A decl genuinely
+// referenced elsewhere is re-discovered by that other site's Builder
+// and deduplicated by the orchestrator.
+//
+// # Details
+//
+// See [§postdecls](./README.md#postdecls).
+func (s *Builder) ResetPostDeclarations() {
+	s.postDecls = nil
+	s.postDeclSet = nil
+}
+
 // MakeRef writes a `$ref: "#/definitions/<name>"` onto prop and
 // registers decl with the discovery loop via AppendPostDecl. The name
 // comes from decl.Names() (the first entry — top-level decls in this
