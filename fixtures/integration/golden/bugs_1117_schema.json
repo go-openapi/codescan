@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Item": {
+      "type": "object",
+      "title": "Item is one array element.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1117"
+    }
+  },
+  "responses": {
+    "arrayResponse": {
+      "description": "ArrayResponse is a response whose body is an array type.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Item"
+        }
+      }
+    }
+  }
+}
