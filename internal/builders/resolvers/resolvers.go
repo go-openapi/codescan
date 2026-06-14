@@ -159,8 +159,19 @@ func (t tagOptions) Name() string {
 	return t[0]
 }
 
-func ParseJSONTag(field *ast.Field) (name string, ignore, isString, omitEmpty bool, err error) {
-	if len(field.Names) > 0 {
+// ParseJSONTag derives the JSON property name and tag options for a struct
+// field. goName is the field's Go identifier as reported by go/types; it is
+// authoritative for the default name because a single AST field group may
+// declare several names (`R, G, B, A uint8`), each a distinct go/types field
+// promoted to its own property (go-swagger#2638). When goName is empty the
+// first AST name is used as a fallback.
+//
+// A json rename (`json:"foo"`) can only name a single field, so it is ignored
+// for a multi-name group — each member keeps its own Go name — while the `-`,
+// `,omitempty` and `,string` options still apply to every member.
+func ParseJSONTag(field *ast.Field, goName string) (name string, ignore, isString, omitEmpty bool, err error) {
+	name = goName
+	if name == "" && len(field.Names) > 0 {
 		name = field.Names[0].Name
 	}
 	if field.Tag == nil || len(strings.TrimSpace(field.Tag.Value)) == 0 {
@@ -190,6 +201,11 @@ func ParseJSONTag(field *ast.Field) (name string, ignore, isString, omitEmpty bo
 		case "":
 			return name, false, isString, omitEmpty, nil
 		default:
+			if len(field.Names) > 1 {
+				// A rename names a single field; with a multi-name group it
+				// can't name N members, so each keeps its own Go name.
+				return name, false, isString, omitEmpty, nil
+			}
 			return jsonParts.Name(), false, isString, omitEmpty, nil
 		}
 	}
