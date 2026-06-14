@@ -178,6 +178,25 @@ the prose surface so they never land in TITLE / DESC. The
 swagger-prefix check runs first, so `//swagger:model` (legal but
 non-idiomatic, no leading space) is not mistaken for a directive.
 
+### Kubernetes marker comments are dropped
+
+Lines whose content begins with `+` followed by a letter —
+`+kubebuilder:…`, `+genclient`, `+k8s:…`, `+optional`, the marker
+convention emitted by kubebuilder / controller-gen / k8s
+code-generation — are recognised by `isDirectiveMarker` and dropped
+from the prose surface, so they never leak into model / property
+descriptions (go-swagger#2687, the residual of #3007). Requiring a
+letter after the `+` keeps ordinary prose (`+1 for …`, markdown `+`
+bullets) intact.
+
+Unlike Go directives, this drop happens at **Stage 3**
+(`classifyProse`), not at line classification. The inline
+`swagger:route` parameters grammar uses `+name:` as a parameter
+separator (go-swagger#3100), which matches the marker shape; running
+the filter after `accumulateBodies` has folded the route body into
+its keyword token means the separator is never seen by the marker
+check. Only loose prose `tokenText` lines are filtered.
+
 ### First-character case insensitivity on keywords
 
 `Consumes:` and `consumes:` both lex as the `consumes` keyword.

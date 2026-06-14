@@ -508,3 +508,61 @@ type _ struct{}
 	assert.Contains(t, joined, "application/xml")
 	assert.NotContains(t, joined, "nolint")
 }
+
+func TestLexer_DirectiveMarkerPredicate(t *testing.T) {
+	markers := []string{
+		"+genclient",
+		"+kubebuilder:resource:shortName=mytype",
+		"+kubebuilder:validation:Required",
+		"+kubebuilder:default:=false",
+		"+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object",
+		"+optional",
+		"+name: encryption_public_key", // shape matches; only excluded by context (see below)
+	}
+	for _, m := range markers {
+		assert.True(t, isDirectiveMarker(m), "expected %q to be a directive marker", m)
+	}
+
+	notMarkers := []string{
+		"+1 for this idea", // digit after + — ordinary prose
+		"+ a markdown bullet",
+		"+",
+		"",
+		"plain prose",
+		"a +kubebuilder reference mid-sentence",
+		"++double",
+	}
+	for _, m := range notMarkers {
+		assert.False(t, isDirectiveMarker(m), "did not expect %q to be a directive marker", m)
+	}
+}
+
+func TestLexer_DirectiveMarkersDroppedFromProse(t *testing.T) {
+	// go-swagger#2687 / #3007: Kubernetes marker comments must not leak into
+	// the model title/description.
+	src := `package fake
+
+// MyType description
+//
+// +genclient
+// +kubebuilder:resource:shortName=mytype
+// +kubebuilder:subresource:status
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// swagger:model Application
+type MyType struct{}
+`
+	b := parseGoSource(t, src)
+	mb, ok := b.(*ModelBlock)
+	require.True(t, ok, "expected *ModelBlock, got %T", b)
+	prose := mb.Title() + mb.Description()
+	assert.Contains(t, prose, "MyType description", "authored prose must survive")
+	assert.NotContains(t, prose, "+kubebuilder")
+	assert.NotContains(t, prose, "+genclient")
+	assert.NotContains(t, prose, "+k8s")
+}
+
+// Note: the #3100 boundary — the inline swagger:route `+name:` parameter
+// separator must NOT be stripped despite matching the marker shape — is locked
+// end-to-end by TestCoverage_Bug3100 in the integration suite. The filter runs
+// at Stage 3 (prose), after accumulateBodies has folded the route body into its
+// keyword token, so the separator never reaches the marker check.
