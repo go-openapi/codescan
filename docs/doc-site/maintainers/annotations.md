@@ -79,10 +79,14 @@ group:
 - **Type declaration** (`type T struct { … }`, `type T int`,
   `type T = Other`) — carries `swagger:model`, `swagger:strfmt`,
   `swagger:enum`, `swagger:allOf`, `swagger:alias`, `swagger:ignore`,
-  `swagger:type`.
+  `swagger:type`. Inside a grouped declaration (`type ( A …; B … )`)
+  the comment on each individual spec is honoured independently — the
+  annotation attaches to its own `TypeSpec`, not to the enclosing group —
+  so two types in one group can carry distinct docs and annotations.
 - **Function or variable declaration** (`func ServeAPI() { … }`,
   `var DoIt = func() { … }`) — carries `swagger:route`,
-  `swagger:operation`.
+  `swagger:operation`. These two are recognised whether the annotation
+  sits in the function's doc comment or **inside the function body**.
 - **Struct field doc** — carries `swagger:name`, `swagger:type`,
   `swagger:ignore`, plus any of the [keyword reference]({{% relref "keywords" %}})
   entries legal in `schema` / `param` / `header` context.
@@ -180,7 +184,16 @@ map, and resolves cross-references between models.
 `type T int`, `type T = Other`, …).
 
 **Argument shape.** Optional IDENT — the name the model takes in
-`definitions`. Default: the Go type's name.
+`definitions`. Default: the Go type's name. The name must be a plain
+identifier (a JSON label), not a Go-qualified name — a dotted name such
+as `utils.Error` is rejected with a warning and dropped. Cross-package
+types are resolved automatically, so reference a model by its bare name.
+
+**Ordering.** The descriptive prose must come **before** the
+`swagger:model` line: the first paragraph becomes the model's `title`
+and the rest its `description`. An annotation-first block (the
+`swagger:model` line ahead of the prose) still publishes the model but
+drops its title and description.
 
 **Sample.**
 
@@ -248,7 +261,8 @@ func (m *MAC) UnmarshalText(b []byte) error { *m = MAC(b); return nil }
 A field typed `MAC` emits as `{type: string, format: mac}`. The
 underlying `MAC` type does NOT appear as a top-level model definition
 (strfmt-tagged structs are replaced by their format at every
-reference).
+reference). A slice of the type (`[]MAC`) carries the format onto its
+items: `{type: array, items: {type: string, format: mac}}`.
 
 **Legal keywords.** None at the type level beyond `swagger:strfmt`
 itself; the format name is the entire surface.
@@ -325,6 +339,7 @@ not on a `Priority` definition:
     "type": "object",
     "properties": {
       "priority": {
+        "description": "Priority is the task's urgency.\nlow PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon.",
         "type": "string",
         "enum": ["low", "medium", "high"],
         "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon."
@@ -333,6 +348,12 @@ not on a `Priority` definition:
   }
 }
 ```
+
+By default the const→value mapping is folded into the property's
+`description` (as above) **and** duplicated in `x-go-enum-desc`. Set the
+scanner option `SkipEnumDescriptions: true` to keep the authored prose as
+the description; the mapping then rides `x-go-enum-desc` only. See
+[Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions" %}}).
 
 **Legal keywords.** Schema-context keywords. The `enum:` keyword can
 ALSO be used inline on the type doc to force a value set; when present,
@@ -396,6 +417,13 @@ Produces:
 
 **Legal keywords.** Schema-context keywords on the inline-object
 member (the second `allOf` element).
+
+**Inside a response body.** The same composition applies when the
+embedding struct is a `swagger:response` body. The embedded base emits
+an `allOf: [{$ref}, …]` arm **only when it is a `swagger:model`** — i.e.
+a definition exists to point at. If the embedded type is itself a
+`swagger:response` (which has no definition), its fields are inlined
+instead of producing a `$ref`.
 
 **Full example.** `fixtures/enhancements/allof-edges/types.go`.
 
@@ -581,7 +609,15 @@ or more operations. Each field of the struct becomes one parameter
 on the named operation(s). The field's doc comment carries the
 parameter's `in:`, `required:`, validation, and description.
 
-**Where it goes.** On a struct declaration.
+Each parameter's **name** comes from the field's `json:` tag, falling
+back to the Go field name when there is no tag. The `form:` tag is not
+consulted — add a `json:` tag to control the parameter name (a
+`form:"sort_key"` tag alone leaves the name as the Go identifier).
+
+**Where it goes.** On a struct declaration. A bare slice variable
+(`var Filters []string`) carries no `in:`/`type:`/`required:` per
+field, so it cannot drive parameter generation — parameters must be a
+struct.
 
 **Argument shape.** Required IDENTs — the operation IDs this
 parameters set applies to. At least one. The same operation ID may
@@ -641,7 +677,15 @@ The struct's fields contribute the response shape:
   body schema. The body may be a struct, a `$ref`'d model, **or a
   primitive** — e.g. `Body string` emits `schema: {type: string}` and
   `Body []int` emits `schema: {type: array, items: {type: integer}}`.
-- Other fields carrying `in: header` become response headers.
+- Other fields carrying `in: header` become response headers. A field
+  with **neither** `Body`/`in: body` nor `in: header` is treated as a
+  response **header** by default, not as a body property — so for a body
+  schema, name the field `Body` or mark it `in: body`.
+
+An `interface{}` / `any`-typed field (or a slice `[]any`) emits an empty
+schema — `{}` for a scalar field, `{type: array, items: {}}` for a
+slice. An empty schema means "any type" and is valid OpenAPI 2.0; this is
+intentional, not a missing type.
 
 **Where it goes.** On a struct declaration.
 
@@ -778,8 +822,10 @@ replaced with the annotation's argument.
 
 **Where it goes.** On a type declaration OR a struct field doc.
 
-**Argument shape.** Required IDENT — the Swagger type name (`string`,
-`integer`, `number`, `boolean`, `array`, `object`).
+**Argument shape.** Required IDENT — a scalar Swagger type name
+(`string`, `integer`, `number`, `boolean`, `object`) or a Go builtin
+codescan resolves. `array` and `file` are **not** accepted; an
+unrecognised value is ignored and the field keeps its underlying Go type.
 
 **Sample (type-level override):**
 

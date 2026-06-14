@@ -49,6 +49,7 @@ an existing spec via `Options.InputSpec`.
 | `BuildTags`, `Include`/`Exclude` | Scope control over what gets scanned. |
 | `RefAliases`, `TransparentAliases`, `DescWithRef` | Alias-handling knobs. |
 | `SkipExtensions` | Suppress `x-go-*` vendor extensions. |
+| `SkipEnumDescriptions` | Keep the `swagger:enum` const→value mapping out of property/parameter descriptions (it still rides `x-go-enum-desc`). |
 
 See the [godoc][godoc] for the full list.
 

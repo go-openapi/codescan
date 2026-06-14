@@ -24,4 +24,25 @@ codescan.Run(&codescan.Options{
 ```
 
 `SkipExtensions` removes the scanner-derived `x-go-*` extensions. Extensions you
-author yourself (via the `Extensions:` keyword) are not affected.
+author yourself (via the `Extensions:` keyword) are not affected, and neither is
+`x-deprecated` (it carries semantic intent — see
+[Other type decorators]({{% relref "/tutorials/other-type-decorators" %}})).
+
+## Enum descriptions
+
+A `swagger:enum` type backed by Go `const` declarations folds the const→value
+mapping into the field's `description` **and** duplicates it in the
+`x-go-enum-desc` extension. When the prose already says everything you want, the
+folded mapping is noise. `Options.SkipEnumDescriptions` keeps the authored prose
+as the description; the mapping then rides `x-go-enum-desc` only:
+
+```go
+codescan.Run(&codescan.Options{
+    Packages:             []string{"./..."},
+    ScanModels:           true,
+    SkipEnumDescriptions: true,
+})
+```
+
+This knob is independent of `SkipExtensions`: set both to drop the mapping
+everywhere (no description folding, no `x-go-enum-desc`).

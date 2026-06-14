@@ -406,6 +406,18 @@ up the constant names AND their godoc descriptions and produces an
 `x-go-enum-desc` extension alongside the enum values. The
 `enum:` keyword is the manual override.
 
+By default the const→value mapping that `swagger:enum` derives is folded
+into the field's `description` **and** duplicated in `x-go-enum-desc`. Set
+the scanner option `SkipEnumDescriptions: true` to keep the authored prose
+as the description; the mapping then rides `x-go-enum-desc` only. This is
+independent of `SkipExtensions` (set both to suppress the mapping entirely).
+
+When a struct field references a named primitive (`Status State` →
+`type State string`), an `enum:` line in the referenced type's own doc
+comment is parsed into that definition's enum values; the surrounding
+prose becomes its title/description and the `enum:` line never leaks into
+the text.
+
 ### `required`
 
 Marks a field as required. Boolean.
@@ -433,9 +445,16 @@ schema's `discriminator` field. Schema-only.
 
 ### `deprecated`
 
-Marks the carrying entity as deprecated. Boolean. Legal on operations
-(`operation.deprecated`), routes (`operation.deprecated` on the
-synthesised op), and schemas (some downstream tools render this).
+Marks the carrying entity as deprecated. Boolean. On operations
+(`operation.deprecated`) and routes (`operation.deprecated` on the
+synthesised op) it writes the native OpenAPI 2.0 `deprecated` field.
+OpenAPI 2.0 has no native `deprecated` on the Schema object, so on a
+**model or model field** it emits `x-deprecated: true` instead. A
+godoc-style `Deprecated:` paragraph (the pkgsite convention) is an exact
+synonym for `deprecated: true`, recognised in any context — and is the
+idiomatic form on a Go doc comment, where a bare `deprecated: true` line
+reads as a malformed deprecation notice to Go linters. Because it carries
+semantic intent, `x-deprecated` survives even when `SkipExtensions` is set.
 
 ---
 

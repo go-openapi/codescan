@@ -98,6 +98,26 @@ The lexer strips the leading whitespace (`\t`, `*`, `/`, `|`) per
 line via [`trimContentPrefix`]({{% relref "grammar#preprocess" %}}) before
 classification.
 
+### Tool-directive markers are dropped
+
+Two families of non-swagger directive lines are filtered out of the prose
+surface, so they never leak into a title or description:
+
+- **Go directives** — `//go:generate`, `//nolint:foo`, `//lint:ignore`
+  (a lowercase word + `:` + an immediate argument, no leading space).
+- **Kubernetes-style `+marker` comments** — any line whose content begins
+  with `+` immediately followed by a letter: `+kubebuilder:…`,
+  `+genclient`, `+k8s:…`, `+optional`, as emitted by
+  kubebuilder / controller-gen. Requiring a letter after the `+` keeps
+  ordinary prose (`+1 for …`) intact. This is also why a stray
+  `+kubebuilder:default:=false` no longer crashes the scan
+  ([go-swagger#3007](https://github.com/go-swagger/go-swagger/issues/3007))
+  — the marker is dropped, not parsed as a keyword.
+
+The `+marker` filter runs at the prose-classification stage (after
+annotation bodies are folded), so the `swagger:route` `Parameters:`
+`+ name:` chunk separator — a `+` followed by a space — is unaffected.
+
 ### Markdown semantics that survive
 
 - **Dash lists** in descriptions are preserved verbatim. A line

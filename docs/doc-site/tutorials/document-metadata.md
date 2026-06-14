@@ -18,7 +18,9 @@ package.
 The block lives in the package doc comment. The **title** comes from the first
 line with the `Package <name>` prefix stripped; the following paragraph becomes
 the `description`. The indented `Key: value` lines and list blocks populate the
-rest — `License:` and `Contact:` parse into structured objects.
+rest — `License:` and `Contact:` parse into structured objects, and an
+`ExternalDocs:` block (description + url) populates the spec's top-level
+`externalDocs`.
 
 {{< example go="concepts/meta/doc.go" goregion="meta" golabel="Package doc comment"
             json="concepts/meta/testdata/meta.json" jsonlabel="the document" >}}

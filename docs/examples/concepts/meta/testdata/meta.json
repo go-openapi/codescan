@@ -25,5 +25,9 @@
   },
   "host": "api.example.com",
   "basePath": "/v1",
-  "paths": {}
+  "paths": {},
+  "externalDocs": {
+    "description": "Full API guide",
+    "url": "https://example.com/docs"
+  }
 }

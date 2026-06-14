@@ -57,3 +57,43 @@ type Settings struct {
 var DefaultPort = 8080 //nolint:gochecknoglobals // demo example
 
 // endsnippet:swaggerdefault
+
+// snippet:reffield
+
+// Currency is a named (defined) string type, so it earns its own definition and
+// a field typed Currency renders as a $ref. A $ref cannot carry sibling
+// keywords, so an example or default on such a field rides the override arm of
+// an allOf compound — the value still reaches the spec.
+//
+// swagger:model
+type Currency string
+
+// Price shows example + default on a defined-type field.
+//
+// swagger:model
+type Price struct {
+	// Unit is the ISO currency code.
+	//
+	// default: USD
+	// example: EUR
+	Unit Currency `json:"unit"`
+}
+
+// endsnippet:reffield
+
+// snippet:responseexample
+
+// NTPServers is a top-level array response carrying an example. The example
+// lands on the response body schema rather than being dropped.
+//
+// swagger:response ntpServers
+// example: ["10.0.0.1","10.0.0.2"]
+type NTPServers []string
+
+// swagger:route GET /ntp ntp listNTP
+//
+// responses:
+//
+//	200: ntpServers
+
+// endsnippet:responseexample

@@ -42,6 +42,25 @@ rather than this annotation.
 
 {{< code file="concepts/examples/examples.go" lang="go" region="swaggerdefault" >}}
 
+## On a defined-type field
+
+When a field's type is a named (defined) type, it renders as a `$ref` to that
+type's definition — and a `$ref` cannot carry sibling keywords. An `example:` or
+`default:` on such a field is therefore preserved on the **override arm of an
+`allOf`** compound, so the value still reaches the spec.
+
+{{< example go="concepts/examples/examples.go" goregion="reffield"
+            json="concepts/examples/testdata/reffield.json" jsonlabel="#/definitions/Price" >}}
+
+## On a response body
+
+`example:` is not limited to model fields. On a `swagger:response` whose body is
+a top-level array (or other non-struct) type, the example lands on the response
+body schema:
+
+{{< example go="concepts/examples/examples.go" goregion="responseexample"
+            json="concepts/examples/testdata/responseexample.json" jsonlabel="responses[ntpServers]" >}}
+
 ## What's next
 
 - [Other type decorators]({{% relref "/tutorials/other-type-decorators" %}}) —

@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "title": "Price shows example + default on a defined-type field.",
+  "properties": {
+    "unit": {
+      "description": "Unit is the ISO currency code.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Currency"
+        },
+        {
+          "default": "USD",
+          "example": "EUR"
+        }
+      ],
+      "x-go-name": "Unit"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+}

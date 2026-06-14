@@ -1,0 +1,11 @@
+{
+  "description": "Attributes is a free-form object constrained by the object-validation\nkeywords: it must carry between 1 and 10 properties, and any property whose\nname matches the regex is permitted. Object validations constrain the map of\n(additional) properties rather than named struct fields.",
+  "type": "object",
+  "maxProperties": 10,
+  "minProperties": 1,
+  "additionalProperties": {},
+  "patternProperties": {
+    "^x-": {}
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/validations"
+}

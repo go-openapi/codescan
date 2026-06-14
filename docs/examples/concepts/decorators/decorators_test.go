@@ -67,6 +67,10 @@ func TestDecoratorFragments(t *testing.T) {
 	require.True(t, ok, "GET /legacy/ping missing")
 	require.NotNil(t, ping.Get)
 
-	goldenJSON(t, "readonly", token)  // read only: true → readOnly on the property
-	goldenJSON(t, "deprecated", ping) // deprecated: true on the operation
+	gadget, ok := doc.Definitions["Gadget"]
+	require.True(t, ok, "Gadget definition missing")
+
+	goldenJSON(t, "readonly", token)          // read only: true → readOnly on the property
+	goldenJSON(t, "deprecated", ping)         // deprecated: true on the operation
+	goldenJSON(t, "deprecated_model", gadget) // model/field deprecation → x-deprecated
 }

@@ -67,6 +67,26 @@ emits as `{type: file}`. It belongs on a `formData` field of a
 {{< example go="concepts/routes/routes.go" goregion="file"
             json="concepts/routes/testdata/file.json" jsonlabel="parameters on uploadPetPhoto" >}}
 
+## externalDocs
+
+An `externalDocs:` block (description + url) links an object out to external
+documentation. It rides an **operation** (in a `swagger:route` or
+`swagger:operation` body) and a **full schema** (a `swagger:model`). It is a
+full-Schema-only keyword: on a simple-schema parameter (anything but `in: body`)
+it is dropped with a diagnostic. The same `ExternalDocs:` block on a
+`swagger:meta` package populates the spec's top-level `externalDocs` (see
+[Document metadata]({{% relref "/tutorials/document-metadata" %}})).
+
+{{< example go="concepts/routes/routes.go" goregion="externaldocs"
+            json="concepts/routes/testdata/externaldocs.json" jsonlabel="operation externalDocs" >}}
+
+On a model the link rides the definition. The value can be written as the
+indented block above or as an equivalent inline `{ description: …, url: … }`
+mapping — which reads better on a single-line doc comment:
+
+{{< example go="concepts/routes/routes.go" goregion="externaldocs"
+            json="concepts/routes/testdata/externaldocs_schema.json" jsonlabel="#/definitions/CatalogEntry" >}}
+
 ## What's next
 
 - [Validations]({{% relref "/tutorials/validations" %}}) — constrain parameter

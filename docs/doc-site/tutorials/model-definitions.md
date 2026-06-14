@@ -25,6 +25,10 @@ the JSON-Schema `type` / `format`.
 {{< example go="concepts/models/models.go" goregion="model"
             json="concepts/models/testdata/model.json" jsonlabel="#/definitions/Pet" >}}
 
+A `swagger:model` that nothing else references appears in `definitions` only
+when you scan with `Options.ScanModels` (the `-m` flag). See
+[When the scanner emits a type]({{% relref "/shaping-the-output/type-discovery" %}}).
+
 ## swagger:strfmt
 
 `swagger:strfmt <name>` marks a named string type as a custom format. The type
@@ -68,6 +72,13 @@ The accepted values are the scalar Swagger types — `string`, `integer`,
 `number`, `boolean`, `object` (plus the Go builtin names codescan resolves).
 `array` and `file` are not accepted here; an unrecognized value leaves the field
 on its underlying Go type.
+
+The override also works **on an individual field doc** — no wrapper-type
+annotation. Here `Code` is published as a string while its `RawID` type is left
+untouched everywhere else:
+
+{{< example go="concepts/models/models.go" goregion="typefield"
+            json="concepts/models/testdata/typefield.json" jsonlabel="#/definitions/Coupon" >}}
 
 ## swagger:name
 

@@ -42,8 +42,14 @@ func goldenJSON(t *testing.T, doc *spec.Swagger, feature, defName string) {
 	t.Helper()
 	schema, ok := doc.Definitions[defName]
 	require.Truef(t, ok, "definition %q not found", defName)
+	goldenRaw(t, feature, schema)
+}
 
-	got, err := json.MarshalIndent(schema, "", "  ")
+// goldenRaw marshals an arbitrary value (a definition, a response, …) into
+// testdata/<feature>.json, honouring UPDATE_GOLDEN.
+func goldenRaw(t *testing.T, feature string, v any) {
+	t.Helper()
+	got, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(t, err)
 	got = append(got, '\n')
 
@@ -64,6 +70,11 @@ func TestExampleFragments(t *testing.T) {
 
 	goldenJSON(t, doc, "example", "Greeting") // example: values, typed
 	goldenJSON(t, doc, "default", "Settings") // default: values, typed
+	goldenJSON(t, doc, "reffield", "Price")   // example/default on a $ref'd field (allOf override)
+
+	ntp, ok := doc.Responses["ntpServers"]
+	require.True(t, ok, "ntpServers response missing")
+	goldenRaw(t, "responseexample", ntp) // example on a top-level array response
 
 	// Type coercion: a numeric default on an int field is a JSON number, a
 	// boolean default a JSON bool — not strings.

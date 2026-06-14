@@ -1,0 +1,13 @@
+{
+  "description": "NTPServers is a top-level array response carrying an example. The example\nlands on the response body schema rather than being dropped.",
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "example": [
+      "10.0.0.1",
+      "10.0.0.2"
+    ]
+  }
+}

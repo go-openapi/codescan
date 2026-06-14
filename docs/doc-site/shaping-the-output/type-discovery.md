@@ -37,3 +37,18 @@ If a model is missing from your spec, it is almost always **unreachable**: no
 operation/parameter/response/model leads to it. Either reference it, or annotate
 it `swagger:model` and scan with `ScanModels`.
 {{% /notice %}}
+
+## Generic and embedded types
+
+codescan resolves types through `go/packages` type information, so two forms
+that look tricky still work:
+
+- **Generics.** An instantiated generic — `WrappedRequest[Order]`, whether
+  annotated `swagger:parameters` or `swagger:model` — emits the concrete type:
+  the type argument is substituted, so a `T`-typed field becomes a `$ref` to the
+  argument's definition. The generic's declaration may live in a different file
+  from its instantiation. A free (un-instantiated) type parameter is skipped
+  with a warning.
+- **Embedded fields**, including those from an **external package**, are
+  promoted into the embedding type, and a custom field type resolves to its
+  underlying type.

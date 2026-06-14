@@ -120,3 +120,31 @@ type UploadParams struct {
 }
 
 // endsnippet:file
+
+// snippet:externaldocs
+
+// swagger:route GET /pets/search pets searchPets
+//
+// Searches pets. The operation links out to external documentation.
+//
+// externalDocs:
+//   description: Search guide
+//   url: https://example.com/docs/search
+//
+// responses:
+//
+//	200: petsResponse
+
+// CatalogEntry carries externalDocs at the schema level — the link rides the
+// definition. (On a simple-schema parameter externalDocs is dropped with a
+// diagnostic: it is a full-Schema-only keyword.)
+//
+// externalDocs: {description: "Catalog schema reference", url: "https://example.com/docs/catalog"}
+//
+// swagger:model
+type CatalogEntry struct {
+	// SKU is the catalog identifier.
+	SKU string `json:"sku"`
+}
+
+// endsnippet:externaldocs

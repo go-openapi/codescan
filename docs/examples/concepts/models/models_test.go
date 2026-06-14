@@ -76,12 +76,13 @@ func TestModelFragments(t *testing.T) {
 	doc := scanModels(t)
 
 	cases := []struct{ feature, defName string }{
-		{"model", "Pet"},     // swagger:model — a plain struct definition
-		{"strfmt", "Device"}, // swagger:strfmt — a {type:string, format} field
-		{"enum", "Task"},     // swagger:enum — enum values inlined on the field
-		{"allof", "Dog"},     // swagger:allOf — two base $refs + inline arm
-		{"type", "Token"},    // swagger:type — overridden field type
-		{"name", "Car"},      // swagger:name — overridden interface-method property
+		{"model", "Pet"},        // swagger:model — a plain struct definition
+		{"strfmt", "Device"},    // swagger:strfmt — a {type:string, format} field
+		{"enum", "Task"},        // swagger:enum — enum values inlined on the field
+		{"allof", "Dog"},        // swagger:allOf — two base $refs + inline arm
+		{"type", "Token"},       // swagger:type — overridden field type (type-level)
+		{"typefield", "Coupon"}, // swagger:type — overridden type on the field doc
+		{"name", "Car"},         // swagger:name — overridden interface-method property
 	}
 	for _, tc := range cases {
 		t.Run(tc.feature, func(t *testing.T) {

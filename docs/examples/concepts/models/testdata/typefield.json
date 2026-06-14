@@ -1,0 +1,18 @@
+{
+  "description": "Coupon overrides the type of a single field directly on the field doc — no\nwrapper-type annotation. Code publishes as a bare string while RawID is left\nuntouched everywhere else it appears.",
+  "type": "object",
+  "properties": {
+    "amount": {
+      "description": "Amount is the discount in cents.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "Amount"
+    },
+    "code": {
+      "description": "Code is an opaque identifier published as a string.",
+      "type": "string",
+      "x-go-name": "Code"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

@@ -1,0 +1,16 @@
+{
+  "description": "CatalogEntry carries externalDocs at the schema level — the link rides the\ndefinition. (On a simple-schema parameter externalDocs is dropped with a\ndiagnostic: it is a full-Schema-only keyword.)",
+  "type": "object",
+  "properties": {
+    "sku": {
+      "description": "SKU is the catalog identifier.",
+      "type": "string",
+      "x-go-name": "SKU"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/routes",
+  "externalDocs": {
+    "description": "Catalog schema reference",
+    "url": "https://example.com/docs/catalog"
+  }
+}

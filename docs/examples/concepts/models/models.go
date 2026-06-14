@@ -125,6 +125,29 @@ type Token struct {
 
 // endsnippet:type
 
+// snippet:typefield
+
+// RawID is a custom 16-byte identifier — an array under the hood, so left to
+// itself a field of this type would render as an array of integers.
+type RawID [16]byte
+
+// Coupon overrides the type of a single field directly on the field doc — no
+// wrapper-type annotation. Code publishes as a bare string while RawID is left
+// untouched everywhere else it appears.
+//
+// swagger:model
+type Coupon struct {
+	// Code is an opaque identifier published as a string.
+	//
+	// swagger:type string
+	Code RawID `json:"code"`
+
+	// Amount is the discount in cents.
+	Amount int64 `json:"amount"`
+}
+
+// endsnippet:typefield
+
 // snippet:name
 
 // Car is exposed as a schema via its method set. Interface methods cannot carry

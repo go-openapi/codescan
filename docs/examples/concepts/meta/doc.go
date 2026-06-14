@@ -20,6 +20,10 @@
 //	Produces:
 //	  - application/json
 //
+//	ExternalDocs:
+//	  description: Full API guide
+//	  url: https://example.com/docs
+//
 // swagger:meta
 package meta
 

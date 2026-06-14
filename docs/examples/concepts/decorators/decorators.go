@@ -46,3 +46,26 @@ type PingResponse struct {
 		OK bool `json:"ok"`
 	}
 }
+
+// snippet:deprecatedmodel
+
+// Gadget is a deprecated model. OpenAPI 2.0 has no native `deprecated` on a
+// schema, so codescan emits `x-deprecated: true` — here triggered by the
+// godoc-style "Deprecated:" paragraph, which is recognised on its own without a
+// separate annotation. (The explicit `deprecated: true` annotation, shown on the
+// operation above, has the same effect on a model or field.)
+//
+// Deprecated: superseded by the v2 widget API.
+//
+// swagger:model
+type Gadget struct {
+	// SerialNo is the legacy identifier.
+	//
+	// Deprecated: use the v2 identifier instead.
+	SerialNo string `json:"serialNo"`
+
+	// Name is the current display name.
+	Name string `json:"name"`
+}
+
+// endsnippet:deprecatedmodel
