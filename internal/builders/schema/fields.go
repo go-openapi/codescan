@@ -209,6 +209,15 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 		return fieldCarrier{}, false, nil
 	}
 
+	// swagger:name overrides the json-tag / field-name derivation on a
+	// struct field — matching its documented "field OR method" scope and
+	// the behaviour already honoured on interface methods (F5,
+	// doc-site-quirks.md). applyFieldCarrier still records the Go name as
+	// x-go-name when it differs from the emitted JSON name.
+	if fd.JSONName != "" {
+		name = fd.JSONName
+	}
+
 	return fieldCarrier{
 		name:      name,
 		goName:    fld.Name(),
