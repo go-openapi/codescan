@@ -500,6 +500,26 @@ The asymmetry is deliberate:
   path. If `time.Time` ends up embedded and the package isn't in
   `AllPackages`, `missingSource` fires — same as v1.
 
+### Cross-source-file field promotion (go-swagger#2417)
+
+When `buildNamedEmbedded` reaches the struct arm, `tpe.Underlying()`
+collapses any chain of defined types straight to the `*types.Struct`,
+so a cross-package defined type (`type AnotherPackageAlias
+color.Color`) is built from the embedding type's `decl` even though the
+promoted fields' source lives in the *underlying* type's file. The same
+shape arises within a single package across files (a transparent alias
+to a struct defined in a sibling file).
+
+`structFieldCarrier` resolves each field's AST with
+`FindASTField(decl.File, fld.Pos())`. That returns nil when the field
+isn't in `decl.File` (a different file or package), which previously
+dropped the field silently — the model came out a bare empty object.
+The carrier now falls back to `ScanCtx.FileForPos(fld.Pkg().Path(),
+fld.Pos())`, which locates the field's own source file via the shared
+FileSet, so its json tag and doc are read correctly. The fallback only
+fires when the primary lookup misses, so the common single-file path is
+unchanged.
+
 ### `AddDiscoveredModel` pairing
 
 Both arms call `s.Ctx.AddDiscoveredModel(decl)` before recursing.

@@ -164,6 +164,18 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 	}
 
 	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	if afld == nil && fld.Pkg() != nil {
+		// The field is not in the embedding decl's file. This happens when an
+		// embedded named type promotes fields whose source lives elsewhere —
+		// e.g. embedding a cross-package defined type
+		// (`type AnotherPackageAlias color.Color`), where `decl` is the alias
+		// in package `a` but the fields belong to `color.Color` in package
+		// `color`. Resolve the field's AST against its own source file so its
+		// json tag and doc are read correctly. See go-swagger#2417.
+		if file, ok := s.Ctx.FileForPos(fld.Pkg().Path(), fld.Pos()); ok {
+			afld = resolvers.FindASTField(file, fld.Pos())
+		}
+	}
 	if afld == nil {
 		return fieldCarrier{}, false, nil
 	}

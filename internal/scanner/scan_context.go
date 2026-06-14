@@ -389,6 +389,36 @@ func (s *ScanCtx) PkgForType(t types.Type) (*packages.Package, bool) {
 	}
 }
 
+// FileForPos returns the *ast.File in package pkgPath whose source
+// interval contains pos. Used when a struct's fields are defined in a
+// different file than the decl that carries them — e.g. embedding a
+// cross-package defined type (`type AnotherPackageAlias color.Color`),
+// where the promoted fields live in the underlying type's source file,
+// not in the embedding type's file. See go-swagger#2417.
+//
+// Matching is done via the shared FileSet: positions and ast.File starts
+// resolve through the same *token.File, so the comparison is independent
+// of go/ast's File range accessors.
+func (s *ScanCtx) FileForPos(pkgPath string, pos token.Pos) (*ast.File, bool) {
+	pkg, ok := s.app.AllPackages[pkgPath]
+	if !ok || pkg.Fset == nil {
+		return nil, false
+	}
+
+	target := pkg.Fset.File(pos)
+	if target == nil {
+		return nil, false
+	}
+
+	for _, file := range pkg.Syntax {
+		if pkg.Fset.File(file.Pos()) == target {
+			return file, true
+		}
+	}
+
+	return nil, false
+}
+
 func (s *ScanCtx) FindComments(pkg *packages.Package, name string) (*ast.CommentGroup, bool) {
 	for _, f := range pkg.Syntax {
 		for _, d := range f.Decls {

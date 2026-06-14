@@ -7,6 +7,22 @@
         "payload": {
           "description": "Payload uses an alias that should resolve transparently.",
           "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "description": "ID of the payload.",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "ID"
+            },
+            "name": {
+              "description": "Name of the payload.",
+              "type": "string",
+              "x-go-name": "Name"
+            }
+          },
           "x-go-name": "Payload"
         }
       }

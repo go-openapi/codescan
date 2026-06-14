@@ -361,6 +361,11 @@ func TestParseResponses_TransparentAliases(t *testing.T) {
 	assert.TrueT(t, payload.Type.Contains("object"))
 	assert.Empty(t, payload.Ref.String())
 	assert.Equal(t, "Payload", payload.Extensions["x-go-name"])
+	// The inlined struct lives in a different source file than the response
+	// decl; its fields must still be promoted (go-swagger#2417 — same
+	// cross-source-file root cause as the cross-package embed).
+	assert.Contains(t, payload.Properties, "id")
+	assert.Contains(t, payload.Properties, "name")
 
 	scantest.CompareOrDumpJSON(t, responses, "transparentalias_responses.json")
 }
