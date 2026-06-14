@@ -58,6 +58,31 @@ func (pt ItemsTypable) WithEnumDescription(_ string) {
 	// parameter / header description already absorbs the enum doc.
 }
 
+// SimpleSchemaShape satisfies schema.SimpleSchemaProbe: an items level
+// in a non-body parameter / response header is itself a Swagger 2.0
+// SimpleSchema. Exposing it lets the schema builder's catch-at-exit
+// validator inspect array-element shapes, not just the top-level
+// target (go-swagger#1088).
+func (pt ItemsTypable) SimpleSchemaShape() *oaispec.SimpleSchema {
+	return &pt.items.SimpleSchema
+}
+
+// HasRef satisfies schema.SimpleSchemaProbe. SimpleSchema forbids a
+// $ref, including on array items: a named object element ([]Ele under
+// in: query) otherwise resolves to `items: {$ref}`, which the Swagger
+// 2.0 editor rejects (go-swagger#1088).
+func (pt ItemsTypable) HasRef() bool {
+	return pt.items.Ref.String() != ""
+}
+
+// ResetForViolation satisfies schema.SimpleSchemaProbe. Dissolves an
+// illegal $ref / shape on this items level back to empty, mirroring
+// paramTypable.ResetForViolation one level down.
+func (pt ItemsTypable) ResetForViolation() {
+	pt.items.SimpleSchema = oaispec.SimpleSchema{}
+	pt.items.Ref = oaispec.Ref{}
+}
+
 // ItemsValidations wraps an *oaispec.Items as a ValidationBuilder /
 // OperationValidationBuilder target. Used by parameters' and
 // responses' grammar items-level Walker dispatch.

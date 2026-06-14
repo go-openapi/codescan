@@ -104,6 +104,17 @@ register it.
 Nil and Ident-less decls are silently ignored — defensive against
 the scanner emitting partial decls during error recovery.
 
+`ResetPostDeclarations()` drops the whole queue for a Build pass. Its
+one caller is the schema builder's SimpleSchema catch-at-exit validator
+(go-swagger#1088): when a non-body parameter / response-header element
+dissolves an illegal `$ref`, the decl `MakeRef` discovered for that ref
+is a byproduct of the now-removed reference and must not linger as an
+orphan definition. A single-type Build renders exactly one target, so
+every queued decl is reachable only through it; clearing the whole queue
+is correct, and a decl genuinely referenced elsewhere is re-discovered
+by that other site's Builder and deduplicated here and in the
+orchestrator.
+
 ## <a id="embed-inheritance"></a>§embed-inheritance — annotations on an embed flow to promoted members
 
 `EmbedInheritance` + `ReadEmbedInheritance` are the shared kernel of the

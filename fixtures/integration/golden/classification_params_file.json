@@ -255,9 +255,7 @@
     "parameters": [
       {
         "type": "array",
-        "items": {
-          "$ref": "#/definitions/OrderBodyParams"
-        },
+        "items": {},
         "x-go-name": "Orders",
         "description": "The orders",
         "name": "orders",

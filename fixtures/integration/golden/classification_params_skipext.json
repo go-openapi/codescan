@@ -238,9 +238,7 @@
     "parameters": [
       {
         "type": "array",
-        "items": {
-          "$ref": "#/definitions/OrderBodyParams"
-        },
+        "items": {},
         "description": "The orders",
         "name": "orders",
         "in": "query",
