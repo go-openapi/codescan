@@ -1,0 +1,22 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Event": {
+      "description": "Event carries a time.Time field, which JSON-serialises to a string and should\nbe documented as {type: string, format: date-time}.",
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "CreatedAt"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1078"
+    }
+  }
+}
