@@ -88,6 +88,20 @@ identically to `header`. Q1 made this default **explicit** in code
 — `inHeader` is assigned when `!signals.inSet`. Observable behaviour
 is unchanged; the implicit fall-through is gone.
 
+### Inherited `in:` from an embed (go-swagger#2701)
+
+An `in:` annotation on an embedded (anonymous) field applies to the
+response fields it promotes. `buildFromStruct` reads it via the shared
+`common.EmbedInheritance` kernel and threads it through the embed
+recursion with save/restore; `processResponseField` consults it as the
+fallback between a field's own `in:` and the `header` default. So an
+embed marked `// in: body` routes its promoted field to the body, while
+the common header-promotion case (an embed of header fields) is
+unaffected. Response **bodies** also inherit `required:` from embeds, but
+through the schema builder (a body is built there), not here — OAS2
+response headers carry no `required`. See
+[common §embed-inheritance](../common/README.md#embed-inheritance).
+
 ### Invalid `in:` values
 
 An `in:` line with a non-vocabulary value (e.g. `in: cookie`) emits

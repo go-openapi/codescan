@@ -19,6 +19,7 @@ post-decl queue, and the slog logger.
 - [§makeref](#makeref) — why `MakeRef` lives on the common base
 - [§diagnostics](#diagnostics) — accumulator ordering, dedup posture, LSP-evolution caveat
 - [§postdecls](#postdecls) — per-Builder dedup index + cross-Builder re-dedup in the orchestrator
+- [§embed-inheritance](#embed-inheritance) — annotations on an embed flow to promoted members
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -102,6 +103,31 @@ register it.
 
 Nil and Ident-less decls are silently ignored — defensive against
 the scanner emitting partial decls during error recovery.
+
+## <a id="embed-inheritance"></a>§embed-inheritance — annotations on an embed flow to promoted members
+
+`EmbedInheritance` + `ReadEmbedInheritance` are the shared kernel of the
+rule "a doc-comment directive on an embedded (anonymous) struct field
+applies to the members that embed promotes" (go-swagger#2701). All three
+field-walking builders embed `*common.Builder` and use it so the
+behaviour is identical:
+
+- **parameters** consume `In` and `Required` (an `in: path` / `required:`
+  on the embed flows to the promoted parameters);
+- **schema** consumes `Required` (a `required:` on the embed adds the
+  promoted properties to the enclosing object's required list); it has no
+  `in:` concept;
+- **responses** consume `In` (the body/header routing discriminator);
+  OAS2 response headers carry no `required`.
+
+Each builder keeps its own struct walk (the output objects differ —
+`Parameter` vs `Header` vs schema property), threading the context with
+save/restore around its embed recursion: the embed's own directive wins
+over the inherited one, an absent directive carries the parent's through
+(so nesting accumulates), and a promoted member's own directive always
+wins over the inherited fallback. `ScanInLocation` (the `in:` line scan,
+shared with the parameters/responses field-signal scanners) and
+`grammar.NormalizeIn` back the `In` half.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 

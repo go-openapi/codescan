@@ -26,6 +26,14 @@ const inBody = "body"
 // PostDeclarations, diagnostics, ParseBlocks cache).
 type Builder struct {
 	*common.Builder
+
+	// inherited carries an embedded field's in:/required: annotation down
+	// into the parameters it promotes (go-swagger#2701). The zero value
+	// means no inheritance (top-level / non-embedded path). Set with
+	// save/restore around the embedded-field recursion in buildFromStruct.
+	// The mechanism is shared with the schema and responses builders via
+	// common.EmbedInheritance.
+	inherited common.EmbedInheritance
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -323,7 +331,17 @@ func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, o
 	sequence := make([]string, 0, numFields)
 	for fld := range tpe.Fields() {
 		if fld.Embedded() {
-			if err := p.buildFromType(fld.Type(), op, seen); err != nil {
+			// An in:/required: annotation on the embed itself applies to the
+			// parameters it promotes (go-swagger#2701). Thread it through the
+			// recursion as inherited context, restoring afterwards so sibling
+			// fields are unaffected.
+			saved := p.inherited
+			if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+				p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
+			}
+			err := p.buildFromType(fld.Type(), op, seen)
+			p.inherited = saved
+			if err != nil {
 				return err
 			}
 			continue
@@ -382,8 +400,12 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 	}
 
 	in := "query"
-	if signals.inSet {
+	switch {
+	case signals.inSet:
 		in = signals.in
+	case p.inherited.InSet:
+		// in: from an embedding field (go-swagger#2701).
+		in = p.inherited.In
 	}
 
 	ps := seen[name]
@@ -418,10 +440,16 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		ps.Items = nil
 	}
 
+	_, fieldSetRequired := p.ParseBlock(afld.Doc).GetBool(grammar.KwRequired)
 	if err := p.applyBlockToField(afld, &ps); err != nil {
 		return "", err
 	}
 	if ps.In == "path" {
+		ps.Required = true
+	}
+	// required: from an embedding field (go-swagger#2701), unless the
+	// promoted field set its own required: explicitly.
+	if !fieldSetRequired && p.inherited.RequiredSet && p.inherited.Required {
 		ps.Required = true
 	}
 

@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"go/types"
 
+	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
@@ -96,6 +97,15 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 	}
 
 	s.applyBlockToField(c.afld, target, &ps, c.name)
+
+	// required: inherited from an embedding field (go-swagger#2701), unless
+	// the promoted property set its own required: explicitly. The flag lives
+	// on the enclosing object's Required list, so it is written to target.
+	if s.embedInherited.RequiredSet && s.embedInherited.Required {
+		if _, ownRequired := s.ParseBlock(c.afld.Doc).GetBool(grammar.KwRequired); !ownRequired {
+			handlers.SetRequired(target, c.name, true)
+		}
+	}
 
 	if ps.Ref.String() == "" && c.name != c.goName {
 		resolvers.AddExtension(&ps.VendorExtensible, "x-go-name", c.goName, s.skipExtensions)
