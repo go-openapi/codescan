@@ -87,21 +87,23 @@ func (ht responseTypable) WithEnum(values ...any) {
 	ht.header.WithEnum(values...)
 }
 
-func (ht responseTypable) WithEnumDescription(_ string) {
-	// Intentionally a no-op. A response header is an OAS v2 SimpleSchema
-	// target, but go-openapi/spec's Header.MarshalJSON serializes only
-	// CommonValidations + SimpleSchema + HeaderProps — it does NOT emit the
-	// embedded VendorExtensible. So a header cannot carry x-go-enum-desc (or
-	// any x-go-* extension) in the output spec; setting one would be dead
-	// in-memory state silently dropped at marshal time. The enum *values*
-	// still ship via WithEnum. This is the one SimpleSchema target where the
-	// const-name mapping is unrepresentable. See go-swagger/go-swagger#2922.
-	//
-	// TODO: tracked by go-openapi/spec#277 (Header.MarshalJSON drops
-	// VendorExtensible). Once that lands and the dependency is bumped, wire
-	// this to emit x-go-enum-desc (mirroring paramTypable.WithEnumDescription)
-	// and flip the header assertion in coverage_bug_2922_test.go from
-	// "no x-go-enum-desc" to "extension present".
+// WithEnumDescription rides the enum const-name mapping on the
+// header's x-go-enum-desc vendor extension, mirroring
+// paramTypable.WithEnumDescription.
+//
+// This is wired against go-openapi/spec >= v0.22.6, where
+// Header.MarshalJSON emits the embedded VendorExtensible (go-openapi/spec#277).
+// Earlier versions dropped header extensions at marshal, so this was a
+// documented no-op. The enum *values* themselves ship via WithEnum and
+// were never affected.
+func (ht responseTypable) WithEnumDescription(desc string) {
+	if desc == "" {
+		return
+	}
+	// Gated on SkipExtensions (mirrors schema.Typable): the contract is that
+	// x-go-* vendor extensions are suppressed everywhere when SkipExtensions
+	// is set.
+	resolvers.AddExtension(&ht.header.VendorExtensible, resolvers.ExtEnumDesc, desc, ht.skipExt)
 }
 
 // SimpleSchemaShape satisfies schema.SimpleSchemaProbe (non-body

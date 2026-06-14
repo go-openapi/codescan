@@ -60,7 +60,8 @@
             "SECOND"
           ],
           "type": "string",
-          "description": "The description of the enum header"
+          "description": "The description of the enum header",
+          "x-go-enum-desc": "FIRST TestEnumFirst\nSECOND TestEnumSecond"
         }
       }
     }
