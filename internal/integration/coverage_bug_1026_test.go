@@ -29,7 +29,7 @@ func TestCoverage_Bug1026(t *testing.T) {
 
 	logo, ok := doc.Info.Extensions["x-logo"]
 	require.True(t, ok, "x-logo is emitted as an info vendor extension")
-	logoMap, ok := logo.(map[string]interface{})
+	logoMap, ok := logo.(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "./images/logo.png", logoMap["url"])
 
