@@ -1,0 +1,48 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "ListResponseData": {
+      "type": "object",
+      "title": "ListResponseData is a nested model.",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Items"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1708"
+    },
+    "ListResponseMeta": {
+      "type": "object",
+      "title": "ListResponseMeta is a nested model.",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Total"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1708"
+    }
+  },
+  "responses": {
+    "eventsResponse": {
+      "description": "EventsResponse is a body response whose fields are pointers to other models —\nthe reporter hit \"missing property type\" on this shape (follow-up of #619).",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/definitions/ListResponseData"
+          },
+          "meta": {
+            "$ref": "#/definitions/ListResponseMeta"
+          }
+        }
+      }
+    }
+  }
+}
