@@ -4,7 +4,6 @@
 package integration_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -18,10 +17,9 @@ import (
 // (`+kubebuilder:default:=false`) used to abort the scan with
 // `strconv.ParseBool parsing "=false"`. The scan now succeeds.
 //
-// Residual (flagged 📖 Need doc): the marker is currently absorbed into the
-// field description rather than ignored. Filtering known non-swagger markers
-// (kubebuilder, etc.) out of prose is a possible future enhancement; this
-// test documents the current behaviour so a change to it is conscious.
+// The residual (the marker leaking into the field description) is now closed
+// alongside go-swagger#2687: the lexer drops `+marker`-style directive lines
+// from prose, so the description is clean.
 func TestCoverage_Bug3007(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/3007/..."},
@@ -33,9 +31,9 @@ func TestCoverage_Bug3007(t *testing.T) {
 
 	enabled := doc.Definitions["Thing"].Properties["enabled"]
 	assert.Equal(t, "boolean", enabled.Type[0])
-	// Current behaviour: the non-swagger marker leaks into the description.
-	assert.True(t, strings.Contains(enabled.Description, "+kubebuilder:default:=false"),
-		"TODO #3007: kubebuilder marker currently absorbed into the description (future: filter non-swagger markers)")
+	// FIXED (with #2687): the non-swagger marker is stripped from the prose.
+	assert.Equal(t, "Enabled flag.", enabled.Description)
+	assert.NotContains(t, enabled.Description, "+kubebuilder")
 
 	scantest.CompareOrDumpJSON(t, doc, "bugs_3007_schema.json")
 }

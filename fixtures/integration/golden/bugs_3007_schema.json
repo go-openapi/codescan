@@ -6,7 +6,7 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "description": "Enabled flag.\n+kubebuilder:default:=false",
+          "description": "Enabled flag.",
           "type": "boolean",
           "x-go-name": "Enabled"
         }

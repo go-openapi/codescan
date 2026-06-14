@@ -138,6 +138,29 @@ func isGoDirective(raw string) bool {
 	return true
 }
 
+// isDirectiveMarker reports whether text is a Go "marker" comment of the
+// kind emitted by Kubernetes code-generation tooling (kubebuilder,
+// controller-gen, k8s deepcopy-gen, genclient): a line whose content
+// begins with `+` immediately followed by an ASCII letter, e.g.
+// `+genclient`, `+kubebuilder:validation:Required`, `+k8s:deepcopy-gen=…`.
+//
+// These markers are not part of the swagger annotation grammar and must
+// not leak into model / property descriptions (go-swagger#2687, the
+// residual of #3007); lexLine drops them from the prose surface exactly
+// like Go directives.
+//
+// text is the godoc-stripped Line.Text, so both the common kubebuilder
+// form `// +marker` (space after the comment marker) and the bare
+// `//+marker` arrive here as `+marker`. Requiring a letter after the `+`
+// avoids eating prose that merely opens with a sign (e.g. "+1 for …").
+func isDirectiveMarker(text string) bool {
+	if len(text) < 2 || text[0] != '+' {
+		return false
+	}
+	c := text[1]
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
 // hasSwaggerPrefix is the case-insensitive match on the first char of
 // AnnotationPrefix — only the first character is permissive.
 //
@@ -1017,6 +1040,17 @@ func classifyProse(in []Token) []Token {
 			} else {
 				state = proseInBody
 			}
+			continue
+		}
+		// Drop Kubernetes-style marker comments (`+kubebuilder:…`,
+		// `+genclient`, `+k8s:…`) from the prose surface so they never leak
+		// into model / property descriptions (go-swagger#2687, the residual
+		// of #3007). Done here (Stage 3) rather than at line classification
+		// so annotation bodies are untouched — the inline swagger:route
+		// parameters grammar uses `+name:` as a parameter separator
+		// (go-swagger#3100), and by this stage that body has already been
+		// folded into its keyword token by accumulateBodies.
+		if t.Kind == tokenText && isDirectiveMarker(t.Text) {
 			continue
 		}
 		// Buffer prose runs; the run-classifier runs at run-end.
