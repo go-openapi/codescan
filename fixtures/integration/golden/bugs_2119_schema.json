@@ -1,0 +1,15 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "title": "Widget probes SkipExtensions suppressing x-go-name / x-go-package (#2119).",
+      "properties": {
+        "colour": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
