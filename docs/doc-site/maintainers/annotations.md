@@ -854,17 +854,28 @@ property `FullName` (PascalCase). The annotation renames it to
 
 ## `swagger:type`
 
-**What it does.** Overrides the inferred Swagger type for a named
-type or struct field. The Go type's natural inference (struct →
-object, named string → string, `time.Time` → date-time, …) is
-replaced with the annotation's argument.
+**What it does.** Replaces a field's (or named type's) inferred Swagger
+type with an **inlined** type. `swagger:type` is an inline directive — it
+never emits a `$ref`; the chosen type is rendered directly in place
+(the default `$ref`-for-named-types is the *no-annotation* behaviour).
 
 **Where it goes.** On a type declaration OR a struct field doc.
 
-**Argument shape.** Required IDENT — a scalar Swagger type name
-(`string`, `integer`, `number`, `boolean`, `object`) or a Go builtin
-codescan resolves. `array` and `file` are **not** accepted; an
-unrecognised value is ignored and the field keeps its underlying Go type.
+**Argument shape.** Required token, one of:
+
+- a **scalar type** — `string`, `integer`, `number`, `boolean`, `object`
+  (or a Go-builtin spelling such as `int64`, `uint32`);
+- **`[]T`** — an array whose items are the inlined `T` (recursive:
+  `[][]int64`, `[]Custom`);
+- **`inline`** — expand the field's own Go type in place, instead of the
+  `$ref` a named type would otherwise produce;
+- a **known type name** — inline that type's schema (again, no `$ref`).
+
+`array` is **deprecated** — use `inline`, or `[]T` for an explicit element
+type; it still works, with a `validate.deprecated` warning. `file` is
+rejected with a diagnostic (use [`swagger:file`](#swaggerfile)). An unknown
+name falls back to inlining the field's Go type, with a
+`validate.unsupported-type` diagnostic.
 
 **Sample (type-level override):**
 
@@ -889,9 +900,12 @@ type Document struct {
 }
 ```
 
-**Interaction:** when combined with `swagger:strfmt` on the same
-type, both apply — the strfmt format goes onto the published
-`{type: string, format: …}`.
+**Interaction with `swagger:strfmt`.** `swagger:type` wins on the type
+axis; a `swagger:strfmt` format on the same field is kept only when
+**compatible** with the resolved type — a `string` accepts any format,
+the numeric types accept the numeric width formats — otherwise it is
+dropped with a shape-mismatch diagnostic. `swagger:strfmt` *alone* is
+unchanged: it still forces the string-encoded `{type: string, format: …}`.
 
 **Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
 

@@ -31,12 +31,16 @@ This is an **advanced, rarely-needed** case. To keep the alias name in the spec
   overriding the per-declaration annotation (use sites become `$ref` to the
   target, as in the default-dissolve example above).
 
-For the precise per-mode contract and the canonical witnesses, see the
-[`swagger:alias` reference]({{% relref "/maintainers/annotations#swaggeralias" %}})
-and the `fixtures/enhancements/alias-calibration-embed` golden trio.
+The canonical witnesses are the `fixtures/enhancements/alias-calibration-embed`
+golden trio.
 
 {{% notice style="note" %}}
 Most APIs never need first-class aliases — prefer naming a real `swagger:model`
 type over aliasing one. Reach for `RefAliases` / `TransparentAliases` only when
 you specifically need to control whether an alias name survives in the output.
+
+The `swagger:alias` *annotation* is
+[deprecated]({{% relref "/maintainers/annotations#swaggeralias--deprecated" %}})
+and has no effect — alias rendering is governed by the plain Go alias plus these
+options, or by `swagger:model` for a first-class definition.
 {{% /notice %}}

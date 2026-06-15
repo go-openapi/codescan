@@ -22,6 +22,12 @@ sets it, clients must not.
 {{< example go="concepts/decorators/decorators.go" goregion="readonly"
             json="concepts/decorators/testdata/readonly.json" jsonlabel="#/definitions/Token" >}}
 
+This is the idiomatic way to model server-set fields (an `id`, a `createdAt`)
+that appear in responses but should not be supplied on create — one model,
+marked `readOnly`, rather than separate request/response structs. (codescan does
+not hide fields per operation; if you truly need different shapes, declare
+distinct request and response models.)
+
 ## deprecated
 
 `deprecated: true` in a `swagger:route` / `swagger:operation` body marks the

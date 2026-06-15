@@ -74,10 +74,14 @@ field is published as a `string`.
 {{< example go="concepts/models/models.go" goregion="type"
             json="concepts/models/testdata/type.json" jsonlabel="#/definitions/Token" >}}
 
-The accepted values are the scalar Swagger types — `string`, `integer`,
-`number`, `boolean`, `object` (plus the Go builtin names codescan resolves).
-`array` and `file` are not accepted here; an unrecognized value leaves the field
-on its underlying Go type.
+`swagger:type` is an **inline directive**: it renders the chosen type in place
+and never emits a `$ref`. The value is a scalar type (`string`, `integer`,
+`number`, `boolean`, `object`, or a Go builtin like `int64`), `[]T` for an array
+of an inlined type, `inline` to expand the field's own Go type, or a known type
+name to inline that type. `array` is deprecated in favour of `inline` / `[]T`,
+and `file` is rejected (use `swagger:file`). When combined with `swagger:strfmt`,
+the type wins and the format is kept only if compatible — see the
+[reference]({{% relref "/maintainers/annotations#swaggertype" %}}).
 
 The override also works **on an individual field doc** — no wrapper-type
 annotation. Here `Code` is published as a string while its `RawID` type is left
@@ -88,12 +92,12 @@ untouched everywhere else:
 
 ## swagger:name
 
-A model defined as an **interface** publishes one property per nullary method.
-By default the property name is the camelCased method name — so `Maker()`
-already becomes `maker` with no annotation. `swagger:name <name>` is the
-**override** for when that default is not what you want (interface methods
-cannot carry a `json` tag). Here `StructType()` would default to `structType`;
-the annotation publishes it as `jsonClass` instead.
+`swagger:name <name>` overrides the JSON property name a field or method
+renders as. It works on a **struct field** (overriding the `json:` tag / Go
+field name) and on an **interface method**. It is most useful on interface
+methods, which publish one property per nullary method and cannot carry a
+`json` tag: below, `StructType()` would default to `structType`, and the
+annotation publishes it as `jsonClass` instead.
 
 {{< example go="concepts/models/models.go" goregion="name"
             json="concepts/models/testdata/name.json" jsonlabel="#/definitions/Car" >}}
