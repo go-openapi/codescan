@@ -31,7 +31,7 @@ func TestCoverage_Bug1542(t *testing.T) {
 	assert.Equal(t, "OpenEBS Volume", props["name"].Example)
 
 	ann := props["annotations"].Example
-	m, ok := ann.(map[string]interface{})
+	m, ok := ann.(map[string]any)
 	require.True(t, ok, "a JSON object example is parsed into a map, not kept as a string")
 	assert.Equal(t, "SomeString", m["com.example1.com"])
 

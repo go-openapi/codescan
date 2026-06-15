@@ -30,7 +30,7 @@ func TestCoverage_Bug1713(t *testing.T) {
 	r200 := op.Responses.StatusCodeResponses[200]
 	ex, ok := r200.Examples["application/json"]
 	require.True(t, ok, "examples keyed by mime type are emitted")
-	exMap, ok := ex.(map[string]interface{})
+	exMap, ok := ex.(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "blah", exMap["test"])
 

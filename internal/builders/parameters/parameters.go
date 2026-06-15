@@ -331,37 +331,12 @@ func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, o
 	sequence := make([]string, 0, numFields)
 	for fld := range tpe.Fields() {
 		if fld.Embedded() {
-			// An in:/required: annotation on the embed itself applies to the
-			// parameters it promotes (go-swagger#2701). Thread it through the
-			// recursion as inherited context, restoring afterwards so sibling
-			// fields are unaffected.
-			saved := p.inherited
-			if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
-				p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
-			}
-			// An embed marked `in: body` IS the body parameter — the embedded
-			// struct becomes one body param's schema, exactly like a named
-			// `Body Foo` field, rather than promoting its members as N separate
-			// body params (an operation allows at most one body parameter, so
-			// per-field promotion produces an invalid spec). go-swagger#1635;
-			// the parameters counterpart of the responses in: body embed.
-			// Other in: values still promote the embed's fields (#2701).
-			if p.inherited.InSet && p.inherited.In == inBody {
-				name, err := p.processParamField(fld, decl, seen)
-				p.inherited = saved
-				if err != nil {
-					return err
-				}
-				if name != "" {
-					sequence = append(sequence, name)
-				}
-				continue
-			}
-			err := p.buildFromType(fld.Type(), op, seen)
-			p.inherited = saved
+			var err error
+			sequence, err = p.buildEmbeddedField(fld, decl, op, sequence, seen)
 			if err != nil {
-				return err
+				return nil
 			}
+
 			continue
 		}
 
@@ -387,6 +362,45 @@ func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, o
 	}
 
 	return nil
+}
+
+func (p *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, op *oaispec.Operation, sequence []string, seen map[string]oaispec.Parameter) ([]string, error) {
+	// An in:/required: annotation on the embed itself applies to the
+	// parameters it promotes (go-swagger#2701). Thread it through the
+	// recursion as inherited context, restoring afterwards so sibling
+	// fields are unaffected.
+	saved := p.inherited
+	if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+		p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
+	}
+	// An embed marked `in: body` IS the body parameter — the embedded
+	// struct becomes one body param's schema, exactly like a named
+	// `Body Foo` field, rather than promoting its members as N separate
+	// body params (an operation allows at most one body parameter, so
+	// per-field promotion produces an invalid spec). go-swagger#1635;
+	// the parameters counterpart of the responses in: body embed.
+	// Other in: values still promote the embed's fields (#2701).
+	if p.inherited.InSet && p.inherited.In == inBody {
+		name, err := p.processParamField(fld, decl, seen)
+		p.inherited = saved
+		if err != nil {
+			return nil, err
+		}
+
+		if name != "" {
+			sequence = append(sequence, name)
+		}
+
+		return sequence, nil
+	}
+
+	err := p.buildFromType(fld.Type(), op, seen)
+	p.inherited = saved
+	if err != nil {
+		return nil, err
+	}
+
+	return sequence, nil
 }
 
 // processParamField processes a single non-embedded struct field for parameter building.

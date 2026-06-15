@@ -373,34 +373,14 @@ func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, r
 
 	for fld := range tpe.Fields() {
 		if fld.Embedded() {
-			// An in: annotation on the embed applies to the response fields
-			// it promotes (go-swagger#2701) — body/header routing. Thread it
-			// through the recursion, restoring afterwards so siblings are
-			// unaffected.
-			saved := r.inherited
-			if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
-				r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
-			}
-			// An embed marked `in: body` IS the response body — the embedded
-			// struct becomes the body schema, exactly like a named `Body Foo`
-			// field, rather than promoting its members (a response has a single
-			// body, so per-field promotion is meaningless). go-swagger#1635.
-			// Other in: values still promote the embed's fields (#2701).
-			if r.inherited.InSet && r.inherited.In == inBody {
-				err := r.buildBodyEmbed(fld, resp, seen)
-				r.inherited = saved
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			err := r.buildFromType(fld.Type(), resp, seen)
-			r.inherited = saved
+			err := r.buildEmbeddedField(fld, decl, resp, seen)
 			if err != nil {
-				return err
+				return nil
 			}
+
 			continue
 		}
+
 		if fld.Anonymous() {
 			logger.DebugLogf(r.Ctx.Debug(), "skipping anonymous field")
 			continue
@@ -416,6 +396,40 @@ func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, r
 			delete(resp.Headers, k)
 		}
 	}
+
+	return nil
+}
+
+func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, resp *oaispec.Response, seen map[string]bool) error {
+	// An in: annotation on the embed applies to the response fields
+	// it promotes (go-swagger#2701) — body/header routing. Thread it
+	// through the recursion, restoring afterwards so siblings are
+	// unaffected.
+	saved := r.inherited
+	if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+		r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
+	}
+	// An embed marked `in: body` IS the response body — the embedded
+	// struct becomes the body schema, exactly like a named `Body Foo`
+	// field, rather than promoting its members (a response has a single
+	// body, so per-field promotion is meaningless). go-swagger#1635.
+	// Other in: values still promote the embed's fields (#2701).
+	if r.inherited.InSet && r.inherited.In == inBody {
+		err := r.buildBodyEmbed(fld, resp, seen)
+		r.inherited = saved
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := r.buildFromType(fld.Type(), resp, seen)
+	r.inherited = saved
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
