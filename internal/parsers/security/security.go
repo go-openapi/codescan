@@ -44,7 +44,8 @@ func parseLines(lines []string) []Requirement {
 	const kvParts = 2
 	var result []Requirement
 	for _, raw := range lines {
-		kv := strings.SplitN(raw, ":", kvParts)
+		line := stripSequenceMarker(strings.TrimSpace(raw))
+		kv := strings.SplitN(line, ":", kvParts)
 		if len(kv) < kvParts {
 			continue
 		}
@@ -52,17 +53,44 @@ func parseLines(lines []string) []Requirement {
 		if name == "" {
 			continue
 		}
-		scopes := []string{}
-		for scope := range strings.SplitSeq(kv[1], ",") {
-			tr := strings.TrimSpace(scope)
-			if tr == "" {
-				continue
-			}
-			// V1 quirk: scope truncates at first whitespace.
-			tr = strings.SplitAfter(tr, " ")[0]
-			scopes = append(scopes, strings.TrimSpace(tr))
-		}
-		result = append(result, Requirement{name: scopes})
+		result = append(result, Requirement{name: parseScopes(kv[1])})
 	}
 	return result
+}
+
+// stripSequenceMarker removes a leading YAML sequence marker ("- ") so a
+// requirement written as a list item (`- name: scopes`) parses identically to
+// the flat form (`name: scopes`). go-swagger#2403.
+//
+// The marker is only stripped when the dash is followed by whitespace (or is
+// the whole token), so a scheme name that legitimately begins with '-' — and
+// the YAML document fence `---` — are left untouched.
+func stripSequenceMarker(line string) string {
+	rest, ok := strings.CutPrefix(line, "-")
+	if !ok || (rest != "" && rest[0] != ' ' && rest[0] != '\t') {
+		return line
+	}
+	return strings.TrimSpace(rest)
+}
+
+// parseScopes parses the scope list following a `name:` requirement. Both the
+// flat comma form (`a, b`) and a YAML inline sequence (`[]`, `[a, b]`) are
+// accepted; the latter lets the list-item form `- name: []` denote empty scopes
+// rather than a literal `"[]"` scope. go-swagger#2403.
+func parseScopes(raw string) []string {
+	v := strings.TrimSpace(raw)
+	if len(v) >= 2 && v[0] == '[' && v[len(v)-1] == ']' {
+		v = strings.TrimSpace(v[1 : len(v)-1])
+	}
+	scopes := []string{}
+	for scope := range strings.SplitSeq(v, ",") {
+		tr := strings.TrimSpace(scope)
+		if tr == "" {
+			continue
+		}
+		// V1 quirk: scope truncates at first whitespace.
+		tr = strings.SplitAfter(tr, " ")[0]
+		scopes = append(scopes, strings.TrimSpace(tr))
+	}
+	return scopes
 }
