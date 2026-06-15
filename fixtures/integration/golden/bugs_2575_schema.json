@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "List all pets.",
+        "operationId": "getPet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "XRequestID",
+            "description": "X-Request-ID custom header.",
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
