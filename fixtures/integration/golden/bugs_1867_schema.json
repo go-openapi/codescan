@@ -7,7 +7,12 @@
           "hybrid"
         ],
         "summary": "Patch via operation.",
-        "operationId": "patchOpenHybridOp"
+        "operationId": "patchOpenHybridOp",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
       }
     },
     "/hybrid/route": {

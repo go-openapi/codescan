@@ -31,10 +31,13 @@ func TestCoverage_Bug1867(t *testing.T) {
 	require.NotNil(t, route.Parameters[0].Schema)
 	assert.Contains(t, route.Parameters[0].Schema.Properties, "end_time")
 
-	// swagger:operation PATCH.
+	// swagger:operation PATCH, including its YAML-body responses.
 	op := doc.Paths.Paths["/hybrid/op"].Patch
 	require.NotNil(t, op, "swagger:operation PATCH must emit a patch operation")
 	assert.Equal(t, "patchOpenHybridOp", op.ID)
+	r200, ok := op.Responses.StatusCodeResponses[200]
+	require.True(t, ok, "the swagger:operation YAML-body response must attach")
+	assert.Equal(t, "ok", r200.Description)
 
 	scantest.CompareOrDumpJSON(t, doc, "bugs_1867_schema.json")
 }

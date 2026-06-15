@@ -1,0 +1,42 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "getPets",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Foo",
+            "name": "foo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "someResponse",
+            "schema": {
+              "$ref": "#/definitions/someResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "someResponse": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-name": "response",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1934"
+    }
+  }
+}

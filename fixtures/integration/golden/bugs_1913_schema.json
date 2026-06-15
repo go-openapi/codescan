@@ -1,0 +1,65 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "TeslaCar": {
+      "type": "object",
+      "title": "TeslaCar is a discriminated (polymorphic) type (go-swagger#1913).",
+      "properties": {
+        "autoPilot": {
+          "description": "AutoPilot returns true when it supports autopilot",
+          "type": "boolean",
+          "x-go-name": "AutoPilot"
+        },
+        "model": {
+          "description": "The model of tesla car",
+          "type": "string",
+          "x-go-name": "Model"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1913",
+      "discriminator": "model"
+    },
+    "modelS": {
+      "title": "ModelS version of the tesla car.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "edition": {
+              "description": "The edition of this Model S",
+              "type": "string",
+              "x-go-name": "Edition"
+            }
+          }
+        }
+      ],
+      "x-go-name": "ModelS",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1913"
+    },
+    "modelX": {
+      "title": "ModelX version of the tesla car.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "doors": {
+              "description": "Number of doors",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Doors"
+            }
+          }
+        }
+      ],
+      "x-go-name": "ModelX",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1913"
+    }
+  }
+}

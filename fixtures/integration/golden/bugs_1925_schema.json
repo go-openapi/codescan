@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/report": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Report.",
+        "operationId": "doReport",
+        "parameters": [
+          {
+            "x-go-name": "Report",
+            "name": "report",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

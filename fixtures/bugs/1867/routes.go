@@ -25,10 +25,10 @@ func PatchViaRoute() {}
 
 // swagger:operation PATCH /hybrid/op hybrid patchOpenHybridOp
 //
-// ---
-// summary: Patch via operation.
-// responses:
+// Patch via operation.
 //
-//	'200':
-//	  description: ok
+// ---
+// responses:
+//   '200':
+//     description: ok
 func PatchViaOperation() {}
