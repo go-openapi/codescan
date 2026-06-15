@@ -28,7 +28,7 @@ func TestCoverage_Bug2353(t *testing.T) {
 	op := doc.Paths.Paths["/test/{id}"].Post
 	require.NotNil(t, op)
 	require.Len(t, op.Parameters, 2)
-	var path, body int = -1, -1
+	path, body := -1, -1
 	for i, p := range op.Parameters {
 		switch p.In {
 		case "path":
