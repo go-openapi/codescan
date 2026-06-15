@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "SetEmailRequest": {
+      "type": "object",
+      "title": "SetEmailRequest overrides an external-type field with swagger:type (#2419).",
+      "properties": {
+        "email": {
+          "type": "string",
+          "x-go-name": "Email"
+        },
+        "user_id": {
+          "type": "string",
+          "x-go-name": "UserID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2419"
+    },
+    "StringValue": {
+      "type": "object",
+      "title": "StringValue is an external wrapper type (like protobuf wrappers.StringValue).",
+      "properties": {
+        "Value": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2419/sub"
+    }
+  }
+}
