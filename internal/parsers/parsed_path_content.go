@@ -8,6 +8,8 @@ import (
 	"go/token"
 	"regexp"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var (
@@ -107,13 +109,62 @@ func ensureCommentMarker(line string) string {
 	return "// " + line
 }
 
+// stripBlockFraming removes the `/* … */` markers from a block comment's
+// full text, leaving the inner lines. A `swagger:operation` written in a
+// `/* */` block comment arrives as a single *ast.Comment whose Text still
+// carries the framing; without stripping it, the closing `*/` (and the
+// empty opener line) leak into the reconstructed Remaining block, where a
+// stray `*/` reads as a YAML alias indicator and fails the body parse
+// (go-swagger#1595). Returns the text unchanged for `//` comments.
+func stripBlockFraming(text string) string {
+	if !strings.HasPrefix(text, "/*") {
+		return text
+	}
+	return strings.TrimSuffix(strings.TrimPrefix(text, "/*"), "*/")
+}
+
+// stripBlockContinuation removes the `\s*\*\s?` godoc decoration a `/* */`
+// continuation line may carry, preserving all other indentation (so YAML
+// body indentation under a block-comment swagger:operation survives). It
+// mirrors grammar.stripBlockContinuation; the duplication keeps the
+// scanner-level parsers package free of a dependency on the grammar
+// sub-package. A line with no `*` decoration (the flush-left block style)
+// is returned untouched.
+func stripBlockContinuation(s string) string {
+	leading := -1
+	for i, r := range s {
+		if !unicode.IsSpace(r) {
+			leading = i
+			break
+		}
+	}
+	if leading < 0 || s[leading] != '*' {
+		return s
+	}
+	s = s[leading+1:]
+	r, offset := utf8.DecodeRuneInString(s)
+	if unicode.IsSpace(r) {
+		return s[offset:]
+	}
+	return s
+}
+
 func parsePathAnnotation(annotation *regexp.Regexp, lines []*ast.Comment) (cnt ParsedPathContent) {
 	const routeTagsIndex = 3 // routeTagsIndex is the regex submatch index where route tags begin.
 	var justMatched bool
 
 	for _, cmt := range lines {
 		txt := cmt.Text
+		isBlock := strings.HasPrefix(txt, "/*")
+		txt = stripBlockFraming(txt)
 		for line := range strings.SplitSeq(txt, "\n") {
+			if isBlock {
+				// Shed the godoc `* ` continuation decoration so a
+				// `*`-styled block comment's body lines don't carry a
+				// leading `*` into Remaining / the YAML body. Indentation
+				// is preserved for flush-left block bodies (go-swagger#1595).
+				line = stripBlockContinuation(line)
+			}
 			// Strip inline-regex path-param constraints (`{id:[0-9]+}`)
 			// to the RFC 6570 Level-1 form (`{id}`) BEFORE matching:
 			// rxPath's alphabet has no `[`/`]`, so the raw line would
