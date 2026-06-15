@@ -442,7 +442,13 @@ Schema-only — emitting `readOnly:` inside a SimpleSchema context
 
 Marks the property as the discriminator for an `allOf` polymorphic
 schema. Boolean. Writes the property's name onto the enclosing
-schema's `discriminator` field. Schema-only.
+schema's `discriminator` field. Schema-only. The property should also be
+`required` (a subtype cannot be selected from an absent value). Subtypes
+that `allOf`-embed the base inherit the discriminator; the discriminator
+value for each is its definition name — a custom-value annotation
+(`swagger:discriminatorValue`) is not implemented. See the
+[Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}})
+tutorial.
 
 ### `deprecated`
 

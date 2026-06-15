@@ -62,6 +62,10 @@ three arms: two `$ref`s and one inline object.
 {{< example go="concepts/models/models.go" goregion="allof"
             json="concepts/models/testdata/allof.json" jsonlabel="#/definitions/Dog" >}}
 
+When the base also declares a `discriminator`, this composition becomes a
+Swagger 2.0 type hierarchy — see
+[Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}}).
+
 ## swagger:type
 
 `swagger:type <type>` overrides the type codescan would infer. Here a `[16]byte`

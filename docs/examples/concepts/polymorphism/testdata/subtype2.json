@@ -1,0 +1,20 @@
+{
+  "title": "Dog is a second Pet subtype.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Pet"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "packSize": {
+          "description": "PackSize is the size of the dog's pack.",
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "PackSize"
+        }
+      }
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/polymorphism"
+}
