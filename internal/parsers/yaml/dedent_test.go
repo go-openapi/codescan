@@ -36,6 +36,43 @@ func TestRemoveIndent_LeadingBlankLine(t *testing.T) {
 	}
 }
 
+// TestRemoveIndent_InterleavedProseAndCodeBlocks pins the swagger:operation
+// counterpart of F7: a gofmt-canonical operation body interleaves prose-rendered
+// top-level keys (one leading space) with tab-prefixed value blocks. Expanding
+// leading tabs to spaces BEFORE the first-non-blank-line strip preserves the
+// relative nesting; the previous strip-then-retab approach stripped the
+// children's lone tab off and flattened them.
+func TestRemoveIndent_InterleavedProseAndCodeBlocks(t *testing.T) {
+	in := []string{
+		" responses:",
+		"",
+		"\t'200':",
+		"\t  description: ok",
+		"",
+		" x-ext:",
+		"",
+		"\thttpMethod: GET",
+	}
+	want := []string{
+		"responses:",
+		"",
+		" '200':",
+		"   description: ok",
+		"",
+		"x-ext:",
+		"",
+		" httpMethod: GET",
+	}
+	got := RemoveIndent(in)
+	assert.Equal(t, want, got)
+
+	// No tab survives in any line's leading whitespace.
+	for _, l := range got {
+		lead := l[:len(l)-len(strings.TrimLeft(l, " \t"))]
+		assert.NotContains(t, lead, "\t", "leading tab must be expanded: %q", l)
+	}
+}
+
 // TestRemoveIndent_ColumnZeroKey checks that a column-0 first non-blank line
 // (no indent to strip) leaves the body untouched.
 func TestRemoveIndent_ColumnZeroKey(t *testing.T) {

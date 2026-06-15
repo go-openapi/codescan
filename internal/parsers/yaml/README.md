@@ -130,10 +130,15 @@ raw blocks), and any future target that needs the same shape.
 
 Two dedent strategies coexist in this package, chosen per call site:
 
-- **`RemoveIndent` (operation/meta path)** — first-line dedent. The
-  first line's indent length is treated as the canonical strip width
-  and applied to every subsequent line. Preserved verbatim because
-  the existing operation goldens depend on it.
+- **`RemoveIndent` (operation/meta path)** — expand-then-first-line
+  dedent. Pass 1 expands the leading tabs of every non-blank line to
+  two spaces (so tab- and space-indented lines are comparable); pass 2
+  strips the first non-blank line's indent length from every line. The
+  first-line strip width is preserved because the existing operation
+  goldens depend on it. The up-front tab expansion (vs the older
+  retab-only-the-post-strip-remainder) is what lets a gofmt-canonical
+  swagger:operation body — 1-space prose keys interleaved with
+  tab-prefixed value blocks — keep its nesting; see `dedent.go`.
 - **`normaliseExtensionBody` (typed-extensions path)** — common-prefix
   dedent. Strips the longest leading-whitespace run shared by every
   non-blank line. Required because extension bodies arrive with the
