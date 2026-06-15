@@ -294,11 +294,13 @@ type MyObjectType map[string]interface{}
 ### `pattern`
 
 A regex constraint on a string value. The pattern is preserved
-verbatim on `schema.pattern`. The grammar runs a best-effort RE2
-compile (Go's regex engine) on the value; if it fails, a
-`CodeInvalidAnnotation` diagnostic surfaces with the compile error.
-The value still lands on the schema — downstream tools may use
-JSON Schema's wider regex dialect.
+verbatim on `schema.pattern` — including backslash escapes: `\d`,
+`\.`, `\n` reach the spec as the literal two-character sequences your
+consumer's regex engine expects, not interpreted by the scanner. The
+grammar runs a best-effort RE2 compile (Go's regex engine) on the
+value; if it fails, a `CodeInvalidAnnotation` diagnostic surfaces with
+the compile error. The value still lands on the schema — downstream
+tools may use JSON Schema's wider regex dialect.
 
 ```go
 // Slug is a URL-friendly identifier.
