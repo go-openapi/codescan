@@ -16,6 +16,55 @@ func TestStripBlockContinuation(t *testing.T) {
 	}
 }
 
+// TestNormalizeBullet covers the markdown-bullet → canonical `- ` rewrite that
+// makes `* item` / `+ item` lists identifiable like `- item` (go-swagger#1726).
+func TestNormalizeBullet(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"asterisk bullet", "* item", "- item"},
+		{"plus bullet", "+ item", "- item"},
+		{"dash bullet untouched", "- item", "- item"},
+		{"plain prose untouched", "item", "item"},
+		{"emphasis not a bullet", "*emphasis*", "*emphasis*"},
+		{"bold not a bullet", "**bold**", "**bold**"},
+		{"lone asterisk not a bullet", "*", "*"},
+		{"asterisk then tab is not a CommonMark bullet", "*\titem", "*\titem"},
+		{"empty", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.EqualT(t, tc.want, normalizeBullet(tc.in))
+		})
+	}
+}
+
+// TestTrimContentPrefixBullets locks the end-to-end content-prefix behaviour:
+// leading godoc decoration is shed and a markdown bullet is normalised, while
+// the YAML fence and prose are preserved.
+func TestTrimContentPrefixBullets(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"indented asterisk bullet", "  * fast", "- fast"},
+		{"indented plus bullet", "  + up", "- up"},
+		{"indented dash bullet", "  - red", "- red"},
+		{"yaml fence preserved", "---", "---"},
+		{"slashes shed", "/ note", "note"},
+		{"table pipe shed", "| cell", "cell"},
+		{"plain prose", "hello world", "hello world"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.EqualT(t, tc.want, trimContentPrefix(tc.in))
+		})
+	}
+}
+
 type stripBlockTestCase struct {
 	Name     string
 	Input    string
