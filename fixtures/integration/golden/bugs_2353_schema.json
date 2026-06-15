@@ -1,0 +1,48 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/test/{id}": {
+      "post": {
+        "tags": [
+          "test"
+        ],
+        "summary": "Do something.",
+        "operationId": "doSomething",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Request",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Req"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Req": {
+      "type": "object",
+      "title": "Req is the body model.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2353"
+    }
+  }
+}
