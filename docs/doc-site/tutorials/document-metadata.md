@@ -37,6 +37,21 @@ extensions, terms of service), see the
 [`swagger:meta` reference]({{% relref "/maintainers/annotations#swaggermeta" %}})
 and the [meta keywords]({{% relref "/maintainers/keywords#meta-single-line-keywords" %}}).
 
+## Security
+
+Authentication is declared, not hand-rolled: an `Authorization: Basic …` header
+is HTTP Basic auth — a first-class OAS 2.0 security scheme, not a manual header
+parameter. A `SecurityDefinitions:` block declares the schemes (`basic`,
+`apiKey`, `oauth2`); a `Security:` block lists the requirement(s) applied
+document-wide. The meta block above declares `basic_auth` and `api_key` and
+requires `basic_auth` by default — producing the spec's `securityDefinitions`
+and top-level `security`.
+
+A route can override the document default with its own `Security:` keyword (see
+the [`swagger:route` reference]({{% relref "/maintainers/annotations#swaggerroute" %}})),
+and the [security keywords]({{% relref "/maintainers/keywords#securitydefinitions" %}})
+cover the full scheme surface.
+
 ## A build-time version
 
 `Version:` is a static literal in source — there is no `Options` field for it. To

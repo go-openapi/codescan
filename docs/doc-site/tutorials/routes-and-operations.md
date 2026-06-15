@@ -54,6 +54,12 @@ listed.
 {{< example go="concepts/routes/routes.go" goregion="parameters"
             json="concepts/routes/testdata/parameters.json" jsonlabel="parameters on listPets" >}}
 
+A field marked `in: body` makes its Go type the **request body** schema — the
+usual shape for a POST or PUT payload:
+
+{{< example go="concepts/routes/routes.go" goregion="bodyparam"
+            json="concepts/routes/testdata/bodyparam.json" jsonlabel="parameters on createPet" >}}
+
 ## swagger:response
 
 `swagger:response <name>` declares a struct as a named entry in the spec's

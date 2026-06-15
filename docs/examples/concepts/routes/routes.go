@@ -167,3 +167,26 @@ type Supplier struct {
 }
 
 // endsnippet:externaldocs
+
+// snippet:bodyparam
+
+// CreatePetParams is the request parameter set for createPet. A field marked
+// `in: body` makes its Go type the request body schema — the usual shape for a
+// POST or PUT payload.
+//
+// swagger:parameters createPet
+type CreatePetParams struct {
+	// Body is the pet to create.
+	//
+	// in: body
+	// required: true
+	Body Pet `json:"body"`
+}
+
+// swagger:route POST /pets/import pets createPet
+//
+// responses:
+//
+//	200: petsResponse
+
+// endsnippet:bodyparam

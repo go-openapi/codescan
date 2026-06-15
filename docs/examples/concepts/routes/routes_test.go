@@ -82,6 +82,10 @@ func TestRouteFragments(t *testing.T) {
 	catalog, ok := doc.Definitions["CatalogEntry"]
 	require.True(t, ok, "CatalogEntry definition missing")
 
+	create, ok := paths["/pets/import"]
+	require.True(t, ok, "POST /pets/import path missing")
+	require.NotNil(t, create.Post)
+
 	goldenJSON(t, "route", listPets)                       // swagger:route — a path item
 	goldenJSON(t, "operation", getPet)                     // swagger:operation — YAML body
 	goldenJSON(t, "parameters", listPets.Get.Parameters)   // swagger:parameters — params on the op
@@ -89,4 +93,5 @@ func TestRouteFragments(t *testing.T) {
 	goldenJSON(t, "file", upload.Post.Parameters)          // swagger:file — a formData file param
 	goldenJSON(t, "externaldocs", search.Get.ExternalDocs) // externalDocs on an operation
 	goldenJSON(t, "externaldocs_schema", catalog)          // externalDocs on a full schema
+	goldenJSON(t, "bodyparam", create.Post.Parameters)     // in: body request parameter
 }

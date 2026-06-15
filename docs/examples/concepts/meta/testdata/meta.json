@@ -26,6 +26,21 @@
   "host": "api.example.com",
   "basePath": "/v1",
   "paths": {},
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "basic_auth": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "basic_auth": []
+    }
+  ],
   "tags": [
     {
       "description": "Everything about your Pets",

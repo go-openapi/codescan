@@ -34,6 +34,17 @@
 //	  description: Access to Petstore orders
 //	  x-display-name: Store
 //
+//	SecurityDefinitions:
+//	  basic_auth:
+//	    type: basic
+//	  api_key:
+//	    type: apiKey
+//	    in: header
+//	    name: X-API-Key
+//
+//	Security:
+//	  basic_auth:
+//
 // swagger:meta
 package meta
 

@@ -644,7 +644,10 @@ struct.
 **Argument shape.** Required IDENTs — the operation IDs this
 parameters set applies to. At least one. The same operation ID may
 appear in multiple `swagger:parameters` annotations to compose a
-parameter set from several structs.
+parameter set from several structs. Conversely, **one struct may carry
+several `swagger:parameters` lines**, each listing a different subset of
+operation IDs — the lists accumulate, so a long operation-ID list can be
+split across multiple annotation lines for readability.
 
 **Across packages.** The struct need not sit in the same package as the
 route. `swagger:parameters` (and `swagger:response`) declarations are
