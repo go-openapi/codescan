@@ -13,9 +13,7 @@
       "title": "Payload aggregates all four cases so a full scan walks every branch.",
       "properties": {
         "headers": {
-          "description": "Headers for this request.",
-          "type": "object",
-          "x-go-name": "Headers"
+          "$ref": "#/definitions/objectStruct"
         },
         "labels": {
           "description": "Labels for this item.",
@@ -26,15 +24,7 @@
           "x-go-name": "Labels"
         },
         "nested": {
-          "description": "The nested struct with an unsupported swagger:type.",
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "x-go-name": "Name"
-            }
-          },
-          "x-go-name": "Nested"
+          "$ref": "#/definitions/structWithBadType"
         },
         "tags": {
           "description": "Tags for this item.",

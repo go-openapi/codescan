@@ -7,26 +7,16 @@
       "title": "Holder references each override type to expose field-site rendering.",
       "properties": {
         "id": {
-          "type": "string",
-          "format": "uuid",
-          "x-go-name": "ID"
+          "$ref": "#/definitions/UUID"
         },
         "priority": {
           "$ref": "#/definitions/Priority"
         },
         "raw": {
-          "type": "string",
-          "x-go-name": "Raw"
+          "$ref": "#/definitions/RawID"
         },
         "state": {
-          "description": "active StatusActive is active.\nclosed StatusClosed is closed.",
-          "type": "string",
-          "enum": [
-            "active",
-            "closed"
-          ],
-          "x-go-enum-desc": "active StatusActive is active.\nclosed StatusClosed is closed.",
-          "x-go-name": "State"
+          "$ref": "#/definitions/Status"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
@@ -46,11 +36,17 @@
     "Status": {
       "description": "Status is an enum type (named swagger:enum) with swagger:model (F4): values\ninline on referencing fields, or a $ref to an enum definition?",
       "type": "string",
+      "enum": [
+        "active",
+        "closed"
+      ],
+      "x-go-enum-desc": "active StatusActive is active.\nclosed StatusClosed is closed.",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
     },
     "UUID": {
       "description": "UUID is a string-format type carrying BOTH swagger:strfmt and swagger:model\n(F1): does it publish a {type:string,format:uuid} definition that fields\n$ref, or inline + an orphan definition?",
       "type": "string",
+      "format": "uuid",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
     }
   }

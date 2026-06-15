@@ -682,19 +682,23 @@ func TestAliasedTypes(t *testing.T) {
 
 	scantest.AssertRef(t, &schema, "modsNamed", "ModsNamed", "#/definitions/modsSomeStringType")
 	scantest.AssertRef(t, &schema, "modsNumbered", "ModsNumbered", "#/definitions/modsSomeIntType")
-	scantest.AssertProperty(t, &schema, "string", "modsDated", "date-time", "ModsDated")
+	// F1: modsSomeTimeType is swagger:model + swagger:strfmt date-time, so it
+	// now $refs its definition (which carries the format) like its siblings,
+	// rather than inlining {string,date-time}.
+	scantest.AssertRef(t, &schema, "modsDated", "ModsDated", "#/definitions/modsSomeTimeType")
 	scantest.AssertRef(t, &schema, "modsTimed", "ModsTimed", "#/definitions/modsSomeTimedType")
 	scantest.AssertRef(t, &schema, "modsPetted", "ModsPetted", "#/definitions/modsSomePettedType")
 
 	assertArrayRef(t, &schema, "modsNameds", "ModsNameds", "#/definitions/modsSomeStringType")
 	assertArrayRef(t, &schema, "modsNumbereds", "ModsNumbereds", "#/definitions/modsSomeIntType")
-	scantest.AssertArrayProperty(t, &schema, "string", "modsDateds", "date-time", "ModsDateds")
+	assertArrayRef(t, &schema, "modsDateds", "ModsDateds", "#/definitions/modsSomeTimeType")
 	assertArrayRef(t, &schema, "modsTimeds", "ModsTimeds", "#/definitions/modsSomeTimedType")
 	assertArrayRef(t, &schema, "modsPetteds", "ModsPetteds", "#/definitions/modsSomePettedType")
 
 	scantest.AssertRef(t, &schema, "manyModsNamed", "ManyModsNamed", "#/definitions/modsSomeStringsType")
 	scantest.AssertRef(t, &schema, "manyModsNumbered", "ManyModsNumbered", "#/definitions/modsSomeIntsType")
-	scantest.AssertArrayProperty(t, &schema, "string", "manyModsDated", "date-time", "ManyModsDated")
+	// F1: modsSomeTimesType (model + strfmt date-time) now $refs its definition.
+	scantest.AssertRef(t, &schema, "manyModsDated", "ManyModsDated", "#/definitions/modsSomeTimesType")
 	scantest.AssertRef(t, &schema, "manyModsTimed", "ManyModsTimed", "#/definitions/modsSomeTimedsType")
 	scantest.AssertRef(t, &schema, "manyModsPetted", "ManyModsPetted", "#/definitions/modsSomePettedsType")
 	scantest.AssertRef(t, &schema, "manyModsPettedPtr", "ManyModsPettedPtr", "#/definitions/modsSomePettedsPtrType")

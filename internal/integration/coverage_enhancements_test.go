@@ -264,16 +264,19 @@ func TestCoverage_RawMessageOverride(t *testing.T) {
 		def, ok := defs["TypedContainer"]
 		require.TrueT(t, ok)
 
+		// F2: AsObject / AsArray carry swagger:type + swagger:model, so the
+		// fields $ref their definitions (which hold the overridden shape) —
+		// matching the fixture's stated "expect {$ref: ...}" intent, rather
+		// than inlining the override at the field site.
 		obj, ok := def.Properties["obj"]
 		require.TrueT(t, ok)
-		assert.TrueT(t, obj.Type.Contains("object"), "obj should be typed object via swagger:type on AsObject")
+		objRef := obj.Ref
+		assert.EqualT(t, "#/definitions/AsObject", objRef.String())
 
 		arr, ok := def.Properties["arr"]
 		require.TrueT(t, ok)
-		assert.TrueT(t, arr.Type.Contains("array"), "arr should be typed array via swagger:type on AsArray")
-		require.NotNil(t, arr.Items)
-		require.NotNil(t, arr.Items.Schema)
-		assert.TrueT(t, arr.Items.Schema.Type.Contains("integer"), "array items reflect []byte → uint8")
+		arrRef := arr.Ref
+		assert.EqualT(t, "#/definitions/AsArray", arrRef.String())
 	})
 
 	t.Run("case B': wrapper-type top-level definitions honour swagger:type", func(t *testing.T) {
