@@ -100,11 +100,18 @@ func stripComment(raw string, basePos token.Position) []Line {
 }
 
 func stripLine(s string, pos token.Position, rawStrip func(string) string) Line {
-	stripped := trimContentPrefix(s)
+	// Apply the comment-kind decoration strip (block-comment `* `
+	// continuation, or a no-op for `//`) BEFORE the content-prefix trim, so
+	// the only leading `*` trimContentPrefix can see is a markdown list
+	// bullet — never godoc decoration. This keeps `* item` bullets
+	// identifiable as lists without mangling block-comment framing
+	// (go-swagger#1726).
+	raw := rawStrip(s)
+	stripped := trimContentPrefix(raw)
 	consumed := len(s) - len(stripped)
 	pos.Column += consumed
 	pos.Offset += consumed
-	return Line{Text: stripped, Raw: rawStrip(s), Pos: pos}
+	return Line{Text: stripped, Raw: raw, Pos: pos}
 }
 
 // stripSingleGodocSpace is intentionally a no-op so Line.Raw preserves
@@ -136,12 +143,34 @@ func stripBlockContinuation(s string) string {
 	return s
 }
 
-// trimContentPrefix strips godoc-style leading decoration. Notably
-// preserves leading "-" so the YAML fence "---" survives intact.
+// trimContentPrefix strips godoc-style leading decoration (indentation,
+// slashes, an optional markdown table pipe) and normalises a markdown list
+// bullet to the canonical YAML `- ` form.
+//
+// `*` is NOT in the strip set: block-comment `* ` continuation decoration is
+// already removed by stripLine before this runs, so a leading `*`/`+` here is
+// a markdown bullet, not decoration. Normalising `* item` / `+ item` to
+// `- item` makes every downstream consumer that already understands `- `
+// (prose descriptions, Property.AsList, enum bodies) treat markdown-style and
+// YAML-style lists identically, in one place (go-swagger#1726). gofmt performs
+// the same `*`→`-` rewrite on // doc-comment bullets, so this also matches the
+// gofmt-canonical source form. A leading `-` is preserved so the YAML fence
+// `---` survives intact.
 func trimContentPrefix(s string) string {
-	s = strings.TrimLeft(s, " \t*/")
+	s = strings.TrimLeft(s, " \t/")
 	s = strings.TrimPrefix(s, "|")
-	return strings.TrimLeft(s, " \t")
+	s = strings.TrimLeft(s, " \t")
+	return normalizeBullet(s)
+}
+
+// normalizeBullet rewrites a leading markdown bullet marker (`* ` or `+ `) to
+// the canonical `- `. The marker must be followed by a space (a CommonMark
+// bullet), so `*emphasis*` and `**bold**` prose are left untouched.
+func normalizeBullet(s string) string {
+	if len(s) >= 2 && (s[0] == '*' || s[0] == '+') && s[1] == ' ' {
+		return "- " + s[2:]
+	}
+	return s
 }
 
 // preprocessText handles raw text inputs (already stripped of

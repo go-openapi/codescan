@@ -122,10 +122,29 @@ lone `\r → \n`) so the lexer never sees `\r`.
 
 The `/* */` block-comment form yields one Line per physical source
 line; the godoc continuation decoration (`\s*\*\s?`) is stripped
-from each line.
+from each line. That strip runs **before** the content-prefix trim
+(`stripLine` applies the comment-kind raw-strip first), so the only
+leading `*` the content trim can see is a markdown list bullet, never
+block-comment decoration.
 
 Leading `-` is preserved on Text so the YAML fence `---` survives
 intact.
+
+### Markdown bullet normalisation (go-swagger#1726)
+
+A leading markdown list bullet — `* item` or `+ item` — is normalised
+on `Text` to the canonical YAML form `- item`. Doing it here, once, in
+the shared preprocess step means every downstream consumer that already
+understands `- ` treats markdown-style and YAML-style lists identically:
+prose descriptions, `Property.AsList` (consumes / produces / schemes /
+tags), and enum bodies. The marker must be followed by a space (a
+CommonMark bullet), so `*emphasis*` and `**bold**` prose are untouched.
+
+gofmt performs the **same** `*`/`+` → `-` rewrite on `//` doc-comment
+bullets, so this normalisation only changes the result for source that
+has not been gofmt'd; gofmt-canonical source already arrives in the dash
+form. The two agree by construction. (`Raw` is left untouched, so YAML
+bodies — which are strict YAML and use `-` sequences — are unaffected.)
 
 ---
 
@@ -609,6 +628,9 @@ Schemes:                        # multi-line, indented bare
 Schemes:                        # multi-line, YAML `- ` markers
   - http
   - https
+Schemes:                        # markdown `* ` / `+ ` bullets (normalised
+  * http                        #   to `- ` upstream in preprocess, so they
+  * https                       #   reach AsList already as the dash form)
 Schemes: http, https            # inline + indented continuation
   - ws
 ```
@@ -616,7 +638,9 @@ Schemes: http, https            # inline + indented continuation
 Algorithm: treat `Value` (if non-empty) as one input line, then
 each line of `Body`. For each line: trim, drop a leading `- `
 YAML marker if present, re-trim, comma-split, trim each token,
-drop empties. Aggregate.
+drop empties. Aggregate. Markdown `*`/`+` bullets need no special
+handling here — [§preprocess-contract](#preprocess-contract) has
+already normalised them to `- ` (go-swagger#1726).
 
 The helper stops at "simple token lists" — it does **not** handle
 enum values (whose elements may be JSON arrays), the `+ name:`
