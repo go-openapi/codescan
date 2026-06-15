@@ -53,18 +53,10 @@
       "title": "TypedContainer (case B field reference) — references the wrappers.",
       "properties": {
         "arr": {
-          "description": "Wrapped via AsArray — expect `{$ref: AsArray}` whose definition\nresolves to a typed array shape.",
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "format": "uint8"
-          },
-          "x-go-name": "Arr"
+          "$ref": "#/definitions/AsArray"
         },
         "obj": {
-          "description": "Wrapped via AsObject — expect `{$ref: AsObject}` whose definition\nresolves to `{type: object}` (the classifier wins on the decl).",
-          "type": "object",
-          "x-go-name": "Obj"
+          "$ref": "#/definitions/AsObject"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/raw-message-override"

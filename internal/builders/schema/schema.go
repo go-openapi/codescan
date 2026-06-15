@@ -143,6 +143,26 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 		if s.guardDecl(tpe) {
 			return nil
 		}
+		// F1/F4: a swagger:model type carrying a swagger:strfmt or
+		// swagger:enum override publishes the FULL override schema on its
+		// own definition, not the bare-underlying orphan
+		// ({type:string} with the format dropped / no enum values). The
+		// override classifiers — the same ones the field site uses —
+		// inline that schema onto the definition target here; field sites
+		// then $ref the definition (see buildNamedType's swagger:model
+		// gate). swagger:type is already applied above (decl-site
+		// classifierNamedTypeOverride).
+		defTgt := NewTypable(schema, 0, s.skipExtensions)
+		switch ut := tpe.Underlying().(type) {
+		case *types.Struct:
+			if s.classifierNamedStructStrfmt(s.Decl.Comments, defTgt) {
+				return nil
+			}
+		case *types.Basic:
+			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, ut, defTgt, tpe.Obj().Name()) {
+				return nil
+			}
+		}
 		ti := s.Decl.Pkg.TypesInfo.Types[s.Decl.Spec.Type]
 		resolvers.MustBeAType(ti) // invariant
 		return s.buildFromType(ti.Type, NewTypable(schema, 0, s.skipExtensions))
@@ -393,15 +413,29 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	}
 
 	var cmt *ast.CommentGroup
+	var isModel bool
 	if decl, ok := s.Ctx.DeclForType(titpe); ok && decl != nil {
 		cmt = decl.Comments
+		isModel = decl.HasModelAnnotation()
 	}
 
-	if handled, recurse := s.classifierNamedTypeOverride(cmt, target, titpe, s.Ctx.PosOf(tio.Pos())); handled {
-		if recurse {
-			return s.buildFromType(titpe.Underlying(), target)
+	// refModel: reference this type by $ref instead of inlining the override.
+	// A swagger:model type carrying an override (strfmt/type/enum) publishes
+	// its override schema on its OWN definition (applied at buildFromDecl) and
+	// is referenced here by $ref — the inline override classifiers below are
+	// skipped (F1/F2/F4). BUT only in full-schema mode: under SimpleSchema
+	// (non-body params / response headers) a $ref is illegal in OAS v2, so the
+	// override must still inline even for a swagger:model type. Without
+	// swagger:model an override type inlines everywhere, as before.
+	refModel := isModel && !s.simpleSchema
+
+	if !refModel {
+		if handled, recurse := s.classifierNamedTypeOverride(cmt, target, titpe, s.Ctx.PosOf(tio.Pos())); handled {
+			if recurse {
+				return s.buildFromType(titpe.Underlying(), target)
+			}
+			return nil
 		}
-		return nil
 	}
 
 	// Dissolve when there's no source-level TypeSpec to $ref:
@@ -416,7 +450,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	// Underlying-shape table. See [§dispatch-table](./README.md#dispatch-table).
 	switch utitpe := titpe.Underlying().(type) {
 	case *types.Struct:
-		if s.classifierNamedStructStrfmt(cmt, target) {
+		if !refModel && s.classifierNamedStructStrfmt(cmt, target) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, nil)
@@ -429,7 +463,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 			s.Warn("skipped unsupported builtin", slog.Any("type", tio))
 			return nil
 		}
-		if s.classifierNamedBasic(cmt, pkg, utitpe, target) {
+		if !refModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, func() error {
@@ -437,9 +471,9 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		})
 
 	case *types.Array:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false, refModel)
 	case *types.Slice:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true, refModel)
 
 	case *types.Map:
 		return s.resolveRefOr(tio, target, nil)
@@ -452,12 +486,16 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 
 // buildNamedArrayLike is the unified Array/Slice arm.
 // forSlice toggles the slice-only "bsonobjectid" special case in classifierNamedArrayLike.
-func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, forSlice bool) error {
-	if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, forSlice); handled {
-		if recurse {
-			return s.buildFromType(elem, tgt.Items())
+// isModel skips the inline override classifier so a swagger:model array/slice
+// type is referenced by $ref (its override schema lives on its own definition).
+func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, forSlice, isModel bool) error {
+	if !isModel {
+		if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, forSlice); handled {
+			if recurse {
+				return s.buildFromType(elem, tgt.Items())
+			}
+			return nil
 		}
-		return nil
 	}
 
 	return s.resolveRefOr(tio, tgt, func() error {
