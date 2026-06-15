@@ -58,6 +58,12 @@ func CoerceValue(s string, schema *spec.SimpleSchema) (any, error) {
 		return strconv.ParseBool(s)
 	case "number", "float64", "float32":
 		return strconv.ParseFloat(s, 64)
+	case "string":
+		// Surrounding quotes are delimiters, not part of the value:
+		// `example: ""` is the empty string, `example: "Foo"` is Foo
+		// (go-swagger#2547 / #2899, quirk F8). An unquoted value (`Foo`)
+		// is returned unchanged.
+		return unquoteIfQuoted(s), nil
 	case "object":
 		var obj map[string]any
 		if err := json.Unmarshal([]byte(s), &obj); err != nil {
@@ -73,6 +79,20 @@ func CoerceValue(s string, schema *spec.SimpleSchema) (any, error) {
 	default:
 		return s, nil
 	}
+}
+
+// unquoteIfQuoted strips a single pair of surrounding double quotes from
+// a string annotation value, honouring Go/JSON escape sequences. A value
+// that is not a double-quoted literal is returned unchanged, so a bare
+// `example: Foo` stays Foo while `example: "Foo"` becomes Foo and
+// `example: ""` becomes the empty string (go-swagger#2547 / #2899, F8).
+func unquoteIfQuoted(s string) string {
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		if unq, err := strconv.Unquote(s); err == nil {
+			return unq
+		}
+	}
+	return s
 }
 
 // ParseDefault is the two-axis entry point for default:/example:

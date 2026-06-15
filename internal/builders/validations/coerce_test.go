@@ -48,6 +48,31 @@ func TestCoerceValue_PrimitiveTypes(t *testing.T) {
 	}
 }
 
+func TestCoerceValue_StringStripsSurroundingQuotes(t *testing.T) {
+	// quirk F8 (go-swagger#2547 / #2899): surrounding quotes on a
+	// string-typed example/default are delimiters and must be stripped.
+	cases := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{"empty quoted string", `""`, ""},
+		{"quoted word", `"Foo"`, "Foo"},
+		{"quoted digits", `"123456"`, "123456"},
+		{"bare value unchanged", "Foo", "Foo"},
+		{"inner escaped quotes", `"a\"b"`, `a"b`},
+		{"lone quote left as-is", `"`, `"`},
+		{"unbalanced quotes left as-is", `"a`, `"a`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := validations.CoerceValue(tc.raw, &spec.SimpleSchema{Type: "string"})
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestCoerceValue_ObjectAndArrayUnmarshal(t *testing.T) {
 	obj, err := validations.CoerceValue(`{"k":1}`, &spec.SimpleSchema{Type: "object"})
 	require.NoError(t, err)

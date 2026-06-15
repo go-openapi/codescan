@@ -85,9 +85,18 @@ Dispatch table (after stripping surrounding quotes from
 | `integer`, `int`, `int64`, `int32`, `int16` | both | `strconv.Atoi` |
 | `bool`, `boolean` | both | `strconv.ParseBool` |
 | `number`, `float64`, `float32` | both | `strconv.ParseFloat` (bitSize=64) |
+| `string` | both | `unquoteIfQuoted` — strips a surrounding quote pair (F8) |
 | `object` | both | `json.Unmarshal` into `map[string]any` |
 | `array` | both | `json.Unmarshal` into `[]any` |
 | anything else / `nil` schema | both | raw string unchanged |
+
+The `string` arm strips one pair of surrounding double quotes from a
+quoted literal (`example: "Foo"` → `Foo`, `example: ""` → the empty
+string) while leaving a bare value (`example: Foo`) untouched — the
+quotes are delimiters, not content (quirk F8; go-swagger#2547 / #2899).
+Only the plain `string` type is unquoted here; string *formats*
+(`date`, `uuid`, …) surface their format name as the dispatch label and
+fall to the raw-string arm.
 
 Numeric and boolean parse errors are surfaced to the caller so
 the consumer can decide whether to emit a diagnostic. JSON
