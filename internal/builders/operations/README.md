@@ -78,6 +78,16 @@ so the bridge collapses to three direct reads:
    `yaml.UnmarshalBody` → `op.UnmarshalJSON`. Exactly one fenced
    body is consumed per operation; subsequent bodies are ignored.
 
+   Parameters already bound to the operation by a `swagger:parameters`
+   struct (placed there by `buildParameters`, which runs before
+   `buildOperations`) are snapshotted and the slice cleared before the
+   unmarshal, then merged back via `mergeBoundParameters`. Without this,
+   `encoding/json` reuses the existing slice elements when decoding the
+   inline `parameters:` array and welds a bound body's `$ref` onto an
+   inline parameter (go-swagger#2651). Merge-back skips a bound
+   parameter that collides with an inline one — same `(name, in)`, or
+   both the singleton body parameter — so inline declarations win.
+
 `path.Remaining` is the `*ast.CommentGroup` AFTER the
 `swagger:operation` header line has been stripped by
 `parsers.ParseOperationPathAnnotation`, so the grammar sees it as an
