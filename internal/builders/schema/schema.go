@@ -416,16 +416,20 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	var isModel bool
 	if decl, ok := s.Ctx.DeclForType(titpe); ok && decl != nil {
 		cmt = decl.Comments
-		// A swagger:model type carrying an override (strfmt/type/enum)
-		// publishes its override schema on its OWN definition (applied at
-		// buildFromDecl) and is referenced here by $ref — the inline
-		// override classifiers below are skipped so they neither inline
-		// nor re-emit their diagnostics (F1/F2/F4). Without swagger:model,
-		// an override type inlines as before.
 		isModel = decl.HasModelAnnotation()
 	}
 
-	if !isModel {
+	// refModel: reference this type by $ref instead of inlining the override.
+	// A swagger:model type carrying an override (strfmt/type/enum) publishes
+	// its override schema on its OWN definition (applied at buildFromDecl) and
+	// is referenced here by $ref — the inline override classifiers below are
+	// skipped (F1/F2/F4). BUT only in full-schema mode: under SimpleSchema
+	// (non-body params / response headers) a $ref is illegal in OAS v2, so the
+	// override must still inline even for a swagger:model type. Without
+	// swagger:model an override type inlines everywhere, as before.
+	refModel := isModel && !s.simpleSchema
+
+	if !refModel {
 		if handled, recurse := s.classifierNamedTypeOverride(cmt, target, titpe, s.Ctx.PosOf(tio.Pos())); handled {
 			if recurse {
 				return s.buildFromType(titpe.Underlying(), target)
@@ -446,7 +450,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	// Underlying-shape table. See [§dispatch-table](./README.md#dispatch-table).
 	switch utitpe := titpe.Underlying().(type) {
 	case *types.Struct:
-		if !isModel && s.classifierNamedStructStrfmt(cmt, target) {
+		if !refModel && s.classifierNamedStructStrfmt(cmt, target) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, nil)
@@ -459,7 +463,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 			s.Warn("skipped unsupported builtin", slog.Any("type", tio))
 			return nil
 		}
-		if !isModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
+		if !refModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, func() error {
@@ -467,9 +471,9 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		})
 
 	case *types.Array:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false, isModel)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false, refModel)
 	case *types.Slice:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true, isModel)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true, refModel)
 
 	case *types.Map:
 		return s.resolveRefOr(tio, target, nil)
