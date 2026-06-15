@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/aws": {
+      "get": {
+        "tags": [
+          "aws"
+        ],
+        "summary": "AWS-integrated operation.",
+        "operationId": "getAws",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "httpMethod": "GET",
+          "passthroughBehavior": "when_no_match",
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "type": "http_proxy",
+          "uri": "https://proxy-url.com"
+        }
+      }
+    }
+  }
+}

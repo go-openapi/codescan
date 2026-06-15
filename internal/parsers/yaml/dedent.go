@@ -6,11 +6,14 @@ package yaml
 import "strings"
 
 // RemoveIndent normalises the common leading indentation of a YAML
-// body lifted from a godoc comment block: the first non-blank line's
-// indent length is treated as the canonical strip width and applied to
-// every line. Any tabs in the stripped lines' leading-whitespace run
-// are then expanded to two spaces, because YAML refuses tab
-// indentation.
+// body lifted from a godoc comment block. It runs in two passes:
+//
+//  1. Expand the leading tabs of every (non-blank) line to two spaces.
+//     YAML refuses tab indentation, and gofmt renders an indented
+//     doc-comment line (a code block) with a leading tab; expanding up
+//     front makes tab- and space-indented lines comparable.
+//  2. Treat the first non-blank line's indent length as the canonical
+//     strip width and strip it from every line.
 //
 // The first-(non-blank-)line dedent (vs "shortest leading-whitespace
 // run across every non-blank line") is the operations / meta path's
@@ -18,16 +21,19 @@ import "strings"
 // typed-extensions path uses common-prefix dedent instead; see
 // README.md §dedent.
 //
-// Leading blank lines are skipped when choosing the canonical line:
-// gofmt inserts a blank "//" line directly under a column-0
-// doc-comment key (its code-block rule), so the gofmt-canonical
-// swagger:meta form is `key:` at column 0, a blank line, then
-// tab-indented children. Keying the strip width off the literal first
-// line would see the blank line, derive a zero strip width, and leave
-// the children's tabs intact for the YAML parser to reject ("found
-// character that cannot start any token"). Skipping the blank line
-// makes that form dedent and retab identically to the all-indented
-// variant (quirk F7).
+// Why expand BEFORE stripping (not the post-strip retab it replaced):
+// gofmt rewrites a column-0 doc-comment key as a prose line (one
+// leading space) and its indented value block as a code block (a
+// leading tab), separated by a blank "//" line. A swagger:meta body is
+// uniformly tab-prefixed (quirk F7), but a swagger:operation body
+// interleaves 1-space prose keys (`responses:`, `x-*:`) with
+// tab-prefixed value blocks. Stripping the prose-keyed width (1) off a
+// child's lone leading tab would consume the child's whole indent and
+// flatten the nesting; the YAML parser then rejects or mis-nests the
+// body. Expanding first turns each tab into two spaces, so the strip
+// leaves the relative nesting intact for both shapes. Leading blank
+// lines are skipped when choosing the canonical line (gofmt inserts one
+// under a column-0 key).
 //
 // Whitespace tokens recognised here are space (' '), tab ('\t'), and
 // the leading `/` characters that survive when the lexer hasn't
@@ -39,6 +45,29 @@ func RemoveIndent(lines []string) []string {
 	if len(lines) == 0 {
 		return lines
 	}
+
+	// Expand leading tabs to two spaces on EVERY line first, so tab- and
+	// space-indented lines become comparable before the common-indent strip.
+	// gofmt renders an indented doc-comment line (a code block) with a leading
+	// tab, and YAML refuses tab indentation. A swagger:meta body is uniformly
+	// tab-prefixed (quirk F7), but a swagger:operation body interleaves
+	// 1-space prose keys (`responses:`, `x-*:`) with tab-prefixed value blocks;
+	// retabbing only the post-strip remainder (the previous approach) left the
+	// children's lone leading tab to be stripped by the prose-keyed width,
+	// collapsing the nesting. Expanding up front, then stripping a pure-space
+	// width, preserves the relative nesting in both shapes.
+	expanded := make([]string, len(lines))
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			// Whitespace-only lines are blank separators with no content to
+			// indent; leave them untouched (a lone tab here is not YAML
+			// indentation).
+			expanded[i] = line
+			continue
+		}
+		expanded[i] = retabLeading(line)
+	}
+	lines = expanded
 
 	first := 0
 	for first < len(lines) && strings.TrimSpace(lines[first]) == "" {
@@ -59,7 +88,7 @@ func RemoveIndent(lines []string) []string {
 			out[i] = line
 			continue
 		}
-		out[i] = retabLeading(line[indent:])
+		out[i] = line[indent:]
 	}
 	return out
 }

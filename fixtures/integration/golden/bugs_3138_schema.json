@@ -4,7 +4,12 @@
     "/widgets": {
       "get": {
         "operationId": "listWidgets",
-        "deprecated": true
+        "deprecated": true,
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
       }
     }
   },
