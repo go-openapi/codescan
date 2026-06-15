@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/it": {
+      "post": {
+        "tags": [
+          "it"
+        ],
+        "summary": "Create it.",
+        "operationId": "createIt",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Payload": {
+      "type": "object",
+      "title": "Payload is the body model.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3117"
+    }
+  }
+}
