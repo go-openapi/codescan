@@ -106,6 +106,31 @@ the example's `TestIgnoreOmitsType` asserts).
 
 {{< code file="concepts/models/models.go" lang="go" region="ignore" >}}
 
+## Decorating a $ref
+
+When a field's type resolves to a named model, the property is a `$ref` — and a
+bare `$ref` cannot carry sibling keywords (a JSON Schema draft-4 rule). So a
+field that is *both* a reference *and* decorated (a description, a vendor
+extension, a `default`/`example`, a validation override) would lose its
+decorations.
+
+codescan avoids that by **wrapping the `$ref` as a member of an `allOf`**. The
+property is then an ordinary schema object, free to carry the decorations
+alongside the reference:
+
+- the `description` and any `x-*` **extensions** sit on the property itself;
+- a value override (`default`, `example`) rides a **second** `allOf` member;
+- `required` rides the **parent** model's `required` list.
+
+{{< example go="concepts/refoverride/refoverride.go" goregion="refoverride"
+            json="concepts/refoverride/testdata/refoverride.json" jsonlabel="#/definitions/Person" >}}
+
+Nothing is dropped. The description-only case is the exception — it is governed
+by the `DescWithRef` option (see
+[Descriptions beside a $ref]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}})) —
+and a `default`/`example` on a `$ref`'d field is shown in
+[Examples & defaults]({{% relref "/tutorials/examples-and-defaults" %}}).
+
 ## What's next
 
 - [Routes & operations]({{% relref "/tutorials/routes-and-operations" %}}) — wire

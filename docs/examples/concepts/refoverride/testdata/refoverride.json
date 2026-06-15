@@ -1,0 +1,20 @@
+{
+  "description": "Person references Address through a field that also carries a description and\na vendor extension. A bare $ref cannot hold sibling keywords, so codescan\nwraps the reference as a member of an allOf — the property is then a normal\nschema that keeps the description and the x-* extension, and required goes to\nthe parent. Nothing is dropped.",
+  "type": "object",
+  "required": [
+    "home"
+  ],
+  "properties": {
+    "home": {
+      "description": "Home is where the person lives.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Address"
+        }
+      ],
+      "x-go-name": "Home",
+      "x-ui-order": 3
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/refoverride"
+}
