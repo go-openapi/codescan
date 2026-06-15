@@ -55,21 +55,18 @@ func TestQuirk_ModelOverrideMatrix(t *testing.T) {
 	assert.Equal(t, "#/definitions/Status", state.Ref.String())
 	assert.Equal(t, []any{"active", "closed"}, doc.Definitions["Status"].Enum)
 
-	// F4b (TODO Part C): bare swagger:enum (no name) still does not collect the
-	// decl's consts — Priority is a plain integer model with no enum, and the
-	// bare form still raises a parse error. Part C will infer the name from the
-	// decl and collect the consts.
+	// F4b: bare swagger:enum (no name) on a type decl now infers the enum name
+	// from the declaration and collects its consts; the definition carries the
+	// enum and the field $refs it.
 	priority := h["priority"]
 	assert.Equal(t, "#/definitions/Priority", priority.Ref.String())
-	assert.Empty(t, doc.Definitions["Priority"].Enum, "TODO Part C: bare swagger:enum collects no values yet")
+	require.Len(t, doc.Definitions["Priority"].Enum, 2, "bare swagger:enum collects the decl's consts")
 
-	var bareEnumErr bool
+	// The bare form no longer raises a missing-required-arg parse error.
 	for _, d := range diags {
-		if d.Code == grammar.CodeMissingRequiredArg {
-			bareEnumErr = true
-		}
+		assert.NotEqualf(t, grammar.CodeMissingRequiredArg, d.Code,
+			"bare swagger:enum must not error: %s", d)
 	}
-	assert.True(t, bareEnumErr, "TODO Part C: bare swagger:enum still errors (name/value-list required)")
 
 	scantest.CompareOrDumpJSON(t, doc, "quirk_model_override_matrix.json")
 }

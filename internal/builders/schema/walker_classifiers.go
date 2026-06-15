@@ -106,6 +106,21 @@ func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.S
 	return true, true
 }
 
+// enumName resolves the enum type name for a swagger:enum annotation: the
+// explicit `swagger:enum <Name>` argument, or — for the BARE `swagger:enum`
+// form on a type declaration — the declared type's own name (F4b, the name is
+// redundant on a type decl). Returns ("", false) when no swagger:enum is
+// present, or when the bare form has no declared type to infer from.
+func (s *Builder) enumName(cg *ast.CommentGroup, declTypeName string) (string, bool) {
+	if name, ok := s.findAnnotationArg(cg, grammar.AnnEnum); ok {
+		return name, true
+	}
+	if declTypeName != "" && s.findAnnotation(cg, grammar.AnnEnum) != nil {
+		return declTypeName, true
+	}
+	return "", false
+}
+
 // classifierNamedBasic is the named-type walker for
 // `buildNamedBasic`. Consumes a cascade of classifier
 // annotations in source-priority order:
@@ -124,13 +139,13 @@ func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.S
 //   - handled=true  → caller returns nil (target written, terminal)
 //   - handled=false → no classifier matched; caller continues to
 //     FindModel / SwaggerSchemaForType fallback
-func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable) (resolved bool) {
+func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable, declTypeName string) (resolved bool) {
 	if name, ok := s.findAnnotationArg(cg, grammar.AnnStrfmt); ok {
 		tgt.Typed("string", name)
 		return true
 	}
 
-	if enumName, ok := s.findAnnotationArg(cg, grammar.AnnEnum); ok {
+	if enumName, ok := s.enumName(cg, declTypeName); ok {
 		enumValues, enumDesces, _ := s.Ctx.FindEnumValues(pkg, enumName)
 		if len(enumValues) > 0 {
 			tgt.WithEnum(enumValues...)

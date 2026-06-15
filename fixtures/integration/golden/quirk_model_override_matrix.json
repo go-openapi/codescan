@@ -26,6 +26,11 @@
       "type": "integer",
       "format": "int64",
       "title": "Priority is an enum declared with the BARE swagger:enum (no name arg) (F4b):",
+      "enum": [
+        1,
+        9
+      ],
+      "x-go-enum-desc": "1 PriorityLow is low.\n9 PriorityHigh is high.",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
     },
     "RawID": {

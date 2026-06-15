@@ -260,12 +260,18 @@ itself; the format name is the entire surface.
 ## `swagger:enum`
 
 **What it does.** Marks a string-typed (or integer-typed) named type
-as an enum and collects the type's `const` declarations. The values
-are applied **inline on each model field that references the type**:
-the property gets an `enum` array plus an `x-go-enum-desc` extension
-carrying the per-value godoc descriptions in `<value> <doc-text>`
-shape. The enum type itself is **not** emitted as a standalone
-definition — the values travel with each referencing property.
+as an enum and collects the type's `const` declarations.
+
+- **Without `swagger:model`** (the default): the values are applied
+  **inline on each model field that references the type** — the
+  property gets an `enum` array plus an `x-go-enum-desc` extension
+  carrying the per-value godoc descriptions in `<value> <doc-text>`
+  shape. The enum type itself is not a standalone definition; the
+  values travel with each referencing property.
+- **With `swagger:model`**: the enum becomes a **first-class
+  definition** carrying the `enum` array (+ `x-go-enum-desc`), and
+  referencing fields point at it via `$ref` — the general
+  `swagger:model ⇒ definition + $ref` rule applied to enums.
 
 (Edge case: if `swagger:enum` names a type for which no matching
 `const` values are found, the enum semantics are dropped and the type
@@ -277,8 +283,11 @@ values are discovered via Go's type-system traversal; they do not
 need to live in the same file. The values surface only when a model
 reaches the enum type through a field.
 
-**Argument shape.** IDENT naming the type whose `const` values to
-collect (its own name).
+**Argument shape.** Optional IDENT naming the type whose `const`
+values to collect. On a type declaration the name is redundant, so the
+**bare `swagger:enum`** form is accepted and infers the name from the
+declared type. `swagger:enum Priority` and a bare `swagger:enum` on
+`type Priority …` are equivalent.
 
 **Sample.**
 

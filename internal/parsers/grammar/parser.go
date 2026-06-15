@@ -551,11 +551,13 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 	// reach the returned Block.
 	switch kind {
 	case AnnEnum:
+		// A bare `swagger:enum` (no name, no inline values, no body) is valid
+		// on a type declaration: the builder infers the enum name from the
+		// declared type and collects its consts (F4b). Only the grammar's
+		// structural shape is checked here, and the bare form is structurally
+		// fine — semantic resolution (does a type with consts exist?) is the
+		// builder's job.
 		form, name, _, valuesArgs := splitEnumArgs(annTok)
-		if name == "" && len(valuesArgs) == 0 && enumBody == "" {
-			s.emit(Errorf(annTok.Pos, CodeMissingRequiredArg,
-				"swagger:enum requires a name and/or a value list"))
-		}
 		s.finaliseBase(base)
 		return &EnumDeclBlock{
 			baseBlock:  base,

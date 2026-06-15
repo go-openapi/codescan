@@ -320,10 +320,20 @@ func TestParser_EnumDecl_PlainList(t *testing.T) {
 	assert.Equal(t, enumFormPlainOnly, eb.InlineForm)
 }
 
-func TestParser_EnumDecl_Empty(t *testing.T) {
+// TestParser_EnumDecl_Bare pins the relaxed bare-swagger:enum contract (F4b):
+// a bare `swagger:enum` (no name, no inline values, no body) is structurally
+// valid — it produces an EnumDeclBlock with an empty Name and raises NO parse
+// diagnostic. The builder infers the enum name from the declared type and
+// collects its consts; "no consts found" is a builder-level concern, not a
+// grammar error.
+func TestParser_EnumDecl_Bare(t *testing.T) {
 	b := parseString(t, "swagger:enum")
-	require.NotEmpty(t, b.Diagnostics())
-	assert.Equal(t, CodeMissingRequiredArg, b.Diagnostics()[0].Code)
+	eb, ok := b.(*EnumDeclBlock)
+	require.True(t, ok, "expected *EnumDeclBlock, got %T", b)
+	assert.Empty(t, eb.Name)
+	for _, d := range b.Diagnostics() {
+		assert.NotEqual(t, CodeMissingRequiredArg, d.Code, "bare swagger:enum must not error")
+	}
 }
 
 func TestParser_UnboundBlock(t *testing.T) {

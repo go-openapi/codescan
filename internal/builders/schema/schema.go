@@ -159,7 +159,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 				return nil
 			}
 		case *types.Basic:
-			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, ut, defTgt) {
+			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, ut, defTgt, tpe.Obj().Name()) {
 				return nil
 			}
 		}
@@ -459,7 +459,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 			s.Warn("skipped unsupported builtin", slog.Any("type", tio))
 			return nil
 		}
-		if !isModel && s.classifierNamedBasic(cmt, pkg, utitpe, target) {
+		if !isModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, func() error {
