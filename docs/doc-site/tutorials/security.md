@@ -38,8 +38,10 @@ and `write` scopes, overriding the default:
             json="concepts/security/testdata/route.json" jsonlabel="security on createReport" >}}
 
 Each line of a `Security:` block is one requirement of the form
-`schemeName: scope1, scope2` (an empty scope list for non-scoped schemes). A
-route's requirements replace the document default for that operation. The same
+`schemeName: scope1, scope2` (an empty scope list for non-scoped schemes),
+written either flat (as above) or as a YAML dash list (`- schemeName: scope1`) —
+both parse identically. A route's requirements replace the document default for
+that operation. The same
 works from a `swagger:operation` YAML body — a `security:` key there sets that
 operation's requirement. (The *schemes* themselves are always global
 `swagger:meta` — OpenAPI 2.0 has no per-operation `securityDefinitions`.)
