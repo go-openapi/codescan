@@ -45,6 +45,11 @@
 //	Security:
 //	  basic_auth:
 //
+//	InfoExtensions:
+//	  x-logo:
+//	    url: https://example.com/logo.png
+//	    altText: Example
+//
 // swagger:meta
 package meta
 

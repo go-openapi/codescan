@@ -20,7 +20,8 @@ line with the `Package <name>` prefix stripped; the following paragraph becomes
 the `description`. The indented `Key: value` lines and list blocks populate the
 rest — `License:` and `Contact:` parse into structured objects, and an
 `ExternalDocs:` block (description + url) populates the spec's top-level
-`externalDocs`.
+`externalDocs`. An `InfoExtensions:` block adds `x-*` vendor extensions to the
+`info` object — this is where an `x-logo` (rendered by ReDoc / Swagger UI) goes.
 
 {{< example go="concepts/meta/doc.go" goregion="meta" golabel="Package doc comment"
             json="concepts/meta/testdata/meta.json" jsonlabel="the document" >}}
