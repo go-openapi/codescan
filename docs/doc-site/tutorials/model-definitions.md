@@ -40,15 +40,24 @@ does not become its own definition — instead, every field typed by it renders 
 {{< example go="concepts/models/models.go" goregion="strfmt"
             json="concepts/models/testdata/strfmt.json" jsonlabel="#/definitions/Device" >}}
 
+Add `swagger:model` to the strfmt type to opt it into a first-class definition
+(`{type: string, format: <name>}`) that fields `$ref` instead of inlining — the
+general `swagger:model ⇒ definition + $ref` rule.
+
 ## swagger:enum
 
 `swagger:enum <name>` collects the type's `const` values. When a model field
 references the type, the property carries the `enum` array and an
 `x-go-enum-desc` extension built from the per-value doc comments. (The enum type
-is reachable, and so emitted, only because a model field points at it.)
+is reachable, and so emitted, only because a model field points at it.) A bare
+`swagger:enum` on the type declaration works too — the name is inferred.
 
 {{< example go="concepts/models/models.go" goregion="enum"
             json="concepts/models/testdata/enum.json" jsonlabel="#/definitions/Task" >}}
+
+Here the values inline on the referencing field. Add `swagger:model` to the enum
+type to make it a first-class definition (carrying the `enum` array) that fields
+`$ref` — again the `swagger:model ⇒ definition + $ref` rule.
 
 ## swagger:allOf
 

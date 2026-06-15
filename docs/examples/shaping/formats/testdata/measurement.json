@@ -1,5 +1,5 @@
 {
-  "description": "Measurement shows forcing a JSON-conformant format. codescan emits a\nGo-specific {integer, format: uint64} for an unsized/large int by default;",
+  "description": "Measurement forces a JSON-conformant format on a field. A uint64 field emits\nthe Go-specific `{integer, format: uint64}` by default; overriding it with a\nfield-level `swagger:strfmt int64` (below) yields a precision-safe,\nstring-encoded `{string, format: int64}`.",
   "type": "object",
   "properties": {
     "bounded": {

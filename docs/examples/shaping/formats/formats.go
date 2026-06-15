@@ -7,10 +7,10 @@ package formats
 
 // snippet:formats
 
-// Measurement shows forcing a JSON-conformant format. codescan emits a
-// Go-specific {integer, format: uint64} for an unsized/large int by default;
-// swagger:strfmt int64 on a field overrides that to a precision-safe,
-// JSON-conformant string encoding ({string, format: int64}).
+// Measurement forces a JSON-conformant format on a field. A uint64 field emits
+// the Go-specific `{integer, format: uint64}` by default; overriding it with a
+// field-level `swagger:strfmt int64` (below) yields a precision-safe,
+// string-encoded `{string, format: int64}`.
 //
 // swagger:model
 type Measurement struct {

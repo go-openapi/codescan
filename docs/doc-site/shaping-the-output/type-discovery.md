@@ -53,7 +53,10 @@ that look tricky still work:
   declared in another source file, are promoted into the embedding type (only
   exported members, recursively), and a custom field type resolves to its
   underlying type. An `in:` / `required:` annotation written on the embedded
-  field itself applies to all the members it promotes.
+  field itself applies to all the members it promotes. An embed that carries a
+  **`json:` tag** (`Base \`json:"base"\``) is **not** promoted — it nests as a
+  single property of that name (a `$ref` to the embedded type), matching Go's
+  own JSON encoding.
 - A type the scanner cannot model — e.g. a bare function type — is skipped with
   a warning rather than failing the whole scan; the annotated models around it
   are still emitted.

@@ -107,6 +107,15 @@ short-circuit). Subsequent annotations are still parsed and visible
 via `Block.AnnotationKind()`-iteration, but the primary classifier
 determines which builder owns the decl.
 
+{{% notice style="warning" %}}
+Recognition is purely positional: **any** comment line that begins with a
+`swagger:<name>` token is treated as that annotation — even when you meant it as
+prose. A description line like `swagger:type controls the emitted type` on a
+type's doc comment is parsed as a `swagger:type` annotation. Keep annotation
+names mid-sentence in descriptions (`The swagger:type directive …`) or wrap them
+in backticks so the line does not *start* with the token.
+{{% /notice %}}
+
 ## Annotation argument shapes
 
 After the `swagger:<name>` head, an annotation may carry positional
@@ -275,6 +284,12 @@ underlying `MAC` type does NOT appear as a top-level model definition
 (strfmt-tagged structs are replaced by their format at every
 reference). A slice of the type (`[]MAC`) carries the format onto its
 items: `{type: array, items: {type: string, format: mac}}`.
+
+**With `swagger:model`.** Adding `swagger:model` to the strfmt type opts
+it into a **first-class definition** carrying the full
+`{type: string, format: …}` schema, and referencing fields point at it
+via `$ref` — the general `swagger:model ⇒ definition + $ref` rule. Without
+`swagger:model`, the format inlines at every reference as above.
 
 **Field-level override.** `swagger:strfmt` may also sit on a struct
 **field** doc to override just that field's published format — e.g.
@@ -906,6 +921,13 @@ axis; a `swagger:strfmt` format on the same field is kept only when
 the numeric types accept the numeric width formats — otherwise it is
 dropped with a shape-mismatch diagnostic. `swagger:strfmt` *alone* is
 unchanged: it still forces the string-encoded `{type: string, format: …}`.
+
+**Interaction with `swagger:model`.** On a *type declaration* that also
+carries `swagger:model`, the override shapes the type's **first-class
+definition** (e.g. `swagger:type string` + `swagger:model` → a
+`{type: string}` definition) and referencing fields `$ref` it — the
+`swagger:model ⇒ definition + $ref` rule. The field-level inline form
+above is the behaviour *without* `swagger:model`.
 
 **Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
 

@@ -30,6 +30,11 @@ structured example — a `{ … }` object on a map field, a `[ … ]` array on a
 field. A bare comma-separated list (`example: a,b`) is *not* split; it is kept
 verbatim as a string, so write `example: ["a","b"]` when you need an array.
 
+On a plain `string` field a surrounding pair of double quotes is treated as
+**delimiters and stripped** — so `example: "Foo"` yields `Foo`, and
+`example: ""` sets an **empty string** (the same applies to `default:`). Bare
+values keep their text as-is.
+
 {{< example go="concepts/examples/examples.go" goregion="complexexample"
             json="concepts/examples/testdata/complexexample.json" jsonlabel="#/definitions/Profile" >}}
 
