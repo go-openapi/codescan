@@ -699,10 +699,13 @@ func TestAliasedTypes(t *testing.T) {
 	scantest.AssertRef(t, &schema, "manyModsPetted", "ManyModsPetted", "#/definitions/modsSomePettedsType")
 	scantest.AssertRef(t, &schema, "manyModsPettedPtr", "ManyModsPettedPtr", "#/definitions/modsSomePettedsPtrType")
 
-	scantest.AssertProperty(t, &schema, "string", "namedAlias", "", "NamedAlias")
-	scantest.AssertProperty(t, &schema, "integer", "numberedAlias", "int64", "NumberedAlias")
-	scantest.AssertArrayProperty(t, &schema, "string", "namedsAlias", "", "NamedsAlias")
-	scantest.AssertArrayProperty(t, &schema, "integer", "numberedsAlias", "int64", "NumberedsAlias")
+	// swagger:alias is deprecated (F8): it no longer force-inlines the
+	// primitive, so these now $ref their definitions like any other named
+	// type (consistent with the `named`/`numbered` assertions above).
+	scantest.AssertRef(t, &schema, "namedAlias", "NamedAlias", "#/definitions/SomeStringTypeAlias")
+	scantest.AssertRef(t, &schema, "numberedAlias", "NumberedAlias", "#/definitions/SomeIntTypeAlias")
+	assertArrayRef(t, &schema, "namedsAlias", "NamedsAlias", "#/definitions/SomeStringTypeAlias")
+	assertArrayRef(t, &schema, "numberedsAlias", "NumberedsAlias", "#/definitions/SomeIntTypeAlias")
 }
 
 func TestAliasedModels(t *testing.T) {

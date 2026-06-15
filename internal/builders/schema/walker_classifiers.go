@@ -110,18 +110,15 @@ func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.S
 // `buildNamedBasic`. Consumes a cascade of classifier
 // annotations in source-priority order:
 //
-//	swagger:strfmt → swagger:enum → swagger:default →
-//	swagger:type   → swagger:alias
+//	swagger:strfmt → swagger:enum → swagger:default → swagger:type
 //
-// The final arm is the "primitive-inline" branch: it fires when
-// either (a) the builder is in SimpleSchema mode (the M1 contract
-// for non-body parameters and response headers — `$ref` forbidden by
-// OAS v2 so the underlying primitive ships inline) or (b) the user
-// has explicitly opted in via `swagger:alias` on the decl. These two
-// triggers are intentionally orthogonal — the SimpleSchema flag is
-// caller-driven and covers query/path/header/formData uniformly,
-// while `swagger:alias` is a per-type author override that bypasses
-// the model-ref pipeline regardless of mode.
+// The final arm is the "primitive-inline" branch, which now fires only
+// in SimpleSchema mode (the M1 contract for non-body parameters and
+// response headers — `$ref` forbidden by OAS v2 so the underlying
+// primitive ships inline). `swagger:alias` USED to be a second trigger
+// here (a per-type force-inline override); it is deprecated (F8) and no
+// longer affects output — its presence only emits a deprecation
+// diagnostic.
 //
 // Returns:
 //   - handled=true  → caller returns nil (target written, terminal)
@@ -161,7 +158,21 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 		return true
 	}
 
-	if s.simpleSchema || s.findAnnotation(cg, grammar.AnnAlias) != nil {
+	// swagger:alias is DEPRECATED (F8): it is now an empty sink. It used to
+	// force a named primitive to inline ({type:string}) instead of the $ref
+	// a swagger:model primitive gets; that special behaviour is removed —
+	// the type now follows default handling. Emit a deprecation diagnostic
+	// and fall through. (Detection lives here because this is the only site
+	// that ever consulted swagger:alias; on non-primitive types it was
+	// already inert.)
+	if alias := s.findAnnotation(cg, grammar.AnnAlias); alias != nil {
+		s.RecordDiagnostic(grammar.Warnf(alias.Pos(), grammar.CodeDeprecated,
+			`swagger:alias is deprecated and no longer affects output; use "swagger:type inline" to inline a type, or swagger:model for a first-class definition`))
+	}
+
+	// SimpleSchema mode (non-body params / response headers) still inlines
+	// the underlying primitive — $ref is forbidden there by OAS v2.
+	if s.simpleSchema {
 		if err := resolvers.SwaggerSchemaForType(utitpe.Name(), tgt); err == nil {
 			return true
 		}

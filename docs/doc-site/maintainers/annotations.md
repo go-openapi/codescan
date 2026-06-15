@@ -392,39 +392,29 @@ member (the second `allOf` element).
 
 ---
 
-## `swagger:alias`
+## `swagger:alias` — DEPRECATED
 
-**What it does.** Marks a Go alias declaration (`type T = Other`) as
-a model that should publish as a `$ref` to `Other`'s definition
-rather than as a duplicate of Other's schema.
+**Deprecated.** `swagger:alias` is deprecated and no longer affects the
+emitted spec — it is an empty sink that only raises a `validate.deprecated`
+diagnostic. (Earlier documentation claimed it published a `$ref` to the
+alias target; that was never accurate. Its only real effect was to
+force a named **primitive** type to inline its scalar — e.g. `{type:
+string}` — instead of producing the `$ref` a named type otherwise gets.
+That force-inline behaviour has been removed.)
 
-The scanner also honours `RefAliases` and `TransparentAliases`
-top-level options, which can globally enable alias-as-ref behaviour
-without per-decl annotation. `swagger:alias` is the per-decl override
-for cases where the global mode isn't appropriate.
+**Migration.**
 
-**Where it goes.** On a type alias declaration.
+- To **inline** a type at a use site, use `swagger:type inline` on the
+  field (see [`swagger:type`](#swaggertype)).
+- To publish a type as a **first-class definition** that fields `$ref`,
+  use `swagger:model`.
+- To control alias rendering **globally**, use the `RefAliases` /
+  `TransparentAliases` options. A plain (unannotated) Go alias `type T =
+  Other` dissolves to its target by default.
 
-**Argument shape.** Optional IDENT — the published name. Default:
-the alias's Go name.
+**Where it went.** On a type alias / named-type declaration.
 
-**Sample.**
-
-```go
-// Timestamp aliases time.Time. The published model carries
-// format: date-time via the time.Time → strfmt resolution.
-//
-// swagger:alias
-type Timestamp = time.Time
-```
-
-Without the annotation (and without global `RefAliases`), the alias
-either expands the target's full schema or is silently ignored
-depending on context.
-
-**Legal keywords.** Schema-context keywords.
-
-**Full example.** `fixtures/enhancements/ref-alias-chain/types.go`.
+**Argument shape.** Optional IDENT (ignored — the annotation has no effect).
 
 ---
 
