@@ -1,0 +1,44 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/hybrid/op": {
+      "patch": {
+        "tags": [
+          "hybrid"
+        ],
+        "summary": "Patch via operation.",
+        "operationId": "patchOpenHybridOp"
+      }
+    },
+    "/hybrid/route": {
+      "patch": {
+        "tags": [
+          "hybrid"
+        ],
+        "summary": "Patch via route.",
+        "operationId": "patchOpenHybridRoute",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "end_time": {
+                  "type": "string",
+                  "x-go-name": "EndTime"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

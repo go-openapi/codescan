@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/upload": {
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "tags": [
+          "files"
+        ],
+        "summary": "Uploads a file.",
+        "operationId": "uploadFile",
+        "parameters": [
+          {
+            "type": "file",
+            "x-go-name": "Upfile",
+            "description": "The file to upload.",
+            "name": "upfile",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
