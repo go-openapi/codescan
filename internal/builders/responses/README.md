@@ -94,12 +94,19 @@ An `in:` annotation on an embedded (anonymous) field applies to the
 response fields it promotes. `buildFromStruct` reads it via the shared
 `common.EmbedInheritance` kernel and threads it through the embed
 recursion with save/restore; `processResponseField` consults it as the
-fallback between a field's own `in:` and the `header` default. So an
-embed marked `// in: body` routes its promoted field to the body, while
-the common header-promotion case (an embed of header fields) is
-unaffected. Response **bodies** also inherit `required:` from embeds, but
-through the schema builder (a body is built there), not here — OAS2
-response headers carry no `required`. See
+fallback between a field's own `in:` and the `header` default. The common
+case — an embed of header fields marked `// in: header` (or unmarked) —
+promotes each field as a response header.
+
+`// in: body` on an embed is special: a response has a single body, so
+per-field promotion is meaningless. The embed IS the body — the embedded
+struct drives `resp.Schema` (a `$ref` to a model, or its inline shape),
+exactly like a named `Body Foo` field. `buildFromStruct` detects the
+inherited `in: body` and routes the embed through `buildBodyEmbed`
+instead of the field-promotion recursion (go-swagger#1635). Response
+**bodies** also inherit `required:` from embeds, but through the schema
+builder (a body is built there), not here — OAS2 response headers carry
+no `required`. See
 [common §embed-inheritance](../common/README.md#embed-inheritance).
 
 ### Invalid `in:` values

@@ -381,6 +381,19 @@ func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, r
 			if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
 				r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
 			}
+			// An embed marked `in: body` IS the response body — the embedded
+			// struct becomes the body schema, exactly like a named `Body Foo`
+			// field, rather than promoting its members (a response has a single
+			// body, so per-field promotion is meaningless). go-swagger#1635.
+			// Other in: values still promote the embed's fields (#2701).
+			if r.inherited.InSet && r.inherited.In == inBody {
+				err := r.buildBodyEmbed(fld, resp, seen)
+				r.inherited = saved
+				if err != nil {
+					return err
+				}
+				continue
+			}
 			err := r.buildFromType(fld.Type(), resp, seen)
 			r.inherited = saved
 			if err != nil {
@@ -404,6 +417,22 @@ func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, r
 		}
 	}
 	return nil
+}
+
+// buildBodyEmbed renders an anonymously-embedded field marked `in: body`
+// as the response body, exactly like a named `Body Foo` field: the
+// embedded type drives the body schema (a $ref to a model, or its inline
+// shape) instead of its members becoming response headers (go-swagger#1635).
+func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response, seen map[string]bool) error {
+	var refAttempted bool
+	header := oaispec.Header{}
+	return r.buildFromField(fld, fld.Type(), responseTypable{
+		in:           inBody,
+		header:       &header,
+		response:     resp,
+		skipExt:      r.Ctx.SkipExtensions(),
+		refAttempted: &refAttempted,
+	}, seen)
 }
 
 func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl, resp *oaispec.Response, seen map[string]bool) error {

@@ -52,6 +52,16 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embed-inheritance"
     },
+    "bodyPayload": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/embed-inheritance"
+    },
     "envelope": {
       "type": "object",
       "title": "envelope is the response body payload; it embeds Base as required too.",
@@ -74,9 +84,9 @@
   },
   "responses": {
     "embeddedBodyResponse": {
-      "description": "",
+      "description": "embeddedBodyResponse anonymously embeds a struct marked `in: body`. The\nembed IS the response body — the body $refs the embedded struct rather than\npromoting its fields as headers, exactly like a named `Body` field\n(go-swagger#1635, the responses counterpart of the in: embed inheritance).",
       "schema": {
-        "type": "string"
+        "$ref": "#/definitions/bodyPayload"
       }
     },
     "embeddedHeadersResponse": {

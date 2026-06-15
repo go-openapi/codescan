@@ -339,6 +339,24 @@ func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, o
 			if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
 				p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
 			}
+			// An embed marked `in: body` IS the body parameter — the embedded
+			// struct becomes one body param's schema, exactly like a named
+			// `Body Foo` field, rather than promoting its members as N separate
+			// body params (an operation allows at most one body parameter, so
+			// per-field promotion produces an invalid spec). go-swagger#1635;
+			// the parameters counterpart of the responses in: body embed.
+			// Other in: values still promote the embed's fields (#2701).
+			if p.inherited.InSet && p.inherited.In == inBody {
+				name, err := p.processParamField(fld, decl, seen)
+				p.inherited = saved
+				if err != nil {
+					return err
+				}
+				if name != "" {
+					sequence = append(sequence, name)
+				}
+				continue
+			}
 			err := p.buildFromType(fld.Type(), op, seen)
 			p.inherited = saved
 			if err != nil {
