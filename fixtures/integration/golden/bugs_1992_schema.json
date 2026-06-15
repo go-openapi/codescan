@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "User": {
+      "description": "User has server-assigned fields that the reporter wanted to hide from create\nrequests (go-swagger#1992). The OAS2 idiom is `readOnly: true` — codescan\nemits one schema per type, so per-operation field hiding is out of scope, but\nreadOnly marks the server-owned fields.",
+      "type": "object",
+      "properties": {
+        "created": {
+          "description": "Created is server-assigned.",
+          "type": "string",
+          "x-go-name": "Created",
+          "readOnly": true
+        },
+        "id": {
+          "description": "ID is server-assigned.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID",
+          "readOnly": true
+        },
+        "name": {
+          "description": "Name is client-supplied.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1992"
+    }
+  }
+}

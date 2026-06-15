@@ -1,0 +1,49 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Base": {
+      "description": "Base is embedded; the #2013 panic (index out of range in SetEnum) occurred in\nbuildEmbedded while parsing an enum on a promoted field.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "Kind of thing.",
+          "type": "string",
+          "enum": [
+            "a",
+            "b",
+            "c"
+          ],
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2013"
+    },
+    "Thing": {
+      "type": "object",
+      "title": "Thing embeds Base and carries its own enum field.",
+      "properties": {
+        "kind": {
+          "description": "Kind of thing.",
+          "type": "string",
+          "enum": [
+            "a",
+            "b",
+            "c"
+          ],
+          "x-go-name": "Kind"
+        },
+        "status": {
+          "description": "Status of the thing.",
+          "type": "string",
+          "enum": [
+            "open",
+            "closed"
+          ],
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2013"
+    }
+  }
+}

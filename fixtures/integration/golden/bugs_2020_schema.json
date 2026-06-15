@@ -1,0 +1,49 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/alpha": {
+      "get": {
+        "tags": [
+          "alpha"
+        ],
+        "summary": "Alpha.",
+        "operationId": "alphaOp",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Q",
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/beta": {
+      "get": {
+        "tags": [
+          "beta"
+        ],
+        "summary": "Beta.",
+        "operationId": "betaOp",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "R",
+            "name": "r",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
