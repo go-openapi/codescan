@@ -415,10 +415,17 @@ items lives in the analyzer.
 
 ### `swagger:type` argument
 
-`isTypeRef` matches the closed type-reference vocabulary
-(`string`, `integer`, `number`, `boolean`, `array`, `object`,
-`file`, `null`). Anything else falls back to `TokenIdentName`,
-letting the parser diagnose `CodeInvalidTypeRef`.
+`looksLikeTypeRef` accepts any **well-formed** type-reference token —
+an optionally `[]`-prefixed (array), optionally dot-qualified Go-style
+identifier (`string`, `integer`, `int64`, `[]string`, `[][]int64`,
+`Custom`, `pkg.Type`, `inline`, …) — as `TokenTypeRef`. The grammar no
+longer owns a closed type vocabulary: semantic validity (known keyword /
+scanned type, format compatibility, `[]T` element resolution) is the
+builder's job, since only it knows the scanned definitions and the
+annotated Go type (the F3 reconciliation). A **structurally malformed**
+token (embedded spaces, bare `[]`, illegal chars, leading digit) falls
+back to `TokenIdentName`, and the parser flags it `CodeInvalidTypeRef`
+("not a well-formed type reference").
 
 ### HTTP method recognition
 
@@ -842,7 +849,7 @@ Per-annotation argument shapes are classified by
 |---|---|
 | `AnnRoute`, `AnnOperation` | `TokenHTTPMethod` + `TokenURLPath` + `TokenIdentName`* (tags + trailing OpID) |
 | `AnnDefaultName` | one `TokenJSONValue` or `TokenRawValue` per `classifyDefaultValue` |
-| `AnnType` | one `TokenTypeRef` (or fallback `TokenIdentName`) per `isTypeRef` |
+| `AnnType` | one `TokenTypeRef` for any well-formed token (or fallback `TokenIdentName` when malformed) per `looksLikeTypeRef` |
 | `AnnEnum` | per `classifyEnumArgs` — `TokenIdentName` (name) + `TokenJSONValue` / `TokenCommaListValue` (values), in source order |
 | `AnnParameters` | `TokenIdentName`* (operation IDs) |
 | `AnnAllOf`, `AnnModel`, `AnnResponse`, `AnnStrfmt`, `AnnName` | one `TokenIdentName` (first identifier only — single-word capture) |
@@ -866,8 +873,11 @@ emit `CodeMalformedOperation`.
 
 - `AnnStrfmt` requires a name; empty emits `CodeMissingRequiredArg`.
 - `AnnDefaultName` requires a value; missing emits `CodeMissingRequiredArg`.
-- `AnnType` requires a `TokenTypeRef`; a non-closed-vocab value
-  emits `CodeInvalidTypeRef`.
+- `AnnType` requires a `TokenTypeRef`; a missing arg emits
+  `CodeMissingRequiredArg` and a structurally malformed token emits
+  `CodeInvalidTypeRef`. A well-formed but unknown name is NOT a parser
+  error — the builder resolves it (and emits `validate.unsupported-type`
+  if it is neither a keyword nor a scanned type).
 - `AnnEnum` requires a name and/or value list and/or a body;
   empty across all three emits `CodeMissingRequiredArg`.
 - `AnnAllOf`, `AnnIgnore`, `AnnAlias`, `AnnFile` accept optional /
@@ -1006,13 +1016,15 @@ diagnostic-sink option (`WithDiagnosticSink`) for streaming.
 | `CodeInvalidYAMLExtensions` | YAML parse failure on extensions body |
 | `CodeUnterminatedYAML` | `---` opened, not closed |
 | `CodeInvalidAnnotation` | malformed annotation surface |
-| `CodeInvalidTypeRef` | not in the closed type-reference vocab |
+| `CodeInvalidTypeRef` | structurally malformed `swagger:type` token (semantic validity is the builder's job) |
 | `CodeUnexpectedToken` | stray token at body level |
 | `CodeMalformedOperation` | missing/invalid HTTP method / path / OpID |
 | `CodeMissingRequiredArg` | annotation requires an argument |
 | `CodeShapeMismatch` | builder-layer keyword vs schema-type mismatch |
 | `CodeAmbiguousEmbed` | builder-layer embed disambiguation diagnostic |
 | `CodeUnsupportedInSimpleSchema` | builder-layer SimpleSchema-exit violation |
+| `CodeUnsupportedType` | builder-layer unresolvable `swagger:type` (unknown name / `file` / invalid array element) |
+| `CodeDeprecated` | builder-layer accepted-but-deprecated annotation/keyword (carries a migration hint) |
 
 ---
 

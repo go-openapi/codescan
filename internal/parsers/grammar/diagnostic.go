@@ -81,6 +81,20 @@ const (
 	// header was typed as a struct or interface that the recognizer
 	// cascade couldn't reduce to a primitive.
 	CodeUnsupportedInSimpleSchema Code = "validate.unsupported-in-simple-schema"
+
+	// CodeUnsupportedType fires when a `swagger:type` argument cannot be
+	// resolved to an inline schema: an unknown type name, a `file`
+	// override (use swagger:file instead), or a keyword used where it is
+	// not valid (e.g. `inline`/`array` as an array element). The override
+	// is dropped and the subject falls through to its Go type. See the F3
+	// reconciliation in .claude/plans/quirks-F-series-fix.md.
+	CodeUnsupportedType Code = "validate.unsupported-type"
+
+	// CodeDeprecated fires when an accepted-but-deprecated annotation or
+	// keyword value is used (the input is still processed). Carries a
+	// migration hint in the message — e.g. `swagger:type array` →
+	// `inline`, or the deprecated `swagger:alias` annotation.
+	CodeDeprecated Code = "validate.deprecated"
 )
 
 // Diagnostic is one observation about a comment block.

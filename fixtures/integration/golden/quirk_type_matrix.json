@@ -24,14 +24,7 @@
           "x-go-name": "AString"
         },
         "bInteger": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "integer",
-              "format": "int64",
-              "x-go-name": "X"
-            }
-          },
+          "type": "integer",
           "x-go-name": "BInteger"
         },
         "cInt64": {
@@ -40,25 +33,11 @@
           "x-go-name": "CInt64"
         },
         "dNumber": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "integer",
-              "format": "int64",
-              "x-go-name": "X"
-            }
-          },
+          "type": "number",
           "x-go-name": "DNumber"
         },
         "eBoolean": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "integer",
-              "format": "int64",
-              "x-go-name": "X"
-            }
-          },
+          "type": "boolean",
           "x-go-name": "EBoolean"
         },
         "fObject": {
@@ -74,13 +53,9 @@
           "x-go-name": "GArray"
         },
         "hArrayExplicit": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "integer",
-              "format": "int64",
-              "x-go-name": "X"
-            }
+          "type": "array",
+          "items": {
+            "type": "string"
           },
           "x-go-name": "HArrayExplicit"
         },
@@ -119,6 +94,17 @@
         },
         "lStrfmtThenType": {
           "description": "strfmt THEN type (field site) — which wins?",
+          "type": "integer",
+          "x-go-name": "LStrfmtThenType"
+        },
+        "mStrfmtThenString": {
+          "description": "strfmt THEN string-type (field site).",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "MStrfmtThenString"
+        },
+        "nInline": {
+          "description": "inline forces the field's own Go type (Custom) to expand in place,\nrather than the $ref a plain Custom field would emit.",
           "type": "object",
           "properties": {
             "x": {
@@ -127,12 +113,34 @@
               "x-go-name": "X"
             }
           },
-          "x-go-name": "LStrfmtThenType"
+          "x-go-name": "NInline"
         },
-        "mStrfmtThenString": {
-          "description": "strfmt THEN string-type (field site).",
-          "type": "string",
-          "x-go-name": "MStrfmtThenString"
+        "oArrayCustom": {
+          "description": "[]Custom is an array whose items are the inlined Custom type.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "format": "int64",
+                "x-go-name": "X"
+              }
+            }
+          },
+          "x-go-name": "OArrayCustom"
+        },
+        "pCrossRef": {
+          "description": "A cross-type reference: a string field overridden to the Custom type,\ninlined (swagger:type always inlines, regardless of the Go type).",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "PCrossRef"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
@@ -153,7 +161,6 @@
     "NamedStrfmtAndType": {
       "description": "NamedStrfmtAndType carries BOTH strfmt and type at the named-scalar site —\nthe named-site precedence may differ from the field site above.",
       "type": "integer",
-      "format": "int64",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
     }
   }

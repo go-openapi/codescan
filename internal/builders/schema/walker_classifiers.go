@@ -5,6 +5,7 @@ package schema
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 	"log"
 	"reflect"
@@ -77,24 +78,31 @@ func (s *Builder) classifierTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypabl
 // classifierNamedTypeOverride is the named-type walker fired in
 // `buildFromType`'s named-fallback and `buildFromStruct`'s pre-
 // pass. Consumes only `swagger:type` (the explicit type-override
-// annotation). On match attempts SwaggerSchemaForType and
-// reports back via the (handled, fallthrough) tuple:
+// annotation). It is the single resolution point for `swagger:type` on a
+// named type: it routes the argument through resolveTypeOverride (always
+// inlining — keyword scalars / Go builtins / `[]T` / `inline` / `array` /
+// type-name refs), and applies a co-present `swagger:strfmt` as a
+// supplementary format only when compatible with the resolved type (F3 —
+// see .claude/plans/quirks-F-series-fix.md). ownType is the named Go type
+// (consumed by the `inline`/`array` keywords); pos drives diagnostics.
 //
-//   - handled=true,  fallthrough=false → caller returns nil
+// Reports back via the (handled, fallthrough) tuple:
+//
 //   - handled=false, fallthrough=false → no swagger:type present
-//   - handled=true,  fallthrough=true  → unrecognised type-ref
-//     value (caller should resolve via the underlying type)
-func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable) (handled, fallthroughUnderlying bool) {
+//   - handled=true,  fallthrough=false → resolved (caller returns nil)
+//   - handled=true,  fallthrough=true  → unresolved value (file / unknown;
+//     a diagnostic was recorded — caller falls through to the underlying type)
+func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, ownType types.Type, pos token.Position) (handled, fallthroughUnderlying bool) {
 	name, ok := s.findAnnotationArg(cg, grammar.AnnType)
 	if !ok {
 		return false, false
 	}
-	if err := resolvers.SwaggerSchemaForType(name, tgt); err == nil {
+	if s.resolveTypeOverride(name, tgt, ownType, pos) {
+		if sf, hasStrfmt := s.findAnnotationArg(cg, grammar.AnnStrfmt); hasStrfmt {
+			s.applyStrfmtFormat(tgt.Schema(), sf, pos)
+		}
 		return true, false
 	}
-	// Unsupported swagger:type value (e.g. "array") — caller falls
-	// through to the underlying type so the full schema (including
-	// items for slices) is properly built.
 	return true, true
 }
 

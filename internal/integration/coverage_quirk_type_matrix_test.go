@@ -13,16 +13,16 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_TypeMatrix is the F3 WITNESS (documented-current): it captures how
-// swagger:type renders today across its argument vocabulary, combined with
-// swagger:strfmt, at both the field and named-type sites. No fix is applied —
-// the golden quirk_type_matrix.json is the baseline the F3 rationalisation is
-// measured against. Diagnostics (if any) are captured too.
+// TestQuirk_TypeMatrix verifies the F3 reconciliation: swagger:type is now a
+// uniform "inline this type" directive (never a $ref), resolved consistently at
+// the field site and the named-type site. It supersedes the documented-current
+// witness this test started as. The golden quirk_type_matrix.json is the
+// fixed baseline; this test pins the headline behaviours and the diagnostics.
 //
-// Read the golden to see: which args override vs fall through to the Go type
-// ($ref Custom), whether integer/number/boolean are accepted, what []string /
-// file / badValue / a scanned type name do, and whether strfmt-vs-type
-// precedence differs between the field site and the named site.
+// Vocabulary (always inlined): canonical OAS-2 scalars + Go-builtin spellings,
+// `[]T` arrays, the `inline` keyword (expand the Go type), the deprecated
+// `array` keyword, type-name references (inline a known definition), with a
+// `file` / unknown diagnostic and a strfmt-iff-format-compatible rule.
 func TestQuirk_TypeMatrix(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -34,59 +34,76 @@ func TestQuirk_TypeMatrix(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	t.Logf("diagnostics emitted: %d", len(diags))
+	m := doc.Definitions["Matrix"].Properties
+	require.NotNil(t, m)
+
+	scalar := func(name, typ string) {
+		t.Helper()
+		assert.Equalf(t, []string{typ}, []string(m[name].Type), "%s → %s", name, typ)
+	}
+
+	// Canonical scalar names + Go builtins, all inlined.
+	scalar("aString", "string")
+	scalar("bInteger", "integer") // was silently dropped; now resolves
+	scalar("dNumber", "number")
+	scalar("eBoolean", "boolean")
+	scalar("fObject", "object")
+	scalar("cInt64", "integer")
+	assert.Equal(t, "int64", m["cInt64"].Format) // Go builtin, no longer a grammar error
+
+	// []T → array with inlined items.
+	assert.Equal(t, []string{"array"}, []string(m["hArrayExplicit"].Type))
+	assert.Equal(t, []string{"string"}, []string(m["hArrayExplicit"].Items.Schema.Type))
+
+	// `array` keyword on a Go slice still inlines (deprecated; see diagnostics).
+	assert.Equal(t, []string{"array"}, []string(m["gArray"].Type))
+	assert.Equal(t, []string{"string"}, []string(m["gArray"].Items.Schema.Type))
+
+	// `inline` expands the field's own Go type (Custom) in place — no $ref.
+	nInline := m["nInline"]
+	assert.Equal(t, []string{"object"}, []string(nInline.Type))
+	assert.Contains(t, nInline.Properties, "x")
+	assert.Empty(t, nInline.Ref.String())
+
+	// Type-name reference inlines a known definition (no $ref), even across a
+	// different Go type (pCrossRef is a Go string overridden to Custom).
+	kScanned := m["kScanned"]
+	assert.Contains(t, kScanned.Properties, "x")
+	assert.Empty(t, kScanned.Ref.String())
+	assert.Equal(t, []string{"object"}, []string(m["pCrossRef"].Type))
+	assert.Contains(t, m["pCrossRef"].Properties, "x")
+
+	// []Custom → array of the inlined Custom type.
+	assert.Equal(t, []string{"array"}, []string(m["oArrayCustom"].Type))
+	assert.Contains(t, m["oArrayCustom"].Items.Schema.Properties, "x")
+
+	// strfmt + type precedence: type wins; a compatible format is applied, an
+	// incompatible one is dropped (with a diagnostic, asserted below).
+	assert.Equal(t, []string{"string"}, []string(m["mStrfmtThenString"].Type))
+	assert.Equal(t, "uuid", m["mStrfmtThenString"].Format) // uuid compatible with string
+	assert.Equal(t, []string{"integer"}, []string(m["lStrfmtThenType"].Type))
+	assert.Empty(t, m["lStrfmtThenType"].Format) // uuid incompatible with integer → dropped
+
+	// file / unknown fall through to the Go type (inlined), with a diagnostic.
+	assert.Contains(t, m["iFile"].Properties, "x")
+	assert.Contains(t, m["jBad"].Properties, "x")
+
+	// Named-type site behaves identically to the field site.
+	assert.Equal(t, []string{"string"}, []string(doc.Definitions["NamedScalarString"].Type))
+	assert.Equal(t, []string{"array"}, []string(doc.Definitions["NamedSlice"].Type))
+	assert.Equal(t, []string{"integer"}, []string(doc.Definitions["NamedStrfmtAndType"].Type))
+
+	// Diagnostics: array-deprecated ×2 (field gArray + named NamedSlice),
+	// strfmt-incompatible ×2 (field lStrfmtThenType + named NamedStrfmtAndType),
+	// file ×1, unknown ×1. No grammar invalid-type-ref any more.
+	byCode := map[grammar.Code]int{}
 	for _, d := range diags {
-		t.Logf("  %s", d)
+		byCode[d.Code]++
+		assert.NotEqualf(t, grammar.CodeInvalidTypeRef, d.Code, "no grammar invalid-type-ref: %s", d)
 	}
-
-	matrix := doc.Definitions["Matrix"].Properties
-	require.NotNil(t, matrix)
-
-	// Baseline that is correct today and must stay correct after the fix.
-	assert.Equal(t, []string{"string"}, []string(matrix["aString"].Type))
-	assert.Equal(t, []string{"object"}, []string(matrix["fObject"].Type))
-	// The `array` Mode-2 idiom on a Go slice — load-bearing, keep working.
-	assert.Equal(t, []string{"array"}, []string(matrix["gArray"].Type))
-	assert.Equal(t, []string{"string"}, []string(matrix["gArray"].Items.Schema.Type))
-
-	// --- Contradictions the F3 reconciliation will flip (documented-current) ---
-
-	// TODO F3: `integer`/`number`/`boolean` are grammar-valid but the builder
-	// silently drops them — the field falls through to the inlined Go struct
-	// instead of resolving to a scalar. After the fix these become scalars.
-	for _, k := range []string{"bInteger", "dNumber", "eBoolean"} {
-		assert.Equal(t, []string{"object"}, []string(matrix[k].Type),
-			"TODO F3: %q is silently dropped today (should resolve to a scalar)", k)
-	}
-
-	// TODO F3: `int64` (a Go builtin) renders correctly, yet the grammar emits
-	// a parse.invalid-type-ref ERROR for it — "errors but works". After the
-	// fix the Go-builtin spelling must not raise that diagnostic.
-	assert.Equal(t, []string{"integer"}, []string(matrix["cInt64"].Type))
-	assert.Equal(t, "int64", matrix["cInt64"].Format)
-
-	// TODO F3: []string is unsupported today (grammar error + builder drop).
-	assert.Equal(t, []string{"object"}, []string(matrix["hArrayExplicit"].Type),
-		"TODO F3: []string should become {type:array, items:{type:string}}")
-
-	// TODO F3: file / a scanned-type name / a typo all fall through silently
-	// (file should warn+ignore; unknowns should get one clean diagnostic).
-	for _, k := range []string{"iFile", "jBad", "kScanned"} {
-		assert.Equal(t, []string{"object"}, []string(matrix[k].Type),
-			"TODO F3: %q falls through today", k)
-	}
-
-	// TODO F3: the grammar already errors on these four args (int64, []string,
-	// badValue, Custom) — but with a vocabulary disjoint from the builder's.
-	// The fix must reconcile the two layers into one consistent diagnostic.
-	var invalidTypeRefs int
-	for _, d := range diags {
-		if d.Code == grammar.CodeInvalidTypeRef {
-			invalidTypeRefs++
-		}
-	}
-	assert.Equal(t, 4, invalidTypeRefs,
-		"TODO F3: grammar emits invalid-type-ref for int64/[]string/badValue/Custom today")
+	assert.Equal(t, 2, byCode[grammar.CodeDeprecated], "array deprecation, field + named")
+	assert.Equal(t, 2, byCode[grammar.CodeShapeMismatch], "strfmt incompatible, field + named")
+	assert.Equal(t, 2, byCode[grammar.CodeUnsupportedType], "file + unknown")
 
 	scantest.CompareOrDumpJSON(t, doc, "quirk_type_matrix.json")
 }

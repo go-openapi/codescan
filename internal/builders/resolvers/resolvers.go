@@ -74,6 +74,20 @@ func SwaggerSchemaForType(typeName string, prop ifaces.SwaggerTypable) error {
 		prop.Typed("integer", "uint64")
 	case "object":
 		prop.Typed("object", "")
+	// Canonical OAS-2 scalar type names, accepted as `swagger:type`
+	// arguments alongside the Go-builtin spellings above (quirk F3).
+	// No implied format — `string`/`integer`/`number`/`boolean` carry
+	// only their type; a format may still be supplied via swagger:strfmt
+	// (applied when format-compatible — see validations.IsFormatCompatible).
+	// The Go-basic resolution path never passes these names (a
+	// *types.Basic stringifies as `int64`/`string`/…), so this only
+	// widens the swagger:type surface.
+	case "integer":
+		prop.Typed("integer", "")
+	case "number":
+		prop.Typed("number", "")
+	case "boolean":
+		prop.Typed("boolean", "")
 	default:
 		return fmt.Errorf("unsupported type %q: %w", typeName, ErrResolver)
 	}

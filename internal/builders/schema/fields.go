@@ -78,22 +78,32 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 		ps.Ref = oaispec.Ref{}
 		ps.Items = nil
 	}
-	if c.fd.StrfmtName != "" {
-		ps.Typed("string", c.fd.StrfmtName)
-		ps.Ref = oaispec.Ref{}
-		ps.Items = nil
-	}
-	if c.fd.TypeOverride != "" {
-		// Field-site swagger:type override. See
-		// [§user-overrides](./README.md#user-overrides) for ordering
-		// and the Underlying() fallback rationale.
+	// swagger:type + swagger:strfmt precedence (F3). swagger:type wins on
+	// the type axis and always inlines; swagger:strfmt then applies as a
+	// supplementary format only when compatible with the resolved type.
+	// strfmt ALONE keeps forcing the string-encoded representation
+	// (go-swagger#1512). See [§user-overrides](./README.md#user-overrides).
+	pos := s.Ctx.PosOf(c.afld.Pos())
+	switch {
+	case c.fd.TypeOverride != "":
 		ps = oaispec.Schema{}
 		override := NewTypable(&ps, 0, s.skipExtensions)
-		if err := resolvers.SwaggerSchemaForType(c.fd.TypeOverride, override); err != nil {
-			if err := s.buildFromType(c.propType.Underlying(), override); err != nil {
+		if s.resolveTypeOverride(c.fd.TypeOverride, override, c.propType, pos) {
+			if c.fd.StrfmtName != "" {
+				s.applyStrfmtFormat(&ps, c.fd.StrfmtName, pos)
+			}
+		} else {
+			// Unresolved (file / unknown): fall through to the field's Go
+			// type, inlined as before.
+			ps = oaispec.Schema{}
+			if err := s.buildFromType(c.propType.Underlying(), NewTypable(&ps, 0, s.skipExtensions)); err != nil {
 				return err
 			}
 		}
+	case c.fd.StrfmtName != "":
+		ps.Typed("string", c.fd.StrfmtName)
+		ps.Ref = oaispec.Ref{}
+		ps.Items = nil
 	}
 
 	s.applyBlockToField(c.afld, target, &ps, c.name)

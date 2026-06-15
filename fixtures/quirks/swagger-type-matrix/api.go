@@ -57,6 +57,20 @@ type Matrix struct {
 	//
 	// swagger:type array
 	GArray []string `json:"gArray"`
+	// inline forces the field's own Go type (Custom) to expand in place,
+	// rather than the $ref a plain Custom field would emit.
+	//
+	// swagger:type inline
+	NInline Custom `json:"nInline"`
+	// []Custom is an array whose items are the inlined Custom type.
+	//
+	// swagger:type []Custom
+	OArrayCustom Custom `json:"oArrayCustom"`
+	// A cross-type reference: a string field overridden to the Custom type,
+	// inlined (swagger:type always inlines, regardless of the Go type).
+	//
+	// swagger:type Custom
+	PCrossRef string `json:"pCrossRef"`
 }
 
 // NamedSlice is a named slice carrying the Mode-2 `array` inline idiom.
