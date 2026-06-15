@@ -39,7 +39,10 @@ and `write` scopes, overriding the default:
 
 Each line of a `Security:` block is one requirement of the form
 `schemeName: scope1, scope2` (an empty scope list for non-scoped schemes). A
-route's requirements replace the document default for that operation.
+route's requirements replace the document default for that operation. The same
+works from a `swagger:operation` YAML body — a `security:` key there sets that
+operation's requirement. (The *schemes* themselves are always global
+`swagger:meta` — OpenAPI 2.0 has no per-operation `securityDefinitions`.)
 
 ## Keep security out of your code
 
