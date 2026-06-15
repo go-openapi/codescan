@@ -416,7 +416,14 @@ classification per embed:
 - `swagger:allOf` (via `fieldDoc.IsAllOfMember`) **or** the
   embedded type is `*types.Alias` — embed becomes an allOf member;
   remaining properties land on a fresh target schema.
-- otherwise — plain embed; properties merge into the outer schema.
+- otherwise — plain embed, handled by `buildPlainEmbed`, which splits on
+  whether the embed carries an explicit name:
+  - an explicit json tag name (`Inner `json:"inner"``) — or a
+    `swagger:name` — makes the embed **nest** under that name as a
+    single regular property (a `$ref` when the embedded type is a model),
+    matching Go's `encoding/json`, which treats a named embed as an
+    ordinary field rather than promoting it (go-swagger#2038).
+  - no explicit name — properties merge (promote) into the outer schema.
 
 The `swagger:allOf` arg, when present, is recorded as
 `x-class: <arg>` on the outer schema (`fd.AllOfClass`). This is the

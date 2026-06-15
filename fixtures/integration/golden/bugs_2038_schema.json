@@ -1,0 +1,76 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Inner": {
+      "type": "object",
+      "title": "Inner is embedded by the models below.",
+      "properties": {
+        "inner_field": {
+          "type": "string",
+          "x-go-name": "InnerField"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2038"
+    },
+    "Squashed": {
+      "description": "Squashed embeds Inner but squashes it with `json:\"-\"`. Go's encoding/json\ndrops the embed entirely: it is neither promoted nor nested. The schema must\ncontain only outer_field (go-swagger#2038).",
+      "type": "object",
+      "properties": {
+        "outer_field": {
+          "type": "string",
+          "x-go-name": "OuterField"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2038"
+    },
+    "Tagged": {
+      "description": "Tagged embeds Inner WITH an explicit json tag. Go's encoding/json NESTS the\nembedded value under \"inner\" (it is no longer promoted). The generated spec\nmust match: an `inner` property, not promoted inner_field (go-swagger#2038).",
+      "type": "object",
+      "properties": {
+        "inner": {
+          "$ref": "#/definitions/Inner"
+        },
+        "outer_field": {
+          "type": "string",
+          "x-go-name": "OuterField"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2038"
+    },
+    "TaggedAllOf": {
+      "description": "TaggedAllOf embeds Inner with BOTH an explicit json tag AND a swagger:allOf\nannotation. The explicit composition annotation wins: the embed becomes an\nallOf member ($ref to Inner), the json tag does NOT cause nesting. This proves\nthe json-tag nesting path fires only for plain (non-allOf) embeds.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Inner"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "outer_field": {
+              "type": "string",
+              "x-go-name": "OuterField"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2038"
+    },
+    "Untagged": {
+      "description": "This is the green guard rail: promotion is correct here.",
+      "type": "object",
+      "title": "Untagged embeds Inner WITHOUT a json tag — Go promotes (flattens) its fields.",
+      "properties": {
+        "inner_field": {
+          "type": "string",
+          "x-go-name": "InnerField"
+        },
+        "outer_field": {
+          "type": "string",
+          "x-go-name": "OuterField"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2038"
+    }
+  }
+}

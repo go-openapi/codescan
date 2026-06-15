@@ -225,3 +225,28 @@ func ParseJSONTag(field *ast.Field, goName string) (name string, ignore, isStrin
 	}
 	return name, false, false, false, nil
 }
+
+// ExplicitJSONName returns the name set in a field's json struct tag —
+// the part before the first comma — or "" when the field has no json
+// tag, the tag sets no name (`json:",omitempty"`), or the tag skips the
+// field (`json:"-"`).
+//
+// Go's encoding/json treats an *embedded* struct field carrying an
+// explicit json name as a regular named field: the embedded value nests
+// under that name instead of being promoted. Callers use a non-empty
+// result to distinguish a nesting embed from a flattening one
+// (go-swagger#2038).
+func ExplicitJSONName(field *ast.Field) string {
+	if field == nil || field.Tag == nil || len(strings.TrimSpace(field.Tag.Value)) == 0 {
+		return ""
+	}
+	tv, err := strconv.Unquote(field.Tag.Value)
+	if err != nil || strings.TrimSpace(tv) == "" {
+		return ""
+	}
+	name := tagOptions(strings.Split(reflect.StructTag(tv).Get("json"), ",")).Name()
+	if name == "-" {
+		return ""
+	}
+	return name
+}
