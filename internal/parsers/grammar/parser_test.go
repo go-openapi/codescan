@@ -287,11 +287,19 @@ func TestParser_ClassifierBlock_StrfmtMissingArg(t *testing.T) {
 	assert.Equal(t, CodeMissingRequiredArg, b.Diagnostics()[0].Code)
 }
 
-func TestParser_ClassifierBlock_TypeWithVocabulary(t *testing.T) {
-	b := parseString(t, "swagger:type string")
-	require.Empty(t, b.Diagnostics())
+// TestParser_ClassifierBlock_TypeWellFormed pins the relaxed swagger:type
+// parsing (F3): a well-formed argument — canonical name, Go builtin, array, or
+// an arbitrary identifier standing for a scanned-type reference — no longer
+// raises a parser diagnostic; semantic resolution (and any unknown-type
+// diagnostic) is the builder's job. Only a structurally malformed token still
+// raises CodeInvalidTypeRef.
+func TestParser_ClassifierBlock_TypeWellFormed(t *testing.T) {
+	for _, arg := range []string{"string", "integer", "int64", "[]string", "custom", "Custom"} {
+		b := parseString(t, "swagger:type "+arg)
+		assert.Emptyf(t, b.Diagnostics(), "%q is well-formed → no parser diagnostic", arg)
+	}
 
-	bad := parseString(t, "swagger:type custom")
+	bad := parseString(t, "swagger:type foo bar")
 	require.NotEmpty(t, bad.Diagnostics())
 	assert.Equal(t, CodeInvalidTypeRef, bad.Diagnostics()[0].Code)
 }

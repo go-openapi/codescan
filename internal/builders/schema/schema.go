@@ -129,7 +129,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 	// Decl-site swagger:type override wins over type-driven default.
 	// See [§user-overrides](./README.md#user-overrides) for the
 	// (handled, recurse) contract and the Underlying() fallback rationale.
-	if handled, recurse := s.classifierNamedTypeOverride(s.Decl.Comments, ps); handled {
+	if handled, recurse := s.classifierNamedTypeOverride(s.Decl.Comments, ps, s.Decl.ObjType(), s.Ctx.PosOf(s.Decl.Ident.Pos())); handled {
 		if !recurse {
 			return nil
 		}
@@ -397,7 +397,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		cmt = decl.Comments
 	}
 
-	if handled, recurse := s.classifierNamedTypeOverride(cmt, target); handled {
+	if handled, recurse := s.classifierNamedTypeOverride(cmt, target, titpe, s.Ctx.PosOf(tio.Pos())); handled {
 		if recurse {
 			return s.buildFromType(titpe.Underlying(), target)
 		}

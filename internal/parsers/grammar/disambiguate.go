@@ -175,25 +175,35 @@ func classifyHTTPMethod(s string) (string, bool) {
 	return canonical, ok
 }
 
-// typeRefVocabulary is the closed type-reference vocabulary
-// recognised as TYPE_REF terminals.
-//
-//nolint:gochecknoglobals // closed-set lookup table.
-var typeRefVocabulary = map[string]struct{}{
-	"string":  {},
-	"integer": {},
-	"number":  {},
-	"boolean": {},
-	"array":   {},
-	"object":  {},
-	"file":    {},
-	"null":    {},
-}
-
-// isTypeRef reports whether s is a recognised TYPE_REF terminal.
-func isTypeRef(s string) bool {
-	_, ok := typeRefVocabulary[s]
-	return ok
+// looksLikeTypeRef reports whether s is a well-formed `swagger:type`
+// argument token — an optionally `[]`-prefixed (array), optionally
+// dot-qualified Go-style identifier. It is a LEXICAL check only: the
+// grammar no longer owns the closed type vocabulary. Semantic validity
+// (is it a known keyword / scanned type? is the format compatible?) is
+// resolved by the builder, which alone knows the scanned definitions and
+// the annotated Go type (the F3 reconciliation — see
+// .claude/plans/quirks-F-series-fix.md). The lexer only rejects
+// structurally malformed tokens (empty, embedded spaces, a bare `[]`, a
+// leading digit, illegal characters), which the parser flags.
+func looksLikeTypeRef(s string) bool {
+	s = strings.TrimSpace(s)
+	for strings.HasPrefix(s, "[]") {
+		s = s[2:]
+	}
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r == '_':
+			// always legal
+		case (r >= '0' && r <= '9' || r == '.') && i > 0:
+			// digits and dot-qualification legal after the first char
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // looksLikeURLPath is a coarse check for the OperationArgs URL path

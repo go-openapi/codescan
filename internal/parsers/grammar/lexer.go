@@ -351,11 +351,13 @@ func argDefaultValue(rest string, pos token.Position) Token {
 	return Token{Kind: kind, Pos: pos, Text: strings.TrimSpace(rest)}
 }
 
-// argTypeRef recognises the closed TYPE_REF vocabulary; non-matches
-// fall back to TokenIdentName so the analyzer can diagnose.
+// argTypeRef tags a well-formed `swagger:type` argument as TYPE_REF and
+// leaves the semantic check (known keyword / scanned type, format
+// compatibility) to the builder. A structurally malformed token falls back
+// to TokenIdentName so the parser can flag it (see looksLikeTypeRef).
 func argTypeRef(rest string, pos token.Position) Token {
 	rest = strings.TrimSpace(rest)
-	if isTypeRef(rest) {
+	if looksLikeTypeRef(rest) {
 		return Token{Kind: TokenTypeRef, Pos: pos, Text: rest}
 	}
 	return Token{Kind: TokenIdentName, Pos: pos, Text: rest}

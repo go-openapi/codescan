@@ -291,17 +291,26 @@ func TestLexer_DefaultAnnotation_RawFallback(t *testing.T) {
 	assert.Equal(t, TokenRawValue, out[0].Args[0].Kind)
 }
 
-func TestLexer_TypeAnnotation_ClosedVocabulary(t *testing.T) {
-	out := lexString(t, "swagger:type string")
+// TestLexer_TypeAnnotation_WellFormed pins the relaxed swagger:type lexing
+// (F3): the grammar no longer owns a closed type vocabulary. Any well-formed
+// token — a canonical name, a Go-builtin spelling, a []-prefixed array, a
+// dot-qualified or arbitrary identifier (a scanned-type reference) — lexes as
+// TYPE_REF; semantic validity is resolved by the builder. Only a structurally
+// malformed token falls back to IDENT_NAME for the parser to flag.
+func TestLexer_TypeAnnotation_WellFormed(t *testing.T) {
+	for _, arg := range []string{"string", "integer", "int64", "[]string", "[][]int64", "Custom", "pkg.Type", "inline"} {
+		out := lexString(t, "swagger:type "+arg)
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 1)
+		assert.Equalf(t, TokenTypeRef, out[0].Args[0].Kind, "%q is well-formed → TYPE_REF", arg)
+		assert.Equal(t, arg, out[0].Args[0].Text)
+	}
+
+	// A malformed token (embedded space) is not a TYPE_REF.
+	out := lexString(t, "swagger:type foo bar")
 	require.NotEmpty(t, out)
 	require.Len(t, out[0].Args, 1)
-	assert.Equal(t, TokenTypeRef, out[0].Args[0].Kind)
-	assert.Equal(t, "string", out[0].Args[0].Text)
-
-	out2 := lexString(t, "swagger:type custom")
-	require.NotEmpty(t, out2)
-	require.Len(t, out2[0].Args, 1)
-	assert.Equal(t, TokenIdentName, out2[0].Args[0].Kind, "unknown type tokens fall back to IDENT_NAME for analyzer diagnosis")
+	assert.Equal(t, TokenIdentName, out[0].Args[0].Kind, "a malformed token falls back to IDENT_NAME for the parser to flag")
 }
 
 func TestLexer_EnumAnnotation_NameOnly(t *testing.T) {

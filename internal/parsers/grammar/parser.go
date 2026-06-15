@@ -575,12 +575,17 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 				"swagger:default requires a value argument"))
 		}
 	case AnnType:
+		// Only the STRUCTURAL shape is checked here: a missing arg, or a
+		// malformed token (embedded spaces, bare `[]`, illegal chars).
+		// Whether the (well-formed) name is a known keyword / scanned type
+		// is resolved by the builder, which alone knows the scanned
+		// definitions and the annotated Go type (F3 reconciliation).
 		if len(annTok.Args) == 0 {
 			s.emit(Errorf(annTok.Pos, CodeMissingRequiredArg,
 				"swagger:type requires a type-reference argument"))
 		} else if annTok.Args[0].Kind != TokenTypeRef {
 			s.emit(Errorf(annTok.Args[0].Pos, CodeInvalidTypeRef,
-				"swagger:type: %q is not a recognised type reference", annTok.Args[0].Text))
+				"swagger:type: %q is not a well-formed type reference", annTok.Args[0].Text))
 		}
 	case AnnAllOf, AnnIgnore, AnnAlias, AnnFile:
 	// Optional / no args.

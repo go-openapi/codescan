@@ -24,6 +24,7 @@ items/headers code paths. Its two halves are:
 - [§coercion-dispatch](#coercion-dispatch) — `CoerceValue` / `ParseDefault` / `ParseEnumValues` routing
 - [§enum-shapes](#enum-shapes) — JSON-array form vs comma-list form
 - [§format-axis](#format-axis) — why `Format` is reserved but not consulted today
+- [§format-compat](#format-compat) — `IsFormatCompatible` type×format legality
 - [§type-domain-table](#type-domain-table) — the keyword-vs-type legality table
 - [§empty-type](#empty-type) — how an unknown schema type is treated
 - [§quirks-open](#quirks-open) — deferred follow-ups
@@ -136,6 +137,32 @@ emitted Swagger document carries the value via `interface{}`
 and downstream consumers re-validate against `(type, format)`
 themselves. They are tagged here as straightforward refinements
 once a concrete consumer asks for them.
+
+## <a id="format-compat"></a>§format-compat — `IsFormatCompatible` type × format legality
+
+`IsFormatCompatible(schemaType, format)` (in `format.go`) is a sibling of
+[`IsLegalForType`](#type-domain-table) on the **format** axis: it answers
+"may this `format` ride on a schema already typed `schemaType`?" It exists for
+the `swagger:type` + `swagger:strfmt` combination, where `swagger:type` wins on
+the type axis and the strfmt format is applied as a **supplementary hint only
+when it is consistent with that type** (the F3 reconciliation — see
+`.claude/plans/quirks-F-series-fix.md`). It is **not** used for the
+strfmt-alone path, where strfmt still forces `{type: string, format: X}`
+(go-swagger#1512).
+
+| Resolved type | Formats accepted |
+|---|---|
+| `string` | **any** (strfmt is string-oriented) |
+| `integer` | `int{n}` (`int`,`int8`…`int64`) + the swagger-extension `uint{n}` |
+| `number` | the integer set **+** float widths (`float`,`double`,`float32`,`float64`) |
+| `boolean` / `object` / `array` / `file` | none |
+
+`int32`/`int64` are the only OAS-2-official integer formats and `float`/`double`
+the only official number formats; the wider Go-spelled set round-trips back to
+Go (the same vendor convention #1512 documents). An empty `format` is trivially
+compatible (nothing to apply); an empty/unknown `schemaType` is accepted
+best-effort, mirroring [§empty-type](#empty-type). A `false` result returns a
+diagnostic-ready hint naming the offending format and type.
 
 ## <a id="type-domain-table"></a>§type-domain-table — keyword × Swagger type legality
 
