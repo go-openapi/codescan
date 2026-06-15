@@ -39,6 +39,11 @@ now given meaning by the base's discriminator.
 `Dog` follows the identical shape. A payload is then recognised as a `Cat` or a
 `Dog` by its `petType` value.
 
+If the subtypes are missing from your spec, they are **unreachable**: a subtype
+appears only when something references it or you scan with `ScanModels` (the
+`-m` flag), the same [reachability rule]({{% relref "/shaping-the-output/type-discovery" %}})
+as any model — codescan does not auto-discover subtypes from the base alone.
+
 {{% notice style="info" %}}
 The discriminator **value** for each subtype is its definition name (`Cat`,
 `Dog`) — so `petType` must carry exactly `"Cat"` or `"Dog"`. codescan does not

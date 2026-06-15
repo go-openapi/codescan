@@ -87,6 +87,8 @@ group:
   `var DoIt = func() { … }`) — carries `swagger:route`,
   `swagger:operation`. These two are recognised whether the annotation
   sits in the function's doc comment or **inside the function body**.
+  A `swagger:model` or `swagger:parameters` declared on a type **local
+  to a function body** is likewise discovered.
 - **Struct field doc** — carries `swagger:name`, `swagger:type`,
   `swagger:ignore`, plus any of the [keyword reference]({{% relref "keywords" %}})
   entries legal in `schema` / `param` / `header` context.
@@ -650,10 +652,11 @@ operation IDs — the lists accumulate, so a long operation-ID list can be
 split across multiple annotation lines for readability.
 
 **Across packages.** The struct need not sit in the same package as the
-route. `swagger:parameters` (and `swagger:response`) declarations are
-collected across **all scanned packages** and matched to operations by
-operation ID — so a shared parameter set can live in its own package, as
-long as that package is in the scan set.
+`swagger:route` or `swagger:operation` it serves. `swagger:parameters`
+(and `swagger:response`) declarations are collected across **all scanned
+packages** and matched to operations by operation ID — so a shared
+parameter set can live in its own package, as long as that package is in
+the scan set.
 
 **Sample.**
 

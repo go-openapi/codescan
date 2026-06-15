@@ -120,9 +120,11 @@ annotation bodies are folded), so the `swagger:route` `Parameters:`
 
 ### Markdown semantics that survive
 
-- **Dash lists** in descriptions are preserved verbatim. A line
-  starting with `- foo` lands in the description as
-  `"- foo"` (not `"foo"`).
+- **Bullet lists** in descriptions are preserved. A line starting with
+  `- foo` lands in the description as `"- foo"` (not `"foo"`). A
+  markdown-style `* foo` or `+ foo` bullet is recognised the same way and
+  **normalised to `- foo`** (the same rewrite gofmt applies), so the two
+  forms agree.
 - **`---` lines** open a YAML fence — see
   [YAML extensions](#yaml-extensions) below.
 
@@ -161,7 +163,8 @@ Consumes: application/json, application/xml
 
 All five forms produce the same `["http", "https"]` (or
 `["application/json", "application/xml", "application/protobuf"]`)
-output.
+output. The `-` marker may also be written as a markdown `*` or `+`
+bullet — all are normalised to the same list.
 
 ### Algorithm
 
