@@ -51,9 +51,10 @@ everywhere (no description folding, no `x-go-enum-desc`).
 
 The `x-go-*` extensions above are scanner-derived. To attach your **own** vendor
 extension — say `x-example` for a tool like Dredd — use an `Extensions:` block in
-the field's doc comment. It works on schema fields, **parameters**, and
-**response headers** alike. (A bare `// x-example: 2` line would be read as the
-field description; the `Extensions:` block is the supported form.)
+the doc comment. It works on a **model** (the `x-*` lands on the definition), a
+**model field**, a **parameter**, and a **response header** alike. (A bare
+`// x-example: 2` line would be read as the description; the `Extensions:` block
+is the supported form.)
 
 {{< code file="shaping/extensions/extensions.go" lang="go" region="paramext" >}}
 
