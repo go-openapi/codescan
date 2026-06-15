@@ -61,6 +61,11 @@ type bodyPayload struct {
 	Message string `json:"message"`
 }
 
+// embeddedBodyResponse anonymously embeds a struct marked `in: body`. The
+// embed IS the response body — the body $refs the embedded struct rather than
+// promoting its fields as headers, exactly like a named `Body` field
+// (go-swagger#1635, the responses counterpart of the in: embed inheritance).
+//
 // swagger:response embeddedBodyResponse
 type embeddedBodyResponse struct {
 	// in: body

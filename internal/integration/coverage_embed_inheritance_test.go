@@ -58,14 +58,19 @@ func TestCoverage_EmbedInheritance(t *testing.T) {
 	assert.Contains(t, hdrs.Headers, "X-Request-Id")
 	assert.Contains(t, hdrs.Headers, "X-Count")
 
-	// Distinguishing case: `in: body` on the embed routes the promoted field
-	// to the response body (it would otherwise default to a header) — proving
-	// the responses builder inherits in: from the embed (go-swagger#2701).
+	// Distinguishing case: `in: body` on the embed routes to the response body
+	// (it would otherwise default to a header) — proving the responses builder
+	// inherits in: from the embed (go-swagger#2701). An `in: body` embed means
+	// the embedded struct IS the body, exactly like a named `Body Foo` field,
+	// so the body $refs the embedded type rather than promoting its fields
+	// (go-swagger#1635).
 	body, ok := doc.Responses["embeddedBodyResponse"]
 	require.True(t, ok)
+	assert.Empty(t, body.Headers,
+		"an in: body embed must not promote its fields as response headers (go-swagger#1635)")
 	require.NotNil(t, body.Schema)
-	assert.True(t, body.Schema.Type.Contains("string"),
-		"in: body on the embed must make the promoted field the response body")
+	assert.Equal(t, "#/definitions/bodyPayload", body.Schema.Ref.String(),
+		"in: body on the embed must make the embedded struct the response body (go-swagger#1635)")
 
 	scantest.CompareOrDumpJSON(t, doc, "embed_inheritance.json")
 }

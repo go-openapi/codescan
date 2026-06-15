@@ -82,6 +82,14 @@ embed so siblings are unaffected, and it nests — an inner embed without
 its own `in:` keeps the outer one. See
 [§in-discriminator](#in-discriminator) for the `in:` precedence.
 
+`in: body` on an embed is special-cased: an operation allows at most one
+body parameter, so promoting the embed's fields as N body params would
+produce an invalid spec. Instead the embed IS the body — `buildFromStruct`
+routes it through `processParamField` (the embedded field's name is its
+type name) so it becomes a single body parameter whose schema is the
+embedded struct, exactly like a named `Body Foo` field (go-swagger#1635).
+The responses builder applies the identical rule.
+
 Exportedness is per-field, not per-embed: only exported fields promote
 (the product documents the public API surface), but exported fields
 reached *through* an unexported embedded type still promote — Go
