@@ -67,3 +67,35 @@ func TestSkipExtensions(t *testing.T) {
 	assert.True(t, strings.Contains(withExt, "x-go-name"), "default output should carry x-go-* extensions")
 	assert.False(t, strings.Contains(noExt, "x-go-"), "SkipExtensions output must carry no x-go-* extensions")
 }
+
+// TestParamHeaderExtensions emits the golden showing author-supplied x-*
+// extensions surviving on a parameter and a response header — and asserts they
+// are present (and, being author-authored, survive SkipExtensions).
+func TestParamHeaderExtensions(t *testing.T) {
+	doc := scan(t, true) // SkipExtensions on: author x-* must still survive
+	require.NotNil(t, doc.Paths)
+
+	widgets, ok := doc.Paths.Paths["/widgets"]
+	require.True(t, ok, "GET /widgets missing")
+	params := widgets.Get.Parameters
+	require.Len(t, params, 1)
+	assert.Contains(t, params[0].Extensions, "x-example", "x-example survives on the parameter")
+
+	resp, ok := doc.Responses["widgetList"]
+	require.True(t, ok, "widgetList response missing")
+	hdr := resp.Headers["X-Rate-Limit"]
+	assert.Contains(t, hdr.Extensions, "x-units", "x-units survives on the response header")
+
+	frag := map[string]any{"parameter": params[0], "responseHeader": hdr}
+	got, err := json.MarshalIndent(frag, "", "  ")
+	require.NoError(t, err)
+	got = append(got, '\n')
+
+	golden := filepath.Join("testdata", "paramext.json")
+	if os.Getenv("UPDATE_GOLDEN") != "" {
+		require.NoError(t, os.WriteFile(golden, got, 0o600))
+	}
+	want, err := os.ReadFile(golden)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(want), string(got))
+}

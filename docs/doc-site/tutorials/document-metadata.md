@@ -37,6 +37,21 @@ extensions, terms of service), see the
 [`swagger:meta` reference]({{% relref "/maintainers/annotations#swaggermeta" %}})
 and the [meta keywords]({{% relref "/maintainers/keywords#meta-single-line-keywords" %}}).
 
+## A build-time version
+
+`Version:` is a static literal in source — there is no `Options` field for it. To
+stamp a version computed at build time, drive codescan as a library and set it on
+the returned document after `Run`:
+
+```go
+doc, _ := codescan.Run(opts)
+doc.Info.Version = buildVersion // e.g. injected via -ldflags "-X main.buildVersion=..."
+```
+
+Alternatively, overlay a base document that already carries the version with
+`Options.InputSpec` (see
+[Overlaying a spec]({{% relref "/shaping-the-output/overlaying-a-spec" %}})).
+
 ## What's next
 
 - [Routes & operations]({{% relref "/tutorials/routes-and-operations" %}}) — add

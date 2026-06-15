@@ -69,6 +69,26 @@ body schema:
 {{< example go="concepts/examples/examples.go" goregion="responseexample"
             json="concepts/examples/testdata/responseexample.json" jsonlabel="responses[ntpServers]" >}}
 
+## Response examples by media type
+
+A `swagger:operation` YAML body can give a response an `examples:` map keyed by
+media type — these populate the OpenAPI response `examples` object:
+
+```go
+// swagger:operation GET /status status getStatus
+//
+// ---
+// responses:
+//   '200':
+//     description: Success
+//     examples:
+//       application/json:
+//         hello: world
+```
+
+This per-media-type form is available in the `swagger:operation` YAML body; the
+struct-based `swagger:response` does not yet emit per-media-type examples.
+
 ## What's next
 
 - [Other type decorators]({{% relref "/tutorials/other-type-decorators" %}}) —

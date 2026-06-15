@@ -667,7 +667,8 @@ Vendor extension declarations as a YAML map. Keys must start with
 
 - `extensions:` lands the entries on the surrounding scope
   (`spec.extensions`, `operation.extensions`, `schema.extensions`,
-  …).
+  `parameter.extensions`, `header.extensions`, …) — including on
+  parameters and response headers.
 - `infoExtensions:` is meta-only; entries land on `info.extensions`.
 
 ```

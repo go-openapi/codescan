@@ -47,6 +47,12 @@ A Go **map** field has no simple-schema representation either: on a non-body
 parameter or a response header it is skipped with a
 `validate.unsupported-in-simple-schema` warning. Maps are only representable on
 a body schema (as `object` + `additionalProperties`).
+
+An **array** element is itself a simple schema, so it may not be a `$ref`. A
+named-primitive element (`[]Label`, underlying `string`) expands inline to its
+type; an object element (`[]SomeStruct`) has no simple-schema form and dissolves
+to an empty `items: {}` with the same warning. Use a body schema for an array of
+objects.
 {{% /notice %}}
 
 The same numeric and length keywords work on a query parameter; arrays add

@@ -131,6 +131,14 @@ by the `DescWithRef` option (see
 and a `default`/`example` on a `$ref`'d field is shown in
 [Examples & defaults]({{% relref "/tutorials/examples-and-defaults" %}}).
 
+{{% notice style="warning" %}}
+**Same-name collisions.** Two structs that share the same short name in
+different packages currently both map to `#/definitions/<Name>` and are silently
+merged into one definition — the result is lossy and depends on scan order.
+Until auto-disambiguation lands, give one type an explicit
+`swagger:model <DistinctName>` to force a separate definition key.
+{{% /notice %}}
+
 ## What's next
 
 - [Routes & operations]({{% relref "/tutorials/routes-and-operations" %}}) — wire

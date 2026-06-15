@@ -227,6 +227,11 @@ type DetailedPet struct { … }
 
 The type is published as `#/definitions/PetWithExtras`.
 
+**Multiple names on one line.** A field group declaring several names
+(`R, G, B, A uint8`) emits **one property per name**. A `json:` tag on
+such a group cannot rename the individual fields — each keeps its own
+name — though tag options still apply.
+
 **Legal keywords.** All [schema]({{% relref "keywords#schema-decorators" %}})
 keywords plus the
 [length / array / numeric validations]({{% relref "keywords#numeric-validations" %}})
@@ -641,6 +646,12 @@ parameters set applies to. At least one. The same operation ID may
 appear in multiple `swagger:parameters` annotations to compose a
 parameter set from several structs.
 
+**Across packages.** The struct need not sit in the same package as the
+route. `swagger:parameters` (and `swagger:response`) declarations are
+collected across **all scanned packages** and matched to operations by
+operation ID — so a shared parameter set can live in its own package, as
+long as that package is in the scan set.
+
 **Sample.**
 
 ```go
@@ -698,6 +709,11 @@ The struct's fields contribute the response shape:
   with **neither** `Body`/`in: body` nor `in: header` is treated as a
   response **header** by default, not as a body property — so for a body
   schema, name the field `Body` or mark it `in: body`.
+- An **anonymously embedded** struct marked `in: body` *is* the body —
+  the embedded type becomes the body schema (a `$ref` to the model),
+  exactly like a named `Body Foo` field, rather than promoting its fields.
+  (The same holds for `swagger:parameters`: an `in: body` embed yields the
+  single body parameter.)
 
 An `interface{}` / `any`-typed field (or a slice `[]any`) emits an empty
 schema — `{}` for a scalar field, `{type: array, items: {}}` for a

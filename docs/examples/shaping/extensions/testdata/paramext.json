@@ -1,0 +1,16 @@
+{
+  "parameter": {
+    "type": "integer",
+    "format": "int32",
+    "x-example": 2,
+    "description": "Page is the page number.",
+    "name": "page",
+    "in": "query"
+  },
+  "responseHeader": {
+    "type": "integer",
+    "format": "int32",
+    "description": "X-Rate-Limit is the per-window request budget.",
+    "x-units": "requests-per-minute"
+  }
+}
