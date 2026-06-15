@@ -20,7 +20,9 @@ For the exhaustive rule on any annotation below, follow its link to the
 
 `swagger:model` publishes a Go struct as a definition. Field doc comments become
 property descriptions; `json` tags drive the property names; the Go type drives
-the JSON-Schema `type` / `format`.
+the JSON-Schema `type` / `format`. Well-known standard-library types resolve
+automatically — a `time.Time` field, for instance, is published as
+`{type: string, format: date-time}`.
 
 {{< example go="concepts/models/models.go" goregion="model"
             json="concepts/models/testdata/model.json" jsonlabel="#/definitions/Pet" >}}

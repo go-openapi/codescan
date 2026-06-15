@@ -310,6 +310,14 @@ untagged token.
   unambiguous `body:string` form for a primitive body.
 - **Subsequent untagged tokens** accumulate into the description.
 
+This block is a **line-based sub-language, not YAML**: each entry is a single
+`<code>: <token>*` line. A description must sit on that same line — either via
+the `description:` tag (`403: description: Unauthorized`) or as trailing
+untagged tokens (`200: listResponse all the users`). A *nested* `description:`
+written on an indented continuation line under a bare `403:` is **not** parsed
+and yields an empty description; for that style, spell the operation out with a
+`swagger:operation` YAML body instead.
+
 ### Examples
 
 ```

@@ -135,9 +135,9 @@ type UploadParams struct {
 //
 //	200: petsResponse
 
-// CatalogEntry carries externalDocs at the schema level — the link rides the
-// definition. (On a simple-schema parameter externalDocs is dropped with a
-// diagnostic: it is a full-Schema-only keyword.)
+// CatalogEntry carries externalDocs at the schema level (the link rides the
+// definition) and on its fields. (On a simple-schema parameter externalDocs is
+// dropped with a diagnostic: it is a full-Schema-only keyword.)
 //
 // externalDocs: {description: "Catalog schema reference", url: "https://example.com/docs/catalog"}
 //
@@ -145,6 +145,25 @@ type UploadParams struct {
 type CatalogEntry struct {
 	// SKU is the catalog identifier.
 	SKU string `json:"sku"`
+
+	// Vendor is a plain field: externalDocs attaches directly to the property.
+	//
+	// externalDocs: {description: "Vendor field docs", url: "https://example.com/docs/vendor"}
+	Vendor string `json:"vendor"`
+
+	// Supplier is a $ref'd field: its sibling externalDocs lifts onto the
+	// field's allOf compound (a bare $ref cannot carry sibling keywords).
+	//
+	// externalDocs: {description: "Supplier docs", url: "https://example.com/docs/supplier"}
+	Supplier Supplier `json:"supplier"`
+}
+
+// Supplier is referenced by CatalogEntry.Supplier.
+//
+// swagger:model
+type Supplier struct {
+	// Name is the supplier name.
+	Name string `json:"name"`
 }
 
 // endsnippet:externaldocs

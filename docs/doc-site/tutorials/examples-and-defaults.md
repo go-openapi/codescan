@@ -25,6 +25,14 @@ type — `Hello, world!` stays a string, `3` becomes a number.
 {{< example go="concepts/examples/examples.go" goregion="example"
             json="concepts/examples/testdata/example.json" jsonlabel="#/definitions/Greeting" >}}
 
+The value is not limited to scalars. A **JSON literal** is parsed into a
+structured example — a `{ … }` object on a map field, a `[ … ]` array on a slice
+field. A bare comma-separated list (`example: a,b`) is *not* split; it is kept
+verbatim as a string, so write `example: ["a","b"]` when you need an array.
+
+{{< example go="concepts/examples/examples.go" goregion="complexexample"
+            json="concepts/examples/testdata/complexexample.json" jsonlabel="#/definitions/Profile" >}}
+
 ## default
 
 `default: <value>` sets the property's `default`, again typed to the field — `8080`

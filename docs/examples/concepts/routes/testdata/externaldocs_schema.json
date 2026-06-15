@@ -1,11 +1,33 @@
 {
-  "description": "CatalogEntry carries externalDocs at the schema level — the link rides the\ndefinition. (On a simple-schema parameter externalDocs is dropped with a\ndiagnostic: it is a full-Schema-only keyword.)",
+  "description": "CatalogEntry carries externalDocs at the schema level (the link rides the\ndefinition) and on its fields. (On a simple-schema parameter externalDocs is\ndropped with a diagnostic: it is a full-Schema-only keyword.)",
   "type": "object",
   "properties": {
     "sku": {
       "description": "SKU is the catalog identifier.",
       "type": "string",
       "x-go-name": "SKU"
+    },
+    "supplier": {
+      "description": "Supplier is a $ref'd field: its sibling externalDocs lifts onto the\nfield's allOf compound (a bare $ref cannot carry sibling keywords).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Supplier"
+        }
+      ],
+      "x-go-name": "Supplier",
+      "externalDocs": {
+        "description": "Supplier docs",
+        "url": "https://example.com/docs/supplier"
+      }
+    },
+    "vendor": {
+      "description": "Vendor is a plain field: externalDocs attaches directly to the property.",
+      "type": "string",
+      "x-go-name": "Vendor",
+      "externalDocs": {
+        "description": "Vendor field docs",
+        "url": "https://example.com/docs/vendor"
+      }
     }
   },
   "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/routes",

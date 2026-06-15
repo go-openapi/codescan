@@ -29,6 +29,12 @@ comment block — no Go declaration required.
 {{< example go="concepts/routes/routes.go" goregion="route"
             json="concepts/routes/testdata/route.json" jsonlabel="paths[/pets]" >}}
 
+The body can also carry an indented `Parameters:` block to declare simple
+parameters (path / query / header) inline — no `swagger:parameters` struct
+needed. For body parameters or parameter sets shared across operations, use
+[`swagger:parameters`](#swaggerparameters) instead. The block syntax is covered
+in [sub-languages]({{% relref "/maintainers/sub-languages#parameters" %}}).
+
 ## swagger:operation
 
 `swagger:operation` carries the same header but spells the operation out as a
@@ -80,9 +86,12 @@ it is dropped with a diagnostic. The same `ExternalDocs:` block on a
 {{< example go="concepts/routes/routes.go" goregion="externaldocs"
             json="concepts/routes/testdata/externaldocs.json" jsonlabel="operation externalDocs" >}}
 
-On a model the link rides the definition. The value can be written as the
-indented block above or as an equivalent inline `{ description: …, url: … }`
-mapping — which reads better on a single-line doc comment:
+On a model the link rides the definition, and it also rides individual
+**struct fields**: on a plain field it attaches to the property directly; on a
+`$ref`'d field it is lifted onto the field's `allOf` compound (a bare `$ref`
+cannot carry sibling keywords). The value can be written as the indented block
+above or as an equivalent inline `{ description: …, url: … }` mapping — which
+reads better on a single-line doc comment:
 
 {{< example go="concepts/routes/routes.go" goregion="externaldocs"
             json="concepts/routes/testdata/externaldocs_schema.json" jsonlabel="#/definitions/CatalogEntry" >}}

@@ -26,6 +26,21 @@
   "host": "api.example.com",
   "basePath": "/v1",
   "paths": {},
+  "tags": [
+    {
+      "description": "Everything about your Pets",
+      "name": "pets",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "https://example.com/docs/pets"
+      }
+    },
+    {
+      "description": "Access to Petstore orders",
+      "name": "store",
+      "x-display-name": "Store"
+    }
+  ],
   "externalDocs": {
     "description": "Full API guide",
     "url": "https://example.com/docs"

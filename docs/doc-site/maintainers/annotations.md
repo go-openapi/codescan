@@ -168,7 +168,9 @@ package petstore
 (`schemes`, `version`, `host`, `basePath`, `license`, `contact`) plus
 the meta-scope [body keywords]({{% relref "keywords#body-keywords" %}})
 (`consumes`, `produces`, `security`, `securityDefinitions`,
-`extensions`, `infoExtensions`, `tos`, `externalDocs`).
+`extensions`, `infoExtensions`, `tos`, `externalDocs`, `tags`). A
+`Tags:` block declares the spec's top-level `tags` (name, description,
+nested `externalDocs`, `x-*` extensions per tag).
 
 **Full example.** `fixtures/goparsing/spec/api.go`.
 
@@ -190,10 +192,13 @@ as `utils.Error` is rejected with a warning and dropped. Cross-package
 types are resolved automatically, so reference a model by its bare name.
 
 **Ordering.** The descriptive prose must come **before** the
-`swagger:model` line: the first paragraph becomes the model's `title`
-and the rest its `description`. An annotation-first block (the
-`swagger:model` line ahead of the prose) still publishes the model but
-drops its title and description.
+`swagger:model` line. The title/description split follows a heuristic:
+a single-line comment **ending in a period** becomes the `title`; a
+single-line comment **without** a trailing period becomes the
+`description`; a **multi-line** comment uses the first line as `title`
+and the remaining paragraphs as `description`. An annotation-first block
+(the `swagger:model` line ahead of the prose) still publishes the model
+but drops its title and description.
 
 **Sample.**
 
@@ -263,6 +268,16 @@ underlying `MAC` type does NOT appear as a top-level model definition
 (strfmt-tagged structs are replaced by their format at every
 reference). A slice of the type (`[]MAC`) carries the format onto its
 items: `{type: array, items: {type: string, format: mac}}`.
+
+**Field-level override.** `swagger:strfmt` may also sit on a struct
+**field** doc to override just that field's published format — e.g.
+`// swagger:strfmt int64` on a `uint64` field emits
+`{type: string, format: int64}`, a precision-safe, JSON-conformant
+string encoding. (By default codescan emits Go-specific integer formats
+for unsized/large ints — `uint64` → `{integer, format: uint64}`,
+`uint32` → `{integer, format: uint32}`. These vendor formats round-trip
+back to Go but are not part of the Swagger 2.0 format set; the
+`swagger:strfmt int64` string override is the conformant alternative.)
 
 **Legal keywords.** None at the type level beyond `swagger:strfmt`
 itself; the format name is the entire surface.
@@ -538,7 +553,9 @@ func ListPets() {}
 **Legal keywords.** All
 [body keywords]({{% relref "keywords#body-keywords" %}}) legal in route context
 (`consumes`, `produces`, `schemes`, `security`, `parameters`,
-`responses`, `extensions`) plus inline `deprecated:`.
+`responses`, `extensions`, `externalDocs`) plus inline `deprecated:` and a
+body `tags:` list (a string list, unioned and deduplicated with the
+header-line tags). The same applies to `swagger:operation`.
 
 The `Parameters:` and `Responses:` sub-languages are documented in
 [sub-languages.md §parameters]({{% relref "sub-languages#parameters" %}}) and

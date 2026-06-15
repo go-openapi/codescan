@@ -24,6 +24,16 @@
 //	  description: Full API guide
 //	  url: https://example.com/docs
 //
+//	Tags:
+//	- name: pets
+//	  description: Everything about your Pets
+//	  externalDocs:
+//	    description: Find out more
+//	    url: https://example.com/docs/pets
+//	- name: store
+//	  description: Access to Petstore orders
+//	  x-display-name: Store
+//
 // swagger:meta
 package meta
 

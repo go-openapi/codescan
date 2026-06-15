@@ -36,7 +36,7 @@ formal productions should read [grammar.md]({{% relref "grammar" %}}).
 - [Schema decorators](#schema-decorators) — `default`, `example`, `enum`, `required`, `readOnly`, `discriminator`, `deprecated`
 - [Parameter location](#parameter-location) — `in`
 - [Meta single-line keywords](#meta-single-line-keywords) — `schemes`, `version`, `host`, `basePath`, `license`, `contact`
-- [Body keywords](#body-keywords) — `consumes`, `produces`, `security`, `securityDefinitions`, `responses`, `parameters`, `extensions`, `infoExtensions`, `tos`, `externalDocs`
+- [Body keywords](#body-keywords) — `consumes`, `produces`, `security`, `securityDefinitions`, `responses`, `parameters`, `extensions`, `infoExtensions`, `tos`, `externalDocs`, `tags`
 
 ---
 
@@ -143,7 +143,8 @@ them. Detailed entries follow this table.
 | `extensions` | — | raw-block (YAML map of `x-*` entries) | meta, route, operation, schema, param, header |
 | `infoExtensions` | `info extensions`, `info-extensions` | raw-block (YAML map of `x-*` entries) | meta |
 | `tos` | `terms of service`, `terms-of-service`, `termsOfService` | raw-block (prose paragraph) | meta |
-| `externalDocs` | `external docs`, `external-docs` | raw-block (YAML map) | meta, route, operation, schema |
+| `externalDocs` | `external docs`, `external-docs` | raw-block (YAML map) | meta, route, operation, schema, field |
+| `tags` | — | raw-block (YAML) | meta, route, operation |
 
 ---
 
@@ -690,22 +691,50 @@ External documentation pointer as a YAML map with `description` and
 
 Emitted on:
 
-- **`swagger:meta`** → the top-level `externalDocs` object;
+- **`swagger:meta`** → the top-level `externalDocs` object (and, nested under a
+  `Tags:` entry, that tag's `externalDocs`);
 - **`swagger:route` / `swagger:operation`** → the operation's `externalDocs`;
 - **`swagger:model`** (and any full Schema, e.g. a body parameter's schema)
-  → the schema's `externalDocs`.
+  → the schema's `externalDocs`;
+- a **struct field** → the property's `externalDocs`. On a `$ref`'d field
+  (whose property is a bare `$ref`) it is lifted onto the wrapping `allOf`
+  compound, alongside the field's `description` and `x-*` siblings.
 
 An empty block (no `description`/`url`) is skipped rather than emitting a
 bare `externalDocs: {}`. It is a **full-Schema-only** keyword: on a
 SimpleSchema site (a non-body parameter, response header, or items
 chain) it is dropped with a `CodeUnsupportedInSimpleSchema` diagnostic.
-`swagger:meta`'s `tags` do not yet carry `externalDocs`.
 
 ```
 ExternalDocs:
   description: Reference documentation
   url: https://example.com/docs
 ```
+
+---
+
+### `tags`
+
+Top-level tag declarations. Behaviour depends on context:
+
+- In **`swagger:meta`** the body is a YAML sequence of tag objects emitted into
+  the spec's top-level `tags` — each with a `name`, an optional `description`,
+  a nested `externalDocs`, and any `x-*` vendor extensions:
+
+  ```
+  Tags:
+  - name: pets
+    description: Everything about your Pets
+    externalDocs:
+      description: Find out more
+      url: https://example.com/docs/pets
+  - name: store
+    x-display-name: Store
+  ```
+
+- In **`swagger:route` / `swagger:operation`** it is a plain string list,
+  unioned and deduplicated with the annotation's header-line tags onto the
+  operation's `tags`.
 
 ---
 

@@ -1,0 +1,31 @@
+{
+  "description": "Profile carries structured (non-scalar) example values. A JSON object literal\non a map field and a JSON array literal on a slice field are parsed into\nstructured examples — a bare comma-separated list would instead be kept\nverbatim as a string.",
+  "type": "object",
+  "properties": {
+    "labels": {
+      "description": "Labels is a set of key/value labels.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "x-go-name": "Labels",
+      "example": {
+        "env": "prod",
+        "tier": "gold"
+      }
+    },
+    "roles": {
+      "description": "Roles is the list of assigned roles.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "x-go-name": "Roles",
+      "example": [
+        "admin",
+        "auditor"
+      ]
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+}

@@ -76,6 +76,8 @@ func TestExampleFragments(t *testing.T) {
 	require.True(t, ok, "ntpServers response missing")
 	goldenRaw(t, "responseexample", ntp) // example on a top-level array response
 
+	goldenJSON(t, doc, "complexexample", "Profile") // structured (object/array) example values
+
 	// Type coercion: a numeric default on an int field is a JSON number, a
 	// boolean default a JSON bool — not strings.
 	port := doc.Definitions["Settings"].Properties["port"]

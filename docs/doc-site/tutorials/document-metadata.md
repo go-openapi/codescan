@@ -25,6 +25,13 @@ rest — `License:` and `Contact:` parse into structured objects, and an
 {{< example go="concepts/meta/doc.go" goregion="meta" golabel="Package doc comment"
             json="concepts/meta/testdata/meta.json" jsonlabel="the document" >}}
 
+## Tags
+
+A `Tags:` block declares the spec's top-level `tags` — a YAML sequence of tag
+objects, each with a `name`, an optional `description`, a nested `externalDocs`,
+and any `x-*` vendor extensions. This is how you attach per-tag descriptions to
+the tags your routes reference (above, `pets` and `store`).
+
 For the full meta keyword surface (security definitions, external docs,
 extensions, terms of service), see the
 [`swagger:meta` reference]({{% relref "/maintainers/annotations#swaggermeta" %}})

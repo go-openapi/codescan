@@ -97,3 +97,25 @@ type NTPServers []string
 //	200: ntpServers
 
 // endsnippet:responseexample
+
+// snippet:complexexample
+
+// Profile carries structured (non-scalar) example values. A JSON object literal
+// on a map field and a JSON array literal on a slice field are parsed into
+// structured examples — a bare comma-separated list would instead be kept
+// verbatim as a string.
+//
+// swagger:model
+type Profile struct {
+	// Labels is a set of key/value labels.
+	//
+	// example: {"env":"prod","tier":"gold"}
+	Labels map[string]string `json:"labels"`
+
+	// Roles is the list of assigned roles.
+	//
+	// example: ["admin","auditor"]
+	Roles []string `json:"roles"`
+}
+
+// endsnippet:complexexample

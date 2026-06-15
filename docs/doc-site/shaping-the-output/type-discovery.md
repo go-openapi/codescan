@@ -49,6 +49,11 @@ that look tricky still work:
   argument's definition. The generic's declaration may live in a different file
   from its instantiation. A free (un-instantiated) type parameter is skipped
   with a warning.
-- **Embedded fields**, including those from an **external package**, are
-  promoted into the embedding type, and a custom field type resolves to its
-  underlying type.
+- **Embedded fields**, including those from an **external package** or a type
+  declared in another source file, are promoted into the embedding type (only
+  exported members, recursively), and a custom field type resolves to its
+  underlying type. An `in:` / `required:` annotation written on the embedded
+  field itself applies to all the members it promotes.
+- A type the scanner cannot model — e.g. a bare function type — is skipped with
+  a warning rather than failing the whole scan; the annotated models around it
+  are still emitted.
