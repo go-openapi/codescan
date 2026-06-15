@@ -1,0 +1,19 @@
+{
+  "description": "Measurement shows forcing a JSON-conformant format. codescan emits a\nGo-specific {integer, format: uint64} for an unsized/large int by default;",
+  "type": "object",
+  "properties": {
+    "bounded": {
+      "description": "Bounded is forced to a conformant, string-encoded int64.",
+      "type": "string",
+      "format": "int64",
+      "x-go-name": "Bounded"
+    },
+    "raw": {
+      "description": "Raw keeps the default Go-derived vendor format (uint64).",
+      "type": "integer",
+      "format": "uint64",
+      "x-go-name": "Raw"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/formats"
+}
