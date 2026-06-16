@@ -115,7 +115,9 @@ annotation publishes it as `jsonClass` instead.
 
 `swagger:ignore` drops a declaration from the output. The scanner sees `Secret`,
 classifies it, then excludes it — so it never reaches the definitions (a fact
-the example's `TestIgnoreOmitsType` asserts).
+the example's `TestIgnoreOmitsType` asserts). It also works on a **single struct
+field** — placed on the field's doc comment, it drops just that property from
+the model.
 
 {{< code file="concepts/models/models.go" lang="go" region="ignore" >}}
 

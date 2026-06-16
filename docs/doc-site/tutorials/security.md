@@ -41,7 +41,14 @@ Each line of a `Security:` block is one requirement of the form
 `schemeName: scope1, scope2` (an empty scope list for non-scoped schemes),
 written either flat (as above) or as a YAML dash list (`- schemeName: scope1`) —
 both parse identically. A route's requirements replace the document default for
-that operation. The same
+that operation.
+
+To make a single operation **public** — opting out of the document-wide default
+— give it an empty `Security: []`. That emits an explicit empty requirement
+(distinct from omitting the keyword, which *inherits* the default):
+
+{{< example go="concepts/security/routes.go" goregion="routes" golabel="swagger:route"
+            json="concepts/security/testdata/public.json" jsonlabel="security on publicReport" >}} The same
 works from a `swagger:operation` YAML body — a `security:` key there sets that
 operation's requirement. (The *schemes* themselves are always global
 `swagger:meta` — OpenAPI 2.0 has no per-operation `securityDefinitions`.)

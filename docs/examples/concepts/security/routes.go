@@ -23,4 +23,15 @@ package security
 // responses:
 //   201: description: created
 
+// publicReport opts out of the document default entirely — an empty
+// `Security: []` emits an explicit empty requirement, marking the operation
+// public regardless of the document-wide default.
+//
+// swagger:route GET /reports/public reports publicReport
+//
+// Security: []
+//
+// responses:
+//   200: description: the public reports
+
 // endsnippet:routes

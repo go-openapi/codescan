@@ -58,11 +58,17 @@ func TestSecurityInCode(t *testing.T) {
 	require.NotNil(t, create)
 	require.Len(t, create.Security, 1, "createReport overrides with oauth2")
 
+	public := doc.Paths.Paths["/reports/public"].Get
+	require.NotNil(t, public)
+	require.NotNil(t, public.Security, "Security: [] emits an explicit (non-nil) empty requirement")
+	require.Empty(t, public.Security, "an empty requirement opts the operation out of the default")
+
 	goldenRaw(t, "schemes", map[string]any{
 		"securityDefinitions": doc.SecurityDefinitions,
 		"security":            doc.Security,
 	})
 	goldenRaw(t, "route", create.Security)
+	goldenRaw(t, "public", map[string]any{"security": public.Security})
 }
 
 // TestSecurityByOverlay shows the "keep security out of app code" path: the
