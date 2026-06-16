@@ -24,7 +24,7 @@
 //	      write: write reports
 //
 //	Security:
-//	  api_key:
+//	  - api_key: []
 //
 // swagger:meta
 package security

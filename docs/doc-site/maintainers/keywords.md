@@ -386,10 +386,13 @@ for SimpleSchema parameters).
 
 ### `enum`
 
-A closed set of allowed values. Three accepted surface forms:
+A closed set of allowed values. Accepted surface forms:
 
 - **Comma list**: `enum: red, green, blue` — split on `,` and
   trimmed.
+- **Bracketed comma list**: `enum: [red, green, blue]` — the same, with
+  a surrounding `[ ]` pair stripped as delimiters (so the unquoted
+  bracketed and unbracketed forms are equivalent).
 - **JSON array**: `enum: ["red", "green", "blue"]` — parsed via
   YAML/JSON.
 - **Multi-line list with `-` markers**:
@@ -484,6 +487,16 @@ Where the parameter value comes from. Closed-vocab:
 A non-matching value emits a context-invalid diagnostic; the
 parameter loses its `in` and may end up incorrectly classified
 downstream.
+
+### `name`
+
+Sets the published name of the field it decorates, overriding the
+`json:` tag / Go field name. On a `swagger:parameters` field it is the
+parameter name; on a `swagger:response` header field it is the header
+key (the `Headers` map key). It is the field-doc-keyword equivalent of
+the [`swagger:name`]({{% relref "/maintainers/annotations#swaggername" %}})
+annotation, and — being structural — is stripped from the description
+rather than leaking into it.
 
 ```go
 // PageParams declares pagination query parameters.
@@ -589,19 +602,29 @@ Consumes:
 Produces: application/json
 ```
 
-### `security`
-
-Security-requirements list. Each line is one requirement of shape
-`schemeName: scope1, scope2`. An empty scope list (`schemeName:`)
-means "no scopes required, but the scheme must be active."
+Security-requirements list, parsed as **YAML** — a sequence of
+requirement objects. Within one item, multiple schemes are **ANDed**
+(all required); separate items are **ORed** (any one grants access).
+Scopes are a flow (`[read, write]`) or block list; an empty list
+(`api_key: []`) means the scheme is required with no scopes.
 
 ```
 Security:
-  api_key:
-  oauth2: read, write
+  - api_key: []          # OR this requirement…
+  - oauth2: [read, write] #   …or this one
 ```
 
-Maps to `security` (array of single-key maps).
+```
+Security:
+  - api_key: []          # AND: both required (one item, two keys)
+    oauth2: [write]
+```
+
+Maps to `security`. A bare top-level mapping (`api_key:` /
+`oauth2: read, write`, comma-split scopes) is still read as one OR
+requirement per key for back-compatibility. Legal in `swagger:meta`
+(document default), `swagger:route`, and `swagger:operation`; an empty
+`Security: []` on an operation is an explicit "no security" opt-out.
 
 ### `securityDefinitions`
 

@@ -58,6 +58,12 @@ func TestSecurityInCode(t *testing.T) {
 	require.NotNil(t, create)
 	require.Len(t, create.Security, 1, "createReport overrides with oauth2")
 
+	archive := doc.Paths.Paths["/reports/archive"].Post
+	require.NotNil(t, archive)
+	require.Len(t, archive.Security, 1, "two ANDed schemes form a single requirement object")
+	require.Contains(t, archive.Security[0], "api_key")
+	require.Contains(t, archive.Security[0], "oauth2")
+
 	public := doc.Paths.Paths["/reports/public"].Get
 	require.NotNil(t, public)
 	require.NotNil(t, public.Security, "Security: [] emits an explicit (non-nil) empty requirement")
@@ -68,6 +74,7 @@ func TestSecurityInCode(t *testing.T) {
 		"security":            doc.Security,
 	})
 	goldenRaw(t, "route", create.Security)
+	goldenRaw(t, "and", archive.Security)
 	goldenRaw(t, "public", map[string]any{"security": public.Security})
 }
 

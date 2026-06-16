@@ -651,7 +651,9 @@ parameter's `in:`, `required:`, validation, and description.
 Each parameter's **name** comes from the field's `json:` tag, falling
 back to the Go field name when there is no tag. The `form:` tag is not
 consulted — add a `json:` tag to control the parameter name (a
-`form:"sort_key"` tag alone leaves the name as the Go identifier).
+`form:"sort_key"` tag alone leaves the name as the Go identifier). A
+`name:` keyword in the field doc takes precedence over both, setting the
+parameter name explicitly (the field-doc equivalent of `swagger:name`).
 
 **Where it goes.** On a struct declaration. A bare slice variable
 (`var Filters []string`) carries no `in:`/`type:`/`required:` per
@@ -729,7 +731,9 @@ The struct's fields contribute the response shape:
 - Other fields carrying `in: header` become response headers. A field
   with **neither** `Body`/`in: body` nor `in: header` is treated as a
   response **header** by default, not as a body property — so for a body
-  schema, name the field `Body` or mark it `in: body`.
+  schema, name the field `Body` or mark it `in: body`. The header's key
+  comes from the `json:` tag / Go field name, or a `name:` keyword in the
+  field doc (e.g. `name: X-Rate-Limit`) to set it explicitly.
 - An **anonymously embedded** struct marked `in: body` *is* the body —
   the embedded type becomes the body schema (a `$ref` to the model),
   exactly like a named `Body Foo` field, rather than promoting its fields.

@@ -37,20 +37,30 @@ and `write` scopes, overriding the default:
 {{< example go="concepts/security/routes.go" goregion="routes" golabel="swagger:route"
             json="concepts/security/testdata/route.json" jsonlabel="security on createReport" >}}
 
-Each line of a `Security:` block is one requirement of the form
-`schemeName: scope1, scope2` (an empty scope list for non-scoped schemes),
-written either flat (as above) or as a YAML dash list (`- schemeName: scope1`) —
-both parse identically. A route's requirements replace the document default for
-that operation.
+A `Security:` block is plain **YAML** — a sequence of requirement objects.
+Scopes are a flow list (`[read, write]`) or a block list; an empty list
+(`api_key: []`) is the scheme with no scopes. The combining rule follows
+OpenAPI 2.0:
 
-To make a single operation **public** — opting out of the document-wide default
-— give it an empty `Security: []`. That emits an explicit empty requirement
-(distinct from omitting the keyword, which *inherits* the default):
+- **multiple schemes in one item are ANDed** — all are required;
+- **separate items are ORed** — satisfying any one grants access.
+
+So requiring *both* an API key **and** an OAuth2 scope is two keys under a single
+sequence item:
 
 {{< example go="concepts/security/routes.go" goregion="routes" golabel="swagger:route"
-            json="concepts/security/testdata/public.json" jsonlabel="security on publicReport" >}} The same
-works from a `swagger:operation` YAML body — a `security:` key there sets that
-operation's requirement. (The *schemes* themselves are always global
+            json="concepts/security/testdata/and.json" jsonlabel="security on archiveReport (AND)" >}}
+
+A route's requirements replace the document default for that operation. To make
+one operation **public** — opting out of the document-wide default — give it an
+empty `Security: []`. That emits an explicit empty requirement (distinct from
+omitting the keyword, which *inherits* the default):
+
+{{< example go="concepts/security/routes.go" goregion="routes" golabel="swagger:route"
+            json="concepts/security/testdata/public.json" jsonlabel="security on publicReport" >}}
+
+The same works from a `swagger:operation` YAML body — a `security:` key there
+sets that operation's requirement. (The *schemes* themselves are always global
 `swagger:meta` — OpenAPI 2.0 has no per-operation `securityDefinitions`.)
 
 ## Keep security out of your code
