@@ -444,6 +444,22 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		}
 	}
 
+	// A swagger:name annotation is inert in a parameter context — the
+	// canonical rename keyword here is `name:` (doc-quirk G2). It is dropped
+	// rather than applied, so warn in case the author reached for the schema
+	// annotation when they meant the keyword.
+	for _, b := range p.ParseBlocks(afld.Doc) {
+		if b.AnnotationKind() == grammar.AnnName {
+			p.RecordDiagnostic(grammar.Warnf(
+				p.Ctx.PosOf(afld.Pos()),
+				grammar.CodeContextInvalid,
+				"swagger:name is ignored on a parameter field; use the `name:` keyword to rename parameter %q",
+				name,
+			))
+			break
+		}
+	}
+
 	in := "query"
 	switch {
 	case signals.inSet:
