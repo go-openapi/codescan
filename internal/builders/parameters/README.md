@@ -46,7 +46,12 @@ following ordered steps:
    the `common.Builder` parse cache so `applyBlockToField`'s later
    walk hits the same parse result).
 3. If `swagger:ignore` is present → skip.
-4. Resolve the JSON tag name. If ignored (`json:"-"`) → skip.
+4. Resolve the JSON tag name. If ignored (`json:"-"`) → skip. A `name:`
+   keyword on the field overrides this derived name (the parameter-side
+   analogue of `swagger:name` on a schema field); it is read via
+   `Block.GetString(grammar.KwName)` and applied before the name flows
+   into the `seen` key / `ps.Name` / dedup, so the rename is consistent.
+   The Go field name is still recorded as `x-go-name` when it differs.
 5. Pick the `in:` location (default `query`; see [§in-discriminator](#in-discriminator)).
 6. Build the field's type into the parameter via `buildFromField` —
    the schema builder runs in SimpleSchema mode unless `in==body`

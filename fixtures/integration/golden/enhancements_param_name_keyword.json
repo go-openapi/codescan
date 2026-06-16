@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/widgets": {
+      "post": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Create a widget.",
+        "operationId": "createWidget",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "description": "the widget payload",
+            "name": "widget",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Widget"
+            }
+          },
+          {
+            "minimum": 1,
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Quantity",
+            "description": "how many to make",
+            "name": "count",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "x-go-name": "Color"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/param-name-keyword"
+    }
+  }
+}

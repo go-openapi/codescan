@@ -182,6 +182,7 @@ const (
 	KwDiscriminator       = "discriminator"
 	KwDeprecated          = "deprecated"
 	KwIn                  = "in"
+	KwName                = "name"
 	KwSchemes             = "schemes"
 	KwVersion             = "version"
 	KwHost                = "host"
@@ -297,6 +298,16 @@ var keywords = []Keyword{
 	keyword(KwIn,
 		asEnumOption("query", "path", "header", "body", "formData"),
 		ctx(CtxParam)),
+
+	// Parameter-name directive. Like `in:`, this is a structural
+	// parameter keyword rather than part of the schema-body grammar:
+	// it renames the JSON parameter name on a swagger:parameters struct
+	// field, overriding the json-tag / Go-field derivation. Scoped to
+	// CtxParam so it is removed from the description prose and silently
+	// ignored by the SimpleSchema walker (isFullSchemaOnly is false for
+	// CtxParam keywords). The parameters builder reads the value via
+	// GetString(KwName). See README §keyword-table.
+	keyword(KwName, asString(), ctx(CtxParam)),
 
 	// List-shaped keywords. KwSchemes uses asRawBlock() so multi-line
 	// bodies (`Schemes:\n  - http\n  - https`) populate the same way

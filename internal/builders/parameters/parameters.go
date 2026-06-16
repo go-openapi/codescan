@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -429,6 +430,18 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 	}
 	if ignore {
 		return "", nil
+	}
+
+	// A `name:` keyword on the field renames the JSON parameter name,
+	// overriding the json-tag / Go-field derivation (the parameter-side
+	// analogue of swagger:name on a schema field). Read it before `name`
+	// flows into the `seen` key, ps.Name, the sequence and the dedup so
+	// the rename is applied consistently. applyFieldCarrier-style
+	// x-go-name tracking below records the Go field name when it differs.
+	if kwName, ok := p.ParseBlock(afld.Doc).GetString(grammar.KwName); ok {
+		if kwName = strings.TrimSpace(kwName); kwName != "" {
+			name = kwName
+		}
 	}
 
 	in := "query"
