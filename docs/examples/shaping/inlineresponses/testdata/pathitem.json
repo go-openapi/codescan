@@ -1,6 +1,6 @@
 {
   "get": {
-    "description": "Lists pets. Each response is declared inline with the body: sub-language — a\nprimitive, an array of a model, or a single model $ref — so no wrapper\nresponse type is needed. Trailing words become the response description.",
+    "description": "Lists pets. Each response is declared inline with the body: sub-language — a\nprimitive, an array of a model, or a single model $ref — so no wrapper\nresponse type is needed. Trailing words become the response description; omit\nthem and codescan derives one (the model's godoc, or the HTTP status reason).",
     "tags": [
       "pets"
     ],
@@ -16,13 +16,13 @@
         }
       },
       "400": {
-        "description": "an error message",
+        "description": "Bad Request",
         "schema": {
           "type": "string"
         }
       },
       "default": {
-        "description": "a single pet",
+        "description": "Pet is the model the inline responses reference.",
         "schema": {
           "$ref": "#/definitions/Pet"
         }

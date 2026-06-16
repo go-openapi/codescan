@@ -18,7 +18,10 @@ which names the body shape directly:
 - `body:string` (or `number` / `integer` / `boolean`) — a primitive body;
 - `body:Pet` — a `$ref` to the `Pet` definition;
 - `body:[]Pet` — an array of that `$ref` (repeat `[]` to nest deeper);
-- any trailing words after the body token become the response **description**.
+- any trailing words after the body token become the response **description**;
+  omit them and codescan derives one — the referenced model's godoc (`default`
+  above → the `Pet` doc comment), or the HTTP status reason for a numeric code
+  (`400` above → "Bad Request").
 
 {{< example go="shaping/inlineresponses/inlineresponses.go" goregion="inline" golabel="swagger:route"
             json="shaping/inlineresponses/testdata/pathitem.json" jsonlabel="paths[/pets]" >}}

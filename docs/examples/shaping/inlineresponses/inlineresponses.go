@@ -23,11 +23,12 @@ type Pet struct {
 //
 // Lists pets. Each response is declared inline with the body: sub-language — a
 // primitive, an array of a model, or a single model $ref — so no wrapper
-// response type is needed. Trailing words become the response description.
+// response type is needed. Trailing words become the response description; omit
+// them and codescan derives one (the model's godoc, or the HTTP status reason).
 //
 //	Responses:
 //	  200: body:[]Pet the list of pets
-//	  400: body:string an error message
-//	  default: body:Pet a single pet
+//	  400: body:string
+//	  default: body:Pet
 
 // endsnippet:inline
