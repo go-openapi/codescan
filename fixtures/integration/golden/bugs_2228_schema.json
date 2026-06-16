@@ -1,0 +1,32 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/alpha": {
+      "get": {
+        "tags": [
+          "alpha"
+        ],
+        "summary": "This becomes the summary.",
+        "operationId": "withSummary",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/beta": {
+      "get": {
+        "tags": [
+          "beta"
+        ],
+        "operationId": "noSummary",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}
