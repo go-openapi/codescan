@@ -1,0 +1,37 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/user": {
+      "get": {
+        "summary": "Query user.",
+        "operationId": "queryUser",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/userResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "title": "User is a model.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2233/model"
+    }
+  },
+  "responses": {
+    "userResponse": {
+      "description": "swaggUserInfo is the response wrapper.",
+      "schema": {
+        "$ref": "#/definitions/User"
+      }
+    }
+  }
+}

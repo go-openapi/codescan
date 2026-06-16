@@ -1,0 +1,19 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "responses": {
+    "indexedNodes": {
+      "description": "IndexedNodes is a response with a time.Duration header (#2248).",
+      "schema": {
+        "type": "string"
+      },
+      "headers": {
+        "lastContact": {
+          "type": "integer",
+          "format": "int64",
+          "description": "last contact"
+        }
+      }
+    }
+  }
+}
