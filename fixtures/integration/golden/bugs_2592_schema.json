@@ -1,0 +1,59 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Combined": {
+      "title": "Combined is a named body type composing User + Token via swagger:allOf.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/User"
+        },
+        {
+          "$ref": "#/definitions/Token"
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2592"
+    },
+    "Token": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "x-go-name": "Token"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2592"
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2592"
+    }
+  },
+  "responses": {
+    "combinedResponse": {
+      "description": "",
+      "schema": {
+        "$ref": "#/definitions/Combined"
+      }
+    },
+    "inlineResponse": {
+      "description": "inline body with swagger:allOf embeds",
+      "schema": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/User"
+          },
+          {
+            "$ref": "#/definitions/Token"
+          }
+        ]
+      }
+    }
+  }
+}
