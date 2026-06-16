@@ -509,6 +509,24 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 			signals.invalidIn, name,
 		))
 	}
+
+	// A swagger:name annotation is inert on a response header — the canonical
+	// rename keyword is `name:` (doc-quirk G2). Only the header path consults
+	// `name` (a body field becomes resp.Schema), so warn there in case the
+	// author meant the keyword; the annotation is dropped either way.
+	if in == inHeader {
+		for _, b := range r.ParseBlocks(afld.Doc) {
+			if b.AnnotationKind() == grammar.AnnName {
+				r.RecordDiagnostic(grammar.Warnf(
+					r.Ctx.PosOf(afld.Pos()),
+					grammar.CodeContextInvalid,
+					"swagger:name is ignored on a response header field; use the `name:` keyword to rename header %q",
+					name,
+				))
+				break
+			}
+		}
+	}
 	ps := resp.Headers[name]
 
 	// `swagger:file` is body-only (Q3); on a header it would corrupt

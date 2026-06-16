@@ -293,6 +293,7 @@ func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
 	if afld == nil {
 		return fd
 	}
+	var nameKeyword string
 	for _, b := range s.ParseBlocks(afld.Doc) {
 		switch b.AnnotationKind() { //nolint:exhaustive // field-level walker only consumes these five kinds
 		case grammar.AnnIgnore:
@@ -315,6 +316,21 @@ func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
 				fd.AllOfClass = name
 			}
 		}
+		// The `name:` keyword is the canonical field-naming keyword,
+		// honoured uniformly across schema / param / header (doc-quirk
+		// G2). On a model property or interface method it renames the
+		// emitted JSON name just as it already does on a parameter /
+		// header field. It takes precedence over the legacy swagger:name
+		// annotation when both are present, so capture it across all
+		// blocks and apply it last.
+		if v, ok := b.GetString(grammar.KwName); ok {
+			if v = strings.TrimSpace(v); v != "" {
+				nameKeyword = v
+			}
+		}
+	}
+	if nameKeyword != "" {
+		fd.JSONName = nameKeyword
 	}
 	return fd
 }

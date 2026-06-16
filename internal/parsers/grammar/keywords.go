@@ -299,17 +299,22 @@ var keywords = []Keyword{
 		asEnumOption("query", "path", "header", "body", "formData"),
 		ctx(CtxParam)),
 
-	// Name directive. Like `in:`, this is a structural keyword rather
-	// than part of the schema-body grammar. On a swagger:parameters
-	// struct field it renames the JSON parameter name; on a
-	// swagger:response struct field it renames the response header
-	// (the Headers map key) — both overriding the json-tag / Go-field
-	// derivation. Scoped to the two SimpleSchema field sites (CtxParam,
-	// CtxHeader) so it is removed from the description prose and silently
-	// ignored by the SimpleSchema walker (isFullSchemaOnly is false for
-	// these contexts). The parameters / responses builders read the value
-	// via GetString(KwName). See README §keyword-table.
-	keyword(KwName, asString(), ctx(CtxParam, CtxHeader)),
+	// Name directive — the canonical field-naming keyword. Like `in:`,
+	// this is a structural keyword rather than part of the schema-body
+	// grammar: it renames the published name of a field at every field
+	// site — a swagger:parameters field (the JSON parameter name), a
+	// swagger:response field (the response header / Headers map key) and
+	// a swagger:model property or interface method (the JSON property
+	// name) — always overriding the json-tag / Go-field derivation.
+	// Legal in CtxParam, CtxHeader and CtxSchema so it is removed from
+	// the description prose and silently ignored by the (Simple)Schema
+	// walker (isFullSchemaOnly stays false; no shape rule, so checkShape
+	// passes) at all three; the parameters / responses / schema builders
+	// read the value via GetString(KwName). The older `swagger:name`
+	// annotation remains honoured as a legacy form (and is the only form
+	// on interface methods historically), but `name:` takes precedence
+	// when both appear. See README §keyword-table. (doc-quirk G2.)
+	keyword(KwName, asString(), ctx(CtxParam, CtxHeader, CtxSchema)),
 
 	// List-shaped keywords. KwSchemes uses asRawBlock() so multi-line
 	// bodies (`Schemes:\n  - http\n  - https`) populate the same way
