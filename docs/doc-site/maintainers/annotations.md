@@ -653,7 +653,9 @@ back to the Go field name when there is no tag. The `form:` tag is not
 consulted — add a `json:` tag to control the parameter name (a
 `form:"sort_key"` tag alone leaves the name as the Go identifier). A
 `name:` keyword in the field doc takes precedence over both, setting the
-parameter name explicitly (the field-doc equivalent of `swagger:name`).
+parameter name explicitly. (Note: the `swagger:name` *annotation* — which
+names model properties and interface methods — is **not** consulted on a
+parameter field; use the `name:` keyword here.)
 
 **Where it goes.** On a struct declaration. A bare slice variable
 (`var Filters []string`) carries no `in:`/`type:`/`required:` per

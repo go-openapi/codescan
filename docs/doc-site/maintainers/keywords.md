@@ -493,10 +493,15 @@ downstream.
 Sets the published name of the field it decorates, overriding the
 `json:` tag / Go field name. On a `swagger:parameters` field it is the
 parameter name; on a `swagger:response` header field it is the header
-key (the `Headers` map key). It is the field-doc-keyword equivalent of
-the [`swagger:name`]({{% relref "/maintainers/annotations#swaggername" %}})
-annotation, and — being structural — is stripped from the description
-rather than leaking into it.
+key (the `Headers` map key). It is — being structural — stripped from
+the description rather than leaking into it.
+
+`name:` covers **parameter and header** fields; for a **model property
+or interface method** name use the
+[`swagger:name`]({{% relref "/maintainers/annotations#swaggername" %}})
+annotation instead. The two are complementary, not interchangeable: a
+`name:` keyword is currently ignored on a model field, and `swagger:name`
+is not consulted on a parameter field.
 
 ```go
 // PageParams declares pagination query parameters.
