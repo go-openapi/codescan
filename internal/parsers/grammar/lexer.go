@@ -686,19 +686,21 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 		bodyRaw = append(bodyRaw, head.Text)
 	}
 
-	// extensions / infoExtensions / securityDefinitions / Tags bodies
-	// are YAML-parsed downstream (yaml.TypedExtensions or
-	// yaml.UnmarshalBody via the meta walker), so every body line MUST
-	// preserve its original indentation — Tags in particular is a
-	// sequence of mappings whose nesting collapses if the per-item
-	// indent is dropped. Flat raw blocks (consumes / produces /
-	// security / …) use the Text view (leading whitespace dropped,
-	// recognised keywords reformatted). Both branches converge on the
-	// same bodyText slice.
+	// extensions / infoExtensions / securityDefinitions / Tags /
+	// security bodies are YAML-parsed downstream (yaml.TypedExtensions,
+	// yaml.UnmarshalBody via the meta walker, or security.Parse), so
+	// every body line MUST preserve its original indentation — Tags in
+	// particular is a sequence of mappings whose nesting collapses if
+	// the per-item indent is dropped, and a `Security:` requirement
+	// with block-style scopes (`- name:` then indented `- scope`) needs
+	// the same. Flat raw blocks (consumes / produces / …) use the Text
+	// view (leading whitespace dropped, recognised keywords
+	// reformatted). Both branches converge on the same bodyText slice.
 	yamlBody := kw.Name == "extensions" ||
 		kw.Name == "infoExtensions" ||
 		kw.Name == "securityDefinitions" ||
-		kw.Name == KwTags
+		kw.Name == KwTags ||
+		kw.Name == KwSecurity
 	bodyLine := func(t Token) string {
 		if yamlBody {
 			return strings.TrimRightFunc(t.Raw, unicode.IsSpace)

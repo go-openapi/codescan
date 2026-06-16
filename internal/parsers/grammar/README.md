@@ -316,12 +316,13 @@ shape of nested YAML-like content under e.g. `security:`.
 
 **Indentation override (YAML-bodied blocks only).** Inside a
 YAML-bodied block (`extensions`, `infoExtensions`,
-`securityDefinitions`, `tags`), a same-family keyword indented
-*strictly deeper* than the block head is treated as a nested YAML
-key, not a sibling — e.g. `externalDocs:` under a `Tags:` list
-item, where both are meta-family. Such a key is absorbed so the
-nested YAML structure survives. Flat raw blocks (`tos`, `consumes`,
-…) do **not** apply this: their keyword indentation is purely
+`securityDefinitions`, `tags`, `security`), a same-family keyword
+indented *strictly deeper* than the block head is treated as a
+nested YAML key, not a sibling — e.g. `externalDocs:` under a
+`Tags:` list item, where both are meta-family. Such a key is
+absorbed so the nested YAML structure survives. Flat raw blocks
+(`tos`, `consumes`, …) do **not** apply this: their keyword
+indentation is purely
 cosmetic (the petstore meta indents `Schemes:`/`Host:` deeper than
 a column-0 `Terms Of Service:`, yet they are siblings), so any
 sibling-family keyword terminates them regardless of depth.
@@ -338,16 +339,18 @@ would be silently lost.
 
 ### Per-body indentation handling
 
-- `extensions:`, `infoExtensions:`, `securityDefinitions:` and
-  `tags:` bodies are YAML-parsed downstream (`yaml.TypedExtensions`
-  or `yaml.UnmarshalBody`/`UnmarshalListBody` via the meta walker),
-  so every body line preserves its original indentation —
-  `collectRawBlock` reads the `Raw` view (right-trimmed only). The
-  `tags:` body in particular is a sequence of mappings whose nesting
-  collapses if per-line indent is dropped.
-- Flat raw blocks (`consumes:`, `produces:`, `security:`, …) use
-  the `Text` view (leading whitespace dropped, keyword lines
-  reformatted via `formatKeywordLine`).
+- `extensions:`, `infoExtensions:`, `securityDefinitions:`,
+  `tags:` and `security:` bodies are YAML-parsed downstream
+  (`yaml.TypedExtensions` or `yaml.UnmarshalBody`/`UnmarshalListBody`
+  via the meta walker, or `security.Parse`), so every body line
+  preserves its original indentation — `collectRawBlock` reads the
+  `Raw` view (right-trimmed only). The `tags:` body in particular is
+  a sequence of mappings whose nesting collapses if per-line indent
+  is dropped; a `security:` block with block-style scopes needs the
+  same.
+- Flat raw blocks (`consumes:`, `produces:`, …) use the `Text`
+  view (leading whitespace dropped, keyword lines reformatted via
+  `formatKeywordLine`).
 
 Both branches converge on the same `bodyText` slice.
 
@@ -653,8 +656,9 @@ The helper stops at "simple token lists" — it does **not** handle
 enum values (whose elements may be JSON arrays), the `+ name:`
 Parameters chunk grammar (routebody-owned), or raw bodies that
 need YAML structural parsing (`securityDefinitions`,
-`extensions`, `infoExtensions` — those travel through
-`yaml.TypedExtensions` / `json.Unmarshal` directly).
+`extensions`, `infoExtensions`, `security` — those travel through
+`yaml.TypedExtensions` / `json.Unmarshal` / `security.Parse`
+directly).
 
 ---
 
@@ -944,13 +948,23 @@ applies its own validation.
 
 A `security:` raw block in a meta / route / operation context is
 parsed at lex time into a `[]security.Requirement` and made
-available via `Block.SecurityRequirements()`. Each entry is a
-single-key map from scheme name → scope list, mirroring the shape
-OAS v2 expects on `spec.Operation.Security`.
+available via `Block.SecurityRequirements()`. Each entry is a map
+from scheme name → scope list (one key per scheme; multiple keys in
+one entry are AND-combined), mirroring the shape OAS v2 expects on
+`spec.Operation.Security`.
+
+`security.Parse` decodes the body as genuine YAML — the same path
+`securityDefinitions` takes — so the standard sequence-of-objects
+form (with flow- or block-style scopes), the bare-name shorthand
+(`- name`), and the explicit opt-out (`security: []` → non-nil
+empty) all work; a legacy bare top-level mapping is still read as
+one OR requirement per key. See the `security` package doc for the
+full form list.
 
 `parser.emitRawBlock` calls `security.Parse(body)` when the
 keyword name is `KwSecurity`. Returns `nil` when no `security:`
-keyword appeared on the block.
+keyword appeared on the block (absent → inherit), distinct from the
+non-nil empty slice returned for `security: []` (opt-out).
 
 The companion accessor — `Block.Contact()` / `Block.License()` —
 exposes the typed shapes parsed from inline `contact:` /
