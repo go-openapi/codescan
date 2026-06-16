@@ -299,15 +299,17 @@ var keywords = []Keyword{
 		asEnumOption("query", "path", "header", "body", "formData"),
 		ctx(CtxParam)),
 
-	// Parameter-name directive. Like `in:`, this is a structural
-	// parameter keyword rather than part of the schema-body grammar:
-	// it renames the JSON parameter name on a swagger:parameters struct
-	// field, overriding the json-tag / Go-field derivation. Scoped to
-	// CtxParam so it is removed from the description prose and silently
+	// Name directive. Like `in:`, this is a structural keyword rather
+	// than part of the schema-body grammar. On a swagger:parameters
+	// struct field it renames the JSON parameter name; on a
+	// swagger:response struct field it renames the response header
+	// (the Headers map key) — both overriding the json-tag / Go-field
+	// derivation. Scoped to the two SimpleSchema field sites (CtxParam,
+	// CtxHeader) so it is removed from the description prose and silently
 	// ignored by the SimpleSchema walker (isFullSchemaOnly is false for
-	// CtxParam keywords). The parameters builder reads the value via
-	// GetString(KwName). See README §keyword-table.
-	keyword(KwName, asString(), ctx(CtxParam)),
+	// these contexts). The parameters / responses builders read the value
+	// via GetString(KwName). See README §keyword-table.
+	keyword(KwName, asString(), ctx(CtxParam, CtxHeader)),
 
 	// List-shaped keywords. KwSchemes uses asRawBlock() so multi-line
 	// bodies (`Schemes:\n  - http\n  - https`) populate the same way

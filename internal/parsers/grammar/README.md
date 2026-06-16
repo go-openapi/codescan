@@ -801,17 +801,19 @@ can hand a typed token to the parameters dispatch path. The
 schema parser treats it as a context-invalid warning when seen
 outside that path.
 
-### `name:` is a parameter-name directive
+### `name:` is a name directive
 
-`KwName` is declared as `ShapeString` in `CtxParam`. Like `in:`, it
-is a structural parameter keyword rather than part of the schema-body
-grammar: on a `swagger:parameters` struct field it renames the JSON
-parameter name, overriding the json-tag / Go-field derivation (the
-parameter-side analogue of the `swagger:name` annotation on a schema
-field). Recognising it as a keyword removes it from the description
-prose; because it is a `CtxParam` keyword, `isFullSchemaOnly` is false
-for it, so the SimpleSchema walker ignores it silently rather than
-emitting an unsupported-keyword warning. The parameters builder reads
+`KwName` is declared as `ShapeString` in `CtxParam, CtxHeader`. Like
+`in:`, it is a structural keyword rather than part of the schema-body
+grammar. On a `swagger:parameters` struct field it renames the JSON
+parameter name; on a `swagger:response` struct field it renames the
+response header (the `Headers` map key). Both override the json-tag /
+Go-field derivation (the SimpleSchema-side analogue of the
+`swagger:name` annotation on a schema field). Recognising it as a
+keyword removes it from the description prose; because its contexts are
+SimpleSchema field sites, `isFullSchemaOnly` is false for it, so the
+parameter / header walkers ignore it silently rather than emitting an
+unsupported-keyword warning. The parameters / responses builders read
 the value via `Block.GetString(KwName)`.
 
 ### `Schemes:` accepts both inline and multi-line

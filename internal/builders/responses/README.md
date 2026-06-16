@@ -51,7 +51,12 @@ For each non-embedded exported field, `processResponseField` runs:
 2. Pre-scan the doc-comment signals via `scanFieldDocSignals` (uses
    the `common.Builder` parse cache).
 3. If `swagger:ignore` → skip.
-4. Resolve JSON tag name. If `json:"-"` → skip.
+4. Resolve JSON tag name. If `json:"-"` → skip. A `name:` keyword on the
+   field overrides this derived name — it renames the response header
+   (the `Headers` map key), mirroring `name:` on a parameters field
+   (`Block.GetString(grammar.KwName)`, applied before `name` flows into
+   the `Headers` key / `seen` set). Harmless on a body field, which never
+   consults `name`.
 5. Resolve `in:` (default `header`; see [§in-discriminator](#in-discriminator)).
 6. **File-body gate**: if `swagger:file` AND `in==body` → set
    `resp.Schema = {type:"file"}` and skip the field build (see

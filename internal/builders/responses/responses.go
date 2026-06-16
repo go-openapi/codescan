@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/handlers"
@@ -474,6 +475,17 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 	}
 	if ignore {
 		return nil
+	}
+
+	// A `name:` keyword renames the response header (the Headers map key),
+	// overriding the json-tag / Go-field derivation — the response-side
+	// analogue of the same keyword on a swagger:parameters field. Read it
+	// before `name` flows into the Headers key / seen set. (Harmless on a
+	// body field: the body path below never consults `name`.)
+	if kwName, ok := r.ParseBlock(afld.Doc).GetString(grammar.KwName); ok {
+		if kwName = strings.TrimSpace(kwName); kwName != "" {
+			name = kwName
+		}
 	}
 
 	// `in:` is the body/header annotation switch (Q1, default header).
