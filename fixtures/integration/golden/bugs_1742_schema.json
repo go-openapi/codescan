@@ -17,7 +17,7 @@
         ],
         "responses": {
           "200": {
-            "description": "string",
+            "description": "OK",
             "schema": {
               "type": "string"
             }

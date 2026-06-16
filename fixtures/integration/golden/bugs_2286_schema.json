@@ -10,7 +10,7 @@
         "operationId": "authLogout",
         "responses": {
           "200": {
-            "description": "logoutResponse",
+            "description": "LogoutResponse is used directly as a response (#2286).",
             "schema": {
               "$ref": "#/definitions/logoutResponse"
             }

@@ -9,7 +9,7 @@
         "operationId": "getArray",
         "responses": {
           "200": {
-            "description": "string",
+            "description": "OK",
             "schema": {
               "type": "array",
               "items": {
@@ -59,7 +59,7 @@
         "operationId": "getTagged",
         "responses": {
           "200": {
-            "description": "integer",
+            "description": "OK",
             "schema": {
               "type": "integer"
             }
@@ -75,7 +75,7 @@
         "operationId": "getThing",
         "responses": {
           "200": {
-            "description": "Thing",
+            "description": "Thing is the model-ref control.",
             "schema": {
               "$ref": "#/definitions/Thing"
             }

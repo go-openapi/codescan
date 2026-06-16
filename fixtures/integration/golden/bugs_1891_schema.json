@@ -24,7 +24,7 @@
         ],
         "responses": {
           "200": {
-            "description": "FooOutput",
+            "description": "FooOutput for output",
             "schema": {
               "$ref": "#/definitions/FooOutput"
             }
