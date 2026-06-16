@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/excel": {
+      "get": {
+        "produces": [
+          "application/octet-stream"
+        ],
+        "tags": [
+          "files"
+        ],
+        "summary": "Download excel.",
+        "operationId": "generateExcel",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/binary"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "binary": {
+      "description": "Binary is a file-download response (#1267): a binary body. The body field is\ndeclared with swagger:strfmt binary so the schema is {type:string,\nformat:binary}; the operation sets produces: application/octet-stream.",
+      "schema": {
+        "type": "string",
+        "format": "binary"
+      }
+    }
+  }
+}
