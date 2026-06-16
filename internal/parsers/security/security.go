@@ -29,6 +29,12 @@ type Requirement = map[string][]string
 // `name: scope1, scope2` security requirement. Empty body returns
 // nil.
 //
+// An explicit empty YAML sequence (`Security: []`) is distinct from an
+// absent block: it is the OAS 2.0 idiom for opting OUT of security, and
+// returns a non-nil empty list so the spec marshals `"security": []`
+// (overriding any global requirement) rather than omitting the key
+// (which would inherit it). go-swagger#2479.
+//
 // V1 quirk preserved: a scope that contains whitespace truncates at
 // its first word — fixtures today only use single-word scopes, so
 // the truncation is invisible, but the regression risk is real
@@ -36,6 +42,9 @@ type Requirement = map[string][]string
 func Parse(body string) []Requirement {
 	if body == "" {
 		return nil
+	}
+	if strings.TrimSpace(body) == "[]" {
+		return []Requirement{}
 	}
 	return parseLines(strings.Split(body, "\n"))
 }

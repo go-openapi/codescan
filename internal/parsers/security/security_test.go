@@ -21,6 +21,21 @@ func TestParse(t *testing.T) {
 		assert.Equal(t, []string{"read", "write"}, got[0]["oauth"])
 	})
 
+	// go-swagger#2479: an explicit empty sequence is the OAS 2.0 opt-out idiom.
+	// It must be distinguishable from an absent block (nil) so the spec marshals
+	// `"security": []` rather than omitting the key.
+	t.Run("explicit empty list opts out (non-nil empty)", func(t *testing.T) {
+		got := Parse("[]")
+		require.NotNil(t, got, "`[]` must yield a non-nil empty list, not nil")
+		assert.Empty(t, got)
+	})
+
+	t.Run("explicit empty list tolerates surrounding space", func(t *testing.T) {
+		got := Parse("  [] ")
+		require.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+
 	t.Run("flat form: bare name has empty scopes", func(t *testing.T) {
 		got := Parse("api_key:")
 		require.Len(t, got, 1)
