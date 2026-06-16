@@ -1,0 +1,22 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Widget": {
+      "description": "not concatenated into the description (#834).",
+      "type": "object",
+      "title": "Widget probes that Format/Pattern/Example/Type are applied as schema fields,",
+      "properties": {
+        "code": {
+          "description": "the code",
+          "type": "string",
+          "maxLength": 10,
+          "pattern": "^[A-Z]+$",
+          "x-go-name": "Code",
+          "example": "ABC"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/834"
+    }
+  }
+}

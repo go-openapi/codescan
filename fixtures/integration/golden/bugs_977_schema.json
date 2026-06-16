@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Acl": {
+      "type": "object",
+      "title": "Acl maps an aliased-string key to a value.",
+      "properties": {
+        "perms": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "x-go-name": "Perms"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/977"
+    }
+  }
+}
