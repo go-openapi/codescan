@@ -23,7 +23,7 @@
         ],
         "responses": {
           "200": {
-            "description": "GetEnumTestResponse",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/GetEnumTestResponse"
             }

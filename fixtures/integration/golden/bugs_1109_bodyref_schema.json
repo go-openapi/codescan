@@ -10,7 +10,7 @@
         "operationId": "updateOrder",
         "responses": {
           "200": {
-            "description": "order",
+            "description": "An Order for one or more pets by a user.",
             "schema": {
               "$ref": "#/definitions/order"
             }

@@ -6,6 +6,7 @@ package routes
 import (
 	"fmt"
 	"go/token"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -457,6 +458,44 @@ func (r *Builder) dispatchResponses(p grammar.Property, op *oaispec.Operation) e
 	return nil
 }
 
+// defaultResponseDescription is the last-resort description for a `body:`
+// response whose code has no standard HTTP reason phrase (the `default`
+// catch-all, or a non-standard numeric code) and whose body type carries
+// no godoc. OAS2 `default` covers any undeclared code — not necessarily an
+// error — so the placeholder stays neutral rather than asserting "error".
+// Capitalised to read as prose alongside the HTTP reason phrases ("Not
+// Found", "Internal Server Error") it sits next to in a responses table.
+const defaultResponseDescription = "Default response"
+
+// bodyResponseDescription chooses a non-empty, human-meaningful description
+// for a `body:`-form response that carries no trailing description text.
+// OAS2 requires a non-empty description, but the bare Go type token (e.g.
+// "Pet" or "string") leaks an implementation detail into the contract
+// (doc-quirk G1). Preference, most to least specific:
+//
+//  1. the referenced model's own godoc (its Title, then Description) — this
+//     mirrors how a named swagger:response derives its description from
+//     prose, instead of echoing the type name;
+//  2. the HTTP status reason phrase for a numeric code (200 → "OK",
+//     404 → "Not Found");
+//  3. a neutral placeholder for `default` / non-standard codes.
+func (r *Builder) bodyResponseDescription(code, ref string) string {
+	if def, ok := r.definitions[ref]; ok {
+		if t := strings.TrimSpace(def.Title); t != "" {
+			return t
+		}
+		if d := strings.TrimSpace(def.Description); d != "" {
+			return d
+		}
+	}
+	if n, err := strconv.Atoi(code); err == nil {
+		if phrase := http.StatusText(n); phrase != "" {
+			return phrase
+		}
+	}
+	return defaultResponseDescription
+}
+
 // buildRouteResponse materialises one ResponseDecl into a
 // spec.Response. Resolves the ref by consulting r.responses (named
 // swagger:response objects) first, then r.definitions: untagged
@@ -492,7 +531,7 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 		}
 		desc := decl.Description
 		if desc == "" {
-			desc = decl.BodyTypeRef
+			desc = r.bodyResponseDescription(decl.Code, decl.BodyTypeRef)
 		}
 		return oaispec.Response{
 			ResponseProps: oaispec.ResponseProps{
@@ -511,7 +550,7 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 				schema := r.resolveBodySchema(decl.ResponseRef, decl.Arrays)
 				desc := decl.Description
 				if desc == "" {
-					desc = decl.ResponseRef
+					desc = r.bodyResponseDescription(decl.Code, decl.ResponseRef)
 				}
 				return oaispec.Response{
 					ResponseProps: oaispec.ResponseProps{

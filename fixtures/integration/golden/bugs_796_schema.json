@@ -24,7 +24,7 @@
         ],
         "responses": {
           "200": {
-            "description": "pingResponse",
+            "description": "Ping Response",
             "schema": {
               "$ref": "#/definitions/pingResponse"
             }

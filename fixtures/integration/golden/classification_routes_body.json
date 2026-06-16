@@ -22,19 +22,19 @@
       "operationId": "listOrders",
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -104,19 +104,19 @@
       ],
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -158,19 +158,19 @@
       "operationId": "orderDetails",
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -211,19 +211,19 @@
       "operationId": "updateOrder",
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -260,7 +260,7 @@
       "operationId": "deleteOrder",
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
@@ -269,13 +269,13 @@
           "description": "Some description"
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -371,19 +371,19 @@
       ],
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -427,19 +427,19 @@
       "operationId": "listPets",
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }
@@ -497,19 +497,19 @@
       ],
       "responses": {
         "200": {
-          "description": "someResponse",
+          "description": "OK",
           "schema": {
             "$ref": "#/definitions/someResponse"
           }
         },
         "422": {
-          "description": "validationError",
+          "description": "Unprocessable Entity",
           "schema": {
             "$ref": "#/definitions/validationError"
           }
         },
         "default": {
-          "description": "genericError",
+          "description": "Default response",
           "schema": {
             "$ref": "#/definitions/genericError"
           }

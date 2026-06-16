@@ -1,0 +1,64 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/quirk": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "summary": "Exercises every G1 description tier in one operation.",
+        "operationId": "g1",
+        "responses": {
+          "200": {
+            "description": "Pet is a documented model used as a response body.",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/Blank"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "description": "Default response",
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Blank": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/body-response-description"
+    },
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a documented model used as a response body.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/body-response-description"
+    }
+  }
+}
