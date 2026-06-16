@@ -42,8 +42,10 @@ type GoStruct struct {
 	A *float32
 }
 
+// IndexedMap is keyed by a plain int; encoding/json stringifies integer keys so it is representable with additionalProperties (go-swagger#2251).
+//
 // swagger:model index_map
-type UnsupportedMap map[int]struct{}
+type IndexedMap map[int]struct{}
 
 // swagger:model go_error
 type Error error

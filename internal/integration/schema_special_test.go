@@ -87,12 +87,15 @@ func TestSpecialSchemas(t *testing.T) {
 		})
 	})
 
-	t.Run("tagged unsupported map type should render empty", func(t *testing.T) {
+	t.Run("tagged int-keyed map renders additionalProperties", func(t *testing.T) {
+		// map[int]struct{}: encoding/json stringifies integer keys, so this is
+		// representable as {type: object, additionalProperties: {…}}
+		// (go-swagger#2251, §18). It was previously dropped to an empty schema.
 		idx, ok := sp.Definitions["index_map"]
 		require.TrueT(t, ok)
-		var empty oaispec.Schema
-		idx.VendorExtensible = oaispec.VendorExtensible{}
-		require.Equal(t, empty, idx)
+		require.TrueT(t, idx.Type.Contains("object"))
+		require.NotNil(t, idx.AdditionalProperties)
+		require.NotNil(t, idx.AdditionalProperties.Schema)
 	})
 
 	t.Run("redefinition of the builtin error type should render as a string", func(t *testing.T) {

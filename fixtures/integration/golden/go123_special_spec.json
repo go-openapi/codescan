@@ -76,7 +76,12 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
     },
     "index_map": {
-      "x-go-name": "UnsupportedMap",
+      "type": "object",
+      "title": "IndexedMap is keyed by a plain int; encoding/json stringifies integer keys so it is representable with additionalProperties (go-swagger#2251).",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "x-go-name": "IndexedMap",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go123/special"
     },
     "numerical_constraint": {

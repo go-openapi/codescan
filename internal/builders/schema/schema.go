@@ -504,20 +504,34 @@ func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup
 }
 
 // buildFromMap renders a Go map as a Swagger object with additionalProperties.
-// Maps whose key type is neither string nor TextMarshaler are skipped — Swagger object keys are strings.
+//
+// A map is representable as {type: object, additionalProperties: V} only when
+// its key marshals to a JSON string — string kinds, integer/uint kinds, or an
+// encoding.TextMarshaler key (resolvers.IsJSONMapKey, mirroring encoding/json).
+// A key that json.Marshal itself rejects (float, bool, struct without
+// TextMarshaler, interface, …) is not silently dropped to a typeless property:
+// it raises a warning and emits no additionalProperties (go-swagger#2251, §18).
 func (s *Builder) buildFromMap(titpe *types.Map, tgt ifaces.SwaggerTypable) error {
 	sch := tgt.Schema()
 	if sch == nil {
 		return fmt.Errorf("items doesn't support maps: %w", ErrSchema)
 	}
 
-	eleProp := NewTypable(sch, tgt.Level(), s.skipExtensions)
 	key := titpe.Key()
-	if key.Underlying().String() == "string" || resolvers.IsTextMarshaler(key) {
-		return s.buildFromType(titpe.Elem(), eleProp.AdditionalProperties())
+	if !resolvers.IsJSONMapKey(key) {
+		s.RecordDiagnostic(grammar.Warnf(
+			s.Ctx.PosOf(s.Decl.Spec.Pos()),
+			grammar.CodeUnsupportedType,
+			"map key type %s does not marshal to a JSON object key "+
+				"(encoding/json supports string, integer kinds, or encoding.TextMarshaler); "+
+				"additionalProperties dropped",
+			key.String(),
+		))
+		return nil
 	}
 
-	return nil
+	eleProp := NewTypable(sch, tgt.Level(), s.skipExtensions)
+	return s.buildFromType(titpe.Elem(), eleProp.AdditionalProperties())
 }
 
 // annotateSchema returns a deferrable that decorates schema with x-go-name / x-go-package traceability extensions,
