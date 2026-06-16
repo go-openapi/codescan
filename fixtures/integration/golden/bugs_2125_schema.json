@@ -1,0 +1,9 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "# Authentication\n\nClients should contact the api first. Api-Version is negotiated.\nThe api returns a 401 Unauthorized with a WWW-Authenticate header.",
+    "title": "Documentation for API.",
+    "version": "1.0.0"
+  },
+  "paths": {}
+}
