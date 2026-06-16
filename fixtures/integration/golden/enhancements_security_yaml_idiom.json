@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "The block below reads, in OpenAPI terms:\n\n(oauth AND api_key) OR basic\n\nThe first sequence item is one requirement object carrying TWO schemes (AND);\nthe second item is an alternative (OR). Scopes use block style (the form the\nspec's own petstore uses); flow style (`[read, write]`) is equally accepted.\nThe legacy newline-separated mapping (one bare `name:` per line, meaning OR)\nalso still parses, but is NOT idiomatic YAML.",
+    "title": "demonstrates that a Security requirements block written as\nidiomatic OpenAPI 2.0 YAML — a sequence of Security Requirement Objects —\nproduces the spec-correct requirement set, identical to what a real YAML\nparse of the same text would yield. This is the form we recommend in the\ndocs; the bespoke parser was retired in favour of a real YAML decode."
+  },
+  "paths": {},
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "basic": {
+      "type": "basic"
+    },
+    "oauth": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://example.com/oauth/authorize",
+      "tokenUrl": "https://example.com/oauth/token",
+      "scopes": {
+        "read": "read access",
+        "write": "write access"
+      }
+    }
+  },
+  "security": [
+    {
+      "api_key": [],
+      "oauth": [
+        "read",
+        "write"
+      ]
+    },
+    {
+      "basic": []
+    }
+  ]
+}
