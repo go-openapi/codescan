@@ -155,7 +155,16 @@ func CoerceEnum(val string, s *spec.SimpleSchema) []any {
 // coerceEnumCommaList handles the comma-list `enum: a, b, c` form.
 // Per-value whitespace is trimmed before coercion; per-value parse
 // errors fall back to the raw string.
+//
+// The bracketed `enum: [a, b, c]` form also lands here when its values
+// are unquoted (so [CoerceEnum]'s JSON-array parse fails — only the
+// quoted `["a","b"]` / numeric `[1,2]` variants are valid JSON). The
+// surrounding `[`/`]` are delimiters and must be stripped, else they
+// glue onto the first/last value (go-swagger#2396).
 func coerceEnumCommaList(val string, s *spec.SimpleSchema) []any {
+	if v := strings.TrimSpace(val); len(v) >= 2 && v[0] == '[' && v[len(v)-1] == ']' {
+		val = v[1 : len(v)-1]
+	}
 	list := strings.Split(val, ",")
 	out := make([]any, len(list))
 

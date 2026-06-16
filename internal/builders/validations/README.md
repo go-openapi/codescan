@@ -118,7 +118,13 @@ strict-mode option could turn this into a diagnostic.
 - **Comma-list form** — `enum: a, b, c`. Triggered when the
   JSON-array unmarshal fails. Each comma-separated token is
   `TrimSpace`d before per-value coercion so `enum: a, b`
-  produces `["a", "b"]`, not `["a", " b"]`.
+  produces `["a", "b"]`, not `["a", " b"]`. A surrounding `[ ]`
+  pair is stripped first: the bracketed `enum: [a, b, c]` form has
+  unquoted values, so it is not valid JSON and lands here — without
+  the strip the brackets glue onto the first/last value
+  (go-swagger#2396). The quoted (`["a","b"]`) and numeric
+  (`[1,2]`) bracketed variants are valid JSON and take the
+  JSON-array path instead.
 
 Per-element coercion is the same `CoerceValue` path as
 `default:` / `example:`, so type-aware typing applies

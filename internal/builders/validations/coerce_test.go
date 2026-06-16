@@ -123,3 +123,14 @@ func TestCoerceEnum_CommaListWhitespaceTrimmed(t *testing.T) {
 	out := validations.CoerceEnum(`  a  ,   b  ,c  `, &spec.SimpleSchema{Type: "string"})
 	assert.Equal(t, []any{"a", "b", "c"}, out)
 }
+
+// go-swagger#2396: the bracketed comma-list form has unquoted values, so it
+// is not valid JSON and falls to the comma-list path. The surrounding
+// brackets are delimiters and must be stripped, matching the unbracketed form.
+func TestCoerceEnum_BracketedCommaList(t *testing.T) {
+	want := []any{"issues", "pulls", "projects"}
+	bracketed := validations.CoerceEnum(`[issues, pulls, projects]`, &spec.SimpleSchema{Type: "string"})
+	assert.Equal(t, want, bracketed)
+	unbracketed := validations.CoerceEnum(`issues, pulls, projects`, &spec.SimpleSchema{Type: "string"})
+	assert.Equal(t, unbracketed, bracketed, "bracketed and unbracketed forms must agree")
+}

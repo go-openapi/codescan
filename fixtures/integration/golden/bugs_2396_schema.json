@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Bracket": {
+      "description": "Bracket uses the bracketed `enum: [a, b, c]` form (go-swagger#2396). The\nsurrounding brackets must be stripped so the enum is [issues, pulls, projects]\n— not [\"[issues\", \"pulls\", \"projects]\"].",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "kind",
+          "type": "string",
+          "enum": [
+            "issues",
+            "pulls",
+            "projects"
+          ],
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2396"
+    },
+    "Spaced": {
+      "description": "Spaced uses the unbracketed `enum: a, b, c` form (green guard rail — already\ntrims correctly).",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "kind",
+          "type": "string",
+          "enum": [
+            "issues",
+            "pulls",
+            "projects"
+          ],
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2396"
+    }
+  }
+}
