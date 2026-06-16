@@ -1,0 +1,36 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "This is the OP repro from go-swagger#1395 (tab-indented swagger:meta with a\nSecurity requirement + SecurityDefinitions). The original \"corrupted\ndefinitions\" was a misclassified security entry; it now parses cleanly. (The\nOP wrote \"SecurityDefinition\" singular — a typo for the plural keyword used\nhere.)",
+    "title": "The Documentation of project is described here.\nAPI Documentation Engine is Swagger official API-Dev, go-swagger.",
+    "contact": {
+      "name": "Developer",
+      "email": "dev@example.com"
+    },
+    "version": "1.0.0"
+  },
+  "host": "api.tipsyapp.net",
+  "basePath": "/lexy",
+  "paths": {},
+  "securityDefinitions": {
+    "APIKey": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "APIKey": []
+    }
+  ]
+}
