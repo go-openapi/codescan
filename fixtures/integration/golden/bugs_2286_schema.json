@@ -1,0 +1,36 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/logout": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout.",
+        "operationId": "authLogout",
+        "responses": {
+          "200": {
+            "description": "logoutResponse",
+            "schema": {
+              "$ref": "#/definitions/logoutResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "logoutResponse": {
+      "type": "object",
+      "title": "LogoutResponse is used directly as a response (#2286).",
+      "properties": {
+        "body": {
+          "type": "string",
+          "x-go-name": "Payload"
+        }
+      },
+      "x-go-name": "LogoutResponse",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2286"
+    }
+  }
+}
