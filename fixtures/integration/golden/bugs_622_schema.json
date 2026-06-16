@@ -1,0 +1,23 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "responses": {
+    "personResponse": {
+      "description": "",
+      "schema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "description": "The person's name",
+            "type": "string",
+            "x-go-name": "Name",
+            "example": "Bob"
+          }
+        }
+      }
+    }
+  }
+}
