@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/accounts/{accounts}": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "List accounts.",
+        "operationId": "listAccounts",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Accounts",
+            "description": "List of accounts in comma separated format.",
+            "name": "accounts",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

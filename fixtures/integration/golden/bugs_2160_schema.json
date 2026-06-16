@@ -1,0 +1,55 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "FooBarStruct": {
+      "type": "object",
+      "title": "FooBarStruct is an element.",
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Amount"
+        },
+        "value": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2160"
+    },
+    "ResponseBody": {
+      "type": "object",
+      "title": "ResponseBody has an array-of-structs example (#2160).",
+      "properties": {
+        "foo": {
+          "description": "The foo value",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Foo",
+          "example": 123456
+        },
+        "fooBars": {
+          "description": "FooBars",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FooBarStruct"
+          },
+          "x-go-name": "FooBars",
+          "example": [
+            {
+              "amount": 1,
+              "value": 4900
+            },
+            {
+              "amount": 15,
+              "value": 4500
+            }
+          ]
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2160"
+    }
+  }
+}
