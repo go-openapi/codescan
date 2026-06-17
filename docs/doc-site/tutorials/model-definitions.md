@@ -108,8 +108,26 @@ methods, which publish one property per nullary method and cannot carry a
 `json` tag: below, `StructType()` would default to `structType`, and the
 annotation publishes it as `jsonClass` instead.
 
+{{% notice style="note" %}}
+`swagger:name` is the legacy annotation form. The
+[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}) is the
+canonical, universal equivalent — it renames a property here exactly the
+same way, and is the *only* form that also works on parameters and
+response headers. Precedence: `name:` > `swagger:name` > `json:` tag > Go
+field name.
+{{% /notice %}}
+
 {{< example go="concepts/models/models.go" goregion="name"
             json="concepts/models/testdata/name.json" jsonlabel="#/definitions/Car" >}}
+
+The `name:` keyword does the same on a model property — and, being the universal
+form, with the same syntax you would use on a parameter or header. Here it names
+a tag-less field directly, and on a field that also carries a `json:` tag and a
+legacy `swagger:name`, the keyword wins (`name:` > `swagger:name` > `json:` tag >
+Go field name):
+
+{{< example go="concepts/models/models.go" goregion="namekeyword"
+            json="concepts/models/testdata/namekeyword.json" jsonlabel="#/definitions/Account" >}}
 
 ## swagger:ignore
 

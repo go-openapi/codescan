@@ -490,18 +490,26 @@ downstream.
 
 ### `name`
 
-Sets the published name of the field it decorates, overriding the
-`json:` tag / Go field name. On a `swagger:parameters` field it is the
-parameter name; on a `swagger:response` header field it is the header
-key (the `Headers` map key). It is — being structural — stripped from
-the description rather than leaking into it.
+Sets the published name of **any** field it decorates, overriding the
+`json:` tag / Go field name. It is the one canonical field-naming
+keyword and works at every field site: a `swagger:model` property, an
+interface method, a `swagger:parameters` field (the parameter name), and
+a `swagger:response` header field (the `Headers` map key). Being
+structural, it is stripped from the description rather than leaking into
+it.
 
-`name:` covers **parameter and header** fields; for a **model property
-or interface method** name use the
+Precedence, most-explicit-wins and **identical in every context**:
+
+```text
+name: keyword  >  swagger:name annotation  >  json: tag  >  Go field name
+```
+
 [`swagger:name`]({{% relref "/maintainers/annotations#swaggername" %}})
-annotation instead. The two are complementary, not interchangeable: a
-`name:` keyword is currently ignored on a model field, and `swagger:name`
-is not consulted on a parameter field.
+is the older annotation form — still honoured, and idiomatic on
+interface methods — but `name:` is the universal keyword. Using
+`swagger:name` in a parameter or response-header context (where `name:`
+is canonical) is inert and now emits a `context-invalid` diagnostic
+pointing you at the keyword.
 
 ```go
 // PageParams declares pagination query parameters.

@@ -169,6 +169,30 @@ type Car interface {
 
 // endsnippet:name
 
+// snippet:namekeyword
+
+// Account shows the universal name: keyword renaming model struct fields. The
+// same keyword used on parameters and response headers also sets a property key
+// here, winning over a json tag, the legacy swagger:name annotation, and the Go
+// field name.
+//
+// swagger:model
+type Account struct {
+	// Bal has no json tag; the keyword sets the property key directly.
+	//
+	// name: balance
+	Bal float64
+
+	// Currency carries both naming forms; the keyword wins over the
+	// legacy annotation and the json tag.
+	//
+	// name: currencyCode
+	// swagger:name legacyCurrency
+	Currency string `json:"currency"`
+}
+
+// endsnippet:namekeyword
+
 // snippet:ignore
 
 // Secret never reaches the spec.

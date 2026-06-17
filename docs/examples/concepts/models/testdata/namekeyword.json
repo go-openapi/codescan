@@ -1,0 +1,18 @@
+{
+  "description": "Account shows the universal name: keyword renaming model struct fields. The\nsame keyword used on parameters and response headers also sets a property key\nhere, winning over a json tag, the legacy swagger:name annotation, and the Go\nfield name.",
+  "type": "object",
+  "properties": {
+    "balance": {
+      "description": "Bal has no json tag; the keyword sets the property key directly.",
+      "type": "number",
+      "format": "double",
+      "x-go-name": "Bal"
+    },
+    "currencyCode": {
+      "description": "Currency carries both naming forms; the keyword wins over the\nlegacy annotation and the json tag.",
+      "type": "string",
+      "x-go-name": "Currency"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

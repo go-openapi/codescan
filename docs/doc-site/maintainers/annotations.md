@@ -653,9 +653,11 @@ back to the Go field name when there is no tag. The `form:` tag is not
 consulted — add a `json:` tag to control the parameter name (a
 `form:"sort_key"` tag alone leaves the name as the Go identifier). A
 `name:` keyword in the field doc takes precedence over both, setting the
-parameter name explicitly. (Note: the `swagger:name` *annotation* — which
-names model properties and interface methods — is **not** consulted on a
-parameter field; use the `name:` keyword here.)
+parameter name explicitly — it is the [universal field-naming
+keyword]({{% relref "/maintainers/keywords#name" %}}) and is canonical
+here. (The `swagger:name` *annotation* is the legacy form for model
+properties and interface methods; in a parameter context it is inert and
+now emits a `context-invalid` diagnostic pointing you at `name:`.)
 
 **Where it goes.** On a struct declaration. A bare slice variable
 (`var Filters []string`) carries no `in:`/`type:`/`required:` per
@@ -838,9 +840,21 @@ want the decl excluded.
 **What it does.** Overrides the JSON property name that a struct
 field or interface method renders as. By default the scanner derives
 names from `json:"…"` struct tags (or the Go identifier for fields /
-methods with no tag); `swagger:name` is the per-field override when
+methods with no tag); `swagger:name` overrides that derivation when
 the tag-based shape isn't appropriate — typically on **interface
 methods**, which cannot carry struct tags.
+
+{{% notice style="note" %}}
+`swagger:name` is the **legacy** annotation form. The canonical,
+universal field-naming mechanism is the
+[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}), which
+works at *every* field site — model properties, interface methods,
+parameters, and response headers — with the precedence `name:` >
+`swagger:name` > `json:` tag > Go field name. `swagger:name` remains
+honoured (and idiomatic on interface methods, shown below), but reach
+for `name:` in new code; it is the only form that works on parameters
+and headers.
+{{% /notice %}}
 
 **Where it goes.** On a struct field doc OR an interface method doc.
 
