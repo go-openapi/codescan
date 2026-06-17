@@ -4,7 +4,10 @@
 package spec
 
 import (
+	"errors"
+	"fmt"
 	"go/ast"
+	"go/token"
 	"iter"
 	"sort"
 	"strconv"
@@ -18,6 +21,12 @@ import (
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
+
+// ErrInternalPanic is the base error for a builder panic recovered while
+// processing a single declaration. Rather than surfacing a raw Go stack
+// trace, the scan names the offending source declaration (file:line) and
+// aborts with this error. See go-swagger/go-swagger#2886.
+var ErrInternalPanic = errors.New("internal panic during build")
 
 type Builder struct {
 	scanModels  bool
@@ -171,6 +180,37 @@ func operationsByMethod(item *oaispec.PathItem) iter.Seq2[string, *oaispec.Opera
 	}
 }
 
+// guard runs a per-declaration build step under panic recovery. On panic it
+// emits a located scan.internal-panic diagnostic naming the offending source
+// (pos + what), then returns an aborting error wrapping ErrInternalPanic — so
+// a builder bug surfaces as a clean, located failure instead of a raw stack
+// trace (#2886). A non-panicking run is transparent. pos/what identify the
+// declaration being built; the spec.Builder build loops wrap each per-decl
+// step. Panics outside any decl loop are caught by the Run backstop.
+func (s *Builder) guard(pos token.Position, what string, run func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if cb := s.ctx.OnDiagnostic(); cb != nil {
+				cb(grammar.Errorf(pos, grammar.CodeInternalPanic,
+					"panic while building %s: %v", what, r))
+			}
+			err = fmt.Errorf("%w: %s: %s: %v", ErrInternalPanic, pos, what, r)
+		}
+	}()
+
+	return run()
+}
+
+// declLabel names an EntityDecl for a diagnostic — the fully-qualified Go
+// type when the package path is known, else the bare identifier.
+func declLabel(d *scanner.EntityDecl) string {
+	if d.Pkg != nil && d.Pkg.PkgPath != "" {
+		return d.Pkg.PkgPath + "." + d.Ident.Name
+	}
+
+	return d.Ident.Name
+}
+
 func (s *Builder) buildDiscovered() error {
 	// loop over discovered until all the items are in definitions
 	keepGoing := len(s.discovered) > 0
@@ -201,7 +241,9 @@ func (s *Builder) buildDiscovered() error {
 		}
 		s.discovered = nil
 		for _, sd := range queue {
-			if err := s.buildDiscoveredSchema(sd); err != nil {
+			if err := s.guard(s.ctx.PosOf(sd.Ident.Pos()), declLabel(sd), func() error {
+				return s.buildDiscoveredSchema(sd)
+			}); err != nil {
 				return err
 			}
 		}
@@ -279,8 +321,11 @@ func (s *Builder) recordMetaOrigins(block grammar.Block) {
 
 func (s *Builder) buildOperations() error {
 	for pp := range s.ctx.Operations() {
-		ob := operations.NewBuilder(s.ctx, pp, s.operations)
-		if err := ob.Build(s.input.Paths); err != nil {
+		if err := s.guard(s.ctx.PosOf(pp.Pos), "operation "+pp.Method+" "+pp.Path, func() error {
+			ob := operations.NewBuilder(s.ctx, pp, s.operations)
+
+			return ob.Build(s.input.Paths)
+		}); err != nil {
 			return err
 		}
 	}
@@ -291,16 +336,19 @@ func (s *Builder) buildOperations() error {
 func (s *Builder) buildRoutes() error {
 	// build paths dictionary
 	for pp := range s.ctx.Routes() {
-		rb := routes.NewBuilder(
-			s.ctx,
-			pp,
-			routes.Inputs{
-				Responses:   s.responses,
-				Operations:  s.operations,
-				Definitions: s.definitions,
-			},
-		)
-		if err := rb.Build(s.input.Paths); err != nil {
+		if err := s.guard(s.ctx.PosOf(pp.Pos), "route "+pp.Method+" "+pp.Path, func() error {
+			rb := routes.NewBuilder(
+				s.ctx,
+				pp,
+				routes.Inputs{
+					Responses:   s.responses,
+					Operations:  s.operations,
+					Definitions: s.definitions,
+				},
+			)
+
+			return rb.Build(s.input.Paths)
+		}); err != nil {
 			return err
 		}
 	}
@@ -311,18 +359,24 @@ func (s *Builder) buildRoutes() error {
 func (s *Builder) buildResponses() error {
 	// build responses dictionary
 	for decl := range s.ctx.Responses() {
-		rb := responses.NewBuilder(s.ctx, decl)
-		if err := rb.Build(s.responses); err != nil {
-			return err
-		}
-		s.discovered = append(s.discovered, rb.PostDeclarations()...)
-
-		// Cross-ref linkage: anchor the top-level response node to its
-		// swagger:response declaration; headers/body resolve to it.
-		if s.ctx.OriginEnabled() {
-			if name, _ := decl.ResponseNames(); name != "" {
-				s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
+		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+			rb := responses.NewBuilder(s.ctx, decl)
+			if err := rb.Build(s.responses); err != nil {
+				return err
 			}
+			s.discovered = append(s.discovered, rb.PostDeclarations()...)
+
+			// Cross-ref linkage: anchor the top-level response node to its
+			// swagger:response declaration; headers/body resolve to it.
+			if s.ctx.OriginEnabled() {
+				if name, _ := decl.ResponseNames(); name != "" {
+					s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
+				}
+			}
+
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 
@@ -332,11 +386,17 @@ func (s *Builder) buildResponses() error {
 func (s *Builder) buildParameters() error {
 	// build parameters dictionary
 	for decl := range s.ctx.Parameters() {
-		pb := parameters.NewBuilder(s.ctx, decl)
-		if err := pb.Build(s.operations); err != nil {
+		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+			pb := parameters.NewBuilder(s.ctx, decl)
+			if err := pb.Build(s.operations); err != nil {
+				return err
+			}
+			s.discovered = append(s.discovered, pb.PostDeclarations()...)
+
+			return nil
+		}); err != nil {
 			return err
 		}
-		s.discovered = append(s.discovered, pb.PostDeclarations()...)
 	}
 
 	return nil
@@ -392,7 +452,9 @@ func (s *Builder) buildModels() error {
 	}
 
 	for _, decl := range s.ctx.Models() {
-		if err := s.buildDiscoveredSchema(decl); err != nil {
+		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+			return s.buildDiscoveredSchema(decl)
+		}); err != nil {
 			return err
 		}
 	}
