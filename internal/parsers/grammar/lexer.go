@@ -295,7 +295,10 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 		return classifyOperationArgs(rest, pos)
 	case AnnDefaultName:
 		return []Token{argDefaultValue(rest, pos)}
-	case AnnType:
+	case AnnType, AnnAdditionalProperties:
+		// Both take a swagger:type-style spec as a single ref token
+		// (true / false / primitive / []T / type-name). The builder does
+		// the semantic resolution.
 		return []Token{argTypeRef(rest, pos)}
 	case AnnEnum:
 		return classifyEnumAnnotationArgs(rest, pos)

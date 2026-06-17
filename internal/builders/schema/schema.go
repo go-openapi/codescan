@@ -78,6 +78,13 @@ func (s *Builder) Build(opts ...Option) error {
 			return err
 		}
 
+		// Decl-level `swagger:additionalProperties` rides on top of the
+		// type-derived schema (lowest priority; object-only). Applied after the
+		// Go type is resolved so it can complement a struct, override a map's
+		// element schema, or warn-and-drop on a non-object. See
+		// classifierAdditionalProperties.
+		s.classifierAdditionalProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+
 		// The decl-comment block is dispatched before the Go type is
 		// resolved onto the schema (see buildFromDecl), so the inline
 		// checkShape ran against an empty type. Re-gate now that the

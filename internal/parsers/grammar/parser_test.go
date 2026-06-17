@@ -136,6 +136,9 @@ func TestBlock_AnnotationArg(t *testing.T) {
 		{"name", "swagger:name jsonField", "jsonField", true},
 		{"strfmt", "swagger:strfmt date-time", "date-time", true},
 		{"bare strfmt", "swagger:strfmt", "", false},
+		{"additionalProperties bool", "swagger:additionalProperties true", "true", true},
+		{"additionalProperties type", "swagger:additionalProperties Thing", "Thing", true},
+		{"additionalProperties array", "swagger:additionalProperties []integer", "[]integer", true},
 		{"ignore", "swagger:ignore", "", false},
 		{"alias", "swagger:alias", "", false},
 		{"unbound prose", "Just a docstring.", "", false},
@@ -148,6 +151,21 @@ func TestBlock_AnnotationArg(t *testing.T) {
 			assert.Equal(t, tc.wantOK, ok)
 		})
 	}
+}
+
+func TestParser_AdditionalPropertiesBlock_IsClassifierWithArg(t *testing.T) {
+	b := parseString(t, "swagger:additionalProperties Thing")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnAdditionalProperties, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, "Thing", arg)
+}
+
+func TestAnnotationKind_AdditionalProperties_RoundTrip(t *testing.T) {
+	assert.Equal(t, "additionalProperties", AnnAdditionalProperties.String())
+	assert.Equal(t, AnnAdditionalProperties, AnnotationKindFromName("additionalProperties"))
 }
 
 func TestParser_ParametersBlock_RequiresAtLeastOneArg(t *testing.T) {

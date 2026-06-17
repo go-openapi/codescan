@@ -61,7 +61,8 @@ The annotation vocabulary is the go-swagger convention:
 `swagger:route`, `swagger:operation`, `swagger:meta`, plus the
 classifier annotations `swagger:strfmt`, `swagger:alias`,
 `swagger:name`, `swagger:allOf`, `swagger:enum`, `swagger:ignore`,
-`swagger:default`, `swagger:type`, `swagger:file`.
+`swagger:default`, `swagger:type`, `swagger:file`,
+`swagger:additionalProperties`.
 
 `AnnotationPrefix` is the literal `"swagger:"`. It is a constant
 rather than configurable today.
@@ -471,7 +472,7 @@ production implementation.
 | `familySchema` | `swagger:model`, `swagger:response`, `swagger:parameters`, `swagger:name` | `parseSchemaBlock` |
 | `familyOperation` | `swagger:route`, `swagger:operation` | `parseOperationBlock` |
 | `familyMeta` | `swagger:meta` | `parseMetaBlock` |
-| `familyClassifier` | `swagger:strfmt`, `swagger:alias`, `swagger:allOf`, `swagger:enum`, `swagger:ignore`, `swagger:default`, `swagger:type`, `swagger:file` | `parseClassifierBlock` |
+| `familyClassifier` | `swagger:strfmt`, `swagger:alias`, `swagger:allOf`, `swagger:enum`, `swagger:ignore`, `swagger:default`, `swagger:type`, `swagger:file`, `swagger:additionalProperties` | `parseClassifierBlock` |
 | `familyUnknown` | unrecognised | `parseUnboundBlock` |
 
 `swagger:name` dispatches through the schema family because its

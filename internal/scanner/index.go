@@ -347,7 +347,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				if err := checkStructConflict(&seenStruct, annotation, cline.Text); err != nil {
 					return 0, err
 				}
-			case "strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type":
+			case "strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type", "additionalProperties":
 				// Proposal for enhancement: perhaps collect these and pass along to avoid lookups later on
 			case "allOf":
 			case "ignore":

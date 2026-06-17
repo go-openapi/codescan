@@ -12,17 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3005 documents the CURRENT (buggy) behaviour for go-swagger
-// issue #3005 ("additionalProperties are lost when generating spec from
-// code"): a map field tagged json:"-", intended to carry the model's
-// additionalProperties, is dropped — only field1 is emitted, with no
-// additionalProperties on the object schema.
-//
-// FIX TARGET (fix/go-swagger-3005) — DESIGN DECISION PENDING: provide a way
-// to mark a map field as the schema's additionalProperties (the reporter
-// proposes a dedicated annotation, e.g. `// Additional properties`). Decide
-// the annotation in the fix-needed analysis pass, then assert
-// sch.AdditionalProperties.Schema.Type == "number" and regenerate the golden.
+// TestCoverage_Bug3005 locks the resolution of go-swagger issue #3005
+// ("additionalProperties are lost when generating spec from code"): a model
+// with named properties AND free-form values. The json:"-" map the reporter
+// used is muted; the type-level `swagger:additionalProperties number` marker
+// supplies the additionalProperties value schema. field1 stays a named
+// property alongside it.
 func TestCoverage_Bug3005(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/3005/..."},
@@ -35,9 +30,12 @@ func TestCoverage_Bug3005(t *testing.T) {
 	sch, ok := doc.Definitions["TestAdditionalProperties"]
 	require.True(t, ok)
 	assert.Contains(t, sch.Properties, "field1")
-	// CURRENT (wrong): the json:"-" map is dropped; no additionalProperties.
-	assert.Nil(t, sch.AdditionalProperties,
-		"TODO #3005: a marked map field should become the schema additionalProperties")
+
+	// The #3005 fix: the marker complements the object with additionalProperties.
+	require.NotNil(t, sch.AdditionalProperties)
+	require.NotNil(t, sch.AdditionalProperties.Schema)
+	assert.True(t, sch.AdditionalProperties.Schema.Type.Contains("number"),
+		"swagger:additionalProperties number sets the value schema (go-swagger#3005)")
 
 	scantest.CompareOrDumpJSON(t, doc, "bugs_3005_schema.json")
 }

@@ -22,6 +22,7 @@ trade-offs, and known quirks live here.
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
+- [§additional-properties](#additional-properties) — the `swagger:additionalProperties` decl-level marker
 - [§ref-override](#ref-override) — `applyToRefField`, the allOf-on-$ref shape, `refOverrideCollector`, `applyPattern`
 - [§simple-schema-mode](#simple-schema-mode) — the SimpleSchema build mode for OAS v2 non-body params and response headers
 - [§classifier-walkers](#classifier-walkers) — per-call-site classifier walkers and `findAnnotationArg`'s single-word filter
@@ -756,6 +757,48 @@ would otherwise emit. Currently only `recognizeError` writes one
 consult `skipExt`. All eight schema-internal call sites pass
 `s.skipExtensions` so the recognizer subsystem honours the same
 `SkipExtensions` flag as the rest of the builder.
+
+---
+
+## <a id="additional-properties"></a>§additional-properties — the `swagger:additionalProperties` marker
+
+`swagger:additionalProperties <spec>` is a decl-level classifier
+(`grammar.AnnAdditionalProperties`) consumed by
+`classifierAdditionalProperties` (`additional_properties.go`), applied from
+`Build` **after** `buildFromDecl` has resolved the Go type so it can ride on
+top of the type-derived schema.
+
+`<spec>` is one of:
+
+| Arg | Effect | Render |
+|---|---|---|
+| `true` | allow extra keys | `additionalProperties: true` (`SchemaOrBool{Allows:true}`) |
+| `false` | forbid extra keys | `additionalProperties: false` (`SchemaOrBool{Allows:false}`) |
+| `<TypeSpec>` | typed value schema | `additionalProperties: {<schema>}` |
+
+`<TypeSpec>` reuses the `swagger:type` argument grammar (primitive / Go-builtin
+spelling / leading `[]` array layers) via `resolveAdditionalPropertiesType`,
+with one deliberate difference from `resolveTypeOverride`: a **type-name
+reference resolves to a `$ref`** (and registers the model for discovery), not an
+inline expansion — an `additionalProperties` value naturally references a model,
+matching how a `map[string]Model` field renders.
+
+Semantics depend on what the Go type produced:
+
+- **struct** → COMPLEMENT: the named properties stay; the marker adds
+  `additionalProperties`. This is the #2539 / §17 case (`false` to close an
+  object) and the #3005 case (a typed value alongside named properties).
+- **map** → OVERRIDE: `buildFromMap` already emitted `additionalProperties: V`;
+  the marker replaces it.
+- **bare `$ref`** (a map/wrapper type that resolved to a reference) → DEFINE: the
+  `$ref` is cleared and a clean `{type: object, additionalProperties: …}` is
+  emitted (the marker beats the Go type; a `$ref` cannot carry siblings).
+
+**Precedence — lowest priority.** `additionalProperties` only rides on an
+`object`. If a prior rule already fixed a non-object type (`swagger:type` on a
+non-object, `swagger:strfmt`, a special/known type), the marker is dropped with a
+`CodeShapeMismatch` diagnostic. It composes freely with the other object
+validations (`maxProperties`, `minProperties`, `patternProperties`).
 
 ---
 

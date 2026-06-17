@@ -29,6 +29,11 @@ const (
 	AnnDefaultName // swagger:default — value-only classifier annotation
 	AnnType        // swagger:type
 	AnnFile        // swagger:file
+	// AnnAdditionalProperties — swagger:additionalProperties <spec>.
+	// A type/model-level classifier whose arg is true | false | a
+	// swagger:type-style spec. See the schema builder's
+	// classifierAdditionalProperties.
+	AnnAdditionalProperties
 )
 
 const (
@@ -45,9 +50,10 @@ const (
 	labelEnum       = "enum"
 	labelIgnore     = "ignore"
 	labelDefault    = "default"
-	labelType       = "type"
-	labelFile       = "file"
-	labelUnknown    = "unknown"
+	labelType                 = "type"
+	labelFile                 = "file"
+	labelAdditionalProperties = "additionalProperties"
+	labelUnknown              = "unknown"
 )
 
 // String renders an AnnotationKind as its source label.
@@ -83,6 +89,8 @@ func (a AnnotationKind) String() string {
 		return labelType
 	case AnnFile:
 		return labelFile
+	case AnnAdditionalProperties:
+		return labelAdditionalProperties
 	case AnnUnknown:
 		fallthrough
 	default:
@@ -124,6 +132,8 @@ func AnnotationKindFromName(name string) AnnotationKind {
 		return AnnType
 	case labelFile:
 		return AnnFile
+	case labelAdditionalProperties:
+		return AnnAdditionalProperties
 	default:
 		return AnnUnknown
 	}
@@ -156,7 +166,8 @@ func (a AnnotationKind) family() annotationFamily {
 	case AnnMeta:
 		return familyMeta
 	case AnnStrfmt, AnnAlias, AnnAllOf, AnnEnum,
-		AnnIgnore, AnnDefaultName, AnnType, AnnFile:
+		AnnIgnore, AnnDefaultName, AnnType, AnnFile,
+		AnnAdditionalProperties:
 		return familyClassifier
 	case AnnUnknown:
 		fallthrough
