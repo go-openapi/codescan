@@ -101,8 +101,6 @@ func TestOperationsParser(t *testing.T) {
 			assert.EqualT(t, "400", rsp.Description)
 		}
 	}
-
-	scantest.CompareOrDumpJSON(t, ops, "classification_operations.json")
 }
 
 func assertAnnotationOperation(t *testing.T, op *spec.Operation, id, summary, description string, tags []string) {

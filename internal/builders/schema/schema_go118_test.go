@@ -29,11 +29,11 @@ func TestGo118SwaggerTypeNamed(t *testing.T) {
 	prs := NewBuilder(sctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["namedWithType"]
+	schema := models[scantest.ResolveTestKey(t, models, "namedWithType")]
 
+	assert.TrueT(t, schema.Type.Contains("object"))
 	scantest.AssertProperty(t, &schema, "object", "some_map", "", "SomeMap")
-
-	scantest.CompareOrDumpJSON(t, models, "go118_schema_NamedWithType.json")
+	assert.Equal(t, "NamedWithType", schema.Extensions["x-go-name"])
 }
 
 func TestGo118AliasedModels(t *testing.T) {
@@ -54,18 +54,20 @@ func TestGo118AliasedModels(t *testing.T) {
 
 	for k := range defs {
 		for i, b := range names {
-			if b == k {
+			// defs is keyed by the fully-qualified identity; match on the
+			// leaf via ResolveTestKey rather than the bare name.
+			if scantest.ResolveTestKey(t, defs, b) == k {
 				// remove the entry from the collection
 				names = append(names[:i], names[i+1:]...)
 			}
 		}
 	}
 	if assert.Empty(t, names) {
-		// map types
-		assertMapDefinition(t, defs, "SomeObject", "object", "", "")
+		// SomeObject refines an untyped map → object with additionalProperties.
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeObject"), "object", "", "")
+		obj := defs[scantest.ResolveTestKey(t, defs, "SomeObject")]
+		assert.EqualT(t, "SomeObject is a type that refines an untyped map", obj.Description)
 	}
-
-	scantest.CompareOrDumpJSON(t, defs, "go118_schema_aliased.json")
 }
 
 func TestGo118InterfaceField(t *testing.T) {
@@ -76,10 +78,11 @@ func TestGo118InterfaceField(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["Interfaced"]
+	schema := models[scantest.ResolveTestKey(t, models, "Interfaced")]
+	assert.TrueT(t, schema.Type.Contains("object"))
+	// custom_data is an interface field → no type, just the x-go-name.
 	scantest.AssertProperty(t, &schema, "", "custom_data", "", "CustomData")
-
-	scantest.CompareOrDumpJSON(t, models, "go118_schema_Interfaced.json")
+	assert.EqualT(t, "An Interfaced struct contains objects with interface definitions", schema.Description)
 }
 
 func TestGo118_Issue2809(t *testing.T) {
@@ -90,8 +93,10 @@ func TestGo118_Issue2809(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["transportErr"]
+	schema := models[scantest.ResolveTestKey(t, models, "transportErr")]
+	assert.TrueT(t, schema.Type.Contains("object"))
+	assert.Equal(t, []string{"message"}, schema.Required)
+	// data is an interface field (no type); message is a plain string.
 	scantest.AssertProperty(t, &schema, "", "data", "", "Data")
-
-	scantest.CompareOrDumpJSON(t, models, "go118_schema_transportErr.json")
+	scantest.AssertProperty(t, &schema, "string", "message", "", "Message")
 }

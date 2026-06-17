@@ -13,17 +13,29 @@ import (
 )
 
 type EntityDecl struct {
-	Comments               *ast.CommentGroup
-	Type                   *types.Named
-	Alias                  *types.Alias // added to supplement Named, after go1.22
-	Ident                  *ast.Ident
-	Spec                   *ast.TypeSpec
-	File                   *ast.File
-	Pkg                    *packages.Package
-	hasModelAnnotation     bool
-	hasResponseAnnotation  bool
-	hasParameterAnnotation bool
+	Comments                *ast.CommentGroup
+	Type                    *types.Named
+	Alias                   *types.Alias // added to supplement Named, after go1.22
+	Ident                   *ast.Ident
+	Spec                    *ast.TypeSpec
+	File                    *ast.File
+	Pkg                     *packages.Package
+	hasModelAnnotation      bool
+	hasResponseAnnotation   bool
+	hasParameterAnnotation  bool
+	modelOverrideSuppressed bool
 }
+
+// SuppressModelOverride drops this declaration's `swagger:model <name>`
+// override so that Names / DefKey fall back to the Go type name. Used to
+// resolve a same-package duplicate, where two distinct types in one
+// package claim the same override name (a user error): the first keeps
+// the name, later ones revert to their Go name. See name-identity design
+// D-4 (.claude/plans/name-identity-cyclic-ref.md §9.1).
+func (d *EntityDecl) SuppressModelOverride() { d.modelOverrideSuppressed = true }
+
+// ModelOverrideSuppressed reports whether SuppressModelOverride was set.
+func (d *EntityDecl) ModelOverrideSuppressed() bool { return d.modelOverrideSuppressed }
 
 // Obj returns the type name for the declaration defining the named type or alias t.
 func (d *EntityDecl) Obj() *types.TypeName {
@@ -56,11 +68,31 @@ func (d *EntityDecl) Names() (name, goName string) {
 	}
 
 	d.hasModelAnnotation = true
-	if model == "" {
+	if model == "" || d.modelOverrideSuppressed {
 		return goName, goName
 	}
 
 	return model, goName
+}
+
+// DefKey returns the fully-qualified, compiler-unique definition key for
+// this declaration: "<pkgpath>/<name>", where <name> is the
+// swagger:model override when present, else the Go type name (the first
+// return of Names). This is the build-time key for the definitions map
+// and for every "#/definitions/" $ref target, so two distinct Go types
+// that share a short name can never collide before the spec.Builder's
+// reduce stage shortens names back. See the name-identity / cyclic-$ref
+// design (.claude/plans/name-identity-cyclic-ref.md §9.1, §12.1).
+//
+// Universe / package-less types (no enclosing package) fall back to the
+// bare name; in practice those are intercepted as stdlib specials before
+// they ever reach a definition key.
+func (d *EntityDecl) DefKey() string {
+	name, _ := d.Names()
+	if pkg := d.Obj().Pkg(); pkg != nil {
+		return pkg.Path() + "/" + name
+	}
+	return name
 }
 
 func (d *EntityDecl) ResponseNames() (name, goName string) {

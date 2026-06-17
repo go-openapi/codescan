@@ -1,0 +1,46 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Knot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "loop": {
+          "$ref": "#/definitions/Loop"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-recursion"
+    },
+    "Loop": {
+      "type": "object",
+      "properties": {
+        "knot": {
+          "$ref": "#/definitions/Knot"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-recursion"
+    },
+    "Node": {
+      "type": "object",
+      "properties": {
+        "next": {
+          "$ref": "#/definitions/Node"
+        },
+        "value": {
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-recursion"
+    }
+  }
+}

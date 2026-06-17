@@ -67,6 +67,35 @@ type Options struct {
 	// mapping is suppressed everywhere. See go-swagger/go-swagger#2922.
 	SkipEnumDescriptions bool
 
+	// NameConcatBudget tunes the readability cutoff used when the
+	// name-identity reduce stage deconflicts colliding definition names
+	// by concatenating package segments (b.Test / c.Test -> BTest /
+	// CTest). Each candidate concat is scored in [0,1] — lower is more
+	// readable (shorter overall, fewer parts, no over-long segment). A
+	// collision group whose best concat scores ABOVE the budget is a
+	// candidate for the hierarchical fallback (name-identity Stage 3 /
+	// K3).
+	//
+	// The zero value selects the built-in default (0.65). Raise it
+	// toward 1.0 to accept longer concats; lower it to fall back sooner.
+	NameConcatBudget float64
+
+	// EmitHierarchicalNames enables the hierarchical fail-safe for the
+	// rare collision groups whose best flat concat exceeds
+	// NameConcatBudget. When set, such a group is emitted as nested
+	// container definitions (`#/definitions/<pkg>/<Name>`, with
+	// `additionalProperties:true` + `x-go-package` on each container)
+	// instead of a long flat concat, and an explanatory diagnostic is
+	// raised.
+	//
+	// Default false — and deliberately so: a nested definition is a deep
+	// JSON pointer that only `ExpandSpec` resolves, and a definitions-
+	// enumerating consumer (e.g. go-swagger codegen, one model per entry)
+	// sees the container nodes rather than the models. The always-correct
+	// flat concat stays the default; enable this only when you prefer the
+	// nested shape for the over-budget tail.
+	EmitHierarchicalNames bool
+
 	Debug bool // enable verbose debug logging during scanning
 
 	// OnDiagnostic, when non-nil, is invoked for every diagnostic the

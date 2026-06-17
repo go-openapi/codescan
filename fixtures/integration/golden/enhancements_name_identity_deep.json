@@ -1,0 +1,38 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AMongoBook": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-deep/a/mongo"
+    },
+    "BMongoBook": {
+      "type": "object",
+      "properties": {
+        "isbn": {
+          "type": "string",
+          "x-go-name": "ISBN"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-deep/b/mongo"
+    },
+    "Library": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "$ref": "#/definitions/AMongoBook"
+        },
+        "b": {
+          "$ref": "#/definitions/BMongoBook"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-deep"
+    }
+  }
+}

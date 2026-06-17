@@ -410,6 +410,39 @@ func (r *Builder) resolveBodySchema(ref string, arrayLayer int) *oaispec.Schema 
 	return leaf
 }
 
+// resolveDefinitionByLeaf reports whether the definitions map holds a
+// definition whose leaf name (the segment after the last '/') equals
+// short, and whether more than one does.
+//
+// During build the definitions map is keyed by the fully-qualified
+// identity (pkgpath/name — see scanner.EntityDecl.DefKey), while author
+// annotations reference models by their short name; a leaf lookup
+// bridges the two until the spec.Builder's reduce stage shortens unique
+// leaves back to bare names. `ambiguous` means several cross-package
+// definitions share the leaf — a real collision the short name cannot
+// resolve (name-identity design §12.1).
+func resolveDefinitionByLeaf(defs map[string]oaispec.Schema, short string) (key string, found, ambiguous bool) {
+	for k := range defs {
+		if leafOfKey(k) != short {
+			continue
+		}
+		if found {
+			return "", true, true
+		}
+		key, found = k, true
+	}
+	return key, found, false
+}
+
+// leafOfKey returns the segment of a definition key after the last '/',
+// or the whole key when there is none.
+func leafOfKey(key string) string {
+	if i := strings.LastIndex(key, "/"); i >= 0 {
+		return key[i+1:]
+	}
+	return key
+}
+
 // dispatchResponses lowers a `Responses:` raw body via routebody
 // then assembles each ResponseDecl into op.Responses. References to
 // known swagger:response objects produce a `$ref: #/responses/<name>`
@@ -480,7 +513,11 @@ const defaultResponseDescription = "Default response"
 //     404 → "Not Found");
 //  3. a neutral placeholder for `default` / non-standard codes.
 func (r *Builder) bodyResponseDescription(code, ref string) string {
-	if def, ok := r.definitions[ref]; ok {
+	// The definitions map is keyed by the fully-qualified identity during
+	// build; the author wrote a short model name, so resolve by leaf (a
+	// unique match only — an ambiguous one cannot pick a godoc source).
+	if key, ok, ambiguous := resolveDefinitionByLeaf(r.definitions, ref); ok && !ambiguous {
+		def := r.definitions[key]
 		if t := strings.TrimSpace(def.Title); t != "" {
 			return t
 		}
@@ -546,7 +583,25 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 		// (intentional kindness for the common case where the author
 		// referenced a model by name rather than a response).
 		if _, ok := r.responses[decl.ResponseRef]; !ok {
-			if _, ok := r.definitions[decl.ResponseRef]; ok {
+			// The definitions map is keyed by the fully-qualified
+			// identity during build (pkgpath/name); the author wrote a
+			// short model name, so resolve by leaf. Exactly one match →
+			// promote; several → ambiguous cross-package collision the
+			// short name cannot disambiguate (drop + diagnose, per
+			// name-identity D-8). See §12.1.
+			_, found, ambiguous := resolveDefinitionByLeaf(r.definitions, decl.ResponseRef)
+			switch {
+			case ambiguous:
+				r.RecordDiagnostic(grammar.Diagnostic{
+					Pos:      decl.Pos,
+					Severity: grammar.SeverityWarning,
+					Code:     grammar.CodeInvalidAnnotation,
+					Message: "response " + decl.Code + ": ref " + decl.ResponseRef +
+						" is ambiguous — several models across packages share this name; " +
+						"disambiguate with an explicit `swagger:model <name>`; dropped",
+				})
+				return oaispec.Response{}, false
+			case found:
 				schema := r.resolveBodySchema(decl.ResponseRef, decl.Arrays)
 				desc := decl.Description
 				if desc == "" {

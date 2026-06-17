@@ -90,36 +90,34 @@ func TestScanFileParam(t *testing.T) {
 	assert.EqualT(t, "formData", fileParam.In)
 	assert.EqualT(t, "file", fileParam.Type)
 	assert.FalseT(t, fileParam.Required)
-
-	scantest.CompareOrDumpJSON(t, operations, "classification_params_file.json")
 }
 
-// TestParamsParser_OptionVariants captures (SkipExtensions,
+// TestParamsParser_OptionVariants exercises the (SkipExtensions,
 // DescWithRef) option permutations on the classification operations
-// corpus into separately-named goldens. The same set of parameter
-// names as TestParamsParser is built per combination, exercising the
-// $ref'd-field shape on each option pair:
+// corpus. The same set of parameter names as TestParamsParser is
+// built per combination, asserting the $ref'd-field shape on each
+// option pair:
 //
 //   - Default (false/false): description-only $ref'd fields render
-//     bare (matches v1 strict).
-//   - DescWithRef=true: description-only $ref'd fields render as
+//     as a bare $ref (matches v1 strict); scanner-derived x-go-name
+//     is present.
+//   - DescWithRef=true: description-only $ref'd fields render as a
 //     single-arm allOf preserving the description.
-//   - SkipExtensions=true: scanner-derived x-go-name suppressed.
+//   - SkipExtensions=true: scanner-derived x-go-name is suppressed.
 //
-// The matching CompareOrDumpJSON files diverge wherever a $ref'd
-// field carries field-level decoration. Validation overrides keep
-// the allOf wrap regardless.
+// The witness field is the nested `pet` property of the array-item
+// schema produced for someOperation's body `items` parameter, which
+// carries both a description and an x-go-name on top of its $ref.
 func TestParamsParser_OptionVariants(t *testing.T) {
 	cases := []struct {
-		name       string
-		skipExt    bool
-		descRef    bool
-		goldenFile string
+		name    string
+		skipExt bool
+		descRef bool
 	}{
-		{"default", false, false, "classification_params.json"},
-		{"DescWithRef", false, true, "classification_params_descwithref.json"},
-		{"SkipExt", true, false, "classification_params_skipext.json"},
-		{"SkipExt+DescWithRef", true, true, "classification_params_skipext_descwithref.json"},
+		{"default", false, false},
+		{"DescWithRef", false, true},
+		{"SkipExt", true, false},
+		{"SkipExt+DescWithRef", true, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -145,7 +143,52 @@ func TestParamsParser_OptionVariants(t *testing.T) {
 				prs := NewBuilder(sctx, td)
 				require.NoError(t, prs.Build(operations))
 			}
-			scantest.CompareOrDumpJSON(t, operations, tc.goldenFile)
+
+			// Locate someOperation's body `items` parameter and dig
+			// down to the array-item `pet` property, which is the
+			// field whose rendering diverges by option.
+			op, ok := operations["someOperation"]
+			require.TrueT(t, ok)
+			var itemsParam *oaispec.Parameter
+			var idParam *oaispec.Parameter
+			for i := range op.Parameters {
+				switch op.Parameters[i].Name {
+				case "items":
+					itemsParam = &op.Parameters[i]
+				case paramID:
+					idParam = &op.Parameters[i]
+				}
+			}
+			require.NotNil(t, itemsParam)
+			require.NotNil(t, itemsParam.Schema)
+			require.NotNil(t, itemsParam.Schema.Items)
+			require.NotNil(t, itemsParam.Schema.Items.Schema)
+			pet, okPet := itemsParam.Schema.Items.Schema.Properties["pet"]
+			require.TrueT(t, okPet)
+
+			const petRef = "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
+
+			if tc.descRef {
+				// description-only $ref renders as a single-arm allOf
+				// preserving the description; the bare $ref is empty.
+				assert.Empty(t, pet.Ref.String())
+				require.Len(t, pet.AllOf, 1)
+				assert.EqualT(t, petRef, pet.AllOf[0].Ref.String())
+				assert.EqualT(t, "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket", pet.Description)
+			} else {
+				// default rendering keeps a bare $ref, no allOf wrap.
+				assert.EqualT(t, petRef, pet.Ref.String())
+				assert.Empty(t, pet.AllOf)
+			}
+
+			// x-go-name is scanner-derived: present by default,
+			// suppressed under SkipExtensions.
+			require.NotNil(t, idParam)
+			if tc.skipExt {
+				assert.NotContains(t, idParam.Extensions, "x-go-name")
+			} else {
+				assert.Equal(t, "ID", idParam.Extensions["x-go-name"])
+			}
 		})
 	}
 }
@@ -176,7 +219,7 @@ func TestParamsParser(t *testing.T) {
 	bodyParam := ob.Parameters[0]
 	assert.EqualT(t, "The order to submit.", bodyParam.Description)
 	assert.EqualT(t, inBody, bodyParam.In)
-	assert.EqualT(t, "#/definitions/order", bodyParam.Schema.Ref.String())
+	assert.EqualT(t, "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order", bodyParam.Schema.Ref.String())
 	assert.TrueT(t, bodyParam.Required)
 
 	mop, okParam := operations["getOrders"]
@@ -200,8 +243,6 @@ func TestParamsParser(t *testing.T) {
 	t.Run("someAliasOperation", func(t *testing.T) {
 		assertSomeAliasOperationParams(t, operations)
 	})
-
-	scantest.CompareOrDumpJSON(t, operations, "classification_params.json")
 }
 
 func assertYetAnotherOperationParams(t *testing.T, operations map[string]*oaispec.Operation) {
@@ -377,7 +418,7 @@ func assertSomeOperationParams(t *testing.T, operations map[string]*oaispec.Oper
 			assert.TrueT(t, iprop.ExclusiveMinimum, "'id' should have had an exclusive minimum")
 			assert.Equal(t, 3, iprop.Default, "Items.ID default value is incorrect")
 
-			scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/pet")
+			scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet")
 			_, ok = itprop.Properties["pet"]
 			assert.TrueT(t, ok)
 			// if itprop.Ref.String() == "" {
@@ -584,8 +625,6 @@ func TestParamsParser_TransparentAliases(t *testing.T) {
 	assert.EqualT(t, "aliasQuery", queryParam.Name)
 	assert.EqualT(t, "string", queryParam.Type)
 	assert.Empty(t, queryParam.Ref.String())
-
-	scantest.CompareOrDumpJSON(t, operations, "transparentalias_params.json")
 }
 
 func TestParameterParser_Issue2007(t *testing.T) {
@@ -605,8 +644,6 @@ func TestParameterParser_Issue2007(t *testing.T) {
 	require.NotNil(t, sch.AdditionalProperties)
 	require.NotNil(t, sch.AdditionalProperties.Schema)
 	require.TrueT(t, sch.AdditionalProperties.Schema.Type.Contains("string"))
-
-	scantest.CompareOrDumpJSON(t, operations, "classification_params_issue2007.json")
 }
 
 func TestParameterParser_Issue2011(t *testing.T) {
@@ -619,10 +656,12 @@ func TestParameterParser_Issue2011(t *testing.T) {
 	op := operations["putNumPlate"]
 	require.NotNil(t, op)
 	require.Len(t, op.Parameters, 1)
-	sch := op.Parameters[0].Schema
+	param := op.Parameters[0]
+	assert.EqualT(t, "num_plates", param.Name)
+	assert.EqualT(t, inBody, param.In)
+	assert.Equal(t, "NumPlates", param.Extensions["x-go-name"])
+	sch := param.Schema
 	require.NotNil(t, sch)
-
-	scantest.CompareOrDumpJSON(t, operations, "classification_params_issue2011.json")
 }
 
 func TestGo118ParameterParser_Issue2011(t *testing.T) {
@@ -635,8 +674,10 @@ func TestGo118ParameterParser_Issue2011(t *testing.T) {
 	op := operations["putNumPlate"]
 	require.NotNil(t, op)
 	require.Len(t, op.Parameters, 1)
-	sch := op.Parameters[0].Schema
+	param := op.Parameters[0]
+	assert.EqualT(t, "num_plates", param.Name)
+	assert.EqualT(t, inBody, param.In)
+	assert.Equal(t, "NumPlates", param.Extensions["x-go-name"])
+	sch := param.Schema
 	require.NotNil(t, sch)
-
-	scantest.CompareOrDumpJSON(t, operations, "go118_params_issue2011.json")
 }

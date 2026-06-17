@@ -52,7 +52,10 @@ func (s *Builder) inferNames() {
 	}
 
 	s.annotated = true
-	if override, ok := model.AnnotationArg(); ok {
+	// A same-package duplicate has its override suppressed (D-4): keep
+	// the Go name so the x-go-name extension and definition key stay
+	// consistent with EntityDecl.Names/DefKey.
+	if override, ok := model.AnnotationArg(); ok && !s.Decl.ModelOverrideSuppressed() {
 		s.Name = override
 	}
 }

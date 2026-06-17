@@ -72,7 +72,15 @@ func (s *Builder) Build(opts ...Option) error {
 		// top-level declarations
 		s.inferNames()
 
-		schema := s.definitions[s.Name] // if not named, empty schema
+		// Key the definitions map by the fully-qualified identity key
+		// (pkgpath/name), not the bare s.Name: distinct Go types that
+		// share a short name must not collide here. s.Name stays the
+		// leaf so annotateSchema's x-go-name / x-go-package emission is
+		// unchanged. The reduce stage shortens keys back afterwards.
+		// See .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+		defKey := s.Decl.DefKey()
+
+		schema := s.definitions[defKey] // if not named, empty schema
 		err := s.buildFromDecl(&schema)
 		if err != nil {
 			return err
@@ -93,7 +101,7 @@ func (s *Builder) Build(opts ...Option) error {
 		// type and warn. See [§decl-shape-recheck](./README.md#decl-shape-recheck).
 		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
 
-		s.definitions[s.Name] = schema
+		s.definitions[defKey] = schema
 
 		return nil
 	}

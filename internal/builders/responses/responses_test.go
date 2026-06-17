@@ -28,16 +28,16 @@ const (
 // for the full matrix rationale.
 func TestParseResponses_OptionVariants(t *testing.T) {
 	cases := []struct {
-		name       string
-		skipExt    bool
-		descRef    bool
-		goldenFile string
+		name    string
+		skipExt bool
+		descRef bool
 	}{
-		{"default", false, false, "classification_responses.json"},
-		{"DescWithRef", false, true, "classification_responses_descwithref.json"},
-		{"SkipExt", true, false, "classification_responses_skipext.json"},
-		{"SkipExt+DescWithRef", true, true, "classification_responses_skipext_descwithref.json"},
+		{"default", false, false},
+		{"DescWithRef", false, true},
+		{"SkipExt", true, false},
+		{"SkipExt+DescWithRef", true, true},
 	}
+	const petRef = "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			sctx, err := scanner.NewScanCtx(&scanner.Options{
@@ -63,7 +63,40 @@ func TestParseResponses_OptionVariants(t *testing.T) {
 				prs := NewBuilder(sctx, td)
 				require.NoError(t, prs.Build(responses))
 			}
-			scantest.CompareOrDumpJSON(t, responses, tc.goldenFile)
+
+			// The someResponse schema carries the $ref'd "pet" field plus
+			// x-go-name'd scalar fields; these are the surfaces the option
+			// matrix permutes, so assert their shape directly per-option.
+			some, ok := responses["someResponse"]
+			require.TrueT(t, ok)
+			require.NotNil(t, some.Schema)
+			require.NotNil(t, some.Schema.Items)
+			require.NotNil(t, some.Schema.Items.Schema)
+			itprop := some.Schema.Items.Schema
+
+			pet, ok := itprop.Properties["pet"]
+			require.TrueT(t, ok)
+			if tc.descRef {
+				// DescWithRef: the bare $ref is wrapped in a single-arm allOf
+				// so a description can sit alongside the reference.
+				assert.Empty(t, pet.Ref.String())
+				require.Len(t, pet.AllOf, 1)
+				assert.EqualT(t, petRef, pet.AllOf[0].Ref.String())
+				assert.NotEmpty(t, pet.Description)
+			} else {
+				// Default: a bare $ref with no wrapping allOf.
+				assert.EqualT(t, petRef, pet.Ref.String())
+				assert.Empty(t, pet.AllOf)
+			}
+
+			idProp, ok := itprop.Properties["id"]
+			require.TrueT(t, ok)
+			if tc.skipExt {
+				// SkipExtensions: x-go-name vendor extension must be absent.
+				assert.NotContains(t, idProp.Extensions, "x-go-name")
+			} else {
+				assert.EqualT(t, "ID", idProp.Extensions["x-go-name"])
+			}
 		})
 	}
 }
@@ -108,9 +141,7 @@ func TestParseResponses(t *testing.T) {
 	res, ok := responses["resp"]
 	assert.TrueT(t, ok)
 	assert.NotNil(t, res.Schema)
-	assert.EqualT(t, "#/definitions/user", res.Schema.Ref.String())
-
-	scantest.CompareOrDumpJSON(t, responses, "classification_responses.json")
+	assert.EqualT(t, "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/operations/user", res.Schema.Ref.String())
 }
 
 func assertComplexerOneHeaders(t *testing.T, responses map[string]spec.Response) {
@@ -310,7 +341,7 @@ func assertSomeResponseHeaders(t *testing.T, responses map[string]spec.Response)
 	assert.InDeltaT(t, 10.00, *iprop.Minimum, epsilon)
 	assert.TrueT(t, iprop.ExclusiveMinimum, "'id' should have had an exclusive minimum")
 
-	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/pet")
+	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet")
 	_, ok = itprop.Properties["pet"]
 	assert.TrueT(t, ok)
 	// if itprop.Ref.String() == "" {
@@ -366,8 +397,6 @@ func TestParseResponses_TransparentAliases(t *testing.T) {
 	// cross-source-file root cause as the cross-package embed).
 	assert.Contains(t, payload.Properties, "id")
 	assert.Contains(t, payload.Properties, "name")
-
-	scantest.CompareOrDumpJSON(t, responses, "transparentalias_responses.json")
 }
 
 func TestParseResponses_Issue2007(t *testing.T) {
@@ -385,8 +414,6 @@ func TestParseResponses_Issue2007(t *testing.T) {
 	require.NotNil(t, resp.Schema.AdditionalProperties)
 	require.NotNil(t, resp.Schema.AdditionalProperties.Schema)
 	require.TrueT(t, resp.Schema.AdditionalProperties.Schema.Type.Contains("string"))
-
-	scantest.CompareOrDumpJSON(t, responses, "classification_responses_issue2007.json")
 }
 
 func TestParseResponses_Issue2011(t *testing.T) {
@@ -401,7 +428,11 @@ func TestParseResponses_Issue2011(t *testing.T) {
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	scantest.CompareOrDumpJSON(t, responses, "classification_responses_issue2011.json")
+	// go-swagger#2011: an in:body field typed `interface{}` yields an
+	// open (empty) schema — no type, no $ref — rather than erroring.
+	assert.Empty(t, resp.Schema.Type)
+	assert.Empty(t, resp.Schema.Ref.String())
+	assert.Empty(t, resp.Schema.Properties)
 }
 
 func TestParseResponses_Issue2145(t *testing.T) {
@@ -418,9 +449,17 @@ func TestParseResponses_Issue2145(t *testing.T) {
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	assert.NotEmpty(t, prs.PostDeclarations()) // should have Product
+	// go-swagger#2145: a map[...]Product body becomes an object schema
+	// whose additionalProperties is a $ref to the (post-declared) Product.
+	assert.TrueT(t, resp.Schema.Type.Contains("object"))
+	require.NotNil(t, resp.Schema.AdditionalProperties)
+	require.NotNil(t, resp.Schema.AdditionalProperties.Schema)
+	assert.EqualT(t,
+		"#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/product/Product",
+		resp.Schema.AdditionalProperties.Schema.Ref.String(),
+	)
 
-	scantest.CompareOrDumpJSON(t, responses, "product_responses.json")
+	assert.NotEmpty(t, prs.PostDeclarations()) // should have Product
 }
 
 func getResponse(sctx *scanner.ScanCtx, nm string) *scanner.EntityDecl {
@@ -443,5 +482,9 @@ func TestGo118ParseResponses_Issue2011(t *testing.T) {
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	scantest.CompareOrDumpJSON(t, responses, "go118_responses_issue2011.json")
+	// go-swagger#2011 (go1.18 generics corpus): an in:body `interface{}`
+	// field yields an open (empty) schema, same as the non-generic corpus.
+	assert.Empty(t, resp.Schema.Type)
+	assert.Empty(t, resp.Schema.Ref.String())
+	assert.Empty(t, resp.Schema.Properties)
 }

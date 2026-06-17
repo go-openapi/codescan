@@ -95,6 +95,38 @@ const (
 	// migration hint in the message — e.g. `swagger:type array` →
 	// `inline`, or the deprecated `swagger:alias` annotation.
 	CodeDeprecated Code = "validate.deprecated"
+
+	// CodeDuplicateModelName fires when two distinct Go types in the
+	// SAME package claim the same definition name (necessarily via a
+	// `swagger:model <name>` override, since Go type names are unique
+	// per package). The first declaration keeps the name; later ones
+	// fall back to their Go type name. See the name-identity design D-4.
+	CodeDuplicateModelName Code = "validate.duplicate-model-name"
+
+	// CodeCollidingModelName fires when the same definition name is
+	// declared across SEVERAL packages. The reduce stage keeps each
+	// distinct by qualifying the colliding ones with a PascalCase
+	// package-prefix concat (e.g. b.Test / c.Test -> BTest / CTest);
+	// the author can force a specific name with `swagger:model <name>`.
+	// See the name-identity design (D-8).
+	CodeCollidingModelName Code = "validate.colliding-model-name"
+
+	// CodeHierarchicalModelName fires when a colliding definition name's
+	// best flat concat exceeds the readability budget and the caller
+	// enabled EmitHierarchicalNames: the reduce stage emits nested
+	// container definitions (`#/definitions/<pkg>/<Name>`) instead of a
+	// long flat concat. The author can force a flat name with
+	// `swagger:model <name>`. See the name-identity design (rung 3 / W2).
+	CodeHierarchicalModelName Code = "validate.hierarchical-model-name"
+
+	// CodeAmbiguousTypeName fires when a type-name keyword argument
+	// (swagger:type, swagger:additionalProperties, swagger:patternProperties)
+	// names a bare leaf that, after failing to resolve in the builder's own
+	// package, matches a discovered model in SEVERAL packages. The reference
+	// is ambiguous so it is dropped; the author can disambiguate with a
+	// same-package type or a swagger:model override. See the name-identity
+	// leaf-resolution design.
+	CodeAmbiguousTypeName Code = "validate.ambiguous-type-name"
 )
 
 // Diagnostic is one observation about a comment block.

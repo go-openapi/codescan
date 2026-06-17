@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Alpha": {
+      "type": "object",
+      "properties": {
+        "beta": {
+          "$ref": "#/definitions/Beta"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-no-collision"
+    },
+    "Beta": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Count"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-no-collision/sub"
+    }
+  }
+}

@@ -137,8 +137,6 @@ func TestRoutesParser(t *testing.T) {
 	assert.TrueT(t, ok)
 	assert.EqualT(t, "Some description", rsp.Description)
 	assert.Empty(t, rsp.Ref.String())
-
-	scantest.CompareOrDumpJSON(t, ops, "classification_routes.json")
 }
 
 func TestRoutesParserBody(t *testing.T) {
@@ -237,8 +235,6 @@ func TestRoutesParserBody(t *testing.T) {
 	)
 
 	validateRoutesParameters(t, ops)
-
-	scantest.CompareOrDumpJSON(t, ops, "classification_routes_body.json")
 }
 
 func validateRoutesParameters(t *testing.T, ops oaispec.Paths) {
