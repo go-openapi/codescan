@@ -141,6 +141,7 @@ func (s *Builder) enumName(cg *ast.CommentGroup, declTypeName string) (string, b
 //   - handled=true  → caller returns nil (target written, terminal)
 //   - handled=false → no classifier matched; caller continues to
 //     FindModel / SwaggerSchemaForType fallback
+//
 // recordEnumOrigins anchors each enum value to its const source position, but
 // only when this is the canonical definition node (s.path set; cleared in field
 // context, where the enum is a $ref to that definition instead). No-op when no
