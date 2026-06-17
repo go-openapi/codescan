@@ -735,6 +735,19 @@ func (cm MarshalTextStructStrfmtPtr) MarshalText() ([]byte, error) {
 	return []byte("hi frome CustomStructStrfmtPtr"), nil
 }
 
+// URL is exposed as a model (swagger:model) rather than a plain inline strfmt
+// so that fields of this type produce a $ref to a single, stable definition.
+// A field typed as the bare stdlib net/url.URL would instead be expanded
+// structurally, copying net/url's own field doc comments into the spec and
+// making the golden depend on the Go toolchain version (the comments drift
+// between releases). swagger:strfmt keeps the definition a string (url format)
+// instead of an expanded object.
+//
+// This detached comment block is separated from the annotations by a blank
+// line on purpose: only the contiguous block below is the type's doc comment,
+// so the rationale above is not emitted into the spec as a description.
+
+// swagger:model URL
 // swagger:strfmt url
 type URL url.URL
 
@@ -747,7 +760,7 @@ type TextMarshalModel struct {
 	Struct          MarshalTextStruct           `json:"struct"`
 	Map             MarshalTextMap              `json:"map"`
 	MapUUID         map[string]UUID             `json:"mapUUID"`
-	URL             url.URL                     `json:"url"` // url.URL not has TextMarshal!
+	URL             URL                         `json:"url"` // refs the URL model (string), not bare url.URL, so the golden stays stdlib-version-independent
 	Time            time.Time                   `json:"time"`
 	StructStrfmt    MarshalTextStructStrfmt     `json:"structStrfmt"`
 	StructStrfmtPtr *MarshalTextStructStrfmtPtr `json:"structStrfmtPtr"`

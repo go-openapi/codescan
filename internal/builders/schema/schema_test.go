@@ -286,11 +286,12 @@ func TestTextMarhalCustomType(t *testing.T) {
 	scantest.AssertProperty(t, &schema, "string", "struct", "", "Struct")
 	scantest.AssertProperty(t, &schema, "string", "map", "", "Map")
 	assertMapProperty(t, &schema, "string", "mapUUID", "uuid", "MapUUID")
-	scantest.AssertRef(t, &schema, "url", "URL", "#/definitions/net/url/URL")
+	urlRef := "#/definitions/" + fixturesModule + "/goparsing/classification/models/URL"
+	scantest.AssertRef(t, &schema, "url", "URL", urlRef)
 	scantest.AssertProperty(t, &schema, "string", "time", "date-time", "Time")
 	scantest.AssertProperty(t, &schema, "string", "structStrfmt", "date-time", "StructStrfmt")
 	scantest.AssertProperty(t, &schema, "string", "structStrfmtPtr", "date-time", "StructStrfmtPtr")
-	scantest.AssertProperty(t, &schema, "string", "customUrl", "url", "CustomURL")
+	scantest.AssertRef(t, &schema, "customUrl", "CustomURL", urlRef)
 }
 
 func TestEmbeddedTypes(t *testing.T) {
