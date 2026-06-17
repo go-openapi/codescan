@@ -34,33 +34,53 @@ func (s *Builder) classifierAdditionalProperties(schema *oaispec.Schema, pos tok
 	if !ok {
 		return
 	}
+	s.applyAdditionalPropertiesSpec(schema, arg, pos)
+}
 
+// applyAdditionalPropertiesSpec sets additionalProperties on an object schema
+// from a <spec> arg. Shared by the swagger:additionalProperties marker and the
+// additionalProperties: field keyword (non-$ref path).
+//
+// Lowest-priority precedence: a schema already typed non-object is left alone
+// with a diagnostic. A bare $ref is replaced by a clean object (a $ref ignores
+// sibling keywords, so additionalProperties could not ride alongside it).
+func (s *Builder) applyAdditionalPropertiesSpec(schema *oaispec.Schema, arg string, pos token.Position) {
 	if len(schema.Type) > 0 && !schema.Type.Contains("object") {
 		s.RecordDiagnostic(grammar.Warnf(pos, grammar.CodeShapeMismatch,
-			"swagger:additionalProperties is only valid on an object schema; type is %q; ignored",
+			"additionalProperties is only valid on an object schema; type is %q; ignored",
 			schema.Type[0]))
 		return
 	}
 
-	// A bare $ref (map/wrapper that resolved to a reference) is replaced by a
-	// clean object: a $ref ignores sibling keywords, so additionalProperties
-	// could not ride alongside it.
+	sob, ok := s.resolveAdditionalPropertiesValue(arg, pos)
+	if !ok {
+		return // diagnostic already recorded
+	}
+
 	if schema.Ref.String() != "" {
 		schema.Ref = oaispec.Ref{}
 	}
 	schema.Typed("object", "")
+	schema.AdditionalProperties = sob
+}
 
+// resolveAdditionalPropertiesValue turns a <spec> arg (true | false | a
+// swagger:type-style spec) into a SchemaOrBool, without mutating any parent
+// schema — so it serves both the type-forcing paths (marker / field keyword)
+// and the allOf-sibling path on a $ref'd field. Returns ok=false (diagnostic
+// recorded) when a TypeSpec cannot be resolved.
+func (s *Builder) resolveAdditionalPropertiesValue(arg string, pos token.Position) (*oaispec.SchemaOrBool, bool) {
 	switch arg {
 	case "true":
-		schema.AdditionalProperties = &oaispec.SchemaOrBool{Allows: true}
+		return &oaispec.SchemaOrBool{Allows: true}, true
 	case "false":
-		schema.AdditionalProperties = &oaispec.SchemaOrBool{Allows: false}
+		return &oaispec.SchemaOrBool{Allows: false}, true
 	default:
 		apSchema := new(oaispec.Schema)
 		if !s.resolveAdditionalPropertiesType(arg, apSchema, pos) {
-			return // diagnostic already recorded
+			return nil, false
 		}
-		schema.AdditionalProperties = &oaispec.SchemaOrBool{Schema: apSchema}
+		return &oaispec.SchemaOrBool{Schema: apSchema}, true
 	}
 }
 

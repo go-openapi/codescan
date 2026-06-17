@@ -800,6 +800,24 @@ non-object, `swagger:strfmt`, a special/known type), the marker is dropped with 
 `CodeShapeMismatch` diagnostic. It composes freely with the other object
 validations (`maxProperties`, `minProperties`, `patternProperties`).
 
+### Field keyword — `additionalProperties: <spec>`
+
+The same `<spec>` is also accepted as a **field keyword**
+(`grammar.KwAdditionalProperties`, `CtxSchema`) decorating a struct field, with
+the same value grammar and lowest-priority precedence. Two landing paths:
+
+- **non-`$ref` field** (a map, an inline object, a primitive) —
+  `applyBlockToField` post-scans the block (`block.GetString`) after the normal
+  keyword dispatch and calls `applyAdditionalPropertiesSpec` on the field schema:
+  it overrides a map's element schema, or warn-drops on a primitive.
+- **`$ref`'d field** — handled in `applyToRefField`'s `refOverrideCollector`: the
+  value rides as an **allOf sibling** (`{allOf: [{$ref}, {additionalProperties:
+  …}]}`) so the reference is preserved (JSON-Schema-draft-4), rather than the
+  marker's `$ref`-reset.
+
+Both paths share `resolveAdditionalPropertiesValue` (the pure
+`true | false | <TypeSpec>` → `SchemaOrBool` resolver, no parent mutation).
+
 ---
 
 ## <a id="ref-override"></a>§ref-override — field-level overrides on a `$ref`'d field

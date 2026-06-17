@@ -5,6 +5,7 @@ package schema
 
 import (
 	"go/ast"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -77,6 +78,15 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 	}
 
 	handlers.DispatchSchemaLevel0(block, enclosing, ps, name, s.RecordDiagnostic, s.schemaOpts())
+
+	// additionalProperties: <spec> field keyword. Applied after the type-derived
+	// dispatch so it complements an inline object, overrides a map's element
+	// schema, or warn-drops on a non-object — the same precedence as the
+	// type-level marker. ($ref'd fields are handled in applyToRefField via an
+	// allOf sibling, above.)
+	if apSpec, ok := block.GetString(grammar.KwAdditionalProperties); ok {
+		s.applyAdditionalPropertiesSpec(ps, strings.TrimSpace(apSpec), s.Ctx.PosOf(afld.Pos()))
+	}
 
 	// Items-level dispatch — only when the field type is written as
 	// an array literal. Named/alias array types opt out: their items
@@ -252,6 +262,14 @@ func (c *refOverrideCollector) onString(p grammar.Property, val string) {
 	case grammar.KwPatternProperties:
 		handlers.ApplyPatternProperties(p, c.valid, val, c.builder.RecordDiagnostic)
 		c.markValidation()
+	case grammar.KwAdditionalProperties:
+		// On a $ref'd field, additionalProperties rides as an allOf sibling
+		// (`{allOf: [{$ref}, {additionalProperties: …}]}`) so the reference is
+		// preserved — JSON-Schema-draft-4 semantics, like the other siblings.
+		if sob, ok := c.builder.resolveAdditionalPropertiesValue(strings.TrimSpace(val), p.Pos); ok {
+			c.override.AdditionalProperties = sob
+			c.markValidation()
+		}
 	case grammar.KwDefault:
 		// The $ref override arm carries no Type of its own, so a JSON
 		// object/array literal is coerced structurally here rather than

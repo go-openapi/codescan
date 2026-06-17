@@ -171,9 +171,10 @@ const (
 	KwMinItems            = "minItems"
 	KwUnique              = "unique"
 	KwCollectionFormat    = "collectionFormat"
-	KwMaxProperties       = "maxProperties"
-	KwMinProperties       = "minProperties"
-	KwPatternProperties   = "patternProperties"
+	KwMaxProperties        = "maxProperties"
+	KwMinProperties        = "minProperties"
+	KwPatternProperties    = "patternProperties"
+	KwAdditionalProperties = "additionalProperties"
 	KwDefault             = "default"
 	KwExample             = "example"
 	KwEnum                = "enum"
@@ -266,6 +267,14 @@ var keywords = []Keyword{
 		ctx(CtxSchema)),
 	keyword(KwPatternProperties,
 		aka("pattern properties", "pattern-properties"),
+		asString(),
+		ctx(CtxSchema)),
+	// additionalProperties: <spec> field keyword (true | false | a
+	// swagger:type-style spec). Full-Schema-only; the schema builder resolves
+	// the spec and applies the lowest-priority precedence. See
+	// schema/additional_properties.go.
+	keyword(KwAdditionalProperties,
+		aka("additional properties", "additional-properties"),
 		asString(),
 		ctx(CtxSchema)),
 
