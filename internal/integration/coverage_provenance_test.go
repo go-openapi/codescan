@@ -101,6 +101,16 @@ func TestCoverage_ProvenanceGeometry(t *testing.T) {
 		"./enhancements/top-level-kinds",
 		"./enhancements/named-struct-tags",
 		"./enhancements/defaults-examples", // validation-keyword anchors (default/example)
+		// Override / open-object shapes: the descend()-threaded items,
+		// additionalProperties and patternProperties subtrees. Guards against a
+		// future value that inlines (today's $ref/scalar values record nothing
+		// under these segments, so the exact pointers live in
+		// TestCoverage_ProvenanceSchemaShapes).
+		"./enhancements/provenance-schema-shapes",
+		"./enhancements/additional-properties",
+		"./enhancements/pattern-properties-typed",
+		"./enhancements/swagger-type-array",
+		"./enhancements/provenance-params-responses", // param + response header/body anchors
 		// Full-surface fixture: meta, routes/operations, parameters,
 		// top-level responses and enum definitions — exercises every anchor
 		// kind against the resolves-in-spec invariant.
@@ -253,6 +263,135 @@ func TestCoverage_ProvenanceMetaAndRoutes(t *testing.T) {
 
 	// Distinct lines: /info/version and /host come from different keyword lines.
 	assert.NotEqual(t, byPointer["/info/version"].Pos.Line, byPointer["/host"].Pos.Line)
+}
+
+// TestCoverage_ProvenanceSchemaShapes locks the exact jsonpointers for nested
+// schema shapes — not merely that they resolve, but that an inlined element /
+// value's properties carry the items / additionalProperties segment of the node
+// they actually render under. These are the descend()-threaded paths; a missing
+// or wrong descend would anchor the inner property at the parent's pointer (a
+// dangling or mis-located anchor the TUI cross-ref would mis-resolve).
+//
+// The `over` case is the regression witness for the swagger:type []Inner
+// override: before the items-descend fix, Inner's `code` anchored at
+// …/properties/over/properties/code (dangling — `over` is an array, not an
+// object).
+func TestCoverage_ProvenanceSchemaShapes(t *testing.T) {
+	byPointer := map[string]scanner.Provenance{}
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/provenance-schema-shapes"},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+		OnProvenance: func(p scanner.Provenance) {
+			byPointer[p.Pointer] = p
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	// Every nested property must anchor at its exact rendered pointer.
+	for _, ptr := range []string{
+		"/definitions/Shapes/properties/list",                                     // the slice field itself
+		"/definitions/Shapes/properties/list/items/properties/tag",                // inline array element
+		"/definitions/Shapes/properties/dict",                                     // the map field itself
+		"/definitions/Shapes/properties/dict/additionalProperties/properties/val", // inline map value
+		"/definitions/Shapes/properties/over/items/properties/code",               // swagger:type []Inner element
+	} {
+		prov, ok := byPointer[ptr]
+		require.Truef(t, ok, "expected an anchor for %q; got %v", ptr, keysOf(byPointer))
+		assert.Positivef(t, prov.Pos.Line, "%q should carry a source line", ptr)
+	}
+
+	// The wrong (pre-fix) override pointer must NOT be emitted — `over` is an
+	// array, so an /properties/over/properties/* anchor would be dangling.
+	_, bad := byPointer["/definitions/Shapes/properties/over/properties/code"]
+	assert.False(t, bad, "swagger:type []Inner element must anchor under /items, not /properties")
+
+	// And every emitted anchor must resolve in the rendered spec.
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	var root any
+	require.NoError(t, json.Unmarshal(raw, &root))
+	for ptr := range byPointer {
+		assert.Truef(t, resolveJSONPointer(root, ptr),
+			"anchor %q does not resolve in the rendered spec", ptr)
+	}
+}
+
+// TestCoverage_ProvenancePatternPropertyPointer locks the regex-key segment of a
+// patternProperties pointer. A patternProperties value node lives at
+// .../patternProperties/<regex>, where <regex> is the RAW regex used as the JSON
+// map key — so the pointer segment must escape it per RFC 6901 ('~' → '~0',
+// '/' → '~1') to stay byte-identical to the spec-side index and resolve against
+// the rendered spec. The fixture's regex deliberately contains both '/' and '~'.
+func TestCoverage_ProvenancePatternPropertyPointer(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/provenance-schema-shapes"},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	// The raw regex is the JSON map key, verbatim — no escaping in the spec.
+	const regex = "^/api/~v[0-9]+"
+	def, ok := doc.Definitions["PatternPaths"]
+	require.True(t, ok)
+	_, ok = def.PatternProperties[regex]
+	require.Truef(t, ok, "raw regex must be the patternProperties map key; got %v", def.PatternProperties)
+
+	// The cross-ref pointer escapes the regex segment and round-trips: '/' → '~1',
+	// '~' → '~0'. This is exactly the descend("patternProperties", regex) output.
+	ptr := scanner.JSONPointer("definitions", "PatternPaths", "patternProperties", regex)
+	assert.Equal(t, "/definitions/PatternPaths/patternProperties/^~1api~1~0v[0-9]+", ptr,
+		"the regex segment must be RFC 6901 escaped")
+
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	var root any
+	require.NoError(t, json.Unmarshal(raw, &root))
+	assert.True(t, resolveJSONPointer(root, ptr),
+		"the escaped regex-key pointer must resolve against the rendered spec")
+}
+
+// TestCoverage_ProvenanceParamsResponses locks the parameters / responses anchor
+// surface: a parameter anchors at /paths/{path}/{method}/parameters/{i} and stops
+// there (the array index is resolved only after path binding, so a body
+// parameter's inner schema is intentionally not drilled into); a response header
+// anchors at /responses/{name}/headers/{h}; and an in:body response field's
+// inline struct anchors its properties at /responses/{name}/schema/properties/f.
+func TestCoverage_ProvenanceParamsResponses(t *testing.T) {
+	byPointer := map[string]scanner.Provenance{}
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/provenance-params-responses"},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+		OnProvenance: func(p scanner.Provenance) {
+			byPointer[p.Pointer] = p
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	for _, ptr := range []string{
+		"/paths/~1prov/get/parameters/0",               // parameter level (stops here)
+		"/responses/provResp/headers/X-Request-Id",     // response header
+		"/responses/provResp/schema/properties/status", // inline body property
+	} {
+		prov, ok := byPointer[ptr]
+		require.Truef(t, ok, "expected an anchor for %q; got %v", ptr, keysOf(byPointer))
+		assert.Positivef(t, prov.Pos.Line, "%q should carry a source line", ptr)
+	}
+
+	// Every emitted anchor must resolve in the rendered spec.
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	var root any
+	require.NoError(t, json.Unmarshal(raw, &root))
+	for ptr := range byPointer {
+		assert.Truef(t, resolveJSONPointer(root, ptr),
+			"anchor %q does not resolve in the rendered spec", ptr)
+	}
 }
 
 // scanAndResolve runs codescan over pkg with provenance enabled, asserts every

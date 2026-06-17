@@ -178,6 +178,25 @@ func (s *Builder) descend(segments ...string) func() {
 	return s.repath(s.path + scanner.JSONPointer(segments...))
 }
 
+// descendItems path-joins `depth` "items" segments onto the cross-ref base path
+// for the duration of an array-element build, so anchors emitted inside the
+// innermost element (an inlined struct's properties, enum values, validations)
+// carry the …/items[/items…] pointer that matches where the element renders.
+// Used by the `[]T` array-layer arms of swagger:type and
+// swagger:additionalProperties, which build their layers via Items() rather
+// than the structural slice/array path. No-op (and no restore cost) when
+// provenance is off (s.path == "") or depth == 0.
+func (s *Builder) descendItems(depth int) func() {
+	if s.path == "" || depth == 0 {
+		return func() {}
+	}
+	segments := make([]string, depth)
+	for i := range segments {
+		segments[i] = "items"
+	}
+	return s.descend(segments...)
+}
+
 // diagnoseAmbiguousEmbed fires a SeverityWarning Diagnostic on
 // embed-side writes that would overwrite a prior entry whose write
 // was at the same or shallower depth and bound to a different Go

@@ -53,10 +53,15 @@ func (s *Builder) classifierPatternProperties(schema *oaispec.Schema, pos token.
 		schema.PatternProperties = make(oaispec.SchemaProperties)
 	}
 
-	defer s.descend("additionalProperties")()
 	for _, pr := range pairs {
 		valSchema := new(oaispec.Schema)
-		if !s.resolveAdditionalPropertiesType(pr.spec, valSchema, pos) {
+		// Cross-ref linkage: each value lands at <base>/patternProperties/<regex>
+		// (per-pair, not a shared additionalProperties node), so anchors emitted
+		// while resolving an inlined value resolve under the right pointer.
+		restore := s.descend("patternProperties", pr.regex)
+		resolved := s.resolveAdditionalPropertiesType(pr.spec, valSchema, pos)
+		restore()
+		if !resolved {
 			continue // diagnostic already recorded
 		}
 		schema.PatternProperties[pr.regex] = *valSchema
