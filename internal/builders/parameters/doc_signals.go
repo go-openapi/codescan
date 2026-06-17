@@ -14,17 +14,20 @@ import (
 // fieldDocSignals carries the per-field doc-comment signals the
 // parameter dispatcher reads upstream of the schema build: the
 // `in:` location, presence of `swagger:ignore`, presence of
-// `swagger:file`, and the `swagger:strfmt` argument when set.
+// `swagger:file`, the `swagger:strfmt` argument, and the
+// `swagger:type` override argument when set.
 // Replaces the four v1 regex helpers (parsers.ParamLocation /
 // parsers.FileParam / parsers.StrfmtName / parsers.Ignored) with
 // grammar lookups plus a small `in:` line scan.
 type fieldDocSignals struct {
-	in        string
-	inSet     bool
-	ignored   bool
-	file      bool
-	strfmt    string
-	strfmtSet bool
+	in          string
+	inSet       bool
+	ignored     bool
+	file        bool
+	strfmt      string
+	strfmtSet   bool
+	swaggerType string
+	swTypeSet   bool
 }
 
 // scanFieldDocSignals reads every signal the parameter dispatcher
@@ -45,7 +48,7 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 	}
 
 	for _, b := range blocks {
-		switch b.AnnotationKind() { //nolint:exhaustive // only ignore/file/strfmt are relevant here
+		switch b.AnnotationKind() { //nolint:exhaustive // only ignore/file/strfmt/type are relevant here
 		case grammar.AnnIgnore:
 			pd.ignored = true
 		case grammar.AnnFile:
@@ -54,6 +57,14 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 			if arg, ok := b.AnnotationArg(); ok && !strings.ContainsAny(arg, " \t") {
 				pd.strfmt = arg
 				pd.strfmtSet = true
+			}
+		case grammar.AnnType:
+			// A field-level swagger:type overrides the parameter type
+			// (go-swagger#1499). Single-word filter mirrors strfmt and the
+			// schema builder's findAnnotationArg rule.
+			if arg, ok := b.AnnotationArg(); ok && !strings.ContainsAny(arg, " \t") {
+				pd.swaggerType = arg
+				pd.swTypeSet = true
 			}
 		}
 	}
