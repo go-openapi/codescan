@@ -39,7 +39,9 @@ type Code string
 // Diagnostic codes. The `parse.*` prefix marks lexer/parser-level
 // observations; `validate.*` marks semantic-validation observations
 // emitted by the builder layer (typically through the
-// internal/builders/validations package).
+// internal/builders/validations package); `scan.*` marks
+// scan-environment observations (package loading, recovered panics)
+// raised by the scanner / spec builder rather than the grammar parser.
 const (
 	CodeInvalidNumber     Code = "parse.invalid-number"
 	CodeInvalidInteger    Code = "parse.invalid-integer"
@@ -127,6 +129,24 @@ const (
 	// same-package type or a swagger:model override. See the name-identity
 	// leaf-resolution design.
 	CodeAmbiguousTypeName Code = "validate.ambiguous-type-name"
+
+	// CodeDegradedLoad fires when `packages.Load` returns a degraded
+	// result. It is tiered by what is still recoverable: an Error
+	// (aborting) when nothing usable loaded — no packages matched, a
+	// package could not be loaded at all, or its type information
+	// (`Types` / `TypesInfo`) is unavailable (the #2874 case where
+	// swagger:allOf silently stops resolving); a Warning (non-fatal)
+	// when a package carries only parse/type errors but its type
+	// information is still usable, so a single non-building package does
+	// not sink a whole `./...` scan. See go-swagger/go-swagger#2874.
+	CodeDegradedLoad Code = "scan.degraded-load"
+
+	// CodeInternalPanic fires when a builder panics while processing a
+	// single declaration. The scan recovers, names the offending source
+	// declaration (file:line), and aborts with a located error rather
+	// than surfacing a raw Go stack trace. See
+	// go-swagger/go-swagger#2886.
+	CodeInternalPanic Code = "scan.internal-panic"
 )
 
 // Diagnostic is one observation about a comment block.

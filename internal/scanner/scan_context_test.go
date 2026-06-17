@@ -7,8 +7,11 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -462,19 +465,69 @@ func TestNewScanCtx_WithBuildTags(t *testing.T) {
 }
 
 func TestNewScanCtx_InvalidPackage(t *testing.T) {
-	// Loading a nonexistent package should succeed at the Load level
-	// but produce no useful data (packages.Load doesn't return errors for missing pkgs,
-	// it returns packages with errors embedded).
+	// A package that cannot be loaded at all (here: a nonexistent
+	// package, which packages.Load reports as a ListError embedded on a
+	// placeholder package) must fail loud — an Error-severity
+	// scan.degraded-load diagnostic plus an aborting error — instead of
+	// silently producing an incomplete spec (go-swagger#2874).
+	var diags []grammar.Diagnostic
 	sctx, err := NewScanCtx(&Options{
-		Packages: []string{"./nonexistent"},
-		WorkDir:  "../../fixtures",
+		Packages:     []string{"./nonexistent"},
+		WorkDir:      "../../fixtures",
+		OnDiagnostic: func(d grammar.Diagnostic) { diags = append(diags, d) },
 	})
-	// This may or may not error depending on go/packages behavior;
-	// what matters is it doesn't panic.
-	if err != nil {
-		return
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrDegradedLoad)
+	require.Nil(t, sctx)
+
+	require.NotEmpty(t, diags, "a degraded load must surface a diagnostic")
+	var degraded int
+	for _, d := range diags {
+		if d.Code == grammar.CodeDegradedLoad {
+			degraded++
+			assert.Equal(t, grammar.SeverityError, d.Severity)
+			assert.Contains(t, d.Message, "could not be loaded")
+		}
 	}
+	assert.Positive(t, degraded, "expected at least one scan.degraded-load diagnostic")
+}
+
+// TestNewScanCtx_PartialLoad_WarnsAndContinues locks the refinement of §8.2: a
+// package that does not fully type-check but whose type information remains
+// usable (go/packages type-checks best-effort) is a Warning, not an abort — a
+// single non-building package must not sink a whole `./...` scan (#2874).
+func TestNewScanCtx_PartialLoad_WarnsAndContinues(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
+	}
+	write("go.mod", "module probe\n\ngo 1.21\n")
+	// Gadget type-checks fine; the trailing bad declaration produces a
+	// TypeError on the package without erasing its type information.
+	write("api.go", "package probe\n\n"+
+		"// Gadget is a model.\n//\n// swagger:model\n"+
+		"type Gadget struct {\n\tName string `json:\"name\"`\n}\n\n"+
+		"var _ int = \"not an int\"\n")
+
+	var diags []grammar.Diagnostic
+	sctx, err := NewScanCtx(&Options{
+		Packages:     []string{"./..."},
+		WorkDir:      dir,
+		ScanModels:   true,
+		OnDiagnostic: func(d grammar.Diagnostic) { diags = append(diags, d) },
+	})
+	require.NoError(t, err, "a partial (error-tolerant) load must not abort the scan")
 	require.NotNil(t, sctx)
+
+	var warned int
+	for _, d := range diags {
+		if d.Code == grammar.CodeDegradedLoad {
+			warned++
+			assert.Equal(t, grammar.SeverityWarning, d.Severity)
+			assert.Contains(t, d.Message, "did not fully type-check")
+		}
+	}
+	assert.Positive(t, warned, "a partial load must surface a Warning, not abort")
 }
 
 func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {

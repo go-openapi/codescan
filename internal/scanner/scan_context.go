@@ -4,6 +4,7 @@
 package scanner
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -19,6 +20,12 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"golang.org/x/tools/go/packages"
 )
+
+// ErrDegradedLoad is the base error for a degraded package load detected by
+// detectDegradedLoad (no packages matched, or a scanned package failed to
+// load / type-check). It is wrapped with the per-package detail and, at the
+// public API boundary, with ErrCodeScan.
+var ErrDegradedLoad = errors.New("degraded package load")
 
 const pkgLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
@@ -66,6 +73,9 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := detectDegradedLoad(pkgs, opts); err != nil {
+		return nil, err
+	}
 
 	app, err := NewTypeIndex(pkgs,
 		WithExcludeDeps(opts.ExcludeDeps),
@@ -88,6 +98,94 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 		debug: opts.Debug,
 		opts:  opts,
 	}, nil
+}
+
+// detectDegradedLoad reacts to a degraded `packages.Load` result. packages.Load
+// only returns the catastrophic error; degraded-but-loaded states otherwise pass
+// silently and produce an incomplete spec. The reaction is tiered by what is
+// still recoverable — only the pattern-matched root packages are inspected
+// (transitive deps live in the import graph and are not scanned, so dep noise
+// does not trip the check):
+//
+//   - ABORT (Error + returned error) when nothing usable loaded: no packages
+//     matched the patterns; a root package could not be loaded at all (a
+//     packages.ListError — e.g. a missing directory or unresolved import,
+//     where "code must build" cannot even be met); or a root package came back
+//     without type information (Types/TypesInfo nil — the #2874 wholesale
+//     type-check failure where swagger:allOf silently stops resolving).
+//   - WARN (and continue) when a root package carries only parse/type errors
+//     but still has usable type information. go/packages type-checks
+//     best-effort, so its scannable definitions remain usable; a single
+//     non-building package must not sink a whole `./...` scan. The spec is
+//     emitted from what loaded, with the affected package flagged.
+//
+// Every observation is reported through opts.OnDiagnostic as a
+// scan.degraded-load diagnostic; abort observations are also summarised in the
+// returned (wrapped ErrDegradedLoad) error.
+func detectDegradedLoad(pkgs []*packages.Package, opts *Options) error {
+	emit := func(sev grammar.Severity, format string, args ...any) string {
+		ctor := grammar.Errorf
+		if sev == grammar.SeverityWarning {
+			ctor = grammar.Warnf
+		}
+		d := ctor(token.Position{}, grammar.CodeDegradedLoad, format, args...)
+		if cb := opts.OnDiagnostic; cb != nil {
+			cb(d)
+		}
+		return d.Message
+	}
+
+	if len(pkgs) == 0 {
+		return fmt.Errorf("%w: %s", ErrDegradedLoad,
+			emit(grammar.SeverityError, "no packages matched the scan patterns %v in %q", opts.Packages, opts.WorkDir))
+	}
+
+	var fatal []string
+	for _, pkg := range pkgs {
+		switch {
+		case hasListError(pkg.Errors):
+			fatal = append(fatal, emit(grammar.SeverityError,
+				"package %q could not be loaded: %s", pkg.PkgPath, firstListError(pkg.Errors)))
+		case pkg.Types == nil || pkg.TypesInfo == nil:
+			fatal = append(fatal, emit(grammar.SeverityError,
+				"package %q loaded without type information; swagger:allOf / $ref resolution would be incomplete",
+				pkg.PkgPath))
+		case len(pkg.Errors) > 0:
+			emit(grammar.SeverityWarning,
+				"package %q did not fully type-check: %s (%d error(s)); its definitions may be incomplete",
+				pkg.PkgPath, pkg.Errors[0], len(pkg.Errors))
+		}
+	}
+	if len(fatal) > 0 {
+		return fmt.Errorf("%w: %s", ErrDegradedLoad, strings.Join(fatal, "; "))
+	}
+
+	return nil
+}
+
+// hasListError reports whether any error is a packages.ListError — the package
+// or pattern could not be loaded at all (vs. a parse/type error on code that
+// did load).
+func hasListError(errs []packages.Error) bool {
+	for _, e := range errs {
+		if e.Kind == packages.ListError {
+			return true
+		}
+	}
+
+	return false
+}
+
+// firstListError returns the first packages.ListError for messaging; callers
+// guard with hasListError.
+func firstListError(errs []packages.Error) packages.Error {
+	for _, e := range errs {
+		if e.Kind == packages.ListError {
+			return e
+		}
+	}
+
+	return packages.Error{}
 }
 
 func (s *ScanCtx) SkipExtensions() bool {
