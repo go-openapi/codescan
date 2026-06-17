@@ -1,0 +1,16 @@
+{
+  "description": "Inventory shows a plain Go map. A map renders as an object whose values all\nshare one schema, carried as additionalProperties.",
+  "type": "object",
+  "properties": {
+    "counts": {
+      "description": "Counts maps each SKU to its on-hand quantity.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "x-go-name": "Counts"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

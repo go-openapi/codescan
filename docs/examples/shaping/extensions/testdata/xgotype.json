@@ -1,0 +1,20 @@
+{
+  "description": "codescan records each field's Go origin as vendor extensions unless\nSkipExtensions is set.",
+  "type": "object",
+  "title": "Widget is a small model.",
+  "properties": {
+    "label": {
+      "description": "Label is the display label.",
+      "type": "string",
+      "x-go-name": "Label"
+    },
+    "size": {
+      "description": "Size is the widget size in pixels.",
+      "type": "integer",
+      "format": "int32",
+      "x-go-name": "Size"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/extensions",
+  "x-go-type": "github.com/go-openapi/codescan/docs/examples/shaping/extensions.Widget"
+}

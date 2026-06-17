@@ -1,0 +1,12 @@
+[
+  {
+    "x-go-name": "Body",
+    "description": "Body is the pet to create.",
+    "name": "body",
+    "in": "body",
+    "required": true,
+    "schema": {
+      "$ref": "#/definitions/Pet"
+    }
+  }
+]

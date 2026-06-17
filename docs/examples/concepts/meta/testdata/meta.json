@@ -21,9 +21,47 @@
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "version": "1.2.0"
+    "version": "1.2.0",
+    "x-logo": {
+      "altText": "Example",
+      "url": "https://example.com/logo.png"
+    }
   },
   "host": "api.example.com",
   "basePath": "/v1",
-  "paths": {}
+  "paths": {},
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "basic_auth": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "basic_auth": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Everything about your Pets",
+      "name": "pets",
+      "externalDocs": {
+        "description": "Find out more",
+        "url": "https://example.com/docs/pets"
+      }
+    },
+    {
+      "description": "Access to Petstore orders",
+      "name": "store",
+      "x-display-name": "Store"
+    }
+  ],
+  "externalDocs": {
+    "description": "Full API guide",
+    "url": "https://example.com/docs"
+  }
 }

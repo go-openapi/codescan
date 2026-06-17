@@ -1,0 +1,19 @@
+{
+  "description": "StatusEnvelope documents the /status response: it embeds APIResponse and\nshadows the open Data with the concrete StatusReport. Handlers keep returning\nAPIResponse — this type just gives the scanner a concrete shape.",
+  "type": "object",
+  "properties": {
+    "data": {
+      "x-go-name": "Data",
+      "$ref": "#/definitions/StatusReport"
+    },
+    "message": {
+      "type": "string",
+      "x-go-name": "Message"
+    },
+    "status": {
+      "type": "string",
+      "x-go-name": "Status"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/genericenvelopes"
+}

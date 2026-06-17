@@ -1,0 +1,18 @@
+{
+  "description": "APIResponse is the one generic envelope every handler returns. Because Data is\nan open type (any, i.e. interface{}), the scanner can only render it as an\nopen schema — it has no way to know which concrete payload a given operation\nputs there.",
+  "type": "object",
+  "properties": {
+    "data": {
+      "x-go-name": "Data"
+    },
+    "message": {
+      "type": "string",
+      "x-go-name": "Message"
+    },
+    "status": {
+      "type": "string",
+      "x-go-name": "Status"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/genericenvelopes"
+}

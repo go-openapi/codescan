@@ -71,7 +71,11 @@ func TestValidationFragments(t *testing.T) {
 	rate, ok := doc.Responses["rateLimited"]
 	require.True(t, ok, "rateLimited response missing")
 
+	attrs, ok := doc.Definitions["Attributes"]
+	require.True(t, ok, "Attributes definition missing")
+
 	goldenJSON(t, "field", product)               // full JSON-schema surface
 	goldenJSON(t, "param", search.Get.Parameters) // reduced simple-schema surface
 	goldenJSON(t, "header", rate)                 // validated response header
+	goldenJSON(t, "object", attrs)                // object-validation keywords
 }

@@ -49,6 +49,9 @@ an existing spec via `Options.InputSpec`.
 | `BuildTags`, `Include`/`Exclude` | Scope control over what gets scanned. |
 | `RefAliases`, `TransparentAliases`, `DescWithRef` | Alias-handling knobs. |
 | `SkipExtensions` | Suppress `x-go-*` vendor extensions. |
+| `SkipEnumDescriptions` | Keep the `swagger:enum` const→value mapping out of property/parameter descriptions (it still rides `x-go-enum-desc`). |
+| `EmitXGoType` | Stamp `x-go-type` (the fully-qualified Go type) on every definition — see [Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions#stamping-x-go-type" %}}). |
+| `SingleLineCommentAsDescription` | Route single-line comments to `description` instead of `title`/`summary` — see [Single-line comments]({{% relref "/shaping-the-output/single-line-comments" %}}). |
 
 See the [godoc][godoc] for the full list.
 

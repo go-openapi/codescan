@@ -1,0 +1,19 @@
+{
+  "description": "Measurement forces a JSON-conformant format on a field. A uint64 field emits\nthe Go-specific `{integer, format: uint64}` by default; overriding it with a\nfield-level `swagger:strfmt int64` (below) yields a precision-safe,\nstring-encoded `{string, format: int64}`.",
+  "type": "object",
+  "properties": {
+    "bounded": {
+      "description": "Bounded is forced to a conformant, string-encoded int64.",
+      "type": "string",
+      "format": "int64",
+      "x-go-name": "Bounded"
+    },
+    "raw": {
+      "description": "Raw keeps the default Go-derived vendor format (uint64).",
+      "type": "integer",
+      "format": "uint64",
+      "x-go-name": "Raw"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/formats"
+}

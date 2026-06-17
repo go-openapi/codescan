@@ -25,6 +25,11 @@ codescan.Run(&codescan.Options{
 })
 ```
 
+To produce **several specs** from one module — e.g. one per API version — run a
+scan per package tree (`./v1/...`, then `./v2/...`) and write each result
+separately. There is no single-run "split by version"; the unit of a scan is the
+set of packages you pass.
+
 ## Include / Exclude
 
 `Options.Include` and `Options.Exclude` are lists of regular expressions matched

@@ -42,8 +42,14 @@ func goldenJSON(t *testing.T, doc *spec.Swagger, feature, defName string) {
 	t.Helper()
 	schema, ok := doc.Definitions[defName]
 	require.Truef(t, ok, "definition %q not found", defName)
+	goldenRaw(t, feature, schema)
+}
 
-	got, err := json.MarshalIndent(schema, "", "  ")
+// goldenRaw marshals an arbitrary value (a definition, a response, …) into
+// testdata/<feature>.json, honouring UPDATE_GOLDEN.
+func goldenRaw(t *testing.T, feature string, v any) {
+	t.Helper()
+	got, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(t, err)
 	got = append(got, '\n')
 
@@ -64,6 +70,14 @@ func TestExampleFragments(t *testing.T) {
 
 	goldenJSON(t, doc, "example", "Greeting") // example: values, typed
 	goldenJSON(t, doc, "default", "Settings") // default: values, typed
+	goldenJSON(t, doc, "reffield", "Price")   // example/default on a $ref'd field (allOf override)
+
+	ntp, ok := doc.Responses["ntpServers"]
+	require.True(t, ok, "ntpServers response missing")
+	goldenRaw(t, "responseexample", ntp) // example on a top-level array response
+
+	goldenJSON(t, doc, "complexexample", "Profile") // structured (object/array) example values
+	goldenJSON(t, doc, "refstructured", "Place")    // JSON-object example coerced on a $ref'd field
 
 	// Type coercion: a numeric default on an int field is a JSON number, a
 	// boolean default a JSON bool — not strings.
@@ -71,4 +85,11 @@ func TestExampleFragments(t *testing.T) {
 	assert.EqualValues(t, 8080, port.Default)
 	verbose := doc.Definitions["Settings"].Properties["verbose"]
 	assert.Equal(t, false, verbose.Default)
+
+	// G3: a JSON-object example on a $ref'd field is coerced into a structured
+	// value on the allOf override arm, not carried as a raw string.
+	at := doc.Definitions["Place"].Properties["at"]
+	require.Len(t, at.AllOf, 2, "expected a $ref arm and an override arm")
+	assert.IsType(t, map[string]any{}, at.AllOf[1].Example,
+		"object-literal example coerces to a structured value, not a string")
 }

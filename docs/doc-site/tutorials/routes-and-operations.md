@@ -29,6 +29,12 @@ comment block — no Go declaration required.
 {{< example go="concepts/routes/routes.go" goregion="route"
             json="concepts/routes/testdata/route.json" jsonlabel="paths[/pets]" >}}
 
+The body can also carry an indented `Parameters:` block to declare simple
+parameters (path / query / header) inline — no `swagger:parameters` struct
+needed. For body parameters or parameter sets shared across operations, use
+[`swagger:parameters`](#swaggerparameters) instead. The block syntax is covered
+in [sub-languages]({{% relref "/maintainers/sub-languages#parameters" %}}).
+
 ## swagger:operation
 
 `swagger:operation` carries the same header but spells the operation out as a
@@ -48,6 +54,21 @@ listed.
 {{< example go="concepts/routes/routes.go" goregion="parameters"
             json="concepts/routes/testdata/parameters.json" jsonlabel="parameters on listPets" >}}
 
+A field marked `in: body` makes its Go type the **request body** schema — the
+usual shape for a POST or PUT payload:
+
+{{< example go="concepts/routes/routes.go" goregion="bodyparam"
+            json="concepts/routes/testdata/bodyparam.json" jsonlabel="parameters on createPet" >}}
+
+When a parameter field's Go type is a struct (or any type that has no simple
+Swagger representation), it cannot be a query/path/header parameter on its own. A
+[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}}) override
+collapses it to a simple parameter — a scalar, or a `[]`-wrapped scalar for an
+array parameter:
+
+{{< example go="concepts/routes/routes.go" goregion="paramtype"
+            json="concepts/routes/testdata/paramtype.json" jsonlabel="parameters on filterPets" >}}
+
 ## swagger:response
 
 `swagger:response <name>` declares a struct as a named entry in the spec's
@@ -66,6 +87,29 @@ emits as `{type: file}`. It belongs on a `formData` field of a
 
 {{< example go="concepts/routes/routes.go" goregion="file"
             json="concepts/routes/testdata/file.json" jsonlabel="parameters on uploadPetPhoto" >}}
+
+## externalDocs
+
+An `externalDocs:` block (description + url) links an object out to external
+documentation. It rides an **operation** (in a `swagger:route` or
+`swagger:operation` body) and a **full schema** (a `swagger:model`). It is a
+full-Schema-only keyword: on a simple-schema parameter (anything but `in: body`)
+it is dropped with a diagnostic. The same `ExternalDocs:` block on a
+`swagger:meta` package populates the spec's top-level `externalDocs` (see
+[Document metadata]({{% relref "/tutorials/document-metadata" %}})).
+
+{{< example go="concepts/routes/routes.go" goregion="externaldocs"
+            json="concepts/routes/testdata/externaldocs.json" jsonlabel="operation externalDocs" >}}
+
+On a model the link rides the definition, and it also rides individual
+**struct fields**: on a plain field it attaches to the property directly; on a
+`$ref`'d field it is lifted onto the field's `allOf` compound (a bare `$ref`
+cannot carry sibling keywords). The value can be written as the indented block
+above or as an equivalent inline `{ description: …, url: … }` mapping — which
+reads better on a single-line doc comment:
+
+{{< example go="concepts/routes/routes.go" goregion="externaldocs"
+            json="concepts/routes/testdata/externaldocs_schema.json" jsonlabel="#/definitions/CatalogEntry" >}}
 
 ## What's next
 

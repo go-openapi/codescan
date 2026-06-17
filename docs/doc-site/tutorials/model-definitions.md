@@ -20,10 +20,16 @@ For the exhaustive rule on any annotation below, follow its link to the
 
 `swagger:model` publishes a Go struct as a definition. Field doc comments become
 property descriptions; `json` tags drive the property names; the Go type drives
-the JSON-Schema `type` / `format`.
+the JSON-Schema `type` / `format`. Well-known standard-library types resolve
+automatically — a `time.Time` field, for instance, is published as
+`{type: string, format: date-time}`.
 
 {{< example go="concepts/models/models.go" goregion="model"
             json="concepts/models/testdata/model.json" jsonlabel="#/definitions/Pet" >}}
+
+A `swagger:model` that nothing else references appears in `definitions` only
+when you scan with `Options.ScanModels` (the `-m` flag). See
+[When the scanner emits a type]({{% relref "/shaping-the-output/type-discovery" %}}).
 
 ## swagger:strfmt
 
@@ -34,15 +40,24 @@ does not become its own definition — instead, every field typed by it renders 
 {{< example go="concepts/models/models.go" goregion="strfmt"
             json="concepts/models/testdata/strfmt.json" jsonlabel="#/definitions/Device" >}}
 
+Add `swagger:model` to the strfmt type to opt it into a first-class definition
+(`{type: string, format: <name>}`) that fields `$ref` instead of inlining — the
+general `swagger:model ⇒ definition + $ref` rule.
+
 ## swagger:enum
 
 `swagger:enum <name>` collects the type's `const` values. When a model field
 references the type, the property carries the `enum` array and an
 `x-go-enum-desc` extension built from the per-value doc comments. (The enum type
-is reachable, and so emitted, only because a model field points at it.)
+is reachable, and so emitted, only because a model field points at it.) A bare
+`swagger:enum` on the type declaration works too — the name is inferred.
 
 {{< example go="concepts/models/models.go" goregion="enum"
             json="concepts/models/testdata/enum.json" jsonlabel="#/definitions/Task" >}}
+
+Here the values inline on the referencing field. Add `swagger:model` to the enum
+type to make it a first-class definition (carrying the `enum` array) that fields
+`$ref` — again the `swagger:model ⇒ definition + $ref` rule.
 
 ## swagger:allOf
 
@@ -56,6 +71,10 @@ three arms: two `$ref`s and one inline object.
 {{< example go="concepts/models/models.go" goregion="allof"
             json="concepts/models/testdata/allof.json" jsonlabel="#/definitions/Dog" >}}
 
+When the base also declares a `discriminator`, this composition becomes a
+Swagger 2.0 type hierarchy — see
+[Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}}).
+
 ## swagger:type
 
 `swagger:type <type>` overrides the type codescan would infer. Here a `[16]byte`
@@ -64,30 +83,96 @@ field is published as a `string`.
 {{< example go="concepts/models/models.go" goregion="type"
             json="concepts/models/testdata/type.json" jsonlabel="#/definitions/Token" >}}
 
-The accepted values are the scalar Swagger types — `string`, `integer`,
-`number`, `boolean`, `object` (plus the Go builtin names codescan resolves).
-`array` and `file` are not accepted here; an unrecognized value leaves the field
-on its underlying Go type.
+`swagger:type` is an **inline directive**: it renders the chosen type in place
+and never emits a `$ref`. The value is a scalar type (`string`, `integer`,
+`number`, `boolean`, `object`, or a Go builtin like `int64`), `[]T` for an array
+of an inlined type, `inline` to expand the field's own Go type, or a known type
+name to inline that type. `array` is deprecated in favour of `inline` / `[]T`,
+and `file` is rejected (use `swagger:file`). When combined with `swagger:strfmt`,
+the type wins and the format is kept only if compatible — see the
+[reference]({{% relref "/maintainers/annotations#swaggertype" %}}).
+
+The override also works **on an individual field doc** — no wrapper-type
+annotation. Here `Code` is published as a string while its `RawID` type is left
+untouched everywhere else:
+
+{{< example go="concepts/models/models.go" goregion="typefield"
+            json="concepts/models/testdata/typefield.json" jsonlabel="#/definitions/Coupon" >}}
 
 ## swagger:name
 
-A model defined as an **interface** publishes one property per nullary method.
-By default the property name is the camelCased method name — so `Maker()`
-already becomes `maker` with no annotation. `swagger:name <name>` is the
-**override** for when that default is not what you want (interface methods
-cannot carry a `json` tag). Here `StructType()` would default to `structType`;
-the annotation publishes it as `jsonClass` instead.
+`swagger:name <name>` overrides the JSON property name a field or method
+renders as. It works on a **struct field** (overriding the `json:` tag / Go
+field name) and on an **interface method**. It is most useful on interface
+methods, which publish one property per nullary method and cannot carry a
+`json` tag: below, `StructType()` would default to `structType`, and the
+annotation publishes it as `jsonClass` instead.
+
+{{% notice style="note" %}}
+`swagger:name` is the legacy annotation form. The
+[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}) is the
+canonical, universal equivalent — it renames a property here exactly the
+same way, and is the *only* form that also works on parameters and
+response headers. Precedence: `name:` > `swagger:name` > `json:` tag > Go
+field name.
+{{% /notice %}}
 
 {{< example go="concepts/models/models.go" goregion="name"
             json="concepts/models/testdata/name.json" jsonlabel="#/definitions/Car" >}}
+
+The `name:` keyword does the same on a model property — and, being the universal
+form, with the same syntax you would use on a parameter or header. Here it names
+a tag-less field directly, and on a field that also carries a `json:` tag and a
+legacy `swagger:name`, the keyword wins (`name:` > `swagger:name` > `json:` tag >
+Go field name):
+
+{{< example go="concepts/models/models.go" goregion="namekeyword"
+            json="concepts/models/testdata/namekeyword.json" jsonlabel="#/definitions/Account" >}}
 
 ## swagger:ignore
 
 `swagger:ignore` drops a declaration from the output. The scanner sees `Secret`,
 classifies it, then excludes it — so it never reaches the definitions (a fact
-the example's `TestIgnoreOmitsType` asserts).
+the example's `TestIgnoreOmitsType` asserts). It also works on a **single struct
+field** — placed on the field's doc comment, it drops just that property from
+the model.
 
 {{< code file="concepts/models/models.go" lang="go" region="ignore" >}}
+
+## Decorating a $ref
+
+When a field's type resolves to a named model, the property is a `$ref` — and a
+bare `$ref` cannot carry sibling keywords (a JSON Schema draft-4 rule). So a
+field that is *both* a reference *and* decorated (a description, a vendor
+extension, a `default`/`example`, a validation override) would lose its
+decorations.
+
+codescan avoids that by **wrapping the `$ref` as a member of an `allOf`**. The
+property is then an ordinary schema object, free to carry the decorations
+alongside the reference:
+
+- the `description` and any `x-*` **extensions** sit on the property itself;
+- a value override (`default`, `example`) rides a **second** `allOf` member;
+- `required` rides the **parent** model's `required` list.
+
+{{< example go="concepts/refoverride/refoverride.go" goregion="refoverride"
+            json="concepts/refoverride/testdata/refoverride.json" jsonlabel="#/definitions/Person" >}}
+
+Nothing is dropped. The description-only case is the exception — it is governed
+by the `DescWithRef` option (see
+[Descriptions beside a $ref]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}})) —
+and a `default`/`example` on a `$ref`'d field is shown in
+[Examples & defaults]({{% relref "/tutorials/examples-and-defaults" %}}).
+
+{{% notice style="info" %}}
+**Same-name collisions.** Two structs that share the same short name in
+different packages stay distinct: codescan keys each by a compiler-unique
+identity and qualifies the colliding ones with a package segment
+(`billing.Account` / `identity.Account` → `BillingAccount` / `IdentityAccount`),
+deterministically. Pin the names in your public contract with an explicit
+`swagger:model <Name>`, and let auto-resolution handle the rest — see
+[Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts" %}}).
+{{% /notice %}}
 
 ## What's next
 

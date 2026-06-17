@@ -104,3 +104,19 @@ type ProductList struct {
 	// in: body
 	Body []Product
 }
+
+// snippet:object
+
+// Attributes is a free-form object constrained by the object-validation
+// keywords: it must carry between 1 and 10 properties, and any property whose
+// name matches the regex is permitted. Object validations constrain the map of
+// (additional) properties rather than named struct fields.
+//
+// minProperties: 1
+// maxProperties: 10
+// patternProperties: ^x-
+//
+// swagger:model Attributes
+type Attributes map[string]any
+
+// endsnippet:object

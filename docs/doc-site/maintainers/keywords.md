@@ -31,12 +31,12 @@ formal productions should read [grammar.md]({{% relref "grammar" %}}).
 - [Annotation contexts](#annotation-contexts)
 - [Summary table](#summary-table)
 - [Numeric validations](#numeric-validations) — `maximum`, `minimum`, `multipleOf`
-- [Length / array / object validations](#length--array--object-validations) — `maxLength`, `minLength`, `maxItems`, `minItems`, `maxProperties`, `minProperties`, `patternProperties`
+- [Length / array / object validations](#length--array--object-validations) — `maxLength`, `minLength`, `maxItems`, `minItems`, `maxProperties`, `minProperties`, `patternProperties`, `additionalProperties`
 - [Format validations](#format-validations) — `pattern`, `unique`, `collectionFormat`
 - [Schema decorators](#schema-decorators) — `default`, `example`, `enum`, `required`, `readOnly`, `discriminator`, `deprecated`
 - [Parameter location](#parameter-location) — `in`
 - [Meta single-line keywords](#meta-single-line-keywords) — `schemes`, `version`, `host`, `basePath`, `license`, `contact`
-- [Body keywords](#body-keywords) — `consumes`, `produces`, `security`, `securityDefinitions`, `responses`, `parameters`, `extensions`, `infoExtensions`, `tos`, `externalDocs`
+- [Body keywords](#body-keywords) — `consumes`, `produces`, `security`, `securityDefinitions`, `responses`, `parameters`, `extensions`, `infoExtensions`, `tos`, `externalDocs`, `tags`
 
 ---
 
@@ -120,6 +120,7 @@ them. Detailed entries follow this table.
 | `maxProperties` | `max properties`, `max-properties`, `maximum properties`, `maximum-properties`, `maximumProperties` | integer | schema |
 | `minProperties` | `min properties`, `min-properties`, `minimum properties`, `minimum-properties`, `minimumProperties` | integer | schema |
 | `patternProperties` | `pattern properties`, `pattern-properties` | string (regex) | schema |
+| `additionalProperties` | `additional properties`, `additional-properties` | `true` / `false` / type spec | schema |
 | `default` | — | raw-value | param, header, schema, items |
 | `example` | — | raw-value | param, header, schema, items |
 | `enum` | — | raw-value | param, header, schema, items |
@@ -143,7 +144,8 @@ them. Detailed entries follow this table.
 | `extensions` | — | raw-block (YAML map of `x-*` entries) | meta, route, operation, schema, param, header |
 | `infoExtensions` | `info extensions`, `info-extensions` | raw-block (YAML map of `x-*` entries) | meta |
 | `tos` | `terms of service`, `terms-of-service`, `termsOfService` | raw-block (prose paragraph) | meta |
-| `externalDocs` | `external docs`, `external-docs` | raw-block (YAML map) | meta, route, operation, schema |
+| `externalDocs` | `external docs`, `external-docs` | raw-block (YAML map) | meta, route, operation, schema, field |
+| `tags` | — | raw-block (YAML) | meta, route, operation |
 
 ---
 
@@ -286,6 +288,39 @@ never dropped silently.
 type MyObjectType map[string]interface{}
 ```
 
+For **typed** value schemas (a regex mapped to a primitive or a model
+`$ref` rather than the empty `{}`), use the decl-level
+[`swagger:patternProperties`]({{% relref "/maintainers/annotations#swaggerpatternproperties" %}})
+marker. `patternProperties` is a JSON-Schema keyword beyond the Swagger
+2.0 subset — see
+[Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}).
+
+### `additionalProperties`
+
+Sets the policy for keys beyond the named properties on an
+**object**-typed schema. The argument is `true` (allow any extra key),
+`false` (forbid extra keys — close the object), or a **value type** (a
+primitive / `[]T`, or a model name that becomes a `$ref` — the
+[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}})
+value grammar). On a map field it overrides the Go element schema; on a
+`$ref`'d field the value rides an `allOf` sibling so the reference is
+kept. Aliases: `additional properties`, `additional-properties`.
+
+This is the field-keyword form; the decl-level
+[`swagger:additionalProperties`]({{% relref "/maintainers/annotations#swaggeradditionalproperties" %}})
+marker does the same on a type. It is the lowest-priority, object-only
+annotation — dropped with a `CodeShapeMismatch` diagnostic if the field
+resolved to a non-object.
+
+```go
+type Holder struct {
+	// Values maps any key to an integer, overriding the Go element type.
+	//
+	// additionalProperties: integer
+	Values map[string]string `json:"values"`
+}
+```
+
 ---
 
 ## Format validations
@@ -293,11 +328,13 @@ type MyObjectType map[string]interface{}
 ### `pattern`
 
 A regex constraint on a string value. The pattern is preserved
-verbatim on `schema.pattern`. The grammar runs a best-effort RE2
-compile (Go's regex engine) on the value; if it fails, a
-`CodeInvalidAnnotation` diagnostic surfaces with the compile error.
-The value still lands on the schema — downstream tools may use
-JSON Schema's wider regex dialect.
+verbatim on `schema.pattern` — including backslash escapes: `\d`,
+`\.`, `\n` reach the spec as the literal two-character sequences your
+consumer's regex engine expects, not interpreted by the scanner. The
+grammar runs a best-effort RE2 compile (Go's regex engine) on the
+value; if it fails, a `CodeInvalidAnnotation` diagnostic surfaces with
+the compile error. The value still lands on the schema — downstream
+tools may use JSON Schema's wider regex dialect.
 
 ```go
 // Slug is a URL-friendly identifier.
@@ -383,10 +420,13 @@ for SimpleSchema parameters).
 
 ### `enum`
 
-A closed set of allowed values. Three accepted surface forms:
+A closed set of allowed values. Accepted surface forms:
 
 - **Comma list**: `enum: red, green, blue` — split on `,` and
   trimmed.
+- **Bracketed comma list**: `enum: [red, green, blue]` — the same, with
+  a surrounding `[ ]` pair stripped as delimiters (so the unquoted
+  bracketed and unbracketed forms are equivalent).
 - **JSON array**: `enum: ["red", "green", "blue"]` — parsed via
   YAML/JSON.
 - **Multi-line list with `-` markers**:
@@ -405,6 +445,18 @@ For string-typed enums driven by Go `const` declarations the
 up the constant names AND their godoc descriptions and produces an
 `x-go-enum-desc` extension alongside the enum values. The
 `enum:` keyword is the manual override.
+
+By default the const→value mapping that `swagger:enum` derives is folded
+into the field's `description` **and** duplicated in `x-go-enum-desc`. Set
+the scanner option `SkipEnumDescriptions: true` to keep the authored prose
+as the description; the mapping then rides `x-go-enum-desc` only. This is
+independent of `SkipExtensions` (set both to suppress the mapping entirely).
+
+When a struct field references a named primitive (`Status State` →
+`type State string`), an `enum:` line in the referenced type's own doc
+comment is parsed into that definition's enum values; the surrounding
+prose becomes its title/description and the `enum:` line never leaks into
+the text.
 
 ### `required`
 
@@ -429,13 +481,26 @@ Schema-only — emitting `readOnly:` inside a SimpleSchema context
 
 Marks the property as the discriminator for an `allOf` polymorphic
 schema. Boolean. Writes the property's name onto the enclosing
-schema's `discriminator` field. Schema-only.
+schema's `discriminator` field. Schema-only. The property should also be
+`required` (a subtype cannot be selected from an absent value). Subtypes
+that `allOf`-embed the base inherit the discriminator; the discriminator
+value for each is its definition name — a custom-value annotation
+(`swagger:discriminatorValue`) is not implemented. See the
+[Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}})
+tutorial.
 
 ### `deprecated`
 
-Marks the carrying entity as deprecated. Boolean. Legal on operations
-(`operation.deprecated`), routes (`operation.deprecated` on the
-synthesised op), and schemas (some downstream tools render this).
+Marks the carrying entity as deprecated. Boolean. On operations
+(`operation.deprecated`) and routes (`operation.deprecated` on the
+synthesised op) it writes the native OpenAPI 2.0 `deprecated` field.
+OpenAPI 2.0 has no native `deprecated` on the Schema object, so on a
+**model or model field** it emits `x-deprecated: true` instead. A
+godoc-style `Deprecated:` paragraph (the pkgsite convention) is an exact
+synonym for `deprecated: true`, recognised in any context — and is the
+idiomatic form on a Go doc comment, where a bare `deprecated: true` line
+reads as a malformed deprecation notice to Go linters. Because it carries
+semantic intent, `x-deprecated` survives even when `SkipExtensions` is set.
 
 ---
 
@@ -456,6 +521,29 @@ Where the parameter value comes from. Closed-vocab:
 A non-matching value emits a context-invalid diagnostic; the
 parameter loses its `in` and may end up incorrectly classified
 downstream.
+
+### `name`
+
+Sets the published name of **any** field it decorates, overriding the
+`json:` tag / Go field name. It is the one canonical field-naming
+keyword and works at every field site: a `swagger:model` property, an
+interface method, a `swagger:parameters` field (the parameter name), and
+a `swagger:response` header field (the `Headers` map key). Being
+structural, it is stripped from the description rather than leaking into
+it.
+
+Precedence, most-explicit-wins and **identical in every context**:
+
+```text
+name: keyword  >  swagger:name annotation  >  json: tag  >  Go field name
+```
+
+[`swagger:name`]({{% relref "/maintainers/annotations#swaggername" %}})
+is the older annotation form — still honoured, and idiomatic on
+interface methods — but `name:` is the universal keyword. Using
+`swagger:name` in a parameter or response-header context (where `name:`
+is canonical) is inert and now emits a `context-invalid` diagnostic
+pointing you at the keyword.
 
 ```go
 // PageParams declares pagination query parameters.
@@ -561,19 +649,29 @@ Consumes:
 Produces: application/json
 ```
 
-### `security`
-
-Security-requirements list. Each line is one requirement of shape
-`schemeName: scope1, scope2`. An empty scope list (`schemeName:`)
-means "no scopes required, but the scheme must be active."
+Security-requirements list, parsed as **YAML** — a sequence of
+requirement objects. Within one item, multiple schemes are **ANDed**
+(all required); separate items are **ORed** (any one grants access).
+Scopes are a flow (`[read, write]`) or block list; an empty list
+(`api_key: []`) means the scheme is required with no scopes.
 
 ```
 Security:
-  api_key:
-  oauth2: read, write
+  - api_key: []          # OR this requirement…
+  - oauth2: [read, write] #   …or this one
 ```
 
-Maps to `security` (array of single-key maps).
+```
+Security:
+  - api_key: []          # AND: both required (one item, two keys)
+    oauth2: [write]
+```
+
+Maps to `security`. A bare top-level mapping (`api_key:` /
+`oauth2: read, write`, comma-split scopes) is still read as one OR
+requirement per key for back-compatibility. Legal in `swagger:meta`
+(document default), `swagger:route`, and `swagger:operation`; an empty
+`Security: []` on an operation is an explicit "no security" opt-out.
 
 ### `securityDefinitions`
 
@@ -641,7 +739,8 @@ Vendor extension declarations as a YAML map. Keys must start with
 
 - `extensions:` lands the entries on the surrounding scope
   (`spec.extensions`, `operation.extensions`, `schema.extensions`,
-  …).
+  `parameter.extensions`, `header.extensions`, …) — including on
+  parameters and response headers.
 - `infoExtensions:` is meta-only; entries land on `info.extensions`.
 
 ```
@@ -671,22 +770,50 @@ External documentation pointer as a YAML map with `description` and
 
 Emitted on:
 
-- **`swagger:meta`** → the top-level `externalDocs` object;
+- **`swagger:meta`** → the top-level `externalDocs` object (and, nested under a
+  `Tags:` entry, that tag's `externalDocs`);
 - **`swagger:route` / `swagger:operation`** → the operation's `externalDocs`;
 - **`swagger:model`** (and any full Schema, e.g. a body parameter's schema)
-  → the schema's `externalDocs`.
+  → the schema's `externalDocs`;
+- a **struct field** → the property's `externalDocs`. On a `$ref`'d field
+  (whose property is a bare `$ref`) it is lifted onto the wrapping `allOf`
+  compound, alongside the field's `description` and `x-*` siblings.
 
 An empty block (no `description`/`url`) is skipped rather than emitting a
 bare `externalDocs: {}`. It is a **full-Schema-only** keyword: on a
 SimpleSchema site (a non-body parameter, response header, or items
 chain) it is dropped with a `CodeUnsupportedInSimpleSchema` diagnostic.
-`swagger:meta`'s `tags` do not yet carry `externalDocs`.
 
 ```
 ExternalDocs:
   description: Reference documentation
   url: https://example.com/docs
 ```
+
+---
+
+### `tags`
+
+Top-level tag declarations. Behaviour depends on context:
+
+- In **`swagger:meta`** the body is a YAML sequence of tag objects emitted into
+  the spec's top-level `tags` — each with a `name`, an optional `description`,
+  a nested `externalDocs`, and any `x-*` vendor extensions:
+
+  ```
+  Tags:
+  - name: pets
+    description: Everything about your Pets
+    externalDocs:
+      description: Find out more
+      url: https://example.com/docs/pets
+  - name: store
+    x-display-name: Store
+  ```
+
+- In **`swagger:route` / `swagger:operation`** it is a plain string list,
+  unioned and deduplicated with the annotation's header-line tags onto the
+  operation's `tags`.
 
 ---
 

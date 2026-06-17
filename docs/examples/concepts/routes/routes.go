@@ -77,6 +77,45 @@ type ListPetsParams struct {
 
 // endsnippet:parameters
 
+// snippet:paramtype
+
+// Cursor is an opaque pagination token. As a struct it cannot be a query
+// parameter on its own; swagger:type publishes it as a simple parameter.
+type Cursor struct {
+	Page  int
+	Token string
+}
+
+// FilterPetsParams shows swagger:type on parameter fields: a struct-typed field
+// is collapsed to a simple parameter. The override accepts a scalar or a
+// []-wrapped scalar — the inline / type-name forms are rejected here (a
+// non-body parameter has no schema to inline into).
+//
+// swagger:parameters filterPets
+type FilterPetsParams struct {
+	// After is an opaque cursor carried as a plain string query parameter.
+	//
+	// in: query
+	// swagger:type string
+	After Cursor `json:"after"`
+
+	// Sort is a list of sort keys carried as an array-of-string query parameter.
+	//
+	// in: query
+	// swagger:type []string
+	Sort []Cursor `json:"sort"`
+}
+
+// swagger:route GET /pets/filter pets filterPets
+//
+// Filter pets with cursor pagination.
+//
+// responses:
+//
+//	200: description: matched pets
+
+// endsnippet:paramtype
+
 // snippet:response
 
 // PetsResponse is the list returned by listPets.
@@ -120,3 +159,73 @@ type UploadParams struct {
 }
 
 // endsnippet:file
+
+// snippet:externaldocs
+
+// swagger:route GET /pets/search pets searchPets
+//
+// Searches pets. The operation links out to external documentation.
+//
+// externalDocs:
+//   description: Search guide
+//   url: https://example.com/docs/search
+//
+// responses:
+//
+//	200: petsResponse
+
+// CatalogEntry carries externalDocs at the schema level (the link rides the
+// definition) and on its fields. (On a simple-schema parameter externalDocs is
+// dropped with a diagnostic: it is a full-Schema-only keyword.)
+//
+// externalDocs: {description: "Catalog schema reference", url: "https://example.com/docs/catalog"}
+//
+// swagger:model
+type CatalogEntry struct {
+	// SKU is the catalog identifier.
+	SKU string `json:"sku"`
+
+	// Vendor is a plain field: externalDocs attaches directly to the property.
+	//
+	// externalDocs: {description: "Vendor field docs", url: "https://example.com/docs/vendor"}
+	Vendor string `json:"vendor"`
+
+	// Supplier is a $ref'd field: its sibling externalDocs lifts onto the
+	// field's allOf compound (a bare $ref cannot carry sibling keywords).
+	//
+	// externalDocs: {description: "Supplier docs", url: "https://example.com/docs/supplier"}
+	Supplier Supplier `json:"supplier"`
+}
+
+// Supplier is referenced by CatalogEntry.Supplier.
+//
+// swagger:model
+type Supplier struct {
+	// Name is the supplier name.
+	Name string `json:"name"`
+}
+
+// endsnippet:externaldocs
+
+// snippet:bodyparam
+
+// CreatePetParams is the request parameter set for createPet. A field marked
+// `in: body` makes its Go type the request body schema — the usual shape for a
+// POST or PUT payload.
+//
+// swagger:parameters createPet
+type CreatePetParams struct {
+	// Body is the pet to create.
+	//
+	// in: body
+	// required: true
+	Body Pet `json:"body"`
+}
+
+// swagger:route POST /pets/import pets createPet
+//
+// responses:
+//
+//	200: petsResponse
+
+// endsnippet:bodyparam

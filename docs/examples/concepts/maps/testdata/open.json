@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "title": "OpenObject keeps its named property and also allows arbitrary extra keys.",
+  "properties": {
+    "a": {
+      "type": "string",
+      "x-go-name": "A"
+    }
+  },
+  "additionalProperties": true,
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

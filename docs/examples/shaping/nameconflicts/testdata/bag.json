@@ -1,0 +1,15 @@
+{
+  "description": "named by the bare leaf \"Widget\" — resolved cross-package because that leaf is\nunique across the scanned model set.",
+  "type": "object",
+  "title": "Bag is an open object whose additional properties are catalog.Widget,",
+  "properties": {
+    "id": {
+      "type": "string",
+      "x-go-name": "ID"
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/definitions/Widget"
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/nameconflicts"
+}

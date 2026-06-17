@@ -1,0 +1,22 @@
+{
+  "description": "Pet is the polymorphic base type. The field marked `discriminator: true` names\nthe property whose value tells a consumer which concrete subtype a payload is:\ncodescan writes that property's name onto the schema's `discriminator`, and a\ndiscriminator property must be `required`.",
+  "type": "object",
+  "required": [
+    "petType",
+    "name"
+  ],
+  "properties": {
+    "name": {
+      "description": "Name is common to every pet.",
+      "type": "string",
+      "x-go-name": "Name"
+    },
+    "petType": {
+      "description": "PetType selects the concrete subtype — its value is the subtype's\ndefinition name (e.g. \"Cat\" or \"Dog\").",
+      "type": "string",
+      "x-go-name": "PetType"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/polymorphism",
+  "discriminator": "petType"
+}

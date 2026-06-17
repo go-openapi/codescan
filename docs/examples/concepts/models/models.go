@@ -125,6 +125,29 @@ type Token struct {
 
 // endsnippet:type
 
+// snippet:typefield
+
+// RawID is a custom 16-byte identifier — an array under the hood, so left to
+// itself a field of this type would render as an array of integers.
+type RawID [16]byte
+
+// Coupon overrides the type of a single field directly on the field doc — no
+// wrapper-type annotation. Code publishes as a bare string while RawID is left
+// untouched everywhere else it appears.
+//
+// swagger:model
+type Coupon struct {
+	// Code is an opaque identifier published as a string.
+	//
+	// swagger:type string
+	Code RawID `json:"code"`
+
+	// Amount is the discount in cents.
+	Amount int64 `json:"amount"`
+}
+
+// endsnippet:typefield
+
 // snippet:name
 
 // Car is exposed as a schema via its method set. Interface methods cannot carry
@@ -145,6 +168,30 @@ type Car interface {
 }
 
 // endsnippet:name
+
+// snippet:namekeyword
+
+// Account shows the universal name: keyword renaming model struct fields. The
+// same keyword used on parameters and response headers also sets a property key
+// here, winning over a json tag, the legacy swagger:name annotation, and the Go
+// field name.
+//
+// swagger:model
+type Account struct {
+	// Bal has no json tag; the keyword sets the property key directly.
+	//
+	// name: balance
+	Bal float64
+
+	// Currency carries both naming forms; the keyword wins over the
+	// legacy annotation and the json tag.
+	//
+	// name: currencyCode
+	// swagger:name legacyCurrency
+	Currency string `json:"currency"`
+}
+
+// endsnippet:namekeyword
 
 // snippet:ignore
 

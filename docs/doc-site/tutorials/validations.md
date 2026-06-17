@@ -42,6 +42,17 @@ They accept the validation subset (`maximum`/`minimum`/`multipleOf`,
 plus the simple-schema-only `collectionFormat`) but **not** schema-only
 constructs. A schema-only keyword such as `readOnly` placed on a query parameter
 is simply not emitted — `spec.Parameter` has nowhere to carry it.
+
+A Go **map** field has no simple-schema representation either: on a non-body
+parameter or a response header it is skipped with a
+`validate.unsupported-in-simple-schema` warning. Maps are only representable on
+a body schema (as `object` + `additionalProperties`).
+
+An **array** element is itself a simple schema, so it may not be a `$ref`. A
+named-primitive element (`[]Label`, underlying `string`) expands inline to its
+type; an object element (`[]SomeStruct`) has no simple-schema form and dissolves
+to an empty `items: {}` with the same warning. Use a body schema for an array of
+objects.
 {{% /notice %}}
 
 The same numeric and length keywords work on a query parameter; arrays add
@@ -58,6 +69,19 @@ validation set (here `minimum` on an integer header). Note headers carry no
 
 {{< example go="concepts/validations/validations.go" goregion="header"
             json="concepts/validations/testdata/header.json" jsonlabel="responses[rateLimited]" >}}
+
+## On an object — property count and name patterns
+
+The object-validation keywords constrain a free-form object as a whole rather
+than named fields: `minProperties` / `maxProperties` bound the property count,
+and `patternProperties` permits properties whose name matches a regex. They are
+schema-only — kept on an object-typed model, stripped (with a diagnostic) on a
+scalar model or a simple-schema parameter. For dynamic-key objects, the typed
+value forms, and `additionalProperties`, see
+[Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}).
+
+{{< example go="concepts/validations/validations.go" goregion="object"
+            json="concepts/validations/testdata/object.json" jsonlabel="#/definitions/Attributes" >}}
 
 ## What's next
 

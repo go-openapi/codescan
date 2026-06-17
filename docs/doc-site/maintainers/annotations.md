@@ -17,7 +17,8 @@ attach to:
 
 - **Spec-level**: `swagger:meta`.
 - **Model declarations**: `swagger:model`, `swagger:strfmt`,
-  `swagger:enum`, `swagger:allOf`, `swagger:alias`.
+  `swagger:enum`, `swagger:allOf`, `swagger:alias`,
+  `swagger:additionalProperties`, `swagger:patternProperties`.
 - **Operation declarations**: `swagger:route`, `swagger:operation`.
 - **Companion declarations**: `swagger:parameters`, `swagger:response`.
 - **Local hints**: `swagger:ignore`, `swagger:name`, `swagger:type`,
@@ -58,6 +59,8 @@ see [grammar.md]({{% relref "grammar" %}}).
 - [`swagger:ignore`](#swaggerignore)
 - [`swagger:name`](#swaggername)
 - [`swagger:type`](#swaggertype)
+- [`swagger:additionalProperties`](#swaggeradditionalproperties)
+- [`swagger:patternProperties`](#swaggerpatternproperties)
 - [`swagger:file`](#swaggerfile)
 - [`swagger:default`](#swaggerdefault)
 
@@ -79,10 +82,16 @@ group:
 - **Type declaration** (`type T struct { … }`, `type T int`,
   `type T = Other`) — carries `swagger:model`, `swagger:strfmt`,
   `swagger:enum`, `swagger:allOf`, `swagger:alias`, `swagger:ignore`,
-  `swagger:type`.
+  `swagger:type`. Inside a grouped declaration (`type ( A …; B … )`)
+  the comment on each individual spec is honoured independently — the
+  annotation attaches to its own `TypeSpec`, not to the enclosing group —
+  so two types in one group can carry distinct docs and annotations.
 - **Function or variable declaration** (`func ServeAPI() { … }`,
   `var DoIt = func() { … }`) — carries `swagger:route`,
-  `swagger:operation`.
+  `swagger:operation`. These two are recognised whether the annotation
+  sits in the function's doc comment or **inside the function body**.
+  A `swagger:model` or `swagger:parameters` declared on a type **local
+  to a function body** is likewise discovered.
 - **Struct field doc** — carries `swagger:name`, `swagger:type`,
   `swagger:ignore`, plus any of the [keyword reference]({{% relref "keywords" %}})
   entries legal in `schema` / `param` / `header` context.
@@ -100,6 +109,15 @@ overridden because only the source-order-first annotation drives the
 short-circuit). Subsequent annotations are still parsed and visible
 via `Block.AnnotationKind()`-iteration, but the primary classifier
 determines which builder owns the decl.
+
+{{% notice style="warning" %}}
+Recognition is purely positional: **any** comment line that begins with a
+`swagger:<name>` token is treated as that annotation — even when you meant it as
+prose. A description line like `swagger:type controls the emitted type` on a
+type's doc comment is parsed as a `swagger:type` annotation. Keep annotation
+names mid-sentence in descriptions (`The swagger:type directive …`) or wrap them
+in backticks so the line does not *start* with the token.
+{{% /notice %}}
 
 ## Annotation argument shapes
 
@@ -164,7 +182,9 @@ package petstore
 (`schemes`, `version`, `host`, `basePath`, `license`, `contact`) plus
 the meta-scope [body keywords]({{% relref "keywords#body-keywords" %}})
 (`consumes`, `produces`, `security`, `securityDefinitions`,
-`extensions`, `infoExtensions`, `tos`, `externalDocs`).
+`extensions`, `infoExtensions`, `tos`, `externalDocs`, `tags`). A
+`Tags:` block declares the spec's top-level `tags` (name, description,
+nested `externalDocs`, `x-*` extensions per tag).
 
 **Full example.** `fixtures/goparsing/spec/api.go`.
 
@@ -180,7 +200,19 @@ map, and resolves cross-references between models.
 `type T int`, `type T = Other`, …).
 
 **Argument shape.** Optional IDENT — the name the model takes in
-`definitions`. Default: the Go type's name.
+`definitions`. Default: the Go type's name. The name must be a plain
+identifier (a JSON label), not a Go-qualified name — a dotted name such
+as `utils.Error` is rejected with a warning and dropped. Cross-package
+types are resolved automatically, so reference a model by its bare name.
+
+**Ordering.** The descriptive prose must come **before** the
+`swagger:model` line. The title/description split follows a heuristic:
+a single-line comment **ending in a period** becomes the `title`; a
+single-line comment **without** a trailing period becomes the
+`description`; a **multi-line** comment uses the first line as `title`
+and the remaining paragraphs as `description`. An annotation-first block
+(the `swagger:model` line ahead of the prose) still publishes the model
+but drops its title and description.
 
 **Sample.**
 
@@ -208,6 +240,11 @@ type DetailedPet struct { … }
 ```
 
 The type is published as `#/definitions/PetWithExtras`.
+
+**Multiple names on one line.** A field group declaring several names
+(`R, G, B, A uint8`) emits **one property per name**. A `json:` tag on
+such a group cannot rename the individual fields — each keeps its own
+name — though tag options still apply.
 
 **Legal keywords.** All [schema]({{% relref "keywords#schema-decorators" %}})
 keywords plus the
@@ -248,7 +285,24 @@ func (m *MAC) UnmarshalText(b []byte) error { *m = MAC(b); return nil }
 A field typed `MAC` emits as `{type: string, format: mac}`. The
 underlying `MAC` type does NOT appear as a top-level model definition
 (strfmt-tagged structs are replaced by their format at every
-reference).
+reference). A slice of the type (`[]MAC`) carries the format onto its
+items: `{type: array, items: {type: string, format: mac}}`.
+
+**With `swagger:model`.** Adding `swagger:model` to the strfmt type opts
+it into a **first-class definition** carrying the full
+`{type: string, format: …}` schema, and referencing fields point at it
+via `$ref` — the general `swagger:model ⇒ definition + $ref` rule. Without
+`swagger:model`, the format inlines at every reference as above.
+
+**Field-level override.** `swagger:strfmt` may also sit on a struct
+**field** doc to override just that field's published format — e.g.
+`// swagger:strfmt int64` on a `uint64` field emits
+`{type: string, format: int64}`, a precision-safe, JSON-conformant
+string encoding. (By default codescan emits Go-specific integer formats
+for unsized/large ints — `uint64` → `{integer, format: uint64}`,
+`uint32` → `{integer, format: uint32}`. These vendor formats round-trip
+back to Go but are not part of the Swagger 2.0 format set; the
+`swagger:strfmt int64` string override is the conformant alternative.)
 
 **Legal keywords.** None at the type level beyond `swagger:strfmt`
 itself; the format name is the entire surface.
@@ -325,6 +379,7 @@ not on a `Priority` definition:
     "type": "object",
     "properties": {
       "priority": {
+        "description": "Priority is the task's urgency.\nlow PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon.",
         "type": "string",
         "enum": ["low", "medium", "high"],
         "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon."
@@ -333,6 +388,12 @@ not on a `Priority` definition:
   }
 }
 ```
+
+By default the const→value mapping is folded into the property's
+`description` (as above) **and** duplicated in `x-go-enum-desc`. Set the
+scanner option `SkipEnumDescriptions: true` to keep the authored prose as
+the description; the mapping then rides `x-go-enum-desc` only. See
+[Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions" %}}).
 
 **Legal keywords.** Schema-context keywords. The `enum:` keyword can
 ALSO be used inline on the type doc to force a value set; when present,
@@ -396,6 +457,13 @@ Produces:
 
 **Legal keywords.** Schema-context keywords on the inline-object
 member (the second `allOf` element).
+
+**Inside a response body.** The same composition applies when the
+embedding struct is a `swagger:response` body. The embedded base emits
+an `allOf: [{$ref}, …]` arm **only when it is a `swagger:model`** — i.e.
+a definition exists to point at. If the embedded type is itself a
+`swagger:response` (which has no definition), its fields are inlined
+instead of producing a `$ref`.
 
 **Full example.** `fixtures/enhancements/allof-edges/types.go`.
 
@@ -510,7 +578,9 @@ func ListPets() {}
 **Legal keywords.** All
 [body keywords]({{% relref "keywords#body-keywords" %}}) legal in route context
 (`consumes`, `produces`, `schemes`, `security`, `parameters`,
-`responses`, `extensions`) plus inline `deprecated:`.
+`responses`, `extensions`, `externalDocs`) plus inline `deprecated:` and a
+body `tags:` list (a string list, unioned and deduplicated with the
+header-line tags). The same applies to `swagger:operation`.
 
 The `Parameters:` and `Responses:` sub-languages are documented in
 [sub-languages.md §parameters]({{% relref "sub-languages#parameters" %}}) and
@@ -581,12 +651,36 @@ or more operations. Each field of the struct becomes one parameter
 on the named operation(s). The field's doc comment carries the
 parameter's `in:`, `required:`, validation, and description.
 
-**Where it goes.** On a struct declaration.
+Each parameter's **name** comes from the field's `json:` tag, falling
+back to the Go field name when there is no tag. The `form:` tag is not
+consulted — add a `json:` tag to control the parameter name (a
+`form:"sort_key"` tag alone leaves the name as the Go identifier). A
+`name:` keyword in the field doc takes precedence over both, setting the
+parameter name explicitly — it is the [universal field-naming
+keyword]({{% relref "/maintainers/keywords#name" %}}) and is canonical
+here. (The `swagger:name` *annotation* is the legacy form for model
+properties and interface methods; in a parameter context it is inert and
+now emits a `context-invalid` diagnostic pointing you at `name:`.)
+
+**Where it goes.** On a struct declaration. A bare slice variable
+(`var Filters []string`) carries no `in:`/`type:`/`required:` per
+field, so it cannot drive parameter generation — parameters must be a
+struct.
 
 **Argument shape.** Required IDENTs — the operation IDs this
 parameters set applies to. At least one. The same operation ID may
 appear in multiple `swagger:parameters` annotations to compose a
-parameter set from several structs.
+parameter set from several structs. Conversely, **one struct may carry
+several `swagger:parameters` lines**, each listing a different subset of
+operation IDs — the lists accumulate, so a long operation-ID list can be
+split across multiple annotation lines for readability.
+
+**Across packages.** The struct need not sit in the same package as the
+`swagger:route` or `swagger:operation` it serves. `swagger:parameters`
+(and `swagger:response`) declarations are collected across **all scanned
+packages** and matched to operations by operation ID — so a shared
+parameter set can live in its own package, as long as that package is in
+the scan set.
 
 **Sample.**
 
@@ -641,7 +735,22 @@ The struct's fields contribute the response shape:
   body schema. The body may be a struct, a `$ref`'d model, **or a
   primitive** — e.g. `Body string` emits `schema: {type: string}` and
   `Body []int` emits `schema: {type: array, items: {type: integer}}`.
-- Other fields carrying `in: header` become response headers.
+- Other fields carrying `in: header` become response headers. A field
+  with **neither** `Body`/`in: body` nor `in: header` is treated as a
+  response **header** by default, not as a body property — so for a body
+  schema, name the field `Body` or mark it `in: body`. The header's key
+  comes from the `json:` tag / Go field name, or a `name:` keyword in the
+  field doc (e.g. `name: X-Rate-Limit`) to set it explicitly.
+- An **anonymously embedded** struct marked `in: body` *is* the body —
+  the embedded type becomes the body schema (a `$ref` to the model),
+  exactly like a named `Body Foo` field, rather than promoting its fields.
+  (The same holds for `swagger:parameters`: an `in: body` embed yields the
+  single body parameter.)
+
+An `interface{}` / `any`-typed field (or a slice `[]any`) emits an empty
+schema — `{}` for a scalar field, `{type: array, items: {}}` for a
+slice. An empty schema means "any type" and is valid OpenAPI 2.0; this is
+intentional, not a missing type.
 
 **Where it goes.** On a struct declaration.
 
@@ -734,9 +843,21 @@ want the decl excluded.
 **What it does.** Overrides the JSON property name that a struct
 field or interface method renders as. By default the scanner derives
 names from `json:"…"` struct tags (or the Go identifier for fields /
-methods with no tag); `swagger:name` is the per-field override when
+methods with no tag); `swagger:name` overrides that derivation when
 the tag-based shape isn't appropriate — typically on **interface
 methods**, which cannot carry struct tags.
+
+{{% notice style="note" %}}
+`swagger:name` is the **legacy** annotation form. The canonical,
+universal field-naming mechanism is the
+[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}), which
+works at *every* field site — model properties, interface methods,
+parameters, and response headers — with the precedence `name:` >
+`swagger:name` > `json:` tag > Go field name. `swagger:name` remains
+honoured (and idiomatic on interface methods, shown below), but reach
+for `name:` in new code; it is the only form that works on parameters
+and headers.
+{{% /notice %}}
 
 **Where it goes.** On a struct field doc OR an interface method doc.
 
@@ -771,15 +892,40 @@ property `FullName` (PascalCase). The annotation renames it to
 
 ## `swagger:type`
 
-**What it does.** Overrides the inferred Swagger type for a named
-type or struct field. The Go type's natural inference (struct →
-object, named string → string, `time.Time` → date-time, …) is
-replaced with the annotation's argument.
+**What it does.** Replaces a field's (or named type's) inferred Swagger
+type with an **inlined** type. `swagger:type` is an inline directive — it
+never emits a `$ref`; the chosen type is rendered directly in place
+(the default `$ref`-for-named-types is the *no-annotation* behaviour).
 
-**Where it goes.** On a type declaration OR a struct field doc.
+**Where it goes.** On a type declaration, a struct field doc, OR a
+`swagger:parameters` field doc.
 
-**Argument shape.** Required IDENT — the Swagger type name (`string`,
-`integer`, `number`, `boolean`, `array`, `object`).
+{{% notice style="note" %}}
+**On a parameter field** the override collapses the field to a simple
+parameter — useful when a struct- or defined-typed field would otherwise
+come out typeless (invalid Swagger 2.0). The argument is restricted to a
+**scalar** or a **`[]`-wrapped scalar** there: the `inline` and
+type-name forms are rejected with a diagnostic, since a non-body
+parameter has no schema to inline a type into. A compatible
+`swagger:strfmt` on the same field still rides as a supplementary
+format.
+{{% /notice %}}
+
+**Argument shape.** Required token, one of:
+
+- a **scalar type** — `string`, `integer`, `number`, `boolean`, `object`
+  (or a Go-builtin spelling such as `int64`, `uint32`);
+- **`[]T`** — an array whose items are the inlined `T` (recursive:
+  `[][]int64`, `[]Custom`);
+- **`inline`** — expand the field's own Go type in place, instead of the
+  `$ref` a named type would otherwise produce;
+- a **known type name** — inline that type's schema (again, no `$ref`).
+
+`array` is **deprecated** — use `inline`, or `[]T` for an explicit element
+type; it still works, with a `validate.deprecated` warning. `file` is
+rejected with a diagnostic (use [`swagger:file`](#swaggerfile)). An unknown
+name falls back to inlining the field's Go type, with a
+`validate.unsupported-type` diagnostic.
 
 **Sample (type-level override):**
 
@@ -804,11 +950,111 @@ type Document struct {
 }
 ```
 
-**Interaction:** when combined with `swagger:strfmt` on the same
-type, both apply — the strfmt format goes onto the published
-`{type: string, format: …}`.
+**Interaction with `swagger:strfmt`.** `swagger:type` wins on the type
+axis; a `swagger:strfmt` format on the same field is kept only when
+**compatible** with the resolved type — a `string` accepts any format,
+the numeric types accept the numeric width formats — otherwise it is
+dropped with a shape-mismatch diagnostic. `swagger:strfmt` *alone* is
+unchanged: it still forces the string-encoded `{type: string, format: …}`.
+
+**Interaction with `swagger:model`.** On a *type declaration* that also
+carries `swagger:model`, the override shapes the type's **first-class
+definition** (e.g. `swagger:type string` + `swagger:model` → a
+`{type: string}` definition) and referencing fields `$ref` it — the
+`swagger:model ⇒ definition + $ref` rule. The field-level inline form
+above is the behaviour *without* `swagger:model`.
 
 **Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
+
+---
+
+## `swagger:additionalProperties`
+
+**What it does.** Sets a schema's `additionalProperties` — the policy for
+keys beyond the named properties. On a struct it **complements** the
+named properties; on a map type it **overrides** the element-derived
+value schema; on a type that resolved to a bare `$ref` it **defines** a
+clean object. See the
+[Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}})
+tutorial.
+
+**Where it goes.** On a type declaration (alongside `swagger:model`). A
+field-level equivalent exists as the
+[`additionalProperties:` keyword]({{% relref "/maintainers/keywords#additionalproperties" %}}).
+
+**Argument shape.** Required token, one of:
+
+- **`true`** — allow arbitrary extra keys (`additionalProperties: true`);
+- **`false`** — forbid extra keys, closing the object
+  (`additionalProperties: false`);
+- a **value type** — a primitive / Go-builtin / `[]T`, or a **known type
+  name** (which resolves to a `$ref`, and is registered for discovery).
+  This reuses the [`swagger:type`](#swaggertype) value grammar, except a
+  type name becomes a `$ref` rather than an inline expansion.
+
+**Sample.**
+
+```go
+// Settings is an open object: named properties plus typed extra values.
+//
+// swagger:model
+// swagger:additionalProperties integer
+type Settings struct {
+	Name string `json:"name"`
+}
+```
+
+**Precedence — lowest priority.** `additionalProperties` only rides on an
+`object`. If a prior rule fixed a non-object type (a `swagger:type`
+scalar, `swagger:strfmt`, a special type), the marker is dropped with a
+`CodeShapeMismatch` diagnostic. It composes with `maxProperties` /
+`minProperties` / `patternProperties`. It has no OAS-2 SimpleSchema form,
+so it never applies on a non-body parameter or response header.
+
+**Full example.** `fixtures/enhancements/additional-properties/api.go`.
+
+---
+
+## `swagger:patternProperties`
+
+**What it does.** Adds **typed** `patternProperties` entries — each maps a
+property-name regex to a value schema. It is the typed counterpart of the
+regex-only [`patternProperties:` keyword]({{% relref "/maintainers/keywords#patternproperties" %}})
+(which uses an empty, any-value schema).
+
+{{% notice style="note" %}}
+`patternProperties` is a JSON-Schema (draft-4) keyword, **beyond the
+Swagger 2.0 subset**. codescan emits it ungated — your downstream tooling
+must understand it.
+{{% /notice %}}
+
+**Where it goes.** On a type declaration (alongside `swagger:model`).
+
+**Argument shape.** A comma-separated list of `"<regex>": <spec>` pairs.
+The regex is **double-quoted** (it may contain spaces, colons, commas;
+only `\"` is an escape inside it — other backslashes like `\d` are
+preserved). Each `<spec>` reuses the value grammar above (primitive /
+`[]T` / type-name → `$ref`).
+
+**Sample.**
+
+```go
+// Headers carries x-prefixed string values and numeric-keyed counters.
+//
+// swagger:model
+// swagger:patternProperties "^x-": string, "^\d+$": integer
+type Headers struct {
+	Known string `json:"known"`
+}
+```
+
+**Precedence.** Same lowest-priority, object-only rule as
+`swagger:additionalProperties`. Each regex is RE2-hygiene-checked: one
+that does not compile raises a `CodeInvalidAnnotation` warning but is
+**preserved**; a structurally malformed pair list is dropped with a
+diagnostic.
+
+**Full example.** `fixtures/enhancements/pattern-properties-typed/api.go`.
 
 ---
 
@@ -896,6 +1142,8 @@ contracts.
 | `swagger:ignore` | — | — | — | — | — | — | — |
 | `swagger:name` | — | — | — | — | — | — | — |
 | `swagger:type` | — | — | — | — | — | — | — |
+| `swagger:additionalProperties` | — | ✅ (object schema) | — | — | — | — | — |
+| `swagger:patternProperties` | — | ✅ (object schema) | — | — | — | — | — |
 | `swagger:file` | — | — | — | — | — | — | — |
 | `swagger:default` | — | — | — | — | — | — | — |
 

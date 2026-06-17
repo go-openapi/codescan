@@ -40,7 +40,7 @@ swaggerSpec, err := codescan.Run(&codescan.Options{
 })
 ```
 
-See [getting started](../../usage/getting-started/) for a worked example.
+See [getting started](../../getting-started/) for a worked example.
 
 ## Change log
 

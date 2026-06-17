@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "title": "TypedObject complements its named property with typed (integer) extra values.",
+  "properties": {
+    "a": {
+      "type": "string",
+      "x-go-name": "A"
+    }
+  },
+  "additionalProperties": {
+    "type": "integer"
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

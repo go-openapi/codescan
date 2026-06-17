@@ -1,0 +1,24 @@
+{
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "oauth2": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://example.com/auth",
+      "tokenUrl": "https://example.com/token",
+      "scopes": {
+        "read": "read reports",
+        "write": "write reports"
+      }
+    }
+  }
+}

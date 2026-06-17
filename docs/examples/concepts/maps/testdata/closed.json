@@ -1,0 +1,17 @@
+{
+  "description": "ClosedObject forbids any key beyond its named properties: the marker false\ncloses the object.",
+  "type": "object",
+  "properties": {
+    "a": {
+      "type": "string",
+      "x-go-name": "A"
+    },
+    "b": {
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "B"
+    }
+  },
+  "additionalProperties": false,
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

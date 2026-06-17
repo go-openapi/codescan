@@ -1,0 +1,12 @@
+{
+  "description": "LoginResult composes UserSummary with AuthToken via swagger:allOf, so the\nresponse body is the union of both models — a way to wrap a response with an\nadded payload without an open Data field. The body renders as\nallOf:[{$ref:UserSummary},{$ref:AuthToken}].",
+  "allOf": [
+    {
+      "$ref": "#/definitions/UserSummary"
+    },
+    {
+      "$ref": "#/definitions/AuthToken"
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/genericenvelopes"
+}

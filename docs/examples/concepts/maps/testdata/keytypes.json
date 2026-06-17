@@ -1,0 +1,24 @@
+{
+  "description": "Lookups shows which Go map keys survive. A key is usable when encoding/json\ncan stringify it: string kinds, every integer/unsigned kind, and types\nimplementing encoding.TextMarshaler. Other keys (float, bool, struct without\nTextMarshaler) are dropped with a diagnostic.",
+  "type": "object",
+  "properties": {
+    "byCode": {
+      "description": "ByCode is keyed by an integer — JSON stringifies it, so the map is still\nan object with additionalProperties.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "x-go-name": "ByCode"
+    },
+    "byName": {
+      "description": "ByName is keyed by a plain string.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "x-go-name": "ByName"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

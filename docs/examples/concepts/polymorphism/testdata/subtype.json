@@ -1,0 +1,19 @@
+{
+  "description": "Cat is a Pet subtype. `swagger:allOf` composes it as\n`allOf: [ $ref Pet, {its own fields} ]` — the composition Swagger 2.0\npolymorphism builds on.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Pet"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "huntingSkill": {
+          "description": "HuntingSkill is how the cat hunts.",
+          "type": "string",
+          "x-go-name": "HuntingSkill"
+        }
+      }
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/polymorphism"
+}

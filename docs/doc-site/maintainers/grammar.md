@@ -130,6 +130,8 @@ are emitted as separate terminals.
 | `ANN_IGNORE` | `swagger:ignore` |
 | `ANN_DEFAULT` | `swagger:default` |
 | `ANN_TYPE` | `swagger:type` |
+| `ANN_ADDITIONAL_PROPERTIES` | `swagger:additionalProperties` |
+| `ANN_PATTERN_PROPERTIES` | `swagger:patternProperties` |
 | `ANN_FILE` | `swagger:file` |
 
 #### Argument terminals

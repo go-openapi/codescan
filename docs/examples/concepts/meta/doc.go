@@ -20,6 +20,36 @@
 //	Produces:
 //	  - application/json
 //
+//	ExternalDocs:
+//	  description: Full API guide
+//	  url: https://example.com/docs
+//
+//	Tags:
+//	- name: pets
+//	  description: Everything about your Pets
+//	  externalDocs:
+//	    description: Find out more
+//	    url: https://example.com/docs/pets
+//	- name: store
+//	  description: Access to Petstore orders
+//	  x-display-name: Store
+//
+//	SecurityDefinitions:
+//	  basic_auth:
+//	    type: basic
+//	  api_key:
+//	    type: apiKey
+//	    in: header
+//	    name: X-API-Key
+//
+//	Security:
+//	  basic_auth:
+//
+//	InfoExtensions:
+//	  x-logo:
+//	    url: https://example.com/logo.png
+//	    altText: Example
+//
 // swagger:meta
 package meta
 

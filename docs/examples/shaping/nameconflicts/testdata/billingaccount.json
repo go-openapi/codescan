@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Account is the billing view of a customer account.",
+  "properties": {
+    "balance": {
+      "description": "the current balance, in minor units",
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "Balance"
+    },
+    "currency": {
+      "description": "the ISO-4217 currency code",
+      "type": "string",
+      "x-go-name": "Currency"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/nameconflicts/billing"
+}

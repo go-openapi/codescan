@@ -1,0 +1,19 @@
+[
+  {
+    "type": "string",
+    "x-go-name": "After",
+    "description": "After is an opaque cursor carried as a plain string query parameter.",
+    "name": "after",
+    "in": "query"
+  },
+  {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "x-go-name": "Sort",
+    "description": "Sort is a list of sort keys carried as an array-of-string query parameter.",
+    "name": "sort",
+    "in": "query"
+  }
+]

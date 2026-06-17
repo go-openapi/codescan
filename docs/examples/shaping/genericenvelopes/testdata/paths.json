@@ -1,0 +1,36 @@
+{
+  "/status": {
+    "get": {
+      "description": "Returns the service status wrapped in the generic envelope. The response is\ndeclared as the doc-only StatusEnvelope, so data is the concrete StatusReport\nrather than an open schema.",
+      "tags": [
+        "status"
+      ],
+      "operationId": "getStatus",
+      "responses": {
+        "200": {
+          "description": "the status envelope",
+          "schema": {
+            "$ref": "#/definitions/StatusEnvelope"
+          }
+        }
+      }
+    }
+  },
+  "/users/{id}": {
+    "get": {
+      "tags": [
+        "users"
+      ],
+      "summary": "Returns a user wrapped in the same envelope, specialised to UserSummary.",
+      "operationId": "getUser",
+      "responses": {
+        "200": {
+          "description": "the user envelope",
+          "schema": {
+            "$ref": "#/definitions/UserEnvelope"
+          }
+        }
+      }
+    }
+  }
+}
