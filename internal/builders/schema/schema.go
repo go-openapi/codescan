@@ -35,6 +35,7 @@ type Builder struct {
 	discovered     []*scanner.EntityDecl
 	methodMangler  mangling.NameMangler // see [§method-mangler](./README.md#method-mangler).
 	skipExtensions bool
+	emitXGoType    bool // stamp x-go-type on definitions; see [§traceability](./README.md#traceability).
 
 	// Embed-recursion depth for ambiguous-embed diagnostics;
 	// see [§embed-depth](./README.md#embed-depth).
@@ -55,6 +56,7 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 		Builder:        common.New(ctx, decl),
 		methodMangler:  mangling.NewNameMangler(),
 		skipExtensions: ctx.SkipExtensions(),
+		emitXGoType:    ctx.EmitXGoType(),
 	}
 }
 
@@ -553,6 +555,12 @@ func (s *Builder) buildFromMap(titpe *types.Map, tgt ifaces.SwaggerTypable) erro
 // annotateSchema returns a deferrable that decorates schema with x-go-name / x-go-package traceability extensions,
 // unless the schema is just a $ref, in which case the source origin is the target's definition,
 // not the reference site.
+//
+// When Options.EmitXGoType is set it also stamps x-go-type with the
+// fully-qualified Go type — but only if a recognizer hasn't already set it
+// (the special-type cases for `error` / the generic fallback carry their own
+// deliberate value, which we must not clobber). See
+// [§traceability](./README.md#traceability).
 func (s *Builder) annotateSchema(schema *oaispec.Schema) func() {
 	return func() {
 		if schema.Ref.String() != "" {
@@ -562,6 +570,11 @@ func (s *Builder) annotateSchema(schema *oaispec.Schema) func() {
 			resolvers.AddExtension(&schema.VendorExtensible, "x-go-name", s.GoName, s.skipExtensions)
 		}
 		resolvers.AddExtension(&schema.VendorExtensible, "x-go-package", s.Decl.Obj().Pkg().Path(), s.skipExtensions)
+		if s.emitXGoType {
+			if _, exists := schema.Extensions["x-go-type"]; !exists {
+				resolvers.AddExtension(&schema.VendorExtensible, "x-go-type", s.Decl.Obj().Pkg().Path()+"."+s.GoName, s.skipExtensions)
+			}
+		}
 	}
 }
 

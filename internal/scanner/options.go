@@ -96,6 +96,23 @@ type Options struct {
 	// nested shape for the over-budget tail.
 	EmitHierarchicalNames bool
 
+	// EmitXGoType stamps an `x-go-type` vendor extension on every emitted
+	// definition, recording the fully-qualified originating Go type
+	// (`<package path>.<type name>`) alongside the existing `x-go-name` /
+	// `x-go-package` traceability extensions.
+	//
+	//   - false (default): no `x-go-type` is emitted for ordinary types
+	//     (the extension still appears on the narrow special-type cases
+	//     that have always carried it — `error`, the unmodellable
+	//     generic-type fallback).
+	//   - true: each definition carries `x-go-type`, useful for
+	//     round-tripping a generated spec back to its source Go types.
+	//
+	// Under the SkipExtensions umbrella: with SkipExtensions also set,
+	// no vendor extension is emitted regardless. See
+	// go-swagger/go-swagger#2924.
+	EmitXGoType bool
+
 	Debug bool // enable verbose debug logging during scanning
 
 	// OnDiagnostic, when non-nil, is invoked for every diagnostic the

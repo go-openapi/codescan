@@ -87,6 +87,10 @@ func (s *ScanCtx) SkipEnumDescriptions() bool {
 	return s.opts.SkipEnumDescriptions
 }
 
+func (s *ScanCtx) EmitXGoType() bool {
+	return s.opts.EmitXGoType
+}
+
 func (s *ScanCtx) DescWithRef() bool {
 	return s.opts.DescWithRef
 }

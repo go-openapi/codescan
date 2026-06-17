@@ -22,6 +22,7 @@ trade-offs, and known quirks live here.
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
+- [§traceability](#traceability) — `x-go-name` / `x-go-package` / `x-go-type` origin extensions and `EmitXGoType`
 - [§additional-properties](#additional-properties) — the `swagger:additionalProperties` decl-level marker
 - [§pattern-properties](#pattern-properties) — the typed `swagger:patternProperties` decl-level marker
 - [§ref-override](#ref-override) — `applyToRefField`, the allOf-on-$ref shape, `refOverrideCollector`, `applyPattern`
@@ -758,6 +759,31 @@ would otherwise emit. Currently only `recognizeError` writes one
 consult `skipExt`. All eight schema-internal call sites pass
 `s.skipExtensions` so the recognizer subsystem honours the same
 `SkipExtensions` flag as the rest of the builder.
+
+---
+
+## <a id="traceability"></a>§traceability — `x-go-*` origin extensions and `EmitXGoType`
+
+`annotateSchema` (`schema.go`) decorates each emitted **definition** with
+scanner-derived origin metadata, deferred so it runs after the type is built:
+
+- `x-go-name` — the Go identifier, emitted only when it differs from the
+  spec definition name (`s.Name != s.GoName`).
+- `x-go-package` — the originating package import path.
+- `x-go-type` — the fully-qualified Go type (`<package path>.<type name>`),
+  **opt-in** behind `Options.EmitXGoType` (go-swagger#2924). Useful for
+  round-tripping a generated spec back to its source types.
+
+All three pass through `resolvers.AddExtension(..., s.skipExtensions)`, so
+`SkipExtensions` suppresses the whole family.
+
+`x-go-type` predates the option as a narrow type-rendering signal: the
+generic `PkgForType` fallback (`special_types.go`) and `recognizeError`
+stamp it deliberately to record an otherwise-unmodellable type. The
+`annotateSchema` stamp is **presence-guarded** (`if _, exists :=
+schema.Extensions["x-go-type"]; !exists`) so it never clobbers a value a
+recognizer already chose — for ordinary types the recognizer leaves it
+unset and the option supplies it.
 
 ---
 
