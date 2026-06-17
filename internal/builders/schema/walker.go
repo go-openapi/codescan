@@ -253,15 +253,14 @@ func (c *refOverrideCollector) onString(p grammar.Property, val string) {
 		handlers.ApplyPatternProperties(p, c.valid, val, c.builder.RecordDiagnostic)
 		c.markValidation()
 	case grammar.KwDefault:
-		if v, err := validations.ParseDefault(val, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetDefault(v)
-			c.markValidation()
-		}
+		// The $ref override arm carries no Type of its own, so a JSON
+		// object/array literal is coerced structurally here rather than
+		// type-driven via ParseDefault (quirk G3).
+		c.valid.SetDefault(validations.CoerceJSONOrString(val))
+		c.markValidation()
 	case grammar.KwExample:
-		if v, err := validations.ParseDefault(val, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetExample(v)
-			c.markValidation()
-		}
+		c.valid.SetExample(validations.CoerceJSONOrString(val))
+		c.markValidation()
 	case grammar.KwEnum:
 		c.valid.SetEnum(val)
 		c.markValidation()
@@ -285,15 +284,12 @@ func (c *refOverrideCollector) onExtension(ext grammar.Extension) {
 func (c *refOverrideCollector) onRaw(p grammar.Property) {
 	switch p.Keyword.Name {
 	case grammar.KwDefault:
-		if v, err := validations.ParseDefault(p.Value, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetDefault(v)
-			c.markValidation()
-		}
+		// See onString: type-unknown override arm → JSON-literal coercion.
+		c.valid.SetDefault(validations.CoerceJSONOrString(p.Value))
+		c.markValidation()
 	case grammar.KwExample:
-		if v, err := validations.ParseDefault(p.Value, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetExample(v)
-			c.markValidation()
-		}
+		c.valid.SetExample(validations.CoerceJSONOrString(p.Value))
+		c.markValidation()
 	case grammar.KwEnum:
 		c.valid.SetEnum(p.Value)
 		c.markValidation()

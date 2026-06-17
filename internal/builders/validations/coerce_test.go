@@ -104,6 +104,29 @@ func TestCoerceValue_FormatPrecedenceQuirk(t *testing.T) {
 	assert.Equal(t, "1.5", got, "v1 Format-wins quirk: raw string returned for unrecognized 'float'")
 }
 
+func TestCoerceJSONOrString(t *testing.T) {
+	// JSON object/array literals parse structurally (quirk G3: the
+	// $ref override arm has no Type to dispatch on).
+	assert.Equal(t, map[string]any{"k": "v"}, validations.CoerceJSONOrString(`{"k":"v"}`))
+	assert.Equal(t, map[string]any{"name": "Rex"}, validations.CoerceJSONOrString(`  {"name":"Rex"}  `))
+	assert.Equal(t, []any{float64(1), float64(2)}, validations.CoerceJSONOrString(`[1,2]`))
+	assert.Equal(t, []any{map[string]any{"v": "a"}}, validations.CoerceJSONOrString(`[{"v":"a"}]`))
+
+	// A malformed JSON literal falls back to the (unquoted) string.
+	assert.Equal(t, "{not json", validations.CoerceJSONOrString("{not json"))
+
+	// Non-JSON scalars are left as plain strings; surrounding double
+	// quotes are stripped (mirroring CoerceValue's string arm).
+	assert.Equal(t, "plain-scalar", validations.CoerceJSONOrString("plain-scalar"))
+	assert.Equal(t, "quoted", validations.CoerceJSONOrString(`"quoted"`))
+	assert.Equal(t, "", validations.CoerceJSONOrString(`""`))
+
+	// Bare scalars are NOT coerced to numbers/booleans — the referenced
+	// type is unknown on the override arm.
+	assert.Equal(t, "42", validations.CoerceJSONOrString("42"))
+	assert.Equal(t, "true", validations.CoerceJSONOrString("true"))
+}
+
 func TestCoerceEnum_JSONArrayForm(t *testing.T) {
 	out := validations.CoerceEnum(`["low","medium","high"]`, &spec.SimpleSchema{Type: "string"})
 	assert.Equal(t, []any{"low", "medium", "high"}, out)

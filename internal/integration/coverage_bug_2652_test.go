@@ -18,9 +18,10 @@ import (
 // the override arm of an allOf compound (the #3125 shape), so the $ref and the
 // example coexist.
 //
-// Known residual (F8 / coercion family): a complex JSON example on a $ref'd
-// field is carried as a raw string ("{...}"), not a parsed object — the
-// override arm has no type to coerce against. Asserted as-is below.
+// A complex JSON example on a $ref'd field is coerced into a structured
+// object on the override arm — matching the direct-field path (quirk G3,
+// fixed). Previously it was carried as a raw string ("{...}") because the
+// override arm has no type to coerce against.
 func TestCoverage_Bug2652(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2652/..."},
@@ -39,8 +40,8 @@ func TestCoverage_Bug2652(t *testing.T) {
 	assert.Empty(t, pod.Ref.String(), "the $ref must not sit beside the example")
 	require.Len(t, pod.AllOf, 2)
 	assert.Equal(t, "#/definitions/LabelSelector", pod.AllOf[0].Ref.String())
-	assert.Equal(t, `{"matchLabels":{}}`, pod.AllOf[1].Example,
-		"the example is preserved (F8 residual: carried as a raw string, not a parsed object)")
+	assert.Equal(t, map[string]any{"matchLabels": map[string]any{}}, pod.AllOf[1].Example,
+		"the JSON example coerces to a structured object on the override arm (quirk G3)")
 
 	scantest.CompareOrDumpJSON(t, doc, "bugs_2652_schema.json")
 }

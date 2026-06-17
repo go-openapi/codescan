@@ -22,7 +22,9 @@
             "$ref": "#/definitions/ValueStruct"
           },
           {
-            "example": "{\"value\": 42}"
+            "example": {
+              "value": 42
+            }
           }
         ]
       }

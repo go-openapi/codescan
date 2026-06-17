@@ -35,7 +35,9 @@
               "$ref": "#/definitions/LabelSelector"
             },
             {
-              "example": "{\"matchLabels\":{}}"
+              "example": {
+                "matchLabels": {}
+              }
             }
           ],
           "x-go-name": "PodSelector"
