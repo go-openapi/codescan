@@ -1,0 +1,1560 @@
+{
+  "consumes": [
+    "application/json",
+    "application/xml"
+  ],
+  "produces": [
+    "application/json",
+    "application/xml"
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "the purpose of this application is to provide an application\nthat is using plain go code to define an API\n\nThis should demonstrate all the possible comment annotations\nthat are available to turn go code into a fully compliant swagger 2.0 spec",
+    "title": "Petstore API.",
+    "termsOfService": "there are no TOS at this moment, use at your own risk we take no responsibility",
+    "contact": {
+      "name": "John Doe",
+      "url": "http://john.doe.com",
+      "email": "john.doe@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "http://opensource.org/licenses/MIT"
+    },
+    "version": "0.0.1",
+    "x-info-array": [
+      "value1",
+      "value2"
+    ],
+    "x-info-array-obj": [
+      {
+        "name": "obj",
+        "value": "field"
+      }
+    ],
+    "x-info-value": "value"
+  },
+  "host": "localhost",
+  "basePath": "/v2",
+  "paths": {
+    "/orders": {
+      "get": {
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "tags": [
+          "orders"
+        ],
+        "summary": "lists orders filtered by some parameters.",
+        "operationId": "listOrders",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "orders:read",
+              "https://www.googleapis.com/auth/userinfo.email"
+            ]
+          }
+        ],
+        "x-some-flag": false,
+        "x-some-list": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "x-some-object": {
+          "key1": "value1",
+          "key2": "value2",
+          "key3": "value3",
+          "subobject": {
+            "subkey1": "subvalue1",
+            "subkey2": "subvalue2"
+          }
+        }
+      },
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "tags": [
+          "orders"
+        ],
+        "summary": "create an order based on the parameters.",
+        "operationId": "createOrder",
+        "parameters": [
+          {
+            "description": "The order to submit.",
+            "name": "order",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "tags": [
+          "orders"
+        ],
+        "summary": "gets the details for an order.",
+        "operationId": "orderDetails",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "201": {
+            "$ref": "#/responses/fileResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ]
+      },
+      "put": {
+        "description": "When the order doesn't exist this will return an error.",
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "tags": [
+          "orders"
+        ],
+        "summary": "Update the details for an order.",
+        "operationId": "updateOrder",
+        "parameters": [
+          {
+            "description": "The order to submit.",
+            "name": "order",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "summary": "delete a particular order.",
+        "operationId": "deleteOrder",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "202": {
+            "description": "Some description"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ]
+      }
+    },
+    "/pets": {
+      "get": {
+        "description": "This will show all available pets by default.\nYou can get the pets that are out of stock",
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "tags": [
+          "pets",
+          "users"
+        ],
+        "summary": "Lists pets filtered by some parameters.",
+        "operationId": "listPets",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ],
+        "x-some-flag": true
+      },
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "produces": [
+          "application/json",
+          "application/x-protobuf"
+        ],
+        "schemes": [
+          "http",
+          "https",
+          "ws",
+          "wss"
+        ],
+        "tags": [
+          "pets",
+          "users"
+        ],
+        "summary": "Create a pet based on the parameters.",
+        "operationId": "createPet",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "Category": {
+      "description": "Even though this model is not annotated with anything,\nand it's not included in the initial imports\nit should still register because it's a required file for the pet model",
+      "type": "object",
+      "title": "Category represents a category for a pet\ncategories are things like: cat, dog, fish",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "description": "ID the id of the category",
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        },
+        "name": {
+          "description": "Name the name of the category",
+          "type": "string"
+        }
+      }
+    },
+    "Identifiable": {
+      "description": "Identifiable is an interface for things that have an ID",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+          "type": "integer",
+          "format": "int64",
+          "maximum": 1000,
+          "exclusiveMaximum": true,
+          "minimum": 10,
+          "exclusiveMinimum": true
+        }
+      }
+    },
+    "TeslaCar": {
+      "description": "TeslaCar is a tesla car",
+      "type": "object",
+      "properties": {
+        "autoPilot": {
+          "description": "AutoPilot returns true when it supports autopilot",
+          "type": "boolean"
+        },
+        "model": {
+          "description": "The model of tesla car\n\ndiscriminated: true",
+          "type": "string"
+        }
+      }
+    },
+    "TextMarshalModel": {
+      "description": "TextMarshalModel demostrates the use of MarshalText from different fields",
+      "type": "object",
+      "properties": {
+        "customUrl": {
+          "type": "string",
+          "format": "url"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "map": {
+          "type": "string"
+        },
+        "mapUUID": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "struct": {
+          "type": "string"
+        },
+        "structStrfmt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "structStrfmtPtr": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "url": {
+          "$ref": "#/definitions/URL"
+        }
+      }
+    },
+    "URL": {
+      "description": "The general form represented is:\n\n[scheme:][//[userinfo@]host][/]path[?query][#fragment]\n\nURLs that do not start with a slash after the scheme are interpreted as:\n\nscheme:opaque[?query][#fragment]\n\nThe Host field contains the host and port subcomponents of the URL.\nWhen the port is present, it is separated from the host with a colon.\nWhen the host is an IPv6 address, it must be enclosed in square brackets:\n\"[fe80::1]:80\". The [net.JoinHostPort] function combines a host and port\ninto a string suitable for the Host field, adding square brackets to\nthe host when necessary.\n\nNote that the Path field is stored in decoded form: /%47%6f%2f becomes /Go/.\nA consequence is that it is impossible to tell which slashes in the Path were\nslashes in the raw URL and which were %2f. This distinction is rarely important,\nbut when it is, the code should use the [URL.EscapedPath] method, which preserves\nthe original encoding of Path. The Fragment field is also stored in decoded form,\nuse [URL.EscapedFragment] to retrieve the original encoding.\n\nThe [URL.String] method uses the [URL.EscapedPath] method to obtain the path.",
+      "type": "object",
+      "title": "A URL represents a parsed URL (technically, a URI reference).",
+      "properties": {
+        "ForceQuery": {
+          "description": "ForceQuery indicates whether the original URL contained a query ('?') character.\nWhen set, the String method will include a trailing '?', even when RawQuery is empty.",
+          "type": "boolean"
+        },
+        "Fragment": {
+          "type": "string"
+        },
+        "Host": {
+          "type": "string"
+        },
+        "OmitHost": {
+          "description": "OmitHost indicates the URL has an empty host (authority).\nWhen set, the String method will not include the host when it is empty.",
+          "type": "boolean"
+        },
+        "Opaque": {
+          "type": "string"
+        },
+        "Path": {
+          "type": "string"
+        },
+        "RawFragment": {
+          "description": "RawFragment is an optional field containing an encoded fragment hint.\nSee the EscapedFragment method for more details.\n\nIn general, code should call EscapedFragment instead of reading RawFragment.",
+          "type": "string"
+        },
+        "RawPath": {
+          "description": "RawPath is an optional field containing an encoded path hint.\nSee the EscapedPath method for more details.\n\nIn general, code should call EscapedPath instead of reading RawPath.",
+          "type": "string"
+        },
+        "RawQuery": {
+          "description": "RawQuery contains the encoded query values, without the initial '?'.\nUse URL.Query to decode the query.",
+          "type": "string"
+        },
+        "Scheme": {
+          "type": "string"
+        },
+        "User": {
+          "$ref": "#/definitions/Userinfo"
+        }
+      }
+    },
+    "User": {
+      "description": "A user is the security principal for this application.\nIt's also used as one of main axis for reporting.\n\nA user can have friends with whom they can share what they like.",
+      "type": "object",
+      "title": "User represents the user for this application",
+      "required": [
+        "id",
+        "name",
+        "login"
+      ],
+      "properties": {
+        "friends": {
+          "description": "the friends for this user",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/User"
+          }
+        },
+        "id": {
+          "description": "the id for this user",
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        },
+        "login": {
+          "description": "the email address for this user",
+          "type": "string",
+          "format": "email",
+          "uniqueItems": true
+        },
+        "name": {
+          "description": "the name for this user",
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    },
+    "Userinfo": {
+      "description": "The Userinfo type is an immutable encapsulation of username and\npassword details for a [URL]. An existing Userinfo value is guaranteed\nto have a username set (potentially empty, as allowed by RFC 2396),\nand optionally a password.",
+      "type": "object"
+    },
+    "animal": {
+      "description": "it should deserialize into one of the struct types that\nenlist for being implementations of this struct",
+      "type": "object",
+      "title": "A BaseStruct is a struct that has subtypes.",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+          "type": "integer",
+          "format": "int64",
+          "maximum": 1000,
+          "exclusiveMaximum": true,
+          "minimum": 10,
+          "exclusiveMinimum": true
+        },
+        "jsonClass": {
+          "description": "StructType the type of this polymorphic model",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of this no model instance",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 4,
+          "pattern": "[A-Za-z0-9-.]*"
+        }
+      },
+      "discriminator": "jsonClass"
+    },
+    "cars": {
+      "description": "Cars is a collection of cars",
+      "type": "object",
+      "properties": {
+        "cars": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TeslaCar"
+          }
+        }
+      }
+    },
+    "color": {
+      "description": "EmbeddedColor is a color",
+      "type": "object",
+      "properties": {
+        "colorName": {
+          "type": "string"
+        }
+      }
+    },
+    "extra": {
+      "description": "ExtraInfo is an interface for things that have extra info",
+      "type": "object",
+      "properties": {
+        "extraInfo": {
+          "type": "string"
+        }
+      }
+    },
+    "fish": {
+      "description": "Fish represents a base type implemented as interface\nthe nullary methods of this interface will be included as",
+      "allOf": [
+        {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "description": "ID of this no model instance.\nids in this application start at 11 and are smaller than 1000",
+              "type": "integer",
+              "format": "int64",
+              "maximum": 1000,
+              "exclusiveMaximum": true,
+              "minimum": 10,
+              "exclusiveMinimum": true
+            }
+          }
+        },
+        {
+          "$ref": "#/definitions/water"
+        },
+        {
+          "$ref": "#/definitions/extra"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "colorName": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "jsonClass": {
+              "description": "StructType the type of this polymorphic model",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of this no model instance",
+              "type": "string",
+              "maxLength": 50,
+              "minLength": 4,
+              "pattern": "[A-Za-z0-9-.]*"
+            }
+          },
+          "discriminator": "jsonClass"
+        }
+      ]
+    },
+    "gazelle": {
+      "description": "The struct includes the BaseStruct and that embedded value\nis annotated with the discriminator value annotation so it\nwhere it only requires 1 argument because it knows which\ndiscriminator type this belongs to",
+      "title": "A Gazelle is a struct is discriminated for BaseStruct.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/animal"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "hornSize": {
+              "description": "The size of the horns",
+              "type": "number",
+              "format": "float"
+            }
+          }
+        }
+      ],
+      "x-class": "a.b.c.d.E"
+    },
+    "giraffe": {
+      "description": "the annotation is not necessary here because of inclusion\nof a discriminated type\nit infers the name of the x-class value from its context",
+      "title": "A Giraffe is a struct that embeds BaseStruct",
+      "allOf": [
+        {
+          "$ref": "#/definitions/animal"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "neckSize": {
+              "description": "NeckSize the size of the neck of this giraffe",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      ]
+    },
+    "ignoredFields": {
+      "type": "object",
+      "title": "IgnoredFields demostrates the use of swagger:ignore on struct fields.",
+      "properties": {
+        "someErroneouslyIncludedField": {
+          "description": "This swagger:ignore tag won't work - it needs to be in the field's doc\nblock",
+          "type": "string"
+        },
+        "someIncludedField": {
+          "type": "string"
+        }
+      }
+    },
+    "jsonPtrString": {
+      "type": "object",
+      "title": "JSONPtrString has fields with \",string\" JSON directives.",
+      "properties": {
+        "someBool": {
+          "description": "Should be encoded as a string with no format",
+          "type": "string"
+        },
+        "someFloat64": {
+          "description": "Should be encoded as a string with string format \"double\"",
+          "type": "string",
+          "format": "double"
+        },
+        "someInt": {
+          "description": "Should be encoded as a string with string format \"integer\"",
+          "type": "string",
+          "format": "int64"
+        },
+        "someInt16": {
+          "type": "string",
+          "format": "int16"
+        },
+        "someInt32": {
+          "type": "string",
+          "format": "int32"
+        },
+        "someInt64": {
+          "type": "string",
+          "format": "int64"
+        },
+        "someInt8": {
+          "type": "string",
+          "format": "int8"
+        },
+        "someString": {
+          "description": "Should be encoded as a string with no format",
+          "type": "string"
+        },
+        "someUint": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "someUint16": {
+          "type": "string",
+          "format": "uint16"
+        },
+        "someUint32": {
+          "type": "string",
+          "format": "uint32"
+        },
+        "someUint64": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "someUint8": {
+          "type": "string",
+          "format": "uint8"
+        },
+        "somethingElse": {
+          "description": "The \",string\" directive should be ignore before the type isn't scalar",
+          "allOf": [
+            {
+              "$ref": "#/definitions/cars"
+            }
+          ]
+        }
+      }
+    },
+    "jsonString": {
+      "type": "object",
+      "title": "JSONString has fields with \",string\" JSON directives.",
+      "properties": {
+        "SomeDefaultInt": {
+          "description": "The \",omitempty,string\" directive should be valid",
+          "type": "string",
+          "format": "int64"
+        },
+        "someBool": {
+          "description": "Should be encoded as a string with no format",
+          "type": "string"
+        },
+        "someFloat64": {
+          "description": "Should be encoded as a string with string format \"double\"",
+          "type": "string",
+          "format": "double"
+        },
+        "someInt": {
+          "description": "Should be encoded as a string with string format \"integer\"",
+          "type": "string",
+          "format": "int64"
+        },
+        "someInt16": {
+          "type": "string",
+          "format": "int16"
+        },
+        "someInt32": {
+          "type": "string",
+          "format": "int32"
+        },
+        "someInt64": {
+          "type": "string",
+          "format": "int64"
+        },
+        "someInt8": {
+          "type": "string",
+          "format": "int8"
+        },
+        "someString": {
+          "description": "Should be encoded as a string with no format",
+          "type": "string"
+        },
+        "someUint": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "someUint16": {
+          "type": "string",
+          "format": "uint16"
+        },
+        "someUint32": {
+          "type": "string",
+          "format": "uint32"
+        },
+        "someUint64": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "someUint8": {
+          "type": "string",
+          "format": "uint8"
+        },
+        "somethingElse": {
+          "description": "The \",string\" directive should be ignore before the type isn't scalar",
+          "allOf": [
+            {
+              "$ref": "#/definitions/cars"
+            }
+          ]
+        }
+      }
+    },
+    "modelA": {
+      "description": "The ModelA version of the tesla car",
+      "type": "object",
+      "properties": {
+        "Tesla": {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        "doors": {
+          "description": "The number of doors on this Model A",
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "modelS": {
+      "description": "The ModelS version of the tesla car",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "edition": {
+              "description": "The edition of this Model S",
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "x-class": "com.tesla.models.ModelS"
+    },
+    "modelX": {
+      "description": "The ModelX version of the tesla car",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "doors": {
+              "description": "The number of doors on this Model X",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      ],
+      "x-class": "com.tesla.models.ModelX"
+    },
+    "modsSomeIntType": {
+      "description": "SomeIntType is a type that refines int64",
+      "type": "integer",
+      "format": "int64"
+    },
+    "modsSomeIntsType": {
+      "description": "SomeIntsType is a type that refines []int64",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "modsSomePettedType": {
+      "description": "SomePettedType is a type that refines Pet",
+      "$ref": "#/definitions/pet"
+    },
+    "modsSomePettedsPtrType": {
+      "description": "SomePettedsPtrType is a type that refines array of mods.Pet pointers",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/pet"
+      }
+    },
+    "modsSomePettedsType": {
+      "description": "SomePettedsType is a type that refines mods.Pet",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/pet"
+      }
+    },
+    "modsSomeStringType": {
+      "description": "SomeStringType is a type that refines string",
+      "type": "string"
+    },
+    "modsSomeStringsType": {
+      "description": "SomeStringsType is a type that refines []string",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "modsSomeTimeType": {
+      "description": "SomeTimeType is a type that refines time.Time",
+      "type": "string",
+      "format": "date-time"
+    },
+    "modsSomeTimedType": {
+      "description": "SomeTimedType is a type that refines strfmt.DateTime",
+      "type": "string",
+      "format": "date-time"
+    },
+    "modsSomeTimedsType": {
+      "description": "SomeTimedsType is a type that refines strfmt.DateTime",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "modsSomeTimesType": {
+      "description": "SomeTimesType is a type that refines time.Time",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "namedMapOfStoreOrderSlices": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/order"
+        }
+      }
+    },
+    "namedStoreOrderMap": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/order"
+      }
+    },
+    "namedStoreOrderResults": {
+      "type": "object",
+      "properties": {
+        "matches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/order"
+          }
+        },
+        "records_matched": {
+          "type": "integer",
+          "format": "uint32"
+        }
+      }
+    },
+    "namedStoreOrderSlice": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/order"
+      }
+    },
+    "namedStringMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "namedStringResults": {
+      "type": "object",
+      "properties": {
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "records_matched": {
+          "type": "integer",
+          "format": "uint32"
+        }
+      }
+    },
+    "namedStringSlice": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "namedWithArrayType": {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "description": "Tags for this item.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "namedWithBadStructType": {
+      "type": "object",
+      "properties": {
+        "nested": {
+          "description": "The nested struct with an unsupported swagger:type.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/someStructWithBadType"
+            }
+          ]
+        }
+      }
+    },
+    "namedWithFixedArrayType": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "description": "Labels for this item.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "namedWithObjectStructType": {
+      "type": "object",
+      "properties": {
+        "headers": {
+          "description": "Headers for this request.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/someObjectType"
+            }
+          ]
+        }
+      }
+    },
+    "namedWithType": {
+      "type": "object",
+      "properties": {
+        "some_map": {
+          "type": "object"
+        }
+      }
+    },
+    "order": {
+      "description": "An order can either be created, processed or completed.",
+      "type": "object",
+      "title": "StoreOrder represents an order in this application.",
+      "required": [
+        "id",
+        "userId",
+        "category"
+      ],
+      "properties": {
+        "category": {
+          "description": "the category of this user",
+          "type": "string",
+          "default": "bar",
+          "enum": [
+            "foo",
+            "bar",
+            "none"
+          ]
+        },
+        "id": {
+          "description": "the id for this order",
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        },
+        "items": {
+          "description": "the items for this order",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "pet": {
+                "$ref": "#/definitions/pet"
+              },
+              "quantity": {
+                "type": "integer",
+                "format": "int16"
+              }
+            }
+          }
+        },
+        "userId": {
+          "description": "the name for this user",
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "pet": {
+      "description": "This model is not explicitly mentioned in the import paths,\nbut because it is transitively required by the order\nit should also be collected.",
+      "type": "object",
+      "title": "Pet represents a pet in our store",
+      "required": [
+        "id",
+        "name",
+        "category"
+      ],
+      "properties": {
+        "category": {
+          "description": "Category the category this pet belongs to.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Category"
+            }
+          ]
+        },
+        "id": {
+          "description": "ID the id of this pet",
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "description": "Name the name of the pet\nthis is more like the breed or race of the pet",
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    },
+    "someObjectType": {
+      "type": "object",
+      "title": "SomeObjectType is a struct with swagger:type object."
+    },
+    "someStructWithBadType": {
+      "description": "The unsupported value should be ignored and the type should fall through to $ref.",
+      "title": "SomeStructWithBadType is a struct type with an unsupported swagger:type value."
+    },
+    "user": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "ID of this some response instance.\nids in this application start at 11 and are smaller than 1000",
+          "type": "string"
+        }
+      }
+    },
+    "water": {
+      "description": "WaterType is an interface describing a water type",
+      "type": "object",
+      "properties": {
+        "saltWater": {
+          "type": "boolean"
+        },
+        "sweetWater": {
+          "type": "boolean"
+        }
+      }
+    },
+    "withNotes": {
+      "description": "it's used for embedding in another model",
+      "type": "object",
+      "title": "Notable is a model in a transitive package.",
+      "properties": {
+        "extra": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "responses": {
+    "GetConfiguration": {
+      "description": "Success",
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "NumPlatesResp": {
+      "description": "",
+      "schema": {}
+    },
+    "complexerOne": {
+      "description": "A ComplexerOne is composed of a SimpleOne and some extra fields.",
+      "headers": {
+        "NoTagName": {
+          "type": "string"
+        },
+        "age": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "extra": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "description": "ID the id of this not selected model"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name the name of this not selected model"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "complexerPointerOne": {
+      "description": "A ComplexerPointerOne is composed of a *SimpleOne and some extra fields.",
+      "headers": {
+        "age": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "extra": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "fileResponse": {
+      "description": "File response",
+      "schema": {
+        "type": "file"
+      }
+    },
+    "genericError": {
+      "description": "A GenericError is an error that is used when no other error is appropriate",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "Message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resp": {
+      "description": "Resp a response for testing",
+      "schema": {
+        "$ref": "#/definitions/user"
+      },
+      "headers": {
+        "UUID": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "simpleOnes": {
+      "description": "SimpleOnes is a collection of SimpleOne",
+      "headers": {
+        "ones": {
+          "type": "array",
+          "items": {}
+        }
+      }
+    },
+    "simpleOnesFunc": {
+      "description": "SimpleOnesFunc is a collection of SimpleOne",
+      "headers": {
+        "ones": {
+          "type": "array",
+          "items": {}
+        }
+      }
+    },
+    "someResponse": {
+      "description": "A SomeResponse is a dummy response object to test parsing.\n\nThe properties are the same as the other structs used to test parsing.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "pet",
+            "quantity"
+          ],
+          "properties": {
+            "id": {
+              "description": "ID of this some response instance.\nids in this application start at 11 and are smaller than 1000",
+              "type": "integer",
+              "format": "int32",
+              "maximum": 1000,
+              "exclusiveMaximum": true,
+              "minimum": 10,
+              "exclusiveMinimum": true
+            },
+            "notes": {
+              "description": "Notes to add to this item.\nThis can be used to add special instructions.",
+              "type": "string"
+            },
+            "pet": {
+              "description": "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/pet"
+                }
+              ]
+            },
+            "quantity": {
+              "description": "The amount of pets to add to this bucket.",
+              "type": "integer",
+              "format": "int16",
+              "maximum": 10,
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "headers": {
+        "active": {
+          "type": "boolean",
+          "default": true,
+          "description": "Active state of the record"
+        },
+        "bar_slice": {
+          "maxItems": 10,
+          "minItems": 3,
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "maxItems": 9,
+            "minItems": 4,
+            "type": "array",
+            "items": {
+              "maxItems": 8,
+              "minItems": 5,
+              "type": "array",
+              "items": {
+                "maxLength": 10,
+                "minLength": 3,
+                "pattern": "\\w+",
+                "type": "string"
+              }
+            }
+          },
+          "collectionFormat": "pipe",
+          "description": "a BarSlice has bars which are strings"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Created holds the time when this entry was created"
+        },
+        "foo_slice": {
+          "maxItems": 10,
+          "minItems": 3,
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "maxLength": 10,
+            "minLength": 3,
+            "pattern": "\\w+",
+            "type": "string",
+            "example": "foo"
+          },
+          "collectionFormat": "pipe",
+          "description": "a FooSlice has foos which are strings"
+        },
+        "id": {
+          "maximum": 1000,
+          "exclusiveMaximum": true,
+          "minimum": 10,
+          "exclusiveMinimum": true,
+          "type": "integer",
+          "format": "int64",
+          "default": 11,
+          "description": "ID of this some response instance.\nids in this application start at 11 and are smaller than 1000"
+        },
+        "score": {
+          "maximum": 45,
+          "minimum": 3,
+          "multipleOf": 3,
+          "type": "integer",
+          "format": "int32",
+          "example": 27,
+          "description": "The Score of this model"
+        },
+        "x-hdr-name": {
+          "maxLength": 50,
+          "minLength": 4,
+          "pattern": "[A-Za-z0-9-.]*",
+          "type": "string",
+          "description": "Name of this some response instance"
+        }
+      }
+    },
+    "validationError": {
+      "description": "A ValidationError is an error that is used when the required input fails validation.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "FieldName": {
+            "description": "An optional field name to which this validation applies",
+            "type": "string"
+          },
+          "Message": {
+            "description": "The validation message",
+            "type": "string"
+          }
+        }
+      },
+      "headers": {
+        "code": {
+          "enum": [
+            "foo",
+            "bar"
+          ],
+          "type": "integer",
+          "format": "int64",
+          "default": 400
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "KEY",
+      "in": "header"
+    },
+    "oauth2": {
+      "type": "oauth2",
+      "in": "header",
+      "flow": "accessCode",
+      "authorizationUrl": "/oauth2/auth",
+      "tokenUrl": "/oauth2/token",
+      "scopes": {
+        "bla1": "foo1",
+        "bla2": "foo2"
+      }
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "x-meta-array": [
+    "value1",
+    "value2"
+  ],
+  "x-meta-array-obj": [
+    {
+      "name": "obj",
+      "value": "field"
+    }
+  ],
+  "x-meta-value": "value"
+}

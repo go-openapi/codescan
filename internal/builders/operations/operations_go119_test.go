@@ -75,6 +75,4 @@ curl -u "${LOGIN}:${PASSWORD}" -d '{"key2": "value2"}' -X POST   "https://{host}
 
 	assert.MapContainsT(t, sample2, "source")
 	assert.Equal(t, expectedSource, sample2["source"])
-
-	scantest.CompareOrDumpJSON(t, ops, "go119_operations.json")
 }

@@ -30,65 +30,10 @@ const (
 	sampleValue2           = "value2"
 )
 
-func TestBuilder_Struct_Tag(t *testing.T) {
-	ctx := scantest.LoadPetstorePkgsCtx(t, false)
-
-	var td *scanner.EntityDecl
-	t.Run("should find a Tag model", func(t *testing.T) {
-		for k, v := range ctx.Models() {
-			if k.Name != "Tag" {
-				continue
-			}
-			td = v
-			break
-		}
-		require.NotNil(t, td)
-	})
-
-	prs := NewBuilder(ctx, td)
-	result := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(WithDefinitions(result)))
-
-	scantest.CompareOrDumpJSON(t, result, "petstore_schema_Tag.json")
-}
-
-func TestBuilder_Struct_Pet(t *testing.T) {
-	ctx := scantest.LoadPetstorePkgsCtx(t, false)
-	var td *scanner.EntityDecl
-	for k, v := range ctx.Models() {
-		if k.Name != "Pet" {
-			continue
-		}
-		td = v
-		break
-	}
-	require.NotNil(t, td)
-
-	prs := NewBuilder(ctx, td)
-	result := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(WithDefinitions(result)))
-
-	scantest.CompareOrDumpJSON(t, result, "petstore_schema_Pet.json")
-}
-
-func TestBuilder_Struct_Order(t *testing.T) {
-	ctx := scantest.LoadPetstorePkgsCtx(t, false)
-	var td *scanner.EntityDecl
-	for k, v := range ctx.Models() {
-		if k.Name != "Order" {
-			continue
-		}
-		td = v
-		break
-	}
-	require.NotNil(t, td)
-
-	prs := NewBuilder(ctx, td)
-	result := make(map[string]oaispec.Schema)
-	require.NoError(t, prs.Build(WithDefinitions(result)))
-
-	scantest.CompareOrDumpJSON(t, result, "petstore_schema_Order.json")
-}
+// NOTE: the per-type petstore schema snapshots (Tag / Pet / Order) moved to
+// the full-pipeline integration golden petstore_spec.json, which captures the
+// same models in their reduced form. Builder-unit tests assert properties; they
+// no longer dump whole-spec goldens. See .claude/plans/golden-unit-to-integration.md.
 
 func TestBuilder(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
@@ -311,8 +256,6 @@ func TestBuilder(t *testing.T) {
 	assert.TrueT(t, ok)
 	assert.Equal(t, pn, msch.Extensions["x-go-package"])
 	assert.Equal(t, "StoreOrder", msch.Extensions["x-go-name"])
-
-	scantest.CompareOrDumpJSON(t, models, "classification_schema_NoModel.json")
 }
 
 func TestBuilder_AddExtensions(t *testing.T) {
@@ -949,8 +892,6 @@ func TestEmbeddedAllOf(t *testing.T) {
 	scantest.AssertProperty(t, &asch, "string", "createdAt", "date-time", "CreatedAt")
 	scantest.AssertProperty(t, &asch, "integer", "did", "int64", "DID")
 	scantest.AssertProperty(t, &asch, "string", "cat", "", "Cat")
-
-	scantest.CompareOrDumpJSON(t, models, "classification_schema_AllOfModel.json")
 }
 
 func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing.T) {
@@ -988,8 +929,6 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 
 	assertModel(ctx, packagePath, "Item")
 	assertModel(ctx, packagePath, "ItemInterface")
-
-	scantest.CompareOrDumpJSON(t, allModels, "enhancements_pointers_xnullable.json")
 }
 
 // valueKeys returns the five property keys expected for the fixtures
@@ -1037,8 +976,6 @@ func TestPointersAreNotNullableByDefaultWhenSetXNullableForPointersIsNotSet(t *t
 
 	assertModel(ctx, packagePath, "Item")
 	assertModel(ctx, packagePath, "ItemInterface")
-
-	scantest.CompareOrDumpJSON(t, allModels, "enhancements_pointers_no_xnullable.json")
 }
 
 func TestSwaggerTypeNamed(t *testing.T) {
@@ -1051,8 +988,6 @@ func TestSwaggerTypeNamed(t *testing.T) {
 	schema := models[scantest.ResolveTestKey(t, models, "namedWithType")]
 
 	scantest.AssertProperty(t, &schema, "object", "some_map", "", "SomeMap")
-
-	scantest.CompareOrDumpJSON(t, models, "classification_schema_NamedWithType.json")
 }
 
 func TestSwaggerTypeNamedWithGenerics(t *testing.T) {
@@ -1109,8 +1044,6 @@ func TestSwaggerTypeStruct(t *testing.T) {
 	schema := models[scantest.ResolveTestKey(t, models, "NullString")]
 
 	assert.TrueT(t, schema.Type.Contains("string"))
-
-	scantest.CompareOrDumpJSON(t, models, "classification_schema_NullString.json")
 }
 
 func TestStructDiscriminators(t *testing.T) {
@@ -1147,8 +1080,6 @@ func TestStructDiscriminators(t *testing.T) {
 
 	// b, _ := json.MarshalIndent(sch, "", "  ")
 	// fmt.Println(string(b))
-
-	scantest.CompareOrDumpJSON(t, models, "classification_schema_struct_discriminators.json")
 }
 
 func TestInterfaceDiscriminators(t *testing.T) {
@@ -1213,8 +1144,6 @@ func TestInterfaceDiscriminators(t *testing.T) {
 
 		scantest.AssertProperty(t, &schema, "integer", "doors", "int64", "Doors")
 	}
-
-	scantest.CompareOrDumpJSON(t, models, "classification_schema_interface_discriminators.json")
 }
 
 func getClassificationModel(ctx *scanner.ScanCtx, nm string) *scanner.EntityDecl {
@@ -1537,8 +1466,6 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	// arm, matching the direct-field path (quirk G3) — it was previously
 	// carried as the raw string `{"value": 42}`.
 	assert.Equal(t, map[string]any{"value": float64(42)}, v2.AllOf[1].Example)
-
-	scantest.CompareOrDumpJSON(t, models, "bugs_3125_schema.json")
 }
 
 // TestEmbeddedDescriptionAndTags_OptionVariants captures the
@@ -1559,15 +1486,14 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 // semantics described in scanner.Options.
 func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 	cases := []struct {
-		name       string
-		skipExt    bool
-		descRef    bool
-		goldenFile string
+		name    string
+		skipExt bool
+		descRef bool
 	}{
-		{"default", false, false, "bugs_3125_schema.json"},
-		{"DescWithRef", false, true, "bugs_3125_schema_descwithref.json"},
-		{"SkipExt", true, false, "bugs_3125_schema_skipext.json"},
-		{"SkipExt+DescWithRef", true, true, "bugs_3125_schema_skipext_descwithref.json"},
+		{"default", false, false},
+		{"DescWithRef", false, true},
+		{"SkipExt", true, false},
+		{"SkipExt+DescWithRef", true, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1583,7 +1509,30 @@ func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 			prs := NewBuilder(ctx, decl)
 			models := make(map[string]oaispec.Schema)
 			require.NoError(t, prs.Build(WithDefinitions(models)))
-			scantest.CompareOrDumpJSON(t, models, tc.goldenFile)
+			schema := models[scantest.ResolveTestKey(t, models, "Item")]
+
+			require.MapContainsT(t, schema.Properties, sampleValue1)
+			v1 := schema.Properties[sampleValue1]
+
+			// Both fields have overrides → the allOf compound persists in
+			// every option combination.
+			require.NotEmpty(t, v1.AllOf, "overrides always wrap in allOf")
+			assert.Empty(t, v1.Ref.String(), "outer schema must not carry the ref directly")
+
+			// User-authored x-nullable survives regardless of SkipExtensions.
+			assert.Equal(t, true, v1.Extensions["x-nullable"])
+
+			if tc.skipExt {
+				// SkipExtensions suppresses scanner-derived metadata.
+				assert.MapNotContainsT(t, v1.Extensions, "x-go-name")
+				assert.MapNotContainsT(t, v1.Extensions, "x-go-package")
+			} else {
+				assert.Equal(t, "Value1", v1.Extensions["x-go-name"])
+			}
+
+			// DescWithRef only governs the description-only-no-override case;
+			// here both fields keep their descriptions on the outer compound.
+			assert.EqualT(t, "Nullable value", v1.Description)
 		})
 	}
 }
