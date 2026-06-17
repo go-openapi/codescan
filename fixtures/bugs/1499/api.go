@@ -14,6 +14,13 @@ type foo struct {
 	// in: query
 	// swagger:type string
 	Bar Bar `json:"bar"`
+
+	// A []-array override collapses the Go struct slice to a simple
+	// array-of-string query parameter (go-swagger#1499).
+	//
+	// in: query
+	// swagger:type []string
+	Bars []Bar `json:"bars"`
 }
 
 // swagger:route GET /foo foo someOperation
