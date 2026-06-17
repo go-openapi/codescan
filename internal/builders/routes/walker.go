@@ -76,7 +76,8 @@ var responseBodyReservedTypes = map[string]struct{}{
 // grammar sees it as an UnboundBlock whose Title / Description /
 // Properties behave identically to a properly-anchored block.
 func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
-	block := grammar.NewParser(r.Ctx.FileSet()).Parse(r.route.Remaining)
+	block := grammar.NewParser(r.Ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(r.Ctx.SingleLineCommentAsDescription())).Parse(r.route.Remaining)
 
 	op.Summary = block.Title()
 	op.Description = block.Description()

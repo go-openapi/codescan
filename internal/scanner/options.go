@@ -113,6 +113,22 @@ type Options struct {
 	// go-swagger/go-swagger#2924.
 	EmitXGoType bool
 
+	// SingleLineCommentAsDescription routes a single-line doc comment to
+	// the object's `description` regardless of trailing punctuation,
+	// never to `title` / `summary`.
+	//
+	//   - false (default): the first-sentence convention applies — a
+	//     single-line comment ending in punctuation (`.`, `!`, `?`)
+	//     becomes the `title` (model / info) or `summary` (operation);
+	//     without trailing punctuation it is a `description`.
+	//   - true: a single-line comment is always a `description`. Multi-
+	//     line comments keep the existing title/description split (the
+	//     first line, or the paragraph before the first blank line, is
+	//     still the title).
+	//
+	// See go-swagger/go-swagger#2626.
+	SingleLineCommentAsDescription bool
+
 	Debug bool // enable verbose debug logging during scanning
 
 	// OnDiagnostic, when non-nil, is invoked for every diagnostic the

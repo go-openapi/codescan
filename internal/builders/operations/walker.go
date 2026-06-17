@@ -18,7 +18,8 @@ import (
 // the lexer-classified Block onto op and the single-fenced-body
 // contract.
 func (o *Builder) applyBlockToOperation(op *oaispec.Operation) error {
-	block := grammar.NewParser(o.Ctx.FileSet()).Parse(o.path.Remaining)
+	block := grammar.NewParser(o.Ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(o.Ctx.SingleLineCommentAsDescription())).Parse(o.path.Remaining)
 
 	op.Summary = block.Title()
 	op.Description = block.Description()

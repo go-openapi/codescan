@@ -134,13 +134,15 @@ func (s *Builder) WarnStrippedPathRegex(pos token.Pos, params []string) {
 // why ParseAll is preferred over Parse, and the per-Builder
 // (single-goroutine) lifetime that obviates synchronisation.
 func (s *Builder) ParseBlocks(cg *ast.CommentGroup) []grammar.Block {
+	parser := grammar.NewParser(s.Ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(s.Ctx.SingleLineCommentAsDescription()))
 	if cg == nil {
-		return grammar.NewParser(s.Ctx.FileSet()).ParseAll(nil)
+		return parser.ParseAll(nil)
 	}
 
 	bs, ok := s.blockCache[cg]
 	if !ok {
-		bs = grammar.NewParser(s.Ctx.FileSet()).ParseAll(cg)
+		bs = parser.ParseAll(cg)
 		s.blockCache[cg] = bs
 	}
 

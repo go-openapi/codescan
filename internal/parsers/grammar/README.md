@@ -279,6 +279,19 @@ The state-machine in `classifyTitleDescRun` walks the run once
 and re-types text tokens; blanks stay as `TokenBlank` so consumers
 can reproduce paragraph structure.
 
+### `WithSingleLineCommentAsDescription` — demote a lone title
+
+`NewParser(fset, WithSingleLineCommentAsDescription(true))` (driven by
+`Options.SingleLineCommentAsDescription`, go-swagger#2626) overrides
+heuristic 2/3 for the **single-line** case only: after
+`extractTitleDesc`, `finaliseBase` calls `demoteSingleLineTitle`, which
+moves a one-line title (non-empty title, empty description, no embedded
+newline) into the description. A multi-line comment — anything that
+already produced a description, including a heuristic-1 blank split — is
+left untouched. The demotion is applied to both the full
+title/description and the preamble pair, so the schema builder's
+`PreambleTitle` / `PreambleDescription` path observes it too.
+
 ---
 
 ## <a id="raw-block-terminators"></a>§raw-block-terminators — sibling-terminator rule

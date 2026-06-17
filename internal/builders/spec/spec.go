@@ -160,7 +160,8 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 }
 
 func (s *Builder) buildMeta() error {
-	parser := grammar.NewParser(s.ctx.FileSet())
+	parser := grammar.NewParser(s.ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(s.ctx.SingleLineCommentAsDescription()))
 	for cg := range s.ctx.Meta() {
 		block := parser.Parse(cg)
 		if err := applyMetaBlock(s.input, block); err != nil {

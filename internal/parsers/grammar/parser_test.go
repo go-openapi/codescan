@@ -67,6 +67,32 @@ func parseAllString(t *testing.T, src string) []Block {
 	return (&DefaultParser{}).parseAllTokens(tokens)
 }
 
+func TestParser_SingleLineCommentAsDescription(t *testing.T) {
+	pos := token.Position{Filename: "test.go", Line: 1, Column: 1}
+	parse := func(src string, on bool) Block {
+		return NewParser(token.NewFileSet(),
+			WithSingleLineCommentAsDescription(on)).ParseText(src, pos)
+	}
+
+	// Single-line title-shaped comment: default keeps it as title; the
+	// option moves it to the description.
+	const single = "A one-line comment.\n\nswagger:model Pet"
+	def := parse(single, false)
+	assert.Equal(t, "A one-line comment.", def.Title())
+	assert.Empty(t, def.Description())
+
+	on := parse(single, true)
+	assert.Empty(t, on.Title(), "single-line comment is no longer a title")
+	assert.Equal(t, "A one-line comment.", on.Description())
+
+	// Multi-line comment: the title/description split is preserved in both
+	// modes — the option only affects single-line comments.
+	const multi = "Title line.\n\nDescription body.\n\nswagger:model Pet"
+	multiOn := parse(multi, true)
+	assert.Equal(t, "Title line.", multiOn.Title(), "multi-line title unchanged by the option")
+	assert.Equal(t, "Description body.", multiOn.Description())
+}
+
 func TestParser_ParseAll_SingleAnnotation(t *testing.T) {
 	blocks := parseAllString(t, "swagger:model Pet")
 	require.Len(t, blocks, 1)

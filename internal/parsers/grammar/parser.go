@@ -32,8 +32,9 @@ type Parser interface {
 
 // DefaultParser is the concrete Parser implementation.
 type DefaultParser struct {
-	fset *token.FileSet
-	sink func(Diagnostic)
+	fset             *token.FileSet
+	sink             func(Diagnostic)
+	singleLineAsDesc bool
 }
 
 // NewParser constructs a DefaultParser bound to a FileSet (needed to
@@ -53,6 +54,14 @@ type Option func(*DefaultParser)
 // accumulating them on the returned Block.
 func WithDiagnosticSink(sink func(Diagnostic)) Option {
 	return func(p *DefaultParser) { p.sink = sink }
+}
+
+// WithSingleLineCommentAsDescription makes a single-line prose comment
+// resolve to the block Description instead of the Title, regardless of
+// trailing punctuation. Multi-line comments keep the normal
+// title/description split. See go-swagger/go-swagger#2626.
+func WithSingleLineCommentAsDescription(on bool) Option {
+	return func(p *DefaultParser) { p.singleLineAsDesc = on }
 }
 
 //nolint:ireturn // stable seam.
@@ -165,10 +174,11 @@ func (p *DefaultParser) parseAllTokens(tokens []Token) []Block {
 //
 //	golangci-lint run --enable-only unused ./internal/parsers/grammar/...
 type parseState struct {
-	tokens []Token
-	pos    int //nolint:unused // see godoc — reserved for recursive-descent cursor
-	diags  []Diagnostic
-	sink   func(Diagnostic)
+	tokens           []Token
+	pos              int //nolint:unused // see godoc — reserved for recursive-descent cursor
+	diags            []Diagnostic
+	sink             func(Diagnostic)
+	singleLineAsDesc bool // see WithSingleLineCommentAsDescription
 }
 
 func (s *parseState) emit(d Diagnostic) {
@@ -206,7 +216,7 @@ func (s *parseState) advance() Token {
 //
 //nolint:ireturn // stable seam.
 func (p *DefaultParser) parseTokens(tokens []Token) Block {
-	s := &parseState{tokens: tokens, sink: p.sink}
+	s := &parseState{tokens: tokens, sink: p.sink, singleLineAsDesc: p.singleLineAsDesc}
 	annIdx := findAnnotation(tokens)
 	if annIdx < 0 {
 		return s.parseUnboundBlock()
@@ -319,6 +329,7 @@ func dropTrailingBlankLines(ls []string) []string {
 // block.
 func (s *parseState) finaliseBase(base *baseBlock) {
 	t, d, lines := extractTitleDesc(s.tokens)
+	t, d = s.demoteSingleLineTitle(t, d)
 	base.title = t
 	base.description = d
 	base.proseLines = lines
@@ -328,11 +339,28 @@ func (s *parseState) finaliseBase(base *baseBlock) {
 		preTokens = s.tokens[:annIdx]
 	}
 	pt, pd, preLines := extractTitleDesc(preTokens)
+	pt, pd = s.demoteSingleLineTitle(pt, pd)
 	base.preambleTitle = pt
 	base.preambleDescription = pd
 	base.preambleLines = preLines
 
 	base.diagnostics = append(base.diagnostics, s.diags...)
+}
+
+// demoteSingleLineTitle implements the SingleLineCommentAsDescription
+// option (go-swagger#2626): when the prose resolved to a one-line title
+// with no description, move that single line to the description so a
+// lone doc comment never becomes a title / summary. A title spanning
+// multiple lines, or any prose that already produced a description
+// (i.e. a multi-line comment), is left untouched.
+func (s *parseState) demoteSingleLineTitle(title, desc string) (string, string) {
+	if !s.singleLineAsDesc {
+		return title, desc
+	}
+	if title == "" || desc != "" || strings.Contains(title, "\n") {
+		return title, desc
+	}
+	return "", title
 }
 
 // --- UnboundBlock ------------------------------------------------------------

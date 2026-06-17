@@ -91,6 +91,10 @@ func (s *ScanCtx) EmitXGoType() bool {
 	return s.opts.EmitXGoType
 }
 
+func (s *ScanCtx) SingleLineCommentAsDescription() bool {
+	return s.opts.SingleLineCommentAsDescription
+}
+
 func (s *ScanCtx) DescWithRef() bool {
 	return s.opts.DescWithRef
 }
