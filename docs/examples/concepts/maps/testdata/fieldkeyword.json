@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "title": "Holder decorates individual fields with the additionalProperties: keyword.",
+  "properties": {
+    "closedRef": {
+      "description": "ClosedRef references a model and forbids extra keys. Because the field is\na $ref, the value rides an allOf sibling so the reference is preserved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Thing"
+        },
+        {
+          "additionalProperties": false
+        }
+      ],
+      "x-go-name": "ClosedRef"
+    },
+    "overriddenMap": {
+      "description": "OverriddenMap keeps its map shape but overrides the value schema from the\nGo element type (string) to integer.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "x-go-name": "OverriddenMap"
+    },
+    "refMap": {
+      "description": "RefMap points the map values at a model.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Thing"
+      },
+      "x-go-name": "RefMap"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

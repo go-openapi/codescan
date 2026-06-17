@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "title": "RefObject references a model as the schema of its extra values.",
+  "properties": {
+    "a": {
+      "type": "string",
+      "x-go-name": "A"
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/definitions/Thing"
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

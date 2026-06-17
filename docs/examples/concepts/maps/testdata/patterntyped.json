@@ -1,0 +1,22 @@
+{
+  "description": "TypedPatterns maps property-name regexes to typed value schemas. Each quoted\nregex pairs with a value spec — a primitive or a model name (which becomes a\n$ref). The pattern-properties keyword is JSON-Schema, beyond the Swagger 2.0\nsubset; codescan emits it ungated.",
+  "type": "object",
+  "properties": {
+    "known": {
+      "type": "string",
+      "x-go-name": "Known"
+    }
+  },
+  "patternProperties": {
+    "^\\d+$": {
+      "type": "integer"
+    },
+    "^item-": {
+      "$ref": "#/definitions/Thing"
+    },
+    "^x-": {
+      "type": "string"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}
