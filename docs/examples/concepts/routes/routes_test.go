@@ -86,6 +86,15 @@ func TestRouteFragments(t *testing.T) {
 	require.True(t, ok, "POST /pets/import path missing")
 	require.NotNil(t, create.Post)
 
+	filter, ok := paths["/pets/filter"]
+	require.True(t, ok, "GET /pets/filter path missing")
+	require.NotNil(t, filter.Get)
+	// #1499: swagger:type on a parameter field collapses the struct-typed param
+	// to a simple type (string) instead of leaving it typeless.
+	require.NotEmpty(t, filter.Get.Parameters)
+	assert.Equal(t, "string", filter.Get.Parameters[0].Type,
+		"swagger:type override applies on a parameter field")
+
 	goldenJSON(t, "route", listPets)                       // swagger:route — a path item
 	goldenJSON(t, "operation", getPet)                     // swagger:operation — YAML body
 	goldenJSON(t, "parameters", listPets.Get.Parameters)   // swagger:parameters — params on the op
@@ -94,4 +103,5 @@ func TestRouteFragments(t *testing.T) {
 	goldenJSON(t, "externaldocs", search.Get.ExternalDocs) // externalDocs on an operation
 	goldenJSON(t, "externaldocs_schema", catalog)          // externalDocs on a full schema
 	goldenJSON(t, "bodyparam", create.Post.Parameters)     // in: body request parameter
+	goldenJSON(t, "paramtype", filter.Get.Parameters)      // swagger:type override on a parameter field
 }

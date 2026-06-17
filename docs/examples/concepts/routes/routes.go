@@ -77,6 +77,45 @@ type ListPetsParams struct {
 
 // endsnippet:parameters
 
+// snippet:paramtype
+
+// Cursor is an opaque pagination token. As a struct it cannot be a query
+// parameter on its own; swagger:type publishes it as a simple parameter.
+type Cursor struct {
+	Page  int
+	Token string
+}
+
+// FilterPetsParams shows swagger:type on parameter fields: a struct-typed field
+// is collapsed to a simple parameter. The override accepts a scalar or a
+// []-wrapped scalar — the inline / type-name forms are rejected here (a
+// non-body parameter has no schema to inline into).
+//
+// swagger:parameters filterPets
+type FilterPetsParams struct {
+	// After is an opaque cursor carried as a plain string query parameter.
+	//
+	// in: query
+	// swagger:type string
+	After Cursor `json:"after"`
+
+	// Sort is a list of sort keys carried as an array-of-string query parameter.
+	//
+	// in: query
+	// swagger:type []string
+	Sort []Cursor `json:"sort"`
+}
+
+// swagger:route GET /pets/filter pets filterPets
+//
+// Filter pets with cursor pagination.
+//
+// responses:
+//
+//	200: description: matched pets
+
+// endsnippet:paramtype
+
 // snippet:response
 
 // PetsResponse is the list returned by listPets.

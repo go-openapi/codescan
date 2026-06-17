@@ -894,7 +894,19 @@ type with an **inlined** type. `swagger:type` is an inline directive — it
 never emits a `$ref`; the chosen type is rendered directly in place
 (the default `$ref`-for-named-types is the *no-annotation* behaviour).
 
-**Where it goes.** On a type declaration OR a struct field doc.
+**Where it goes.** On a type declaration, a struct field doc, OR a
+`swagger:parameters` field doc.
+
+{{% notice style="note" %}}
+**On a parameter field** the override collapses the field to a simple
+parameter — useful when a struct- or defined-typed field would otherwise
+come out typeless (invalid Swagger 2.0). The argument is restricted to a
+**scalar** or a **`[]`-wrapped scalar** there: the `inline` and
+type-name forms are rejected with a diagnostic, since a non-body
+parameter has no schema to inline a type into. A compatible
+`swagger:strfmt` on the same field still rides as a supplementary
+format.
+{{% /notice %}}
 
 **Argument shape.** Required token, one of:
 

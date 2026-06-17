@@ -60,6 +60,15 @@ usual shape for a POST or PUT payload:
 {{< example go="concepts/routes/routes.go" goregion="bodyparam"
             json="concepts/routes/testdata/bodyparam.json" jsonlabel="parameters on createPet" >}}
 
+When a parameter field's Go type is a struct (or any type that has no simple
+Swagger representation), it cannot be a query/path/header parameter on its own. A
+[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}}) override
+collapses it to a simple parameter — a scalar, or a `[]`-wrapped scalar for an
+array parameter:
+
+{{< example go="concepts/routes/routes.go" goregion="paramtype"
+            json="concepts/routes/testdata/paramtype.json" jsonlabel="parameters on filterPets" >}}
+
 ## swagger:response
 
 `swagger:response <name>` declares a struct as a named entry in the spec's
