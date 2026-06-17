@@ -17,7 +17,8 @@ attach to:
 
 - **Spec-level**: `swagger:meta`.
 - **Model declarations**: `swagger:model`, `swagger:strfmt`,
-  `swagger:enum`, `swagger:allOf`, `swagger:alias`.
+  `swagger:enum`, `swagger:allOf`, `swagger:alias`,
+  `swagger:additionalProperties`, `swagger:patternProperties`.
 - **Operation declarations**: `swagger:route`, `swagger:operation`.
 - **Companion declarations**: `swagger:parameters`, `swagger:response`.
 - **Local hints**: `swagger:ignore`, `swagger:name`, `swagger:type`,
@@ -58,6 +59,8 @@ see [grammar.md]({{% relref "grammar" %}}).
 - [`swagger:ignore`](#swaggerignore)
 - [`swagger:name`](#swaggername)
 - [`swagger:type`](#swaggertype)
+- [`swagger:additionalProperties`](#swaggeradditionalproperties)
+- [`swagger:patternProperties`](#swaggerpatternproperties)
 - [`swagger:file`](#swaggerfile)
 - [`swagger:default`](#swaggerdefault)
 
@@ -965,6 +968,96 @@ above is the behaviour *without* `swagger:model`.
 
 ---
 
+## `swagger:additionalProperties`
+
+**What it does.** Sets a schema's `additionalProperties` — the policy for
+keys beyond the named properties. On a struct it **complements** the
+named properties; on a map type it **overrides** the element-derived
+value schema; on a type that resolved to a bare `$ref` it **defines** a
+clean object. See the
+[Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}})
+tutorial.
+
+**Where it goes.** On a type declaration (alongside `swagger:model`). A
+field-level equivalent exists as the
+[`additionalProperties:` keyword]({{% relref "/maintainers/keywords#additionalproperties" %}}).
+
+**Argument shape.** Required token, one of:
+
+- **`true`** — allow arbitrary extra keys (`additionalProperties: true`);
+- **`false`** — forbid extra keys, closing the object
+  (`additionalProperties: false`);
+- a **value type** — a primitive / Go-builtin / `[]T`, or a **known type
+  name** (which resolves to a `$ref`, and is registered for discovery).
+  This reuses the [`swagger:type`](#swaggertype) value grammar, except a
+  type name becomes a `$ref` rather than an inline expansion.
+
+**Sample.**
+
+```go
+// Settings is an open object: named properties plus typed extra values.
+//
+// swagger:model
+// swagger:additionalProperties integer
+type Settings struct {
+	Name string `json:"name"`
+}
+```
+
+**Precedence — lowest priority.** `additionalProperties` only rides on an
+`object`. If a prior rule fixed a non-object type (a `swagger:type`
+scalar, `swagger:strfmt`, a special type), the marker is dropped with a
+`CodeShapeMismatch` diagnostic. It composes with `maxProperties` /
+`minProperties` / `patternProperties`. It has no OAS-2 SimpleSchema form,
+so it never applies on a non-body parameter or response header.
+
+**Full example.** `fixtures/enhancements/additional-properties/api.go`.
+
+---
+
+## `swagger:patternProperties`
+
+**What it does.** Adds **typed** `patternProperties` entries — each maps a
+property-name regex to a value schema. It is the typed counterpart of the
+regex-only [`patternProperties:` keyword]({{% relref "/maintainers/keywords#patternproperties" %}})
+(which uses an empty, any-value schema).
+
+{{% notice style="note" %}}
+`patternProperties` is a JSON-Schema (draft-4) keyword, **beyond the
+Swagger 2.0 subset**. codescan emits it ungated — your downstream tooling
+must understand it.
+{{% /notice %}}
+
+**Where it goes.** On a type declaration (alongside `swagger:model`).
+
+**Argument shape.** A comma-separated list of `"<regex>": <spec>` pairs.
+The regex is **double-quoted** (it may contain spaces, colons, commas;
+only `\"` is an escape inside it — other backslashes like `\d` are
+preserved). Each `<spec>` reuses the value grammar above (primitive /
+`[]T` / type-name → `$ref`).
+
+**Sample.**
+
+```go
+// Headers carries x-prefixed string values and numeric-keyed counters.
+//
+// swagger:model
+// swagger:patternProperties "^x-": string, "^\d+$": integer
+type Headers struct {
+	Known string `json:"known"`
+}
+```
+
+**Precedence.** Same lowest-priority, object-only rule as
+`swagger:additionalProperties`. Each regex is RE2-hygiene-checked: one
+that does not compile raises a `CodeInvalidAnnotation` warning but is
+**preserved**; a structurally malformed pair list is dropped with a
+diagnostic.
+
+**Full example.** `fixtures/enhancements/pattern-properties-typed/api.go`.
+
+---
+
 ## `swagger:file`
 
 **What it does.** Marks a parameter or response body as a binary file
@@ -1049,6 +1142,8 @@ contracts.
 | `swagger:ignore` | — | — | — | — | — | — | — |
 | `swagger:name` | — | — | — | — | — | — | — |
 | `swagger:type` | — | — | — | — | — | — | — |
+| `swagger:additionalProperties` | — | ✅ (object schema) | — | — | — | — | — |
+| `swagger:patternProperties` | — | ✅ (object schema) | — | — | — | — | — |
 | `swagger:file` | — | — | — | — | — | — | — |
 | `swagger:default` | — | — | — | — | — | — | — |
 

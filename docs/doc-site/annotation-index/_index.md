@@ -25,6 +25,8 @@ tutorial that shows the annotation as runnable Go next to the spec it produces;
 | `swagger:ignore` | type / field doc | excludes the declaration | [example]({{% relref "/tutorials/model-definitions#swaggerignore" %}}) | [reference]({{% relref "/maintainers/annotations#swaggerignore" %}}) |
 | `swagger:name` | field / method doc | renames a JSON property | [example]({{% relref "/tutorials/model-definitions#swaggername" %}}) | [reference]({{% relref "/maintainers/annotations#swaggername" %}}) |
 | `swagger:type` | type / field doc | overrides the inferred Swagger type | [example]({{% relref "/tutorials/model-definitions#swaggertype" %}}) | [reference]({{% relref "/maintainers/annotations#swaggertype" %}}) |
+| `swagger:additionalProperties` | type doc | object `additionalProperties` (open / closed / typed) | [example]({{% relref "/tutorials/maps-and-free-form-objects#open--closed-objects" %}}) | [reference]({{% relref "/maintainers/annotations#swaggeradditionalproperties" %}}) |
+| `swagger:patternProperties` | type doc | typed `patternProperties` (regex → value) | [example]({{% relref "/tutorials/maps-and-free-form-objects#pattern-properties" %}}) | [reference]({{% relref "/maintainers/annotations#swaggerpatternproperties" %}}) |
 | `swagger:file` | param / response field | `{type: file}` | [example]({{% relref "/tutorials/routes-and-operations#swaggerfile" %}}) | [reference]({{% relref "/maintainers/annotations#swaggerfile" %}}) |
 | `swagger:default` | value / field doc | a default-value anchor | [example]({{% relref "/tutorials/examples-and-defaults#swaggerdefault" %}}) | [reference]({{% relref "/maintainers/annotations#swaggerdefault" %}}) |
 

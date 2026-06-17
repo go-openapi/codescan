@@ -31,7 +31,7 @@ formal productions should read [grammar.md]({{% relref "grammar" %}}).
 - [Annotation contexts](#annotation-contexts)
 - [Summary table](#summary-table)
 - [Numeric validations](#numeric-validations) — `maximum`, `minimum`, `multipleOf`
-- [Length / array / object validations](#length--array--object-validations) — `maxLength`, `minLength`, `maxItems`, `minItems`, `maxProperties`, `minProperties`, `patternProperties`
+- [Length / array / object validations](#length--array--object-validations) — `maxLength`, `minLength`, `maxItems`, `minItems`, `maxProperties`, `minProperties`, `patternProperties`, `additionalProperties`
 - [Format validations](#format-validations) — `pattern`, `unique`, `collectionFormat`
 - [Schema decorators](#schema-decorators) — `default`, `example`, `enum`, `required`, `readOnly`, `discriminator`, `deprecated`
 - [Parameter location](#parameter-location) — `in`
@@ -120,6 +120,7 @@ them. Detailed entries follow this table.
 | `maxProperties` | `max properties`, `max-properties`, `maximum properties`, `maximum-properties`, `maximumProperties` | integer | schema |
 | `minProperties` | `min properties`, `min-properties`, `minimum properties`, `minimum-properties`, `minimumProperties` | integer | schema |
 | `patternProperties` | `pattern properties`, `pattern-properties` | string (regex) | schema |
+| `additionalProperties` | `additional properties`, `additional-properties` | `true` / `false` / type spec | schema |
 | `default` | — | raw-value | param, header, schema, items |
 | `example` | — | raw-value | param, header, schema, items |
 | `enum` | — | raw-value | param, header, schema, items |
@@ -285,6 +286,39 @@ never dropped silently.
 //
 // swagger:model MyObjectType
 type MyObjectType map[string]interface{}
+```
+
+For **typed** value schemas (a regex mapped to a primitive or a model
+`$ref` rather than the empty `{}`), use the decl-level
+[`swagger:patternProperties`]({{% relref "/maintainers/annotations#swaggerpatternproperties" %}})
+marker. `patternProperties` is a JSON-Schema keyword beyond the Swagger
+2.0 subset — see
+[Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}).
+
+### `additionalProperties`
+
+Sets the policy for keys beyond the named properties on an
+**object**-typed schema. The argument is `true` (allow any extra key),
+`false` (forbid extra keys — close the object), or a **value type** (a
+primitive / `[]T`, or a model name that becomes a `$ref` — the
+[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}})
+value grammar). On a map field it overrides the Go element schema; on a
+`$ref`'d field the value rides an `allOf` sibling so the reference is
+kept. Aliases: `additional properties`, `additional-properties`.
+
+This is the field-keyword form; the decl-level
+[`swagger:additionalProperties`]({{% relref "/maintainers/annotations#swaggeradditionalproperties" %}})
+marker does the same on a type. It is the lowest-priority, object-only
+annotation — dropped with a `CodeShapeMismatch` diagnostic if the field
+resolved to a non-object.
+
+```go
+type Holder struct {
+	// Values maps any key to an integer, overriding the Go element type.
+	//
+	// additionalProperties: integer
+	Values map[string]string `json:"values"`
+}
 ```
 
 ---

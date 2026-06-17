@@ -76,7 +76,9 @@ The object-validation keywords constrain a free-form object as a whole rather
 than named fields: `minProperties` / `maxProperties` bound the property count,
 and `patternProperties` permits properties whose name matches a regex. They are
 schema-only — kept on an object-typed model, stripped (with a diagnostic) on a
-scalar model or a simple-schema parameter.
+scalar model or a simple-schema parameter. For dynamic-key objects, the typed
+value forms, and `additionalProperties`, see
+[Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}).
 
 {{< example go="concepts/validations/validations.go" goregion="object"
             json="concepts/validations/testdata/object.json" jsonlabel="#/definitions/Attributes" >}}
