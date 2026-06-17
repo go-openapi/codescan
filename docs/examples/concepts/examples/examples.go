@@ -81,6 +81,36 @@ type Price struct {
 
 // endsnippet:reffield
 
+// snippet:refstructured
+
+// Coordinates is a defined struct, so a field typed Coordinates renders as a
+// $ref.
+//
+// swagger:model
+type Coordinates struct {
+	// Lat is the latitude.
+	Lat float64 `json:"lat"`
+
+	// Lng is the longitude.
+	Lng float64 `json:"lng"`
+}
+
+// Place shows a JSON-object example on a $ref'd field. Because the field is a
+// $ref, the example rides the override arm of the allOf — and a JSON object (or
+// array) literal is coerced into a structured value there, exactly as it is on a
+// plain field. A bare scalar would instead stay a string, since the referenced
+// type is not known on the override arm.
+//
+// swagger:model
+type Place struct {
+	// At is the location.
+	//
+	// example: {"lat":48.85,"lng":2.35}
+	At Coordinates `json:"at"`
+}
+
+// endsnippet:refstructured
+
 // snippet:responseexample
 
 // NTPServers is a top-level array response carrying an example. The example

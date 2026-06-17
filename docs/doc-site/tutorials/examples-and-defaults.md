@@ -65,6 +65,15 @@ type's definition — and a `$ref` cannot carry sibling keywords. An `example:` 
 {{< example go="concepts/examples/examples.go" goregion="reffield"
             json="concepts/examples/testdata/reffield.json" jsonlabel="#/definitions/Price" >}}
 
+A **JSON object or array literal** on a `$ref`'d field is coerced into a
+structured value on that override arm — exactly as it is on a plain field — so
+the example reads as real JSON, not an escaped string. A bare *scalar* is the
+exception: on the override arm the referenced type is unknown, so a scalar stays
+a string rather than being silently retyped.
+
+{{< example go="concepts/examples/examples.go" goregion="refstructured"
+            json="concepts/examples/testdata/refstructured.json" jsonlabel="#/definitions/Place" >}}
+
 ## On a response body
 
 `example:` is not limited to model fields. On a `swagger:response` whose body is
@@ -93,6 +102,11 @@ media type — these populate the OpenAPI response `examples` object:
 
 This per-media-type form is available in the `swagger:operation` YAML body; the
 struct-based `swagger:response` does not yet emit per-media-type examples.
+
+Because the example lives on the operation's response, **one shared model can
+carry a different example per response code and per operation** — a `200` and a
+`404` that both return the same error model each show their own illustrative
+payload, with no need for a distinct struct per case.
 
 ## What's next
 

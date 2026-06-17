@@ -77,6 +77,7 @@ func TestExampleFragments(t *testing.T) {
 	goldenRaw(t, "responseexample", ntp) // example on a top-level array response
 
 	goldenJSON(t, doc, "complexexample", "Profile") // structured (object/array) example values
+	goldenJSON(t, doc, "refstructured", "Place")    // JSON-object example coerced on a $ref'd field
 
 	// Type coercion: a numeric default on an int field is a JSON number, a
 	// boolean default a JSON bool — not strings.
@@ -84,4 +85,11 @@ func TestExampleFragments(t *testing.T) {
 	assert.EqualValues(t, 8080, port.Default)
 	verbose := doc.Definitions["Settings"].Properties["verbose"]
 	assert.Equal(t, false, verbose.Default)
+
+	// G3: a JSON-object example on a $ref'd field is coerced into a structured
+	// value on the allOf override arm, not carried as a raw string.
+	at := doc.Definitions["Place"].Properties["at"]
+	require.Len(t, at.AllOf, 2, "expected a $ref arm and an override arm")
+	assert.IsType(t, map[string]any{}, at.AllOf[1].Example,
+		"object-literal example coerces to a structured value, not a string")
 }

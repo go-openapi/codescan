@@ -1,0 +1,22 @@
+{
+  "description": "Place shows a JSON-object example on a $ref'd field. Because the field is a\n$ref, the example rides the override arm of the allOf — and a JSON object (or\narray) literal is coerced into a structured value there, exactly as it is on a\nplain field. A bare scalar would instead stay a string, since the referenced\ntype is not known on the override arm.",
+  "type": "object",
+  "properties": {
+    "at": {
+      "description": "At is the location.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Coordinates"
+        },
+        {
+          "example": {
+            "lat": 48.85,
+            "lng": 2.35
+          }
+        }
+      ],
+      "x-go-name": "At"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+}
