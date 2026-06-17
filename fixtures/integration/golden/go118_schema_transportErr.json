@@ -1,5 +1,5 @@
 {
-  "transportErr": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/go118/transportErr": {
     "type": "object",
     "required": [
       "message"

@@ -1,5 +1,5 @@
 {
-  "Interfaced": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/go118/Interfaced": {
     "description": "An Interfaced struct contains objects with interface definitions",
     "type": "object",
     "properties": {

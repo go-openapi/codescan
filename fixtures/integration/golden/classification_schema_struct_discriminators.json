@@ -1,5 +1,5 @@
 {
-  "animal": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/animal": {
     "description": "it should deserialize into one of the struct types that\nenlist for being implementations of this struct",
     "type": "object",
     "title": "A BaseStruct is a struct that has subtypes.",
@@ -36,12 +36,12 @@
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
     "discriminator": "jsonClass"
   },
-  "gazelle": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/gazelle": {
     "description": "The struct includes the BaseStruct and that embedded value\nis annotated with the discriminator value annotation so it\nwhere it only requires 1 argument because it knows which\ndiscriminator type this belongs to",
     "title": "A Gazelle is a struct is discriminated for BaseStruct.",
     "allOf": [
       {
-        "$ref": "#/definitions/animal"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/animal"
       },
       {
         "type": "object",
@@ -59,12 +59,12 @@
     "x-go-name": "Gazelle",
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "giraffe": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/giraffe": {
     "description": "the annotation is not necessary here because of inclusion\nof a discriminated type\nit infers the name of the x-class value from its context",
     "title": "A Giraffe is a struct that embeds BaseStruct",
     "allOf": [
       {
-        "$ref": "#/definitions/animal"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/animal"
       },
       {
         "type": "object",

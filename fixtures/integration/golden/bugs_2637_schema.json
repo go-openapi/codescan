@@ -1,0 +1,42 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/domains": {
+      "post": {
+        "tags": [
+          "domains"
+        ],
+        "operationId": "createDomain",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/X2637CreateDomainRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "MongoCreateDomainRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2637/mongo"
+    },
+    "X2637CreateDomainRequest": {
+      "$ref": "#/definitions/MongoCreateDomainRequest"
+    }
+  }
+}

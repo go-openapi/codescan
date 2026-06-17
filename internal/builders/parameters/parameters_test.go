@@ -176,7 +176,7 @@ func TestParamsParser(t *testing.T) {
 	bodyParam := ob.Parameters[0]
 	assert.EqualT(t, "The order to submit.", bodyParam.Description)
 	assert.EqualT(t, inBody, bodyParam.In)
-	assert.EqualT(t, "#/definitions/order", bodyParam.Schema.Ref.String())
+	assert.EqualT(t, "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order", bodyParam.Schema.Ref.String())
 	assert.TrueT(t, bodyParam.Required)
 
 	mop, okParam := operations["getOrders"]
@@ -377,7 +377,7 @@ func assertSomeOperationParams(t *testing.T, operations map[string]*oaispec.Oper
 			assert.TrueT(t, iprop.ExclusiveMinimum, "'id' should have had an exclusive minimum")
 			assert.Equal(t, 3, iprop.Default, "Items.ID default value is incorrect")
 
-			scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/pet")
+			scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet")
 			_, ok = itprop.Properties["pet"]
 			assert.TrueT(t, ok)
 			// if itprop.Ref.String() == "" {

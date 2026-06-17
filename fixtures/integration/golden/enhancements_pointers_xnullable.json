@@ -1,5 +1,5 @@
 {
-  "Item": {
+  "github.com/go-openapi/codescan/fixtures/enhancements/pointers-nullable-by-default/Item": {
     "type": "object",
     "properties": {
       "Value1": {
@@ -28,7 +28,7 @@
     },
     "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pointers-nullable-by-default"
   },
-  "ItemInterface": {
+  "github.com/go-openapi/codescan/fixtures/enhancements/pointers-nullable-by-default/ItemInterface": {
     "type": "object",
     "properties": {
       "value1": {

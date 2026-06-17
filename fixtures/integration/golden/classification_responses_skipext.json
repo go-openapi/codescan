@@ -70,7 +70,7 @@
   "resp": {
     "description": "Resp a response for testing",
     "schema": {
-      "$ref": "#/definitions/user"
+      "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/operations/user"
     },
     "headers": {
       "UUID": {
@@ -123,7 +123,7 @@
             "type": "string"
           },
           "pet": {
-            "$ref": "#/definitions/pet"
+            "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
           },
           "quantity": {
             "description": "The amount of pets to add to this bucket.",

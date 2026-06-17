@@ -1,5 +1,5 @@
 {
-  "order": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/petstore/models/order": {
     "type": "object",
     "title": "An Order for one or more pets by a user.",
     "required": [

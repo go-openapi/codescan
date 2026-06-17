@@ -1,5 +1,5 @@
 {
-  "Item": {
+  "github.com/go-openapi/codescan/fixtures/bugs/3125/minimal/Item": {
     "type": "object",
     "required": [
       "value1",
@@ -10,7 +10,7 @@
         "description": "Nullable value",
         "allOf": [
           {
-            "$ref": "#/definitions/ValueStruct"
+            "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/bugs/3125/minimal/ValueStruct"
           }
         ],
         "x-go-name": "Value1",
@@ -20,7 +20,7 @@
         "description": "Non-nullable value",
         "allOf": [
           {
-            "$ref": "#/definitions/ValueStruct"
+            "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/bugs/3125/minimal/ValueStruct"
           },
           {
             "example": {

@@ -108,7 +108,7 @@ func TestParseResponses(t *testing.T) {
 	res, ok := responses["resp"]
 	assert.TrueT(t, ok)
 	assert.NotNil(t, res.Schema)
-	assert.EqualT(t, "#/definitions/user", res.Schema.Ref.String())
+	assert.EqualT(t, "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/operations/user", res.Schema.Ref.String())
 
 	scantest.CompareOrDumpJSON(t, responses, "classification_responses.json")
 }
@@ -310,7 +310,7 @@ func assertSomeResponseHeaders(t *testing.T, responses map[string]spec.Response)
 	assert.InDeltaT(t, 10.00, *iprop.Minimum, epsilon)
 	assert.TrueT(t, iprop.ExclusiveMinimum, "'id' should have had an exclusive minimum")
 
-	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/pet")
+	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet")
 	_, ok = itprop.Properties["pet"]
 	assert.TrueT(t, ok)
 	// if itprop.Ref.String() == "" {

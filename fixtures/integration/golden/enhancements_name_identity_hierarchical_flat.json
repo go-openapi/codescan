@@ -1,0 +1,38 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "NotificationserviceConfig": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "x-go-name": "Channel"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-hierarchical/notificationservice"
+    },
+    "RecommendationengineConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "x-go-name": "Enabled"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-hierarchical/recommendationengine"
+    },
+    "Settings": {
+      "type": "object",
+      "properties": {
+        "notif": {
+          "$ref": "#/definitions/NotificationserviceConfig"
+        },
+        "rec": {
+          "$ref": "#/definitions/RecommendationengineConfig"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-hierarchical"
+    }
+  }
+}

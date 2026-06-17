@@ -1,5 +1,5 @@
 {
-  "AllOfModel": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/AllOfModel": {
     "description": "An AllOfModel is composed out of embedded structs but it should build\nan allOf property",
     "allOf": [
       {
@@ -22,7 +22,7 @@
         }
       },
       {
-        "$ref": "#/definitions/withNotes"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/withNotes"
       },
       {
         "type": "object",

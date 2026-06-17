@@ -1,5 +1,5 @@
 {
-  "NoModel": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/NoModel": {
     "description": "NoModel exists in a package\nbut is not annotated with the swagger model annotations\nso it should now show up in a test.",
     "type": "object",
     "title": "NoModel is a struct without an annotation.",
@@ -132,7 +132,7 @@
               "x-go-name": "Notes"
             },
             "pet": {
-              "$ref": "#/definitions/pet"
+              "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
             },
             "quantity": {
               "description": "The amount of pets to add to this bucket.",
@@ -196,7 +196,7 @@
     },
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "order": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order": {
     "description": "An order can either be created, processed or completed.",
     "type": "object",
     "title": "StoreOrder represents an order in this application.",
@@ -236,7 +236,7 @@
               "x-go-name": "ID"
             },
             "pet": {
-              "$ref": "#/definitions/pet"
+              "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
             },
             "quantity": {
               "type": "integer",

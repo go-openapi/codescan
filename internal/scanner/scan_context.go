@@ -148,6 +148,19 @@ func (s *ScanCtx) OnDiagnostic() func(grammar.Diagnostic) {
 	return s.opts.OnDiagnostic
 }
 
+// NameConcatBudget returns the caller-supplied readability budget for
+// collision-deconflicted definition names, or 0 when unset — the spec
+// builder substitutes its built-in default in that case.
+func (s *ScanCtx) NameConcatBudget() float64 {
+	return s.opts.NameConcatBudget
+}
+
+// EmitHierarchicalNames reports whether the caller opted into the
+// hierarchical fail-safe for over-budget collision groups.
+func (s *ScanCtx) EmitHierarchicalNames() bool {
+	return s.opts.EmitHierarchicalNames
+}
+
 func (s *ScanCtx) Meta() iter.Seq[*ast.CommentGroup] {
 	if s.app == nil {
 		return nil

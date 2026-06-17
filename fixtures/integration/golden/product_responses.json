@@ -4,7 +4,7 @@
     "schema": {
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/Product"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/product/Product"
       }
     }
   }

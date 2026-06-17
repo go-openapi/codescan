@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AWidget": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "x-go-name": "Label",
+          "example": "from-a"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-examples-no-mix/a"
+    },
+    "BWidget": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "x-go-name": "Label",
+          "example": "from-b"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-examples-no-mix/b"
+    },
+    "Catalog": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "$ref": "#/definitions/AWidget"
+        },
+        "b": {
+          "$ref": "#/definitions/BWidget"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-examples-no-mix"
+    }
+  }
+}

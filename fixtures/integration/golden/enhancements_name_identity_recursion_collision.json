@@ -1,0 +1,45 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "PNode": {
+      "type": "object",
+      "properties": {
+        "next": {
+          "$ref": "#/definitions/PNode"
+        },
+        "value": {
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-recursion-collision/p"
+    },
+    "QNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "next": {
+          "$ref": "#/definitions/QNode"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-recursion-collision/q"
+    },
+    "Tree": {
+      "type": "object",
+      "properties": {
+        "p": {
+          "$ref": "#/definitions/PNode"
+        },
+        "q": {
+          "$ref": "#/definitions/QNode"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-recursion-collision"
+    }
+  }
+}

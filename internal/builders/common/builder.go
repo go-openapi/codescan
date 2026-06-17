@@ -212,8 +212,11 @@ func (s *Builder) ResetPostDeclarations() {
 // the common base and what kinds of cross-cutting refinements that
 // shape enables.
 func (s *Builder) MakeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) error {
-	nm, _ := decl.Names()
-	ref, err := oaispec.NewRef("#/definitions/" + nm)
+	// Emit the fully-qualified identity key (pkgpath/name), not the bare
+	// short name: this keeps distinct Go types from colliding before the
+	// spec.Builder's reduce stage shortens names back. See
+	// .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+	ref, err := oaispec.NewRef("#/definitions/" + decl.DefKey())
 	if err != nil {
 		return err
 	}

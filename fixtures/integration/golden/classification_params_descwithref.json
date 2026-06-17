@@ -222,7 +222,7 @@
                 "description": "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/pet"
+                    "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
                   }
                 ],
                 "x-go-name": "Pet"
@@ -251,7 +251,7 @@
         "in": "body",
         "required": true,
         "schema": {
-          "$ref": "#/definitions/order"
+          "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order"
         }
       }
     ]
@@ -593,7 +593,7 @@
                 "description": "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket",
                 "allOf": [
                   {
-                    "$ref": "#/definitions/pet"
+                    "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
                   }
                 ],
                 "x-go-name": "Pet"
@@ -622,7 +622,7 @@
         "in": "body",
         "required": true,
         "schema": {
-          "$ref": "#/definitions/order"
+          "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order"
         }
       }
     ]

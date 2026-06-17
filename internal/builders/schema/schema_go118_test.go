@@ -29,7 +29,7 @@ func TestGo118SwaggerTypeNamed(t *testing.T) {
 	prs := NewBuilder(sctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["namedWithType"]
+	schema := models[scantest.ResolveTestKey(t, models, "namedWithType")]
 
 	scantest.AssertProperty(t, &schema, "object", "some_map", "", "SomeMap")
 
@@ -54,7 +54,9 @@ func TestGo118AliasedModels(t *testing.T) {
 
 	for k := range defs {
 		for i, b := range names {
-			if b == k {
+			// defs is keyed by the fully-qualified identity; match on the
+			// leaf via ResolveTestKey rather than the bare name.
+			if scantest.ResolveTestKey(t, defs, b) == k {
 				// remove the entry from the collection
 				names = append(names[:i], names[i+1:]...)
 			}
@@ -62,7 +64,7 @@ func TestGo118AliasedModels(t *testing.T) {
 	}
 	if assert.Empty(t, names) {
 		// map types
-		assertMapDefinition(t, defs, "SomeObject", "object", "", "")
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeObject"), "object", "", "")
 	}
 
 	scantest.CompareOrDumpJSON(t, defs, "go118_schema_aliased.json")
@@ -76,7 +78,7 @@ func TestGo118InterfaceField(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["Interfaced"]
+	schema := models[scantest.ResolveTestKey(t, models, "Interfaced")]
 	scantest.AssertProperty(t, &schema, "", "custom_data", "", "CustomData")
 
 	scantest.CompareOrDumpJSON(t, models, "go118_schema_Interfaced.json")
@@ -90,7 +92,7 @@ func TestGo118_Issue2809(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["transportErr"]
+	schema := models[scantest.ResolveTestKey(t, models, "transportErr")]
 	scantest.AssertProperty(t, &schema, "", "data", "", "Data")
 
 	scantest.CompareOrDumpJSON(t, models, "go118_schema_transportErr.json")

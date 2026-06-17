@@ -5,6 +5,7 @@ package spec
 
 import (
 	"go/ast"
+	"sort"
 
 	"github.com/go-openapi/codescan/internal/builders/operations"
 	"github.com/go-openapi/codescan/internal/builders/parameters"
@@ -56,6 +57,11 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 }
 
 func (s *Builder) Build() (*oaispec.Swagger, error) {
+	// Resolve same-package duplicate swagger:model names up front so that
+	// every later DefKey() / MakeRef() observes a consistent, conflict-free
+	// key for each declaration (D-4). Must run before anything emits a ref.
+	s.resolveSamePackageDuplicates()
+
 	// this initial scan step is skipped if !scanModels.
 	// Discovered dependencies should however be resolved.
 	if err := s.buildModels(); err != nil {
@@ -87,6 +93,13 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 		return nil, err
 	}
 
+	// Final stage: shorten the fully-qualified, collision-proof
+	// definition keys produced during discovery back to user-facing
+	// names and re-point every $ref. Runs last because buildRoutes /
+	// buildOperations also emit definition refs. See
+	// .claude/plans/name-identity-cyclic-ref.md §9/§12.
+	s.reduceDefinitionNames()
+
 	if s.input.Swagger == "" {
 		s.input.Swagger = "2.0"
 	}
@@ -106,14 +119,20 @@ func (s *Builder) buildDiscovered() error {
 		// existing schema's AllOf and producing doubled entries.
 		queued := make(map[string]struct{})
 		for _, d := range s.discovered {
-			nm, _ := d.Names()
-			if _, alreadyDone := s.definitions[nm]; alreadyDone {
+			// Dedup by the fully-qualified identity key (pkgpath/name),
+			// matching the definitions-map key written by the schema
+			// builder. A cycle / re-discovery of the SAME decl resolves
+			// to the same key and is skipped (reuse); two distinct decls
+			// that merely share a short name now get distinct keys and
+			// both build. See name-identity design §9.1/§12.1.
+			key := d.DefKey()
+			if _, alreadyDone := s.definitions[key]; alreadyDone {
 				continue
 			}
-			if _, dupInPass := queued[nm]; dupInPass {
+			if _, dupInPass := queued[key]; dupInPass {
 				continue
 			}
-			queued[nm] = struct{}{}
+			queued[key] = struct{}{}
 			queue = append(queue, d)
 		}
 		s.discovered = nil
@@ -207,6 +226,49 @@ func (s *Builder) buildParameters() error {
 	}
 
 	return nil
+}
+
+// resolveSamePackageDuplicates detects two distinct annotated models in
+// the SAME package that claim the same definition name — necessarily via
+// a `swagger:model <name>` override, since Go type names are unique per
+// package. The first (in a deterministic order) keeps the name; later
+// ones have their override suppressed (reverting to the Go type name) and
+// get a diagnostic. This is the build-side half of D-4; cross-package
+// same-name collisions are handled later by the reduce stage. See
+// .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+func (s *Builder) resolveSamePackageDuplicates() {
+	models := make([]*scanner.EntityDecl, 0)
+	for _, d := range s.ctx.Models() {
+		models = append(models, d)
+	}
+	// Deterministic order so "first wins" is stable across runs: by key,
+	// then by Go name within a colliding group.
+	sort.Slice(models, func(i, j int) bool {
+		ki, kj := models[i].DefKey(), models[j].DefKey()
+		if ki != kj {
+			return ki < kj
+		}
+		return models[i].Ident.Name < models[j].Ident.Name
+	})
+
+	seen := make(map[string]*scanner.EntityDecl, len(models))
+	for _, d := range models {
+		key := d.DefKey()
+		if first, dup := seen[key]; dup && first.Ident != d.Ident {
+			d.SuppressModelOverride()
+			if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+				_, goName := d.Names()
+				onDiag(grammar.Warnf(
+					s.ctx.PosOf(d.Spec.Pos()),
+					grammar.CodeDuplicateModelName,
+					"duplicate swagger:model name %q in package %q (already used by type %q); using Go name %q instead",
+					leafName(key), d.Obj().Pkg().Path(), first.Ident.Name, goName,
+				))
+			}
+			continue
+		}
+		seen[key] = d
+	}
 }
 
 func (s *Builder) buildModels() error {

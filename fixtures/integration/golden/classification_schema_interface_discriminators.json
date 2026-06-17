@@ -1,5 +1,5 @@
 {
-  "Identifiable": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/Identifiable": {
     "description": "Identifiable is an interface for things that have an ID",
     "type": "object",
     "required": [
@@ -19,7 +19,7 @@
     },
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "TeslaCar": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/TeslaCar": {
     "description": "TeslaCar is a tesla car",
     "type": "object",
     "properties": {
@@ -36,7 +36,7 @@
     },
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "animal": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/animal": {
     "description": "it should deserialize into one of the struct types that\nenlist for being implementations of this struct",
     "type": "object",
     "title": "A BaseStruct is a struct that has subtypes.",
@@ -73,14 +73,14 @@
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
     "discriminator": "jsonClass"
   },
-  "cars": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/cars": {
     "description": "Cars is a collection of cars",
     "type": "object",
     "properties": {
       "cars": {
         "type": "array",
         "items": {
-          "$ref": "#/definitions/TeslaCar"
+          "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/TeslaCar"
         },
         "x-go-name": "Cars"
       }
@@ -88,7 +88,7 @@
     "x-go-name": "Cars",
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "fish": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/fish": {
     "description": "Fish represents a base type implemented as interface\nthe nullary methods of this interface will be included as",
     "allOf": [
       {
@@ -110,10 +110,10 @@
         }
       },
       {
-        "$ref": "#/definitions/water"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/water"
       },
       {
-        "$ref": "#/definitions/extra"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/extra"
       },
       {
         "type": "object",
@@ -150,12 +150,12 @@
     "x-go-name": "Fish",
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "modelA": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/modelA": {
     "description": "The ModelA version of the tesla car",
     "type": "object",
     "properties": {
       "Tesla": {
-        "$ref": "#/definitions/TeslaCar"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/TeslaCar"
       },
       "doors": {
         "description": "The number of doors on this Model A",
@@ -167,11 +167,11 @@
     "x-go-name": "ModelA",
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "modelS": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/modelS": {
     "description": "The ModelS version of the tesla car",
     "allOf": [
       {
-        "$ref": "#/definitions/TeslaCar"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/TeslaCar"
       },
       {
         "type": "object",
@@ -188,11 +188,11 @@
     "x-go-name": "ModelS",
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "modelX": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/modelX": {
     "description": "The ModelX version of the tesla car",
     "allOf": [
       {
-        "$ref": "#/definitions/TeslaCar"
+        "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/TeslaCar"
       },
       {
         "type": "object",
@@ -210,7 +210,7 @@
     "x-go-name": "ModelX",
     "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
   },
-  "water": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/water": {
     "description": "WaterType is an interface describing a water type",
     "type": "object",
     "properties": {

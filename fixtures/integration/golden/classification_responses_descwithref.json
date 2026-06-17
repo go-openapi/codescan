@@ -70,7 +70,7 @@
   "resp": {
     "description": "Resp a response for testing",
     "schema": {
-      "$ref": "#/definitions/user"
+      "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/operations/user"
     },
     "headers": {
       "UUID": {
@@ -128,7 +128,7 @@
             "description": "The Pet to add to this NoModel items bucket.\nPets can appear more than once in the bucket",
             "allOf": [
               {
-                "$ref": "#/definitions/pet"
+                "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
               }
             ],
             "x-go-name": "Pet"

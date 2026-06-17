@@ -1,5 +1,5 @@
 {
-  "namedWithType": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/classification/models/namedWithType": {
     "type": "object",
     "properties": {
       "some_map": {

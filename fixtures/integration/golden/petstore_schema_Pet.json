@@ -1,5 +1,5 @@
 {
-  "pet": {
+  "github.com/go-openapi/codescan/fixtures/goparsing/petstore/models/pet": {
     "description": "It is used to describe the animals available in the store.",
     "type": "object",
     "title": "A Pet is the main product in the store.",
@@ -52,7 +52,7 @@
         "description": "Extra bits of information attached to this pet.",
         "type": "array",
         "items": {
-          "$ref": "#/definitions/tag"
+          "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/petstore/models/tag"
         },
         "x-go-name": "Tags"
       }

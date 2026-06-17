@@ -204,7 +204,7 @@
                 "type": "string"
               },
               "pet": {
-                "$ref": "#/definitions/pet"
+                "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
               },
               "quantity": {
                 "description": "The amount of pets to add to this bucket.",
@@ -228,7 +228,7 @@
         "in": "body",
         "required": true,
         "schema": {
-          "$ref": "#/definitions/order"
+          "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order"
         }
       }
     ]
@@ -541,7 +541,7 @@
                 "type": "string"
               },
               "pet": {
-                "$ref": "#/definitions/pet"
+                "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
               },
               "quantity": {
                 "description": "The amount of pets to add to this bucket.",
@@ -565,7 +565,7 @@
         "in": "body",
         "required": true,
         "schema": {
-          "$ref": "#/definitions/order"
+          "$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/models/order"
         }
       }
     ]

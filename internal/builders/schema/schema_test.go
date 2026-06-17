@@ -20,10 +20,14 @@ const (
 	epsilon = 1e-9
 
 	// fixturesModule is the module path of the fixtures nested module.
-	fixturesModule     = "github.com/go-openapi/codescan/fixtures"
-	fixtureMinimal3125 = "bugs/3125/minimal"
-	sampleValue1       = "value1"
-	sampleValue2       = "value2"
+	fixturesModule = "github.com/go-openapi/codescan/fixtures"
+	// classificationOrderRef is the fully-qualified $ref of the classification
+	// `order` model — emitted by the schema builder before the spec reduce
+	// stage shortens it (see scanner.EntityDecl.DefKey).
+	classificationOrderRef = "#/definitions/" + fixturesModule + "/goparsing/classification/models/order"
+	fixtureMinimal3125     = "bugs/3125/minimal"
+	sampleValue1           = "value1"
+	sampleValue2           = "value2"
 )
 
 func TestBuilder_Struct_Tag(t *testing.T) {
@@ -93,7 +97,7 @@ func TestBuilder(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["NoModel"]
+	schema := models[scantest.ResolveTestKey(t, models, "NoModel")]
 
 	assert.Equal(t, oaispec.StringOrArray([]string{"object"}), schema.Type)
 	assert.EqualT(t, "NoModel is a struct without an annotation.", schema.Title)
@@ -273,7 +277,7 @@ func TestBuilder(t *testing.T) {
 	assert.TrueT(t, iprop.ExclusiveMinimum, "'id' should have had an exclusive minimum")
 	assert.Equal(t, 11, iprop.Default, "ID default value is incorrect")
 
-	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/pet")
+	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/pet")
 	iprop, ok = itprop.Properties["pet"]
 	assert.TrueT(t, ok)
 	if itprop.Ref.String() != "" {
@@ -302,7 +306,7 @@ func TestBuilder(t *testing.T) {
 	decl2 := getClassificationModel(ctx, "StoreOrder")
 	require.NotNil(t, decl2)
 	require.NoError(t, NewBuilder(ctx, decl2).Build(WithDefinitions(models)))
-	msch, ok := models["order"]
+	msch, ok := models[scantest.ResolveTestKey(t, models, "order")]
 	pn := fixturesModule + "/goparsing/classification/models"
 	assert.TrueT(t, ok)
 	assert.Equal(t, pn, msch.Extensions["x-go-package"])
@@ -318,7 +322,7 @@ func TestBuilder_AddExtensions(t *testing.T) {
 	require.NotNil(t, decl)
 	require.NoError(t, NewBuilder(ctx, decl).Build(WithDefinitions(models)))
 
-	msch, ok := models["order"]
+	msch, ok := models[scantest.ResolveTestKey(t, models, "order")]
 	pn := fixturesModule + "/goparsing/classification/models"
 	assert.TrueT(t, ok)
 	assert.Equal(t, pn, msch.Extensions["x-go-package"])
@@ -333,13 +337,13 @@ func TestTextMarhalCustomType(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["TextMarshalModel"]
+	schema := models[scantest.ResolveTestKey(t, models, "TextMarshalModel")]
 	scantest.AssertProperty(t, &schema, "string", "id", "uuid", "ID")
 	scantest.AssertArrayProperty(t, &schema, "string", "ids", "uuid", "IDs")
 	scantest.AssertProperty(t, &schema, "string", "struct", "", "Struct")
 	scantest.AssertProperty(t, &schema, "string", "map", "", "Map")
 	assertMapProperty(t, &schema, "string", "mapUUID", "uuid", "MapUUID")
-	scantest.AssertRef(t, &schema, "url", "URL", "#/definitions/URL")
+	scantest.AssertRef(t, &schema, "url", "URL", "#/definitions/net/url/URL")
 	scantest.AssertProperty(t, &schema, "string", "time", "date-time", "Time")
 	scantest.AssertProperty(t, &schema, "string", "structStrfmt", "date-time", "StructStrfmt")
 	scantest.AssertProperty(t, &schema, "string", "structStrfmtPtr", "date-time", "StructStrfmtPtr")
@@ -353,7 +357,7 @@ func TestEmbeddedTypes(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["ComplexerOne"]
+	schema := models[scantest.ResolveTestKey(t, models, "ComplexerOne")]
 	scantest.AssertProperty(t, &schema, "integer", "age", "int32", "Age")
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
 	scantest.AssertProperty(t, &schema, "string", "createdAt", "date-time", "CreatedAt")
@@ -370,7 +374,7 @@ func TestParsePrimitiveSchemaProperty(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["PrimateModel"]
+	schema := models[scantest.ResolveTestKey(t, models, "PrimateModel")]
 	scantest.AssertProperty(t, &schema, "boolean", "a", "", "A")
 	scantest.AssertProperty(t, &schema, "integer", "b", "int32", "B")
 	scantest.AssertProperty(t, &schema, "string", "c", "", "C")
@@ -398,7 +402,7 @@ func TestParseStringFormatSchemaProperty(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["FormattedModel"]
+	schema := models[scantest.ResolveTestKey(t, models, "FormattedModel")]
 	scantest.AssertProperty(t, &schema, "string", "a", "byte", "A")
 	scantest.AssertProperty(t, &schema, "string", "b", "creditcard", "B")
 	scantest.AssertProperty(t, &schema, "string", "c", "date", "C")
@@ -430,7 +434,7 @@ func TestStringStructTag(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	sch := models["jsonString"]
+	sch := models[scantest.ResolveTestKey(t, models, "jsonString")]
 	scantest.AssertProperty(t, &sch, "string", "someInt", "int64", "SomeInt")
 	scantest.AssertProperty(t, &sch, "string", "someInt8", "int8", "SomeInt8")
 	scantest.AssertProperty(t, &sch, "string", "someInt16", "int16", "SomeInt16")
@@ -460,7 +464,7 @@ func TestPtrFieldStringStructTag(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	sch := models["jsonPtrString"]
+	sch := models[scantest.ResolveTestKey(t, models, "jsonPtrString")]
 	scantest.AssertProperty(t, &sch, "string", "someInt", "int64", "SomeInt")
 	scantest.AssertProperty(t, &sch, "string", "someInt8", "int8", "SomeInt8")
 	scantest.AssertProperty(t, &sch, "string", "someInt16", "int16", "SomeInt16")
@@ -489,7 +493,7 @@ func TestIgnoredStructField(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	sch := models["ignoredFields"]
+	sch := models[scantest.ResolveTestKey(t, models, "ignoredFields")]
 	scantest.AssertProperty(t, &sch, "string", "someIncludedField", "", "SomeIncludedField")
 	scantest.AssertProperty(t, &sch, "string", "someErroneouslyIncludedField", "", "SomeErroneouslyIncludedField")
 	assert.Len(t, sch.Properties, 2)
@@ -503,14 +507,14 @@ func TestParseStructFields(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["SimpleComplexModel"]
+	schema := models[scantest.ResolveTestKey(t, models, "SimpleComplexModel")]
 	scantest.AssertProperty(t, &schema, "object", "emb", "", "Emb")
 	eSchema := schema.Properties["emb"]
 	scantest.AssertProperty(t, &eSchema, "integer", "cid", "int64", "CID")
 	scantest.AssertProperty(t, &eSchema, "string", "baz", "", "Baz")
 
-	scantest.AssertRef(t, &schema, "top", "Top", "#/definitions/Something")
-	scantest.AssertRef(t, &schema, "notSel", "NotSel", "#/definitions/NotSelected")
+	scantest.AssertRef(t, &schema, "top", "Top", "#/definitions/"+fixturesModule+"/goparsing/classification/models/Something")
+	scantest.AssertRef(t, &schema, "notSel", "NotSel", "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/NotSelected")
 }
 
 func TestParsePointerFields(t *testing.T) {
@@ -521,7 +525,7 @@ func TestParsePointerFields(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["Pointdexter"]
+	schema := models[scantest.ResolveTestKey(t, models, "Pointdexter")]
 
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
 	scantest.AssertProperty(t, &schema, "string", "name", "", "Name")
@@ -531,8 +535,8 @@ func TestParsePointerFields(t *testing.T) {
 	scantest.AssertProperty(t, &eSchema, "integer", "cid", "int64", "CID")
 	scantest.AssertProperty(t, &eSchema, "string", "baz", "", "Baz")
 
-	scantest.AssertRef(t, &schema, "top", "Top", "#/definitions/Something")
-	scantest.AssertRef(t, &schema, "notSel", "NotSel", "#/definitions/NotSelected")
+	scantest.AssertRef(t, &schema, "top", "Top", "#/definitions/"+fixturesModule+"/goparsing/classification/models/Something")
+	scantest.AssertRef(t, &schema, "notSel", "NotSel", "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/NotSelected")
 }
 
 func TestEmbeddedStarExpr(t *testing.T) {
@@ -543,7 +547,7 @@ func TestEmbeddedStarExpr(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["EmbeddedStarExpr"]
+	schema := models[scantest.ResolveTestKey(t, models, "EmbeddedStarExpr")]
 
 	scantest.AssertProperty(t, &schema, "integer", "embeddedMember", "int64", "EmbeddedMember")
 	scantest.AssertProperty(t, &schema, "integer", "notEmbedded", "int64", "NotEmbedded")
@@ -557,7 +561,7 @@ func TestArrayOfPointers(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["cars"]
+	schema := models[scantest.ResolveTestKey(t, models, "cars")]
 	scantest.AssertProperty(t, &schema, "array", "cars", "", "Cars")
 }
 
@@ -569,7 +573,7 @@ func TestOverridingOneIgnore(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["OverridingOneIgnore"]
+	schema := models[scantest.ResolveTestKey(t, models, "OverridingOneIgnore")]
 
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
 	scantest.AssertProperty(t, &schema, "string", "name", "", "Name")
@@ -595,7 +599,7 @@ func testParseCollectionFields(
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models[modelName]
+	schema := models[scantest.ResolveTestKey(t, models, modelName)]
 
 	ca.assertProperty(t, &schema, "integer", "ids", "int64", "IDs")
 	ca.assertProperty(t, &schema, "string", "names", "", "Names")
@@ -605,8 +609,8 @@ func testParseCollectionFields(
 	ca.assertProperty(t, eSchema, "integer", "cid", "int64", "CID")
 	ca.assertProperty(t, eSchema, "string", "baz", "", "Baz")
 
-	ca.assertRef(t, &schema, "tops", "Tops", "#/definitions/Something")
-	ca.assertRef(t, &schema, "notSels", "NotSels", "#/definitions/NotSelected")
+	ca.assertRef(t, &schema, "tops", "Tops", "#/definitions/"+fixturesModule+"/goparsing/classification/models/Something")
+	ca.assertRef(t, &schema, "notSels", "NotSels", "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/NotSelected")
 
 	ca.assertProperty(t, &schema, "integer", "ptrIds", "int64", "PtrIDs")
 	ca.assertProperty(t, &schema, "string", "ptrNames", "", "PtrNames")
@@ -616,8 +620,8 @@ func testParseCollectionFields(
 	ca.assertProperty(t, eSchema, "integer", "ptrCid", "int64", "PtrCID")
 	ca.assertProperty(t, eSchema, "string", "ptrBaz", "", "PtrBaz")
 
-	ca.assertRef(t, &schema, "ptrTops", "PtrTops", "#/definitions/Something")
-	ca.assertRef(t, &schema, "ptrNotSels", "PtrNotSels", "#/definitions/NotSelected")
+	ca.assertRef(t, &schema, "ptrTops", "PtrTops", "#/definitions/"+fixturesModule+"/goparsing/classification/models/Something")
+	ca.assertRef(t, &schema, "ptrNotSels", "PtrNotSels", "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/NotSelected")
 }
 
 func TestParseSliceFields(t *testing.T) {
@@ -644,7 +648,7 @@ func TestInterfaceField(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["Interfaced"]
+	schema := models[scantest.ResolveTestKey(t, models, "Interfaced")]
 	scantest.AssertProperty(t, &schema, "", "custom_data", "", "CustomData")
 }
 
@@ -656,60 +660,66 @@ func TestAliasedTypes(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["OtherTypes"]
-	scantest.AssertRef(t, &schema, "named", "Named", "#/definitions/SomeStringType")
-	scantest.AssertRef(t, &schema, "numbered", "Numbered", "#/definitions/SomeIntType")
+	schema := models[scantest.ResolveTestKey(t, models, "OtherTypes")]
+	// Sub-builder unit tests run without the spec reduce stage, so $refs
+	// stay fully-qualified. The alias targets are not built into the local
+	// map (only OtherTypes is), so ResolveTestKey cannot shorten them;
+	// hardcode their package-qualified keys.
+	mp := "#/definitions/" + fixturesModule + "/goparsing/classification/models/"
+	tp := "#/definitions/" + fixturesModule + "/goparsing/classification/transitive/mods/"
+	scantest.AssertRef(t, &schema, "named", "Named", mp+"SomeStringType")
+	scantest.AssertRef(t, &schema, "numbered", "Numbered", mp+"SomeIntType")
 	scantest.AssertProperty(t, &schema, "string", "dated", "date-time", "Dated")
-	scantest.AssertRef(t, &schema, "timed", "Timed", "#/definitions/SomeTimedType")
-	scantest.AssertRef(t, &schema, "petted", "Petted", "#/definitions/SomePettedType")
-	scantest.AssertRef(t, &schema, "somethinged", "Somethinged", "#/definitions/SomethingType")
-	scantest.AssertRef(t, &schema, "strMap", "StrMap", "#/definitions/SomeStringMap")
-	scantest.AssertRef(t, &schema, "strArrMap", "StrArrMap", "#/definitions/SomeArrayStringMap")
+	scantest.AssertRef(t, &schema, "timed", "Timed", mp+"SomeTimedType")
+	scantest.AssertRef(t, &schema, "petted", "Petted", mp+"SomePettedType")
+	scantest.AssertRef(t, &schema, "somethinged", "Somethinged", mp+"SomethingType")
+	scantest.AssertRef(t, &schema, "strMap", "StrMap", mp+"SomeStringMap")
+	scantest.AssertRef(t, &schema, "strArrMap", "StrArrMap", mp+"SomeArrayStringMap")
 
-	scantest.AssertRef(t, &schema, "manyNamed", "ManyNamed", "#/definitions/SomeStringsType")
-	scantest.AssertRef(t, &schema, "manyNumbered", "ManyNumbered", "#/definitions/SomeIntsType")
+	scantest.AssertRef(t, &schema, "manyNamed", "ManyNamed", mp+"SomeStringsType")
+	scantest.AssertRef(t, &schema, "manyNumbered", "ManyNumbered", mp+"SomeIntsType")
 	scantest.AssertArrayProperty(t, &schema, "string", "manyDated", "date-time", "ManyDated")
-	scantest.AssertRef(t, &schema, "manyTimed", "ManyTimed", "#/definitions/SomeTimedsType")
-	scantest.AssertRef(t, &schema, "manyPetted", "ManyPetted", "#/definitions/SomePettedsType")
-	scantest.AssertRef(t, &schema, "manySomethinged", "ManySomethinged", "#/definitions/SomethingsType")
+	scantest.AssertRef(t, &schema, "manyTimed", "ManyTimed", mp+"SomeTimedsType")
+	scantest.AssertRef(t, &schema, "manyPetted", "ManyPetted", mp+"SomePettedsType")
+	scantest.AssertRef(t, &schema, "manySomethinged", "ManySomethinged", mp+"SomethingsType")
 
-	assertArrayRef(t, &schema, "nameds", "Nameds", "#/definitions/SomeStringType")
-	assertArrayRef(t, &schema, "numbereds", "Numbereds", "#/definitions/SomeIntType")
+	assertArrayRef(t, &schema, "nameds", "Nameds", mp+"SomeStringType")
+	assertArrayRef(t, &schema, "numbereds", "Numbereds", mp+"SomeIntType")
 	scantest.AssertArrayProperty(t, &schema, "string", "dateds", "date-time", "Dateds")
-	assertArrayRef(t, &schema, "timeds", "Timeds", "#/definitions/SomeTimedType")
-	assertArrayRef(t, &schema, "petteds", "Petteds", "#/definitions/SomePettedType")
-	assertArrayRef(t, &schema, "somethingeds", "Somethingeds", "#/definitions/SomethingType")
+	assertArrayRef(t, &schema, "timeds", "Timeds", mp+"SomeTimedType")
+	assertArrayRef(t, &schema, "petteds", "Petteds", mp+"SomePettedType")
+	assertArrayRef(t, &schema, "somethingeds", "Somethingeds", mp+"SomethingType")
 
-	scantest.AssertRef(t, &schema, "modsNamed", "ModsNamed", "#/definitions/modsSomeStringType")
-	scantest.AssertRef(t, &schema, "modsNumbered", "ModsNumbered", "#/definitions/modsSomeIntType")
+	scantest.AssertRef(t, &schema, "modsNamed", "ModsNamed", tp+"modsSomeStringType")
+	scantest.AssertRef(t, &schema, "modsNumbered", "ModsNumbered", tp+"modsSomeIntType")
 	// F1: modsSomeTimeType is swagger:model + swagger:strfmt date-time, so it
 	// now $refs its definition (which carries the format) like its siblings,
 	// rather than inlining {string,date-time}.
-	scantest.AssertRef(t, &schema, "modsDated", "ModsDated", "#/definitions/modsSomeTimeType")
-	scantest.AssertRef(t, &schema, "modsTimed", "ModsTimed", "#/definitions/modsSomeTimedType")
-	scantest.AssertRef(t, &schema, "modsPetted", "ModsPetted", "#/definitions/modsSomePettedType")
+	scantest.AssertRef(t, &schema, "modsDated", "ModsDated", tp+"modsSomeTimeType")
+	scantest.AssertRef(t, &schema, "modsTimed", "ModsTimed", tp+"modsSomeTimedType")
+	scantest.AssertRef(t, &schema, "modsPetted", "ModsPetted", tp+"modsSomePettedType")
 
-	assertArrayRef(t, &schema, "modsNameds", "ModsNameds", "#/definitions/modsSomeStringType")
-	assertArrayRef(t, &schema, "modsNumbereds", "ModsNumbereds", "#/definitions/modsSomeIntType")
-	assertArrayRef(t, &schema, "modsDateds", "ModsDateds", "#/definitions/modsSomeTimeType")
-	assertArrayRef(t, &schema, "modsTimeds", "ModsTimeds", "#/definitions/modsSomeTimedType")
-	assertArrayRef(t, &schema, "modsPetteds", "ModsPetteds", "#/definitions/modsSomePettedType")
+	assertArrayRef(t, &schema, "modsNameds", "ModsNameds", tp+"modsSomeStringType")
+	assertArrayRef(t, &schema, "modsNumbereds", "ModsNumbereds", tp+"modsSomeIntType")
+	assertArrayRef(t, &schema, "modsDateds", "ModsDateds", tp+"modsSomeTimeType")
+	assertArrayRef(t, &schema, "modsTimeds", "ModsTimeds", tp+"modsSomeTimedType")
+	assertArrayRef(t, &schema, "modsPetteds", "ModsPetteds", tp+"modsSomePettedType")
 
-	scantest.AssertRef(t, &schema, "manyModsNamed", "ManyModsNamed", "#/definitions/modsSomeStringsType")
-	scantest.AssertRef(t, &schema, "manyModsNumbered", "ManyModsNumbered", "#/definitions/modsSomeIntsType")
+	scantest.AssertRef(t, &schema, "manyModsNamed", "ManyModsNamed", tp+"modsSomeStringsType")
+	scantest.AssertRef(t, &schema, "manyModsNumbered", "ManyModsNumbered", tp+"modsSomeIntsType")
 	// F1: modsSomeTimesType (model + strfmt date-time) now $refs its definition.
-	scantest.AssertRef(t, &schema, "manyModsDated", "ManyModsDated", "#/definitions/modsSomeTimesType")
-	scantest.AssertRef(t, &schema, "manyModsTimed", "ManyModsTimed", "#/definitions/modsSomeTimedsType")
-	scantest.AssertRef(t, &schema, "manyModsPetted", "ManyModsPetted", "#/definitions/modsSomePettedsType")
-	scantest.AssertRef(t, &schema, "manyModsPettedPtr", "ManyModsPettedPtr", "#/definitions/modsSomePettedsPtrType")
+	scantest.AssertRef(t, &schema, "manyModsDated", "ManyModsDated", tp+"modsSomeTimesType")
+	scantest.AssertRef(t, &schema, "manyModsTimed", "ManyModsTimed", tp+"modsSomeTimedsType")
+	scantest.AssertRef(t, &schema, "manyModsPetted", "ManyModsPetted", tp+"modsSomePettedsType")
+	scantest.AssertRef(t, &schema, "manyModsPettedPtr", "ManyModsPettedPtr", tp+"modsSomePettedsPtrType")
 
 	// swagger:alias is deprecated (F8): it no longer force-inlines the
 	// primitive, so these now $ref their definitions like any other named
 	// type (consistent with the `named`/`numbered` assertions above).
-	scantest.AssertRef(t, &schema, "namedAlias", "NamedAlias", "#/definitions/SomeStringTypeAlias")
-	scantest.AssertRef(t, &schema, "numberedAlias", "NumberedAlias", "#/definitions/SomeIntTypeAlias")
-	assertArrayRef(t, &schema, "namedsAlias", "NamedsAlias", "#/definitions/SomeStringTypeAlias")
-	assertArrayRef(t, &schema, "numberedsAlias", "NumberedsAlias", "#/definitions/SomeIntTypeAlias")
+	scantest.AssertRef(t, &schema, "namedAlias", "NamedAlias", mp+"SomeStringTypeAlias")
+	scantest.AssertRef(t, &schema, "numberedAlias", "NumberedAlias", mp+"SomeIntTypeAlias")
+	assertArrayRef(t, &schema, "namedsAlias", "NamedsAlias", mp+"SomeStringTypeAlias")
+	assertArrayRef(t, &schema, "numberedsAlias", "NumberedsAlias", mp+"SomeIntTypeAlias")
 }
 
 func TestAliasedModels(t *testing.T) {
@@ -748,37 +758,44 @@ func TestAliasedModels(t *testing.T) {
 
 	for k := range defs {
 		for i, b := range names {
-			if b == k {
+			// defs is keyed by the fully-qualified identity; match on the
+			// leaf via ResolveTestKey rather than the bare name.
+			if scantest.ResolveTestKey(t, defs, b) == k {
 				// remove the entry from the collection
 				names = append(names[:i], names[i+1:]...)
 			}
 		}
 	}
+	// Sub-builder unit tests run without the spec reduce stage; the pet /
+	// Something $ref targets are not in the local map, so their keys are
+	// hardcoded with their package paths.
+	petRef := "#/definitions/" + fixturesModule + "/goparsing/classification/transitive/mods/pet"
+	somethingRef := "#/definitions/" + fixturesModule + "/goparsing/classification/models/Something"
 	if assert.Empty(t, names) {
 		// single value types
-		assertDefinition(t, defs, "SomeStringType", "string", "")
-		assertDefinition(t, defs, "SomeIntType", "integer", "int64")
-		assertDefinition(t, defs, "SomeTimeType", "string", "date-time")
-		assertDefinition(t, defs, "SomeTimedType", "string", "date-time")
-		assertRefDefinition(t, defs, "SomePettedType", "#/definitions/pet", "")
-		assertRefDefinition(t, defs, "SomethingType", "#/definitions/Something", "")
+		assertDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeStringType"), "string", "")
+		assertDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeIntType"), "integer", "int64")
+		assertDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeTimeType"), "string", "date-time")
+		assertDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeTimedType"), "string", "date-time")
+		assertRefDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomePettedType"), petRef, "")
+		assertRefDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomethingType"), somethingRef, "")
 
 		// slice types
-		assertArrayDefinition(t, defs, "SomeStringsType", "string", "", "")
-		assertArrayDefinition(t, defs, "SomeIntsType", "integer", "int64", "")
-		assertArrayDefinition(t, defs, "SomeTimesType", "string", "date-time", "")
-		assertArrayDefinition(t, defs, "SomeTimedsType", "string", "date-time", "")
-		assertArrayWithRefDefinition(t, defs, "SomePettedsType", "#/definitions/pet", "")
-		assertArrayWithRefDefinition(t, defs, "SomethingsType", "#/definitions/Something", "")
+		assertArrayDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeStringsType"), "string", "", "")
+		assertArrayDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeIntsType"), "integer", "int64", "")
+		assertArrayDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeTimesType"), "string", "date-time", "")
+		assertArrayDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeTimedsType"), "string", "date-time", "")
+		assertArrayWithRefDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomePettedsType"), petRef, "")
+		assertArrayWithRefDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomethingsType"), somethingRef, "")
 
 		// map types
-		assertMapDefinition(t, defs, "SomeObject", "object", "", "")
-		assertMapDefinition(t, defs, "SomeStringMap", "string", "", "")
-		assertMapDefinition(t, defs, "SomeIntMap", "integer", "int64", "")
-		assertMapDefinition(t, defs, "SomeTimeMap", "string", "date-time", "")
-		assertMapDefinition(t, defs, "SomeTimedMap", "string", "date-time", "")
-		assertMapWithRefDefinition(t, defs, "SomePettedMap", "#/definitions/pet", "")
-		assertMapWithRefDefinition(t, defs, "SomeSomethingMap", "#/definitions/Something", "")
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeObject"), "object", "", "")
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeStringMap"), "string", "", "")
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeIntMap"), "integer", "int64", "")
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeTimeMap"), "string", "date-time", "")
+		assertMapDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeTimedMap"), "string", "date-time", "")
+		assertMapWithRefDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomePettedMap"), petRef, "")
+		assertMapWithRefDefinition(t, defs, scantest.ResolveTestKey(t, defs, "SomeSomethingMap"), somethingRef, "")
 	}
 }
 
@@ -815,7 +832,8 @@ func TestAliasedTopLevelModels(t *testing.T) {
 					models := make(map[string]oaispec.Schema)
 					require.NoError(t, builder.Build(WithDefinitions(models)))
 
-					assertRefDefinition(t, models, "Customer", "#/definitions/User", "")
+					assertRefDefinition(t, models, scantest.ResolveTestKey(t, models, "Customer"),
+						"#/definitions/"+fixturesModule+"/goparsing/spec/User", "")
 				})
 
 				t.Run("should have discovered models for User and Customer", func(t *testing.T) {
@@ -842,9 +860,9 @@ func TestAliasedTopLevelModels(t *testing.T) {
 						models := make(map[string]oaispec.Schema)
 						require.NoError(t, userBuilder.Build(WithDefinitions(models)))
 
-						require.MapContainsT(t, models, "User")
+						require.MapContainsT(t, models, scantest.ResolveTestKey(t, models, "User"))
 
-						user := models["User"]
+						user := models[scantest.ResolveTestKey(t, models, "User")]
 						assert.TrueT(t, user.Type.Contains("object"))
 
 						userProperties := user.Properties
@@ -887,9 +905,9 @@ func TestAliasedTopLevelModels(t *testing.T) {
 					models := make(map[string]oaispec.Schema)
 					require.NoError(t, builder.Build(WithDefinitions(models)))
 
-					require.MapContainsT(t, models, "Customer")
-					customer := models["Customer"]
-					require.MapNotContainsT(t, models, "User")
+					require.MapContainsT(t, models, scantest.ResolveTestKey(t, models, "Customer"))
+					customer := models[scantest.ResolveTestKey(t, models, "Customer")]
+					require.MapNotContainsT(t, models, scantest.ResolveTestKey(t, models, "User"))
 
 					assert.TrueT(t, customer.Type.Contains("object"))
 
@@ -916,7 +934,7 @@ func TestEmbeddedAllOf(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["AllOfModel"]
+	schema := models[scantest.ResolveTestKey(t, models, "AllOfModel")]
 
 	require.Len(t, schema.AllOf, 3)
 	asch := schema.AllOf[0]
@@ -925,7 +943,7 @@ func TestEmbeddedAllOf(t *testing.T) {
 	scantest.AssertProperty(t, &asch, "string", "name", "", "Name")
 
 	asch = schema.AllOf[1]
-	assert.EqualT(t, "#/definitions/withNotes", asch.Ref.String())
+	assert.EqualT(t, "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/withNotes", asch.Ref.String())
 
 	asch = schema.AllOf[2]
 	scantest.AssertProperty(t, &asch, "string", "createdAt", "date-time", "CreatedAt")
@@ -943,7 +961,7 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 		prs := NewBuilder(ctx, decl)
 		require.NoError(t, prs.Build(WithDefinitions(allModels)))
 
-		schema := allModels[modelName]
+		schema := allModels[scantest.ResolveTestKey(t, allModels, modelName)]
 		require.Len(t, schema.Properties, 5)
 
 		// Interface-method properties are camelCased; struct fields
@@ -994,7 +1012,7 @@ func TestPointersAreNotNullableByDefaultWhenSetXNullableForPointersIsNotSet(t *t
 		prs := NewBuilder(ctx, decl)
 		require.NoError(t, prs.Build(WithDefinitions(allModels)))
 
-		schema := allModels[modelName]
+		schema := allModels[scantest.ResolveTestKey(t, allModels, modelName)]
 		require.Len(t, schema.Properties, 5)
 
 		v1, v2, v3, v4, v5 := valueKeys(modelName)
@@ -1030,7 +1048,7 @@ func TestSwaggerTypeNamed(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["namedWithType"]
+	schema := models[scantest.ResolveTestKey(t, models, "namedWithType")]
 
 	scantest.AssertProperty(t, &schema, "object", "some_map", "", "SomeMap")
 
@@ -1040,31 +1058,31 @@ func TestSwaggerTypeNamed(t *testing.T) {
 func TestSwaggerTypeNamedWithGenerics(t *testing.T) {
 	tests := map[string]func(t *testing.T, models map[string]oaispec.Schema){
 		"NamedStringResults": func(t *testing.T, models map[string]oaispec.Schema) {
-			schema := models["namedStringResults"]
+			schema := models[scantest.ResolveTestKey(t, models, "namedStringResults")]
 			scantest.AssertArrayProperty(t, &schema, "string", "matches", "", "Matches")
 		},
 		"NamedStoreOrderResults": func(t *testing.T, models map[string]oaispec.Schema) {
-			schema := models["namedStoreOrderResults"]
-			assertArrayRef(t, &schema, "matches", "Matches", "#/definitions/order")
+			schema := models[scantest.ResolveTestKey(t, models, "namedStoreOrderResults")]
+			assertArrayRef(t, &schema, "matches", "Matches", "#/definitions/"+fixturesModule+"/goparsing/classification/models/order")
 		},
 		"NamedStringSlice": func(t *testing.T, models map[string]oaispec.Schema) {
-			assertArrayDefinition(t, models, "namedStringSlice", "string", "", "NamedStringSlice")
+			assertArrayDefinition(t, models, scantest.ResolveTestKey(t, models, "namedStringSlice"), "string", "", "NamedStringSlice")
 		},
 		"NamedStoreOrderSlice": func(t *testing.T, models map[string]oaispec.Schema) {
-			assertArrayWithRefDefinition(t, models, "namedStoreOrderSlice", "#/definitions/order", "NamedStoreOrderSlice")
+			assertArrayWithRefDefinition(t, models, scantest.ResolveTestKey(t, models, "namedStoreOrderSlice"), classificationOrderRef, "NamedStoreOrderSlice")
 		},
 		"NamedStringMap": func(t *testing.T, models map[string]oaispec.Schema) {
-			assertMapDefinition(t, models, "namedStringMap", "string", "", "NamedStringMap")
+			assertMapDefinition(t, models, scantest.ResolveTestKey(t, models, "namedStringMap"), "string", "", "NamedStringMap")
 		},
 		"NamedStoreOrderMap": func(t *testing.T, models map[string]oaispec.Schema) {
-			assertMapWithRefDefinition(t, models, "namedStoreOrderMap", "#/definitions/order", "NamedStoreOrderMap")
+			assertMapWithRefDefinition(t, models, scantest.ResolveTestKey(t, models, "namedStoreOrderMap"), classificationOrderRef, "NamedStoreOrderMap")
 		},
 		"NamedMapOfStoreOrderSlices": func(t *testing.T, models map[string]oaispec.Schema) {
-			assertMapDefinition(t, models, "namedMapOfStoreOrderSlices", "array", "", "NamedMapOfStoreOrderSlices")
-			arraySchema := models["namedMapOfStoreOrderSlices"].AdditionalProperties.Schema
+			assertMapDefinition(t, models, scantest.ResolveTestKey(t, models, "namedMapOfStoreOrderSlices"), "array", "", "NamedMapOfStoreOrderSlices")
+			arraySchema := models[scantest.ResolveTestKey(t, models, "namedMapOfStoreOrderSlices")].AdditionalProperties.Schema
 			assertArrayWithRefDefinition(t, map[string]oaispec.Schema{
 				"array": *arraySchema,
-			}, "array", "#/definitions/order", "")
+			}, "array", "#/definitions/"+fixturesModule+"/goparsing/classification/models/order", "")
 		},
 	}
 
@@ -1088,7 +1106,7 @@ func TestSwaggerTypeStruct(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["NullString"]
+	schema := models[scantest.ResolveTestKey(t, models, "NullString")]
 
 	assert.TrueT(t, schema.Type.Contains("string"))
 
@@ -1106,19 +1124,19 @@ func TestStructDiscriminators(t *testing.T) {
 		require.NoError(t, prs.Build(WithDefinitions(models)))
 	}
 
-	schema := models["animal"]
+	schema := models[scantest.ResolveTestKey(t, models, "animal")]
 
 	assert.Equal(t, "BaseStruct", schema.Extensions["x-go-name"])
 	assert.EqualT(t, "jsonClass", schema.Discriminator)
 
-	sch := models["gazelle"]
+	sch := models[scantest.ResolveTestKey(t, models, "gazelle")]
 	assert.Len(t, sch.AllOf, 2)
 	cl, _ := sch.Extensions.GetString("x-class")
 	assert.EqualT(t, "a.b.c.d.E", cl)
 	cl, _ = sch.Extensions.GetString("x-go-name")
 	assert.EqualT(t, "Gazelle", cl)
 
-	sch = models["giraffe"]
+	sch = models[scantest.ResolveTestKey(t, models, "giraffe")]
 	assert.Len(t, sch.AllOf, 2)
 	cl, _ = sch.Extensions.GetString("x-class")
 	assert.Empty(t, cl)
@@ -1144,7 +1162,7 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		require.NoError(t, prs.Build(WithDefinitions(models)))
 	}
 
-	schema, ok := models["fish"]
+	schema, ok := models[scantest.ResolveTestKey(t, models, "fish")]
 
 	if assert.TrueT(t, ok) && assert.Len(t, schema.AllOf, 5) {
 		sch := schema.AllOf[3]
@@ -1152,14 +1170,14 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		scantest.AssertProperty(t, &sch, "string", "colorName", "", "ColorName")
 
 		sch = schema.AllOf[2]
-		assert.EqualT(t, "#/definitions/extra", sch.Ref.String())
+		assert.EqualT(t, "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/extra", sch.Ref.String())
 
 		sch = schema.AllOf[0]
 		assert.Len(t, sch.Properties, 1)
 		scantest.AssertProperty(t, &sch, "integer", "id", "int64", "ID")
 
 		sch = schema.AllOf[1]
-		assert.EqualT(t, "#/definitions/water", sch.Ref.String())
+		assert.EqualT(t, "#/definitions/"+fixturesModule+"/goparsing/classification/models/water", sch.Ref.String())
 
 		sch = schema.AllOf[4]
 		assert.Len(t, sch.Properties, 2)
@@ -1168,7 +1186,7 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		assert.EqualT(t, "jsonClass", sch.Discriminator)
 	}
 
-	schema, ok = models["modelS"]
+	schema, ok = models[scantest.ResolveTestKey(t, models, "modelS")]
 	if assert.TrueT(t, ok) {
 		assert.Len(t, schema.AllOf, 2)
 		cl, _ := schema.Extensions.GetString("x-class")
@@ -1177,20 +1195,20 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		assert.EqualT(t, "ModelS", cl)
 
 		sch := schema.AllOf[0]
-		assert.EqualT(t, "#/definitions/TeslaCar", sch.Ref.String())
+		assert.EqualT(t, "#/definitions/"+fixturesModule+"/goparsing/classification/models/TeslaCar", sch.Ref.String())
 		sch = schema.AllOf[1]
 		assert.Len(t, sch.Properties, 1)
 		scantest.AssertProperty(t, &sch, "string", "edition", "", "Edition")
 	}
 
-	schema, ok = models["modelA"]
+	schema, ok = models[scantest.ResolveTestKey(t, models, "modelA")]
 	if assert.TrueT(t, ok) {
 		cl, _ := schema.Extensions.GetString("x-go-name")
 		assert.EqualT(t, "ModelA", cl)
 
 		sch, ok := schema.Properties["Tesla"]
 		if assert.TrueT(t, ok) {
-			assert.EqualT(t, "#/definitions/TeslaCar", sch.Ref.String())
+			assert.EqualT(t, "#/definitions/"+fixturesModule+"/goparsing/classification/models/TeslaCar", sch.Ref.String())
 		}
 
 		scantest.AssertProperty(t, &schema, "integer", "doors", "int64", "Doors")
@@ -1359,7 +1377,7 @@ func TestBuilder_DiagnosticsOnInvalidNumeric(t *testing.T) {
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
-	schema := models["BadMaximum"]
+	schema := models[scantest.ResolveTestKey(t, models, "BadMaximum")]
 	require.Contains(t, schema.Properties, "count")
 	count := schema.Properties["count"]
 	// The invalid `maximum: notanumber` is silently dropped — Maximum
@@ -1488,7 +1506,7 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["Item"]
+	schema := models[scantest.ResolveTestKey(t, models, "Item")]
 
 	assert.Equal(t, []string{sampleValue1, sampleValue2}, schema.Required)
 	require.Len(t, schema.Properties, 2)
@@ -1506,7 +1524,7 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	assert.EqualT(t, "Nullable value", v1.Description)
 	assert.Equal(t, true, v1.Extensions["x-nullable"], "x-nullable should be on the outer compound, not inside AllOf")
 	require.Len(t, v1.AllOf, 1, "value1 has an extension-only override → single-arm allOf")
-	assert.Equal(t, "#/definitions/ValueStruct", v1.AllOf[0].Ref.String())
+	assert.Equal(t, "#/definitions/"+fixturesModule+"/"+fixtureMinimal3125+"/ValueStruct", v1.AllOf[0].Ref.String())
 	assert.Empty(t, v1.Ref.String(), "outer schema must NOT carry the ref directly")
 
 	require.MapContainsT(t, schema.Properties, sampleValue2)
@@ -1514,7 +1532,7 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	assert.EqualT(t, "Non-nullable value", v2.Description)
 	assert.MapNotContainsT(t, v2.Extensions, "x-nullable")
 	require.Len(t, v2.AllOf, 2, "value2 has an example override → two-arm allOf")
-	assert.Equal(t, "#/definitions/ValueStruct", v2.AllOf[0].Ref.String())
+	assert.Equal(t, "#/definitions/"+fixturesModule+"/"+fixtureMinimal3125+"/ValueStruct", v2.AllOf[0].Ref.String())
 	// The JSON-object example coerces structurally on the $ref override
 	// arm, matching the direct-field path (quirk G3) — it was previously
 	// carried as the raw string `{"value": 42}`.
@@ -1599,7 +1617,7 @@ func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
 	prs := NewBuilder(ctx, decl)
 	models := make(map[string]oaispec.Schema)
 	require.NoError(t, prs.Build(WithDefinitions(models)))
-	schema := models["Item"]
+	schema := models[scantest.ResolveTestKey(t, models, "Item")]
 
 	require.Len(t, schema.Properties, 2)
 
@@ -1655,7 +1673,7 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 		prs := NewBuilder(ctx, decl)
 		models := make(map[string]oaispec.Schema)
 		require.NoError(t, prs.Build(WithDefinitions(models)))
-		noModel := models["NoModel"]
+		noModel := models[scantest.ResolveTestKey(t, models, "NoModel")]
 		require.Contains(t, noModel.Properties, "items")
 		itemsProp := noModel.Properties["items"]
 		require.NotNil(t, itemsProp.Items)
@@ -1667,7 +1685,7 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 
 	t.Run("DescWithRef=false → bare $ref", func(t *testing.T) {
 		pet := getPetField(t, false)
-		assert.Equal(t, "#/definitions/pet", pet.Ref.String())
+		assert.Equal(t, "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/pet", pet.Ref.String())
 		assert.Empty(t, pet.AllOf, "no allOf compound expected")
 		assert.Empty(t, pet.Description, "description dropped under DescWithRef=false")
 		assert.MapNotContainsT(t, pet.Extensions, "x-go-name")
@@ -1677,7 +1695,7 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 		pet := getPetField(t, true)
 		assert.Empty(t, pet.Ref.String(), "outer schema must NOT carry the ref directly")
 		require.Len(t, pet.AllOf, 1, "single-arm allOf for description-only override")
-		assert.Equal(t, "#/definitions/pet", pet.AllOf[0].Ref.String())
+		assert.Equal(t, "#/definitions/"+fixturesModule+"/goparsing/classification/transitive/mods/pet", pet.AllOf[0].Ref.String())
 		assert.Contains(t, pet.Description, "The Pet to add")
 		assert.MapNotContainsT(t, pet.Extensions, "x-go-name")
 	})
@@ -1690,8 +1708,10 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 // does not change this case — when validations (here, `example`)
 // are present, the allOf wrap is mandatory regardless of the flag.
 func TestIssue2540(t *testing.T) {
+	// Sub-builder unit tests run without the spec reduce stage, so the
+	// definitions key and the $ref stay fully-qualified.
 	const expectedJSON = `{
-		"Book": {
+		"github.com/go-openapi/codescan/fixtures/bugs/2540/foo/Book": {
       "description": "At this moment, a book is only described by its publishing date\nand author.",
       "type": "object",
       "title": "Book holds all relevant information about a book.",
@@ -1700,7 +1720,7 @@ func TestIssue2540(t *testing.T) {
       "properties": {
         "Author": {
           "allOf": [
-            {"$ref": "#/definitions/Author"},
+            {"$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/bugs/2540/foo/Author"},
             {"example": {"Name": "Tolkien"}}
           ]
         },
