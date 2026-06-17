@@ -116,10 +116,10 @@ func dispatchMetaSimple(p grammar.Property, swspec *spec.Swagger) bool {
 // ride grammar's typed Extensions surface (see applyMetaBlock —
 // the block.Extensions() loop routes each entry by ext.Source).
 //
-// externalDocs is wired for swagger:meta only (top-level
-// spec.ExternalDocs); the keyword is also grammar-legal on
-// route/operation/schema, but emitting it there is a separate feature
-// (forthcoming-features.md §9).
+// The KwExternalDocs arm here sets the top-level spec.ExternalDocs for
+// swagger:meta. The same keyword on route/operation/schema is emitted
+// by their own builders (routes/walker.go, handlers.schemaRawHandler),
+// and per-tag externalDocs rides the KwTags []spec.Tag unmarshal below.
 func dispatchMetaYAMLBlock(p grammar.Property, swspec *spec.Swagger) error {
 	switch p.Keyword.Name {
 	case grammar.KwSecurityDefinitions:
