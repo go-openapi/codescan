@@ -168,6 +168,23 @@ func TestAnnotationKind_AdditionalProperties_RoundTrip(t *testing.T) {
 	assert.Equal(t, AnnAdditionalProperties, AnnotationKindFromName("additionalProperties"))
 }
 
+func TestAnnotationKind_PatternProperties_RoundTrip(t *testing.T) {
+	assert.Equal(t, "patternProperties", AnnPatternProperties.String())
+	assert.Equal(t, AnnPatternProperties, AnnotationKindFromName("patternProperties"))
+}
+
+func TestParser_PatternPropertiesBlock_CapturesRawPairList(t *testing.T) {
+	// The whole `"<re>": <spec>, …` remainder is captured verbatim as one arg
+	// (it contains spaces/colons/commas the builder parses).
+	b := parseString(t, `swagger:patternProperties "^x-": string, "^\d+$": integer`)
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnPatternProperties, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, `"^x-": string, "^\d+$": integer`, arg)
+}
+
 func TestParser_ParametersBlock_RequiresAtLeastOneArg(t *testing.T) {
 	b := parseString(t, "swagger:parameters listPets getPet")
 	pb, ok := b.(*ParametersBlock)

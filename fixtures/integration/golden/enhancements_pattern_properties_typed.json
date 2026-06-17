@@ -1,0 +1,60 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Contradiction": {
+      "description": "Contradiction resolves to a string via swagger:type; patternProperties is the\nlowest-priority annotation, so it is dropped with a diagnostic.",
+      "type": "string",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pattern-properties-typed"
+    },
+    "InvalidTyped": {
+      "description": "InvalidTyped carries a regex that does not compile under RE2; the value is\npreserved but a diagnostic is raised.",
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "patternProperties": {
+        "[unclosed(": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pattern-properties-typed"
+    },
+    "Item": {
+      "type": "object",
+      "title": "Item is referenced as a patternProperties value schema.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pattern-properties-typed"
+    },
+    "TypedPatterns": {
+      "description": "TypedPatterns maps property-name patterns to typed value schemas, alongside a\nnamed property.",
+      "type": "object",
+      "properties": {
+        "known": {
+          "type": "string",
+          "x-go-name": "Known"
+        }
+      },
+      "patternProperties": {
+        "^\\d+$": {
+          "type": "integer"
+        },
+        "^item-": {
+          "$ref": "#/definitions/Item"
+        },
+        "^x-": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/pattern-properties-typed"
+    }
+  }
+}

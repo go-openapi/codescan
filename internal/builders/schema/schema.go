@@ -84,6 +84,7 @@ func (s *Builder) Build(opts ...Option) error {
 		// element schema, or warn-and-drop on a non-object. See
 		// classifierAdditionalProperties.
 		s.classifierAdditionalProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+		s.classifierPatternProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
 
 		// The decl-comment block is dispatched before the Go type is
 		// resolved onto the schema (see buildFromDecl), so the inline

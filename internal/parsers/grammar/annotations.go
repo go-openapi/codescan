@@ -34,25 +34,32 @@ const (
 	// swagger:type-style spec. See the schema builder's
 	// classifierAdditionalProperties.
 	AnnAdditionalProperties
+	// AnnPatternProperties — swagger:patternProperties "<re>": <spec>, …
+	// A type/model-level classifier whose arg is a comma-separated list of
+	// quoted-regex → swagger:type-style-spec pairs. The whole remainder is
+	// captured as one raw arg token; the schema builder parses the pairs. See
+	// classifierPatternProperties.
+	AnnPatternProperties
 )
 
 const (
-	labelModel      = "model"
-	labelResponse   = "response"
-	labelParameters = "parameters"
-	labelRoute      = "route"
-	labelOperation  = "operation"
-	labelMeta       = "meta"
-	labelStrfmt     = "strfmt"
-	labelAlias      = "alias"
-	labelName       = "name"
-	labelAllOf      = "allOf"
-	labelEnum       = "enum"
-	labelIgnore     = "ignore"
-	labelDefault    = "default"
+	labelModel                = "model"
+	labelResponse             = "response"
+	labelParameters           = "parameters"
+	labelRoute                = "route"
+	labelOperation            = "operation"
+	labelMeta                 = "meta"
+	labelStrfmt               = "strfmt"
+	labelAlias                = "alias"
+	labelName                 = "name"
+	labelAllOf                = "allOf"
+	labelEnum                 = "enum"
+	labelIgnore               = "ignore"
+	labelDefault              = "default"
 	labelType                 = "type"
 	labelFile                 = "file"
 	labelAdditionalProperties = "additionalProperties"
+	labelPatternProperties    = "patternProperties"
 	labelUnknown              = "unknown"
 )
 
@@ -91,6 +98,8 @@ func (a AnnotationKind) String() string {
 		return labelFile
 	case AnnAdditionalProperties:
 		return labelAdditionalProperties
+	case AnnPatternProperties:
+		return labelPatternProperties
 	case AnnUnknown:
 		fallthrough
 	default:
@@ -134,6 +143,8 @@ func AnnotationKindFromName(name string) AnnotationKind {
 		return AnnFile
 	case labelAdditionalProperties:
 		return AnnAdditionalProperties
+	case labelPatternProperties:
+		return AnnPatternProperties
 	default:
 		return AnnUnknown
 	}
@@ -167,7 +178,7 @@ func (a AnnotationKind) family() annotationFamily {
 		return familyMeta
 	case AnnStrfmt, AnnAlias, AnnAllOf, AnnEnum,
 		AnnIgnore, AnnDefaultName, AnnType, AnnFile,
-		AnnAdditionalProperties:
+		AnnAdditionalProperties, AnnPatternProperties:
 		return familyClassifier
 	case AnnUnknown:
 		fallthrough

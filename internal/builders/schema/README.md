@@ -23,6 +23,7 @@ trade-offs, and known quirks live here.
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
 - [§additional-properties](#additional-properties) — the `swagger:additionalProperties` decl-level marker
+- [§pattern-properties](#pattern-properties) — the typed `swagger:patternProperties` decl-level marker
 - [§ref-override](#ref-override) — `applyToRefField`, the allOf-on-$ref shape, `refOverrideCollector`, `applyPattern`
 - [§simple-schema-mode](#simple-schema-mode) — the SimpleSchema build mode for OAS v2 non-body params and response headers
 - [§classifier-walkers](#classifier-walkers) — per-call-site classifier walkers and `findAnnotationArg`'s single-word filter
@@ -817,6 +818,35 @@ the same value grammar and lowest-priority precedence. Two landing paths:
 
 Both paths share `resolveAdditionalPropertiesValue` (the pure
 `true | false | <TypeSpec>` → `SchemaOrBool` resolver, no parent mutation).
+
+---
+
+## <a id="pattern-properties"></a>§pattern-properties — the typed `swagger:patternProperties` marker
+
+`swagger:patternProperties "<re>": <spec>, …` is a decl-level classifier
+(`grammar.AnnPatternProperties`) consumed by `classifierPatternProperties`
+(`pattern_properties.go`), applied from `Build` alongside the
+additionalProperties marker. It is the **typed** counterpart of the regex-only
+`patternProperties:` field keyword (which sets an empty `{}` value schema): each
+pair maps a property-name regex to a value schema resolved through the same
+`<TypeSpec>` grammar (`resolveAdditionalPropertiesType`, so a type-name → `$ref`).
+
+The whole `"<re>": <spec>, …` remainder is captured by the lexer as one raw arg
+token (regexes may contain spaces / colons / commas), read back via the
+non-filtering `findRawAnnotationArg`, and split by `parsePatternPropertyPairs` —
+a small hand-parser that respects the double-quoted regex (only `\"` is an escape
+inside it; every other backslash, e.g. `\d`, is preserved verbatim) and reads
+each spec up to the next top-level comma.
+
+Same precedence as additionalProperties: object-only (a non-object resolution
+warn-drops the marker; a bare `$ref` is reset). Each regex is RE2-hygiene-checked
+— an invalid regex is preserved on the schema but raises a `CodeInvalidAnnotation`
+warning, mirroring the `patternProperties:` keyword wording. A structurally
+malformed pair list is dropped with a diagnostic rather than partially applied.
+
+OAS-2 caveat: `patternProperties` is a JSON-Schema-draft-4 keyword, not part of
+the Swagger-2.0 Schema Object subset — emitted ungated by design (go-openapi
+favours JSON Schema; see the additional-properties plan).
 
 ---
 

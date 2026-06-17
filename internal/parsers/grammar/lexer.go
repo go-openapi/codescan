@@ -300,6 +300,11 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 		// (true / false / primitive / []T / type-name). The builder does
 		// the semantic resolution.
 		return []Token{argTypeRef(rest, pos)}
+	case AnnPatternProperties:
+		// The arg is a `"<re>": <spec>, …` pair list that may contain
+		// spaces/colons/commas inside quoted regexes — capture the whole
+		// remainder verbatim; the builder parses the pairs.
+		return []Token{{Kind: TokenRawValue, Pos: pos, Text: strings.TrimSpace(rest)}}
 	case AnnEnum:
 		return classifyEnumAnnotationArgs(rest, pos)
 	case AnnParameters:
