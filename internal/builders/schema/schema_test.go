@@ -1515,7 +1515,10 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	assert.MapNotContainsT(t, v2.Extensions, "x-nullable")
 	require.Len(t, v2.AllOf, 2, "value2 has an example override → two-arm allOf")
 	assert.Equal(t, "#/definitions/ValueStruct", v2.AllOf[0].Ref.String())
-	assert.Equal(t, `{"value": 42}`, v2.AllOf[1].Example)
+	// The JSON-object example coerces structurally on the $ref override
+	// arm, matching the direct-field path (quirk G3) — it was previously
+	// carried as the raw string `{"value": 42}`.
+	assert.Equal(t, map[string]any{"value": float64(42)}, v2.AllOf[1].Example)
 
 	scantest.CompareOrDumpJSON(t, models, "bugs_3125_schema.json")
 }
@@ -1698,7 +1701,7 @@ func TestIssue2540(t *testing.T) {
         "Author": {
           "allOf": [
             {"$ref": "#/definitions/Author"},
-            {"example": "{ \"Name\": \"Tolkien\" }"}
+            {"example": {"Name": "Tolkien"}}
           ]
         },
         "Published": {

@@ -81,6 +81,29 @@ func CoerceValue(s string, schema *spec.SimpleSchema) (any, error) {
 	}
 }
 
+// CoerceJSONOrString coerces a default:/example: value whose target type
+// is unknown — the case of a $ref override arm, which carries no Type of
+// its own (the type lives on the referenced definition, not on the allOf
+// sibling). A JSON object- or array-literal body is parsed structurally so
+// it matches the direct-field path (quirk G3): `example: {"k":"v"}` yields
+// an object on a $ref'd field just as it does on a plain map field. Any
+// other value is treated as a string scalar, with surrounding double
+// quotes stripped (mirroring [CoerceValue]'s "string" arm).
+//
+// Never errors: a malformed JSON literal falls back to the unquoted string.
+// Scalar literals (numbers, booleans) are intentionally NOT coerced here —
+// the referenced type is unknown, so a bare `example: 42` against a
+// string-format $ref must not be silently turned into a number.
+func CoerceJSONOrString(s string) any {
+	if t := strings.TrimSpace(s); len(t) > 0 && (t[0] == '{' || t[0] == '[') {
+		var v any
+		if err := json.Unmarshal([]byte(t), &v); err == nil {
+			return v
+		}
+	}
+	return unquoteIfQuoted(s)
+}
+
 // unquoteIfQuoted strips a single pair of surrounding double quotes from
 // a string annotation value, honouring Go/JSON escape sequences. A value
 // that is not a double-quoted literal is returned unchanged, so a bare
