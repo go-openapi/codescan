@@ -71,21 +71,29 @@ emitting `$ref` to an unexported name — are one-place edits.
 ## <a id="diagnostics"></a>§diagnostics — accumulator + LSP-evolution caveat
 
 `Diagnostics()` returns every accumulated `grammar.Diagnostic` in
-source order. **No deduplication is applied.** Two consumers may see
-the same diagnostic via the `OnDiagnostic` callback AND via the
-returned slice — that's intentional under the current contract.
+source order, **raw — no deduplication.** The build re-processes the
+same field/annotation across passes (most visibly a `swagger:parameters`
+struct applied to several operation ids, which rebuilds every field once
+per id), so the slice can carry the identical diagnostic more than once.
+
+The **`OnDiagnostic` callback stream is deduped**, however:
+`ScanCtx.EmitDiagnostic` suppresses exact duplicates — same position,
+code and message — for the lifetime of one scan, so a consumer that only
+listens on the callback (the TUI, an LSP server) sees each distinct
+diagnostic once. This is the "structural deduplication" the caveat below
+anticipated; it lives at the single delivery boundary so the raw
+accumulator stays available for callers that want every occurrence.
 
 The diagnostic surface is **experimental** and expected to evolve
-once the LSP integration matures. Likely changes when that lands:
-typed severity classes, structural deduplication, per-position
-provenance. The shape is conservative today (slice of
-`grammar.Diagnostic` + a callback hook) precisely so it can be
-widened without breaking callers.
+further once the LSP integration matures. Likely remaining changes:
+typed severity classes and per-position provenance. The shape is
+conservative today (slice of `grammar.Diagnostic` + a callback hook)
+precisely so it can be widened without breaking callers.
 
-`RecordDiagnostic` appends to the slice and fires
-`Ctx.OnDiagnostic()` when wired. Walkers' `Diagnostic` callback
-points at this method so grammar-level warnings flow into the same
-accumulator.
+`RecordDiagnostic` appends to the slice and delivers through
+`Ctx.EmitDiagnostic` (the deduped boundary) when a sink is wired.
+Walkers' `Diagnostic` callback points at this method so grammar-level
+warnings flow into the same accumulator.
 
 ## <a id="postdecls"></a>§postdecls — dedup index + orchestrator re-dedup
 

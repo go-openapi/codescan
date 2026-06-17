@@ -94,9 +94,7 @@ func (s *Builder) Diagnostics() []grammar.Diagnostic {
 // warnings flow through the same accumulator as builder-level ones.
 func (s *Builder) RecordDiagnostic(d grammar.Diagnostic) {
 	s.diagnostics = append(s.diagnostics, d)
-	if cb := s.Ctx.OnDiagnostic(); cb != nil {
-		cb(d)
-	}
+	s.Ctx.EmitDiagnostic(d)
 }
 
 // WarnStrippedPathRegex records a warning that one or more inline

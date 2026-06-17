@@ -39,6 +39,15 @@ type Builder struct {
 	// schema and parameters builders via common.EmbedInheritance; responses
 	// consume only In (OAS2 response headers carry no required).
 	inherited common.EmbedInheritance
+
+	// respBase is the cross-ref base pointer for this response —
+	// /responses/{name} — set per Build when a provenance sink is wired ("" when
+	// off). Header anchors hang at respBase/headers/{h}; the in:body schema under
+	// respBase/schema. bodyPath is the live cursor into the body-schema subtree,
+	// advanced by descendBody as the responses builder peels its OWN array/map
+	// layers (delegated struct/named builds are pathed by the schema builder).
+	respBase string
+	bodyPath string
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -60,6 +69,14 @@ func (r *Builder) Build(responses map[string]oaispec.Response) error {
 	name, _ := r.Decl.ResponseNames()
 	response := responses[name]
 	logger.DebugLogf(r.Ctx.Debug(), "building response: %s", name)
+
+	// Cross-ref linkage: anchor this response's headers and in:body schema under
+	// /responses/{name}. The response name is known here (no deferral, unlike a
+	// parameter's array index), so the base path is fixed for the whole build.
+	if r.Ctx.OriginEnabled() {
+		r.respBase = scanner.JSONPointer("responses", name)
+		r.bodyPath = r.respBase + scanner.JSONPointer("schema")
+	}
 
 	// analyze doc comment for the model
 	r.applyBlockToDecl(&response)
@@ -113,6 +130,31 @@ func underlyingIsStruct(t types.Type) bool {
 	}
 }
 
+// descendBody advances the in:body schema cursor by segs for the duration of a
+// child build, mirroring the schema builder's descend. It keeps bodyPath aligned
+// with the node being filled when the responses builder peels its OWN array/map
+// layers; types delegated to the schema sub-builder are pathed there instead.
+// No-op (and no restore cost) when provenance is off (bodyPath == "").
+func (r *Builder) descendBody(segs ...string) func() {
+	if r.bodyPath == "" {
+		return func() {}
+	}
+	saved := r.bodyPath
+	r.bodyPath = saved + scanner.JSONPointer(segs...)
+	return func() { r.bodyPath = saved }
+}
+
+// bodyPathFor returns the cross-ref base path to hand a schema sub-build: the
+// live body cursor when the build targets the in:body schema, else "" — a header
+// schema anchors at respBase/headers/{h}, not under /schema, so its finer nodes
+// resolve to the header anchor rather than emitting a wrong /schema/... pointer.
+func (r *Builder) bodyPathFor(typable ifaces.SwaggerTypable) string {
+	if typable != nil && typable.In() == inBody {
+		return r.bodyPath
+	}
+	return ""
+}
+
 func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]bool) error {
 	logger.DebugLogf(r.Ctx.Debug(), "build from field %s: %T", fld.Name(), tpe)
 
@@ -126,8 +168,10 @@ func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	case *types.Interface:
 		return r.buildFromFieldInterface(ftpe, typable)
 	case *types.Array:
+		defer r.descendBody("items")()
 		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
 	case *types.Slice:
+		defer r.descendBody("items")()
 		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
 	case *types.Map:
 		return r.buildFromFieldMap(ftpe, typable)
@@ -143,7 +187,7 @@ func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 
 func (r *Builder) buildFromFieldStruct(ftpe *types.Struct, typable ifaces.SwaggerTypable) error {
 	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(ftpe, typable)); err != nil {
+	if err := sb.Build(schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
 		return err
 	}
 
@@ -172,10 +216,14 @@ func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 		Schema: sch,
 	}
 
+	// The map value renders at respBase/schema/additionalProperties; advance the
+	// body cursor so the value's inline props (if any) anchor there.
+	defer r.descendBody("additionalProperties")()
+	valTypable := schema.NewTypable(sch, typable.Level()+1, r.Ctx.SkipExtensions())
 	sb := schema.NewBuilder(r.Ctx, r.Decl)
 	if err := sb.Build(
-		schema.WithType(ftpe.Elem(),
-			schema.NewTypable(sch, typable.Level()+1, r.Ctx.SkipExtensions())),
+		schema.WithType(ftpe.Elem(), valTypable),
+		schema.WithPath(r.bodyPathFor(valTypable)),
 	); err != nil {
 		return err
 	}
@@ -189,7 +237,7 @@ func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 
 func (r *Builder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
 	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
+	if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
 		return err
 	}
 
@@ -245,7 +293,7 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 			}
 			sb := schema.NewBuilder(r.Ctx, decl)
 			sb.InferNames()
-			if err := sb.Build(schema.OptionFor(tpe.Underlying(), typable)); err != nil {
+			if err := sb.Build(schema.OptionFor(tpe.Underlying(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
 				return err
 			}
 			resp.WithSchema(&sch)
@@ -301,7 +349,7 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 
 	sb := schema.NewBuilder(r.Ctx, decl)
 	sb.InferNames()
-	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable)); err != nil {
+	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
 		return err
 	}
 
@@ -325,7 +373,7 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 	// to the unaliased target via the schema sub-builder.
 	if r.Ctx.TransparentAliases() {
 		sb := schema.NewBuilder(r.Ctx, r.Decl)
-		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable)); err != nil {
+		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
 			return err
 		}
 		for _, d := range sb.PostDeclarations() {
@@ -601,6 +649,13 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		resp.Headers = make(map[string]oaispec.Header)
 	}
 	resp.Headers[name] = ps
+
+	// Cross-ref linkage: anchor the header to its struct field. The response
+	// name is known (respBase set), so this is direct — no deferral. Finer
+	// header nodes (validations) resolve to this anchor.
+	if r.respBase != "" {
+		r.Ctx.RecordOrigin(r.respBase+scanner.JSONPointer("headers", name), r.Ctx.PosOf(afld.Pos()))
+	}
 
 	return nil
 }

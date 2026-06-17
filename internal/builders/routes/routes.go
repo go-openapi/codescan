@@ -5,6 +5,7 @@ package routes
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/operations"
@@ -62,6 +63,15 @@ func (r *Builder) Build(tgt *oaispec.Paths) error {
 		tgt.Paths = make(map[string]oaispec.PathItem)
 	}
 	tgt.Paths[r.route.Path] = pthObj
+
+	// Cross-ref linkage: anchor the operation node to its swagger:route
+	// annotation; parameters/responses under it resolve to this node.
+	if r.Ctx.OriginEnabled() && r.route.Pos.IsValid() {
+		r.Ctx.RecordOrigin(
+			scanner.JSONPointer("paths", r.route.Path, strings.ToLower(r.route.Method)),
+			r.Ctx.PosOf(r.route.Pos),
+		)
+	}
 
 	return nil
 }

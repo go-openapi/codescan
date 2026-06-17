@@ -58,6 +58,10 @@ func (s *Builder) resolveTypeOverride(arg string, tgt ifaces.SwaggerTypable, own
 		items.Typed("array", "")
 		items = items.Items()
 	}
+	// Cross-ref linkage: the base resolves into the innermost items node, so
+	// any anchors it emits (an inlined named struct's properties, enum values)
+	// must carry the …/items[/items…] pointer, not the parent's.
+	defer s.descendItems(depth)()
 	return s.resolveTypeBase(base, items, ownType, pos, true)
 }
 

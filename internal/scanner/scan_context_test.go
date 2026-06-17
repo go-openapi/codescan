@@ -394,7 +394,7 @@ func TestScanCtx_FindEnumValues(t *testing.T) {
 	require.True(t, ok)
 
 	t.Run("finds enum values for Status type", func(t *testing.T) {
-		list, descList, ok := sctx.FindEnumValues(pkg, "Status")
+		list, descList, _, ok := sctx.FindEnumValues(pkg, "Status")
 		assert.True(t, ok)
 		require.Len(t, list, 3) // available, pending, sold
 		require.Len(t, descList, 3)
@@ -411,7 +411,7 @@ func TestScanCtx_FindEnumValues(t *testing.T) {
 	})
 
 	t.Run("finds enum values for Priority type with doc comments", func(t *testing.T) {
-		list, descList, ok := sctx.FindEnumValues(pkg, "Priority")
+		list, descList, _, ok := sctx.FindEnumValues(pkg, "Priority")
 		assert.True(t, ok)
 		require.Len(t, list, 2) // PriorityLow=1, PriorityHigh=2
 		require.Len(t, descList, 2)
@@ -431,7 +431,7 @@ func TestScanCtx_FindEnumValues(t *testing.T) {
 	})
 
 	t.Run("non-matching enum name returns empty", func(t *testing.T) {
-		list, descList, ok := sctx.FindEnumValues(pkg, "NonExistentEnum")
+		list, descList, _, ok := sctx.FindEnumValues(pkg, "NonExistentEnum")
 		assert.True(t, ok) // always returns true
 		assert.Empty(t, list)
 		assert.Empty(t, descList)
@@ -445,7 +445,7 @@ func TestScanCtx_FindEnumValues_NoConsts(t *testing.T) {
 	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/fixtures/goparsing/classification/models")
 	require.True(t, ok)
 
-	list, descList, ok := sctx.FindEnumValues(pkg, "User")
+	list, descList, _, ok := sctx.FindEnumValues(pkg, "User")
 	assert.True(t, ok)
 	assert.Empty(t, list)
 	assert.Empty(t, descList)
@@ -482,7 +482,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 
 	t.Run("non-ValueSpec returns nil", func(t *testing.T) {
 		spec := &ast.ImportSpec{Path: &ast.BasicLit{Value: `"fmt"`}}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -491,7 +491,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 		spec := &ast.ValueSpec{
 			Names: []*ast.Ident{ast.NewIdent("X")},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -501,7 +501,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Names: []*ast.Ident{ast.NewIdent("X")},
 			Type:  &ast.SelectorExpr{X: ast.NewIdent("pkg"), Sel: ast.NewIdent("Type")},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -512,7 +512,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Bar"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "1"}},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -522,7 +522,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Names: []*ast.Ident{ast.NewIdent("X")},
 			Type:  ast.NewIdent("Foo"),
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -533,7 +533,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{ast.NewIdent("someFunc")},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Empty(t, values)
 		assert.Empty(t, descs)
 	})
@@ -546,7 +546,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "42"}},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -563,7 +563,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// shared doc"}},
 			},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		require.Len(t, values, 2)
 		require.Len(t, descs, 2)
 		assert.EqualT(t, "a", values[0])
@@ -584,7 +584,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				},
 			},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		require.Len(t, values, 1)
 		require.Len(t, descs, 1)
 		assert.EqualT(t, "hello", values[0])
@@ -600,7 +600,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// PriorityLow is a low-priority level."}},
 			},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		require.Len(t, values, 1)
 		assert.EqualT(t, "low PriorityLow is a low-priority level.", descs[0])
 	})
@@ -617,7 +617,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// ChannelEmail and ChannelSMS share a single spec."}},
 			},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		require.Len(t, values, 2)
 		// Both rows strip leading "ChannelEmail" because it matches one of the names.
 		assert.EqualT(t, "email ChannelEmail and ChannelSMS share a single spec.", descs[0])
@@ -633,7 +633,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// The x value."}},
 			},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		require.Len(t, values, 1)
 		assert.EqualT(t, "x X  The x value.", descs[0])
 	})
@@ -644,7 +644,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "7"}},
 		}
-		values, descs := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
 		require.Len(t, values, 1)
 		intVal, ok := values[0].(int64)
 		require.True(t, ok)

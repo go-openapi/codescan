@@ -11,9 +11,45 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/scanner"
 	"github.com/go-openapi/codescan/internal/scanner/classify"
 	oaispec "github.com/go-openapi/spec"
 )
+
+// recordValidationOrigins anchors each scalar validation keyword in block to its
+// source comment line, so following e.g. a `maximum` node in the spec jumps to
+// its `// maximum: 100` line rather than the struct field. Only when a base path
+// was initiated (WithPath) and a sink is wired. The keyword→segment knowledge
+// lives in the grammar ([grammar.PointerPath]); here we prepend the field base
+// and any items depth (base + (/items)×ItemsDepth + /segment, mirroring where
+// the value renders). Runs only on the non-$ref field path (a $ref field with
+// siblings is rewritten to an allOf compound elsewhere, so its validations are
+// not children of base — they resolve to the field anchor).
+func (s *Builder) recordValidationOrigins(block grammar.Block) {
+	if s.path == "" || !s.Ctx.OriginEnabled() {
+		return
+	}
+	emit := func(p grammar.Property) {
+		ctx := grammar.CtxSchema
+		if p.ItemsDepth > 0 {
+			ctx = grammar.CtxItems
+		}
+		segs, ok := grammar.PointerPath(p.Keyword, ctx)
+		if !ok {
+			return
+		}
+		ptr := s.path + strings.Repeat(scanner.JSONPointer("items"), p.ItemsDepth) + scanner.JSONPointer(segs...)
+		s.Ctx.RecordOrigin(ptr, p.Pos)
+	}
+	block.Walk(grammar.Walker{
+		FilterDepth: grammar.AllDepths,
+		Number:      func(p grammar.Property, _ float64, _ bool) { emit(p) },
+		Integer:     func(p grammar.Property, _ int64) { emit(p) },
+		Bool:        func(p grammar.Property, _ bool) { emit(p) },
+		String:      func(p grammar.Property, _ string) { emit(p) },
+		Raw:         func(p grammar.Property) { emit(p) },
+	})
+}
 
 // applyBlockToDecl is the grammar entry point for a top-level model
 // declaration. Parses the doc, short-circuits on swagger:ignore, writes
@@ -49,6 +85,9 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 	}
 
 	handlers.DispatchSchemaLevel0(block, schema, schema, "", s.RecordDiagnostic, s.schemaOpts())
+
+	// Cross-ref linkage: anchor decl-level validation keywords to their lines.
+	s.recordValidationOrigins(block)
 
 	return false
 }
@@ -98,6 +137,9 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 			handlers.DispatchSchemaItemsLevel(block, target, depth+1, s.RecordDiagnostic, s.schemaOpts())
 		}
 	}
+
+	// Cross-ref linkage: anchor each validation keyword to its comment line.
+	s.recordValidationOrigins(block)
 }
 
 // schemaOpts packages the Builder's dispatch options into the value

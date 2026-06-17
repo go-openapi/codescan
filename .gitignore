@@ -28,3 +28,4 @@ profile.cov
 # .vscode/
 .mcp.json
 .worktrees
+go.work.sum

@@ -36,6 +36,12 @@ type Builder struct {
 	// The mechanism is shared with the schema and responses builders via
 	// common.EmbedInheritance.
 	inherited common.EmbedInheritance
+
+	// currentOpID is the operation id whose parameter set is being built. Set
+	// per-iteration in Build and read by processParamField to key the deferred
+	// cross-ref anchor capture. The same swagger:parameters struct may apply to
+	// several operations, so the capture runs once per op id.
+	currentOpID string
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -61,6 +67,7 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 			operation.ID = opid
 		}
 		logger.DebugLogf(p.Ctx.Debug(), "building parameters for: %s", opid)
+		p.currentOpID = opid
 
 		// analyze struct body for fields etc
 		// each exported struct field:
@@ -542,6 +549,12 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 			))
 			break
 		}
+	}
+
+	// Cross-ref linkage: capture the field's position keyed by (opid, name) for
+	// the spec builder's deferred /paths/.../parameters/{i} anchor pass.
+	if p.Ctx.OriginEnabled() {
+		p.Ctx.RecordParamOrigin(p.currentOpID, name, p.Ctx.PosOf(afld.Pos()))
 	}
 
 	in := "query"

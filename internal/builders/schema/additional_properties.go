@@ -51,7 +51,15 @@ func (s *Builder) applyAdditionalPropertiesSpec(schema *oaispec.Schema, arg stri
 		return
 	}
 
+	// Cross-ref linkage: the value schema lands at <base>/additionalProperties,
+	// so advance the base path for its build (an inlined element's properties /
+	// enum values resolve under it). Brackets only the value resolve; the
+	// $ref-sibling path (refOverrideCollector) calls
+	// resolveAdditionalPropertiesValue directly and is intentionally not
+	// bracketed here — its value lives in an untracked allOf member.
+	restore := s.descend("additionalProperties")
 	sob, ok := s.resolveAdditionalPropertiesValue(arg, pos)
+	restore()
 	if !ok {
 		return // diagnostic already recorded
 	}
@@ -96,6 +104,10 @@ func (s *Builder) resolveAdditionalPropertiesType(arg string, target *oaispec.Sc
 		inner.Typed("array", "")
 		inner = inner.Items()
 	}
+	// Cross-ref linkage: the base resolves into the innermost items node; keep
+	// the path aligned for anchors emitted there (caller has already descended
+	// the additionalProperties / patternProperties segment).
+	defer s.descendItems(depth)()
 
 	// Primitive / OAS-2 scalar / Go-builtin spelling — inline.
 	if err := resolvers.SwaggerSchemaForType(base, inner); err == nil {

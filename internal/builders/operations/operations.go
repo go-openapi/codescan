@@ -58,6 +58,15 @@ func (o *Builder) Build(tgt *oaispec.Paths) error {
 
 	tgt.Paths[o.path.Path] = pthObj
 
+	// Cross-ref linkage: anchor the operation node to its swagger:operation
+	// annotation; parameters/responses under it resolve to this node.
+	if o.Ctx.OriginEnabled() && o.path.Pos.IsValid() {
+		o.Ctx.RecordOrigin(
+			scanner.JSONPointer("paths", o.path.Path, strings.ToLower(o.path.Method)),
+			o.Ctx.PosOf(o.path.Pos),
+		)
+	}
+
 	return nil
 }
 

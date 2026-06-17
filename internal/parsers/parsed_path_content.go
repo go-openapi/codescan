@@ -25,6 +25,11 @@ type ParsedPathContent struct {
 	// Pos is the position of the matched route/operation annotation
 	// line (the comment group's start). Used to anchor diagnostics
 	// such as the stripped-regex warning.
+	// Pos is the (coarse) source position of the matched route/operation annotation line — the comment's Slash.
+	//
+	// Used as:
+	// - anchor for diagnostics, such as the stripped-regex warning.
+	// - the cross-ref anchor for the /paths/{path}/{method} node. Invalid when no annotation matched.
 	Pos token.Pos
 
 	// StrippedParams names the path parameters whose inline regex

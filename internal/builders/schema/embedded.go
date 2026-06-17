@@ -131,6 +131,11 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *scanner.EntityDecl, schema *oaispec.Schema,
 	nameByJSON map[string]propOwner,
 ) (fieldHasAllOf bool, err error) {
+	// Cross-ref linkage: interface-side embeds compose into allOf members
+	// (/allOf/{k}/…), an untracked subtree; clear the base path so nothing
+	// inside emits a wrong anchor.
+	defer s.repath("")()
+
 	switch ftpe := fld.(type) {
 	case *types.Named:
 		o := ftpe.Obj()

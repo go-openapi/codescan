@@ -142,4 +142,15 @@ type Options struct {
 	// to change while LSP integration matures. See
 	// [§diagnostics](./README.md#diagnostics).
 	OnDiagnostic func(grammar.Diagnostic)
+
+	// OnProvenance, when non-nil, is invoked once per anchor node in the
+	// produced spec, carrying its JSON pointer and the source position of
+	// the Go construct that produced it (see [Provenance]). Anchors are
+	// code-detail nodes (type decls, fields, values, route/meta blocks);
+	// finer nodes resolve to their nearest anchored ancestor at the
+	// consumer. The callback never blocks the build.
+	//
+	// Experimental: the cross-ref surface may change while LSP / TUI
+	// integration matures.
+	OnProvenance func(Provenance)
 }

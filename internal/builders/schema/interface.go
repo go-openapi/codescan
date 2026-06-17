@@ -56,6 +56,12 @@ func (s *Builder) buildFromInterface(decl *scanner.EntityDecl, it *types.Interfa
 	}
 	target.Typed("object", "")
 
+	// Cross-ref linkage: same divergence guard as buildFromStruct — methods
+	// landing in a fresh allOf member resolve to schema's anchor.
+	if target != schema {
+		defer s.repath("")()
+	}
+
 	for fld := range it.ExplicitMethods() {
 		if err := s.processInterfaceMethod(fld, decl, target, nameByJSON); err != nil {
 			return err
