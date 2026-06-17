@@ -318,6 +318,31 @@ func (s *ScanCtx) GetModel(pkgPath, name string) (*EntityDecl, bool) {
 	return s.FindDecl(pkgPath, name)
 }
 
+// FindModelsByLeaf returns every annotated swagger:model whose Go type
+// name equals name, across all scanned packages, sorted by package path
+// for determinism. It is the build-time analogue of the reduce stage's
+// resolveDefinitionByLeaf: the type-name keyword sites use it to resolve a
+// bare leaf to a model declared in another package (unique -> promote;
+// several -> ambiguous).
+//
+// Only the annotated model set (fixed before building) is searched — not
+// the discovery-grown ExtraModels — so the result is a pure function of the
+// source, independent of build order (W6).
+func (s *ScanCtx) FindModelsByLeaf(name string) []*EntityDecl {
+	var out []*EntityDecl
+	for _, cand := range s.app.Models {
+		obj := cand.Obj()
+		if obj == nil || obj.Name() != name {
+			continue
+		}
+		out = append(out, cand)
+	}
+	slices.SortFunc(out, func(a, b *EntityDecl) int {
+		return strings.Compare(a.Obj().Pkg().Path(), b.Obj().Pkg().Path())
+	})
+	return out
+}
+
 // AddDiscoveredModel registers decl in the ExtraModels index so the
 // spec orchestrator emits a top-level definition for it.
 //

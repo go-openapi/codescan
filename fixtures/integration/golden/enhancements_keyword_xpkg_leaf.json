@@ -1,0 +1,108 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AmbiguousBag": {
+      "description": "AmbiguousBag references a leaf (Thing) declared as a model in TWO packages\n(dup1, dup2). Ambiguous -\u003e diagnostic + the marker is dropped.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf"
+    },
+    "Bag": {
+      "description": "Bag carries additionalProperties referencing a cross-package model by leaf\n(a.Widget). Unique leaf -\u003e resolves to a $ref.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/Widget"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf"
+    },
+    "Catalog": {
+      "description": "Catalog carries patternProperties referencing a cross-package model by leaf\n(a.Widget). Unique leaf -\u003e resolves to a $ref.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "patternProperties": {
+        "^item-": {
+          "$ref": "#/definitions/Widget"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf"
+    },
+    "Dup1Thing": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "X"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf/dup1"
+    },
+    "Dup2Thing": {
+      "type": "object",
+      "properties": {
+        "y": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Y"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf/dup2"
+    },
+    "Gadget": {
+      "type": "object",
+      "properties": {
+        "power": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Power"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf/b"
+    },
+    "Holder": {
+      "description": "Holder overrides a field type with swagger:type referencing a cross-package\nmodel by leaf (b.Gadget). swagger:type inlines, so the field becomes the\nGadget structure in place.",
+      "type": "object",
+      "properties": {
+        "thing": {
+          "type": "object",
+          "properties": {
+            "power": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Power"
+            }
+          },
+          "x-go-name": "Thing"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf"
+    },
+    "Widget": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/keyword-xpkg-leaf/a"
+    }
+  }
+}

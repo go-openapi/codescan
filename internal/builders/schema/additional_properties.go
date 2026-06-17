@@ -5,7 +5,6 @@ package schema
 
 import (
 	"go/token"
-	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -103,38 +102,22 @@ func (s *Builder) resolveAdditionalPropertiesType(arg string, target *oaispec.Sc
 		return true
 	}
 
-	// Type-name reference → $ref (buildFromType on the named type, NOT its
-	// Underlying, so buildNamedType emits the reference and registers it for
-	// discovery).
-	if s.refAdditionalPropertiesTypeName(base, inner) {
-		return true
+	// Type-name reference → $ref. Resolve the leaf in the builder's own
+	// package first, then uniquely across the scanned packages' models
+	// (name-identity leaf resolution). buildFromType uses the NAMED type
+	// (not its Underlying) so buildNamedType emits the $ref and registers it
+	// for discovery.
+	decl, found, ambiguous := s.resolveNamedTypeLeaf(base, pos)
+	if ambiguous {
+		return false // diagnostic already recorded
+	}
+	if found {
+		if t := declNamedType(decl); t != nil && s.buildFromType(t, inner) == nil {
+			return true
+		}
 	}
 
 	s.RecordDiagnostic(grammar.Warnf(pos, grammar.CodeUnsupportedType,
 		"swagger:additionalProperties: unknown type %q", base))
 	return false
-}
-
-// refAdditionalPropertiesTypeName resolves a type name declared in the
-// builder's package onto target, producing a $ref for a model (or inlining a
-// non-model leaf, exactly as a field of that type would). Returns false when
-// there is no such declaration.
-func (s *Builder) refAdditionalPropertiesTypeName(name string, tgt ifaces.SwaggerTypable) bool {
-	if s.Decl == nil || s.Decl.Pkg == nil {
-		return false
-	}
-	decl, ok := s.Ctx.FindDecl(s.Decl.Pkg.PkgPath, name)
-	if !ok || decl == nil {
-		return false
-	}
-	var t types.Type
-	switch {
-	case decl.Type != nil:
-		t = decl.Type
-	case decl.Alias != nil:
-		t = decl.Alias
-	default:
-		return false
-	}
-	return s.buildFromType(t, tgt) == nil
 }

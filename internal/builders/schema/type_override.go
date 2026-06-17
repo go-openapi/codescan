@@ -12,6 +12,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -91,8 +92,16 @@ func (s *Builder) resolveTypeBase(base string, target ifaces.SwaggerTypable, own
 	}
 
 	// Otherwise a type-name reference: inline a known definition in place.
-	if s.inlineNamedTypeRef(base, target) {
-		return true
+	// Resolve the leaf in the builder's own package first, then uniquely
+	// across the scanned packages' models (name-identity leaf resolution).
+	decl, found, ambiguous := s.resolveNamedTypeLeaf(base, pos)
+	if ambiguous {
+		return false // diagnostic already recorded
+	}
+	if found {
+		if t := declNamedType(decl); t != nil && s.buildFromType(t.Underlying(), target) == nil {
+			return true
+		}
 	}
 
 	s.RecordDiagnostic(grammar.Warnf(pos, grammar.CodeUnsupportedType,
@@ -142,27 +151,54 @@ func (s *Builder) inlineGoType(t types.Type, target ifaces.SwaggerTypable) bool 
 	return s.buildFromType(base.Underlying(), target) == nil
 }
 
-// inlineNamedTypeRef resolves name to a definition declared in the builder's
-// current package and inlines its schema in place (no $ref). Returns false
-// when the builder has no package context or no such definition exists.
-func (s *Builder) inlineNamedTypeRef(name string, target ifaces.SwaggerTypable) bool {
-	if s.Decl == nil || s.Decl.Pkg == nil {
-		return false
+// resolveNamedTypeLeaf resolves a bare type name written in a type-name
+// keyword (swagger:type / swagger:additionalProperties /
+// swagger:patternProperties) to its declaration. It looks in the builder's
+// own package first — a local type wins (intent) — then, failing that,
+// resolves the leaf across the scanned packages' annotated model set
+// (name-identity leaf resolution, mirroring routes' resolveDefinitionByLeaf):
+//
+//   - exactly one model with that leaf -> (decl, true, false);
+//   - several -> records an ambiguity diagnostic and returns (nil, false, true);
+//   - none -> (nil, false, false), leaving the caller to emit unknown-type.
+func (s *Builder) resolveNamedTypeLeaf(name string, pos token.Position) (decl *scanner.EntityDecl, found, ambiguous bool) {
+	if s.Decl != nil && s.Decl.Pkg != nil {
+		if d, ok := s.Ctx.FindDecl(s.Decl.Pkg.PkgPath, name); ok && d != nil {
+			return d, true, false
+		}
 	}
-	decl, ok := s.Ctx.FindDecl(s.Decl.Pkg.PkgPath, name)
-	if !ok || decl == nil {
-		return false
+
+	matches := s.Ctx.FindModelsByLeaf(name)
+	switch len(matches) {
+	case 0:
+		return nil, false, false
+	case 1:
+		return matches[0], true, false
+	default:
+		pkgs := make([]string, 0, len(matches))
+		for _, m := range matches {
+			pkgs = append(pkgs, m.Obj().Pkg().Path())
+		}
+		s.RecordDiagnostic(grammar.Warnf(pos, grammar.CodeAmbiguousTypeName,
+			"type name %q is ambiguous: declared as a model in %d packages [%s]; "+
+				"use a same-package type or a swagger:model override to disambiguate",
+			name, len(matches), strings.Join(pkgs, ", ")))
+		return nil, false, true
 	}
-	var t types.Type
+}
+
+// declNamedType returns the named or alias type a decl carries (nil if
+// neither). The caller decides whether to emit it as a $ref (the named type)
+// or inline it (its Underlying).
+func declNamedType(decl *scanner.EntityDecl) types.Type {
 	switch {
 	case decl.Type != nil:
-		t = decl.Type
+		return decl.Type
 	case decl.Alias != nil:
-		t = decl.Alias
+		return decl.Alias
 	default:
-		return false
+		return nil
 	}
-	return s.buildFromType(t.Underlying(), target) == nil
 }
 
 // swagger:type keyword values that are not resolved as scalar/builtin type

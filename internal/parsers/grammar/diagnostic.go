@@ -118,6 +118,15 @@ const (
 	// long flat concat. The author can force a flat name with
 	// `swagger:model <name>`. See the name-identity design (rung 3 / W2).
 	CodeHierarchicalModelName Code = "validate.hierarchical-model-name"
+
+	// CodeAmbiguousTypeName fires when a type-name keyword argument
+	// (swagger:type, swagger:additionalProperties, swagger:patternProperties)
+	// names a bare leaf that, after failing to resolve in the builder's own
+	// package, matches a discovered model in SEVERAL packages. The reference
+	// is ambiguous so it is dropped; the author can disambiguate with a
+	// same-package type or a swagger:model override. See the name-identity
+	// leaf-resolution design.
+	CodeAmbiguousTypeName Code = "validate.ambiguous-type-name"
 )
 
 // Diagnostic is one observation about a comment block.
