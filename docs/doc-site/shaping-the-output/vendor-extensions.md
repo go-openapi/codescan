@@ -28,6 +28,31 @@ author yourself (via the `Extensions:` keyword) are not affected, and neither is
 `x-deprecated` (it carries semantic intent — see
 [Other type decorators]({{% relref "/tutorials/other-type-decorators" %}})).
 
+## Stamping `x-go-type`
+
+`x-go-name` and `x-go-package` record *where* a definition came from, but not the
+originating type's own name. `Options.EmitXGoType` adds an `x-go-type` extension
+carrying the fully-qualified Go type (`<package path>.<type name>`) — useful for
+round-tripping a generated spec back to its source types:
+
+```go
+codescan.Run(&codescan.Options{
+    Packages:    []string{"./..."},
+    ScanModels:  true,
+    EmitXGoType: true,
+})
+```
+
+{{< compare left="shaping/extensions/testdata/off.json" leftlabel="Default — no x-go-type"
+            right="shaping/extensions/testdata/xgotype.json" rightlabel="EmitXGoType: true" >}}
+
+The stamp lands on the **definition**, beside `x-go-package`. It is opt-in and
+default-off, so existing specs are unchanged; it is presence-guarded, so it never
+overwrites the deliberate `x-go-type` the special-type recognizers already set
+(`error`, the unmodellable generic-type fallback). Like the other `x-go-*`
+extensions it rides the `SkipExtensions` umbrella — set `SkipExtensions` and no
+`x-go-type` is emitted either.
+
 ## Enum descriptions
 
 A `swagger:enum` type backed by Go `const` declarations folds the const→value

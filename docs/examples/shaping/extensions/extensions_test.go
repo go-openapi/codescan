@@ -36,6 +36,20 @@ func scan(t *testing.T, skipExtensions bool) *spec.Swagger {
 	return doc
 }
 
+func scanEmitXGoType(t *testing.T, skipExtensions bool) *spec.Swagger {
+	t.Helper()
+	doc, err := codescan.Run(&codescan.Options{
+		WorkDir:        examplesRoot(t),
+		Packages:       []string{"./shaping/extensions"},
+		ScanModels:     true,
+		EmitXGoType:    true,
+		SkipExtensions: skipExtensions,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	return doc
+}
+
 // goldenDef marshals the Widget definition and compares it to (or, under
 // UPDATE_GOLDEN, rewrites) testdata/<feature>.json.
 //
@@ -66,6 +80,23 @@ func TestSkipExtensions(t *testing.T) {
 
 	assert.True(t, strings.Contains(withExt, "x-go-name"), "default output should carry x-go-* extensions")
 	assert.False(t, strings.Contains(noExt, "x-go-"), "SkipExtensions output must carry no x-go-* extensions")
+}
+
+// TestEmitXGoType emits the golden with EmitXGoType on and asserts the stamp
+// carries the fully-qualified Go type — and that it still yields to the
+// SkipExtensions umbrella.
+func TestEmitXGoType(t *testing.T) {
+	on := goldenDef(t, scanEmitXGoType(t, false), "xgotype")
+	assert.Contains(t, on, `"x-go-type"`, "EmitXGoType stamps x-go-type")
+	assert.Contains(t, on,
+		"github.com/go-openapi/codescan/docs/examples/shaping/extensions.Widget",
+		"x-go-type carries the fully-qualified originating Go type")
+
+	// SkipExtensions wins: no x-go-* survives, x-go-type included.
+	skipped := scanEmitXGoType(t, true).Definitions["Widget"]
+	raw, err := json.Marshal(skipped)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "x-go-", "EmitXGoType must yield to SkipExtensions")
 }
 
 // TestParamHeaderExtensions emits the golden showing author-supplied x-*
