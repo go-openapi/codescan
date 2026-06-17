@@ -69,6 +69,31 @@ type UserEnvelope struct {
 	Data UserSummary `json:"data"`
 }
 
+// snippet:compose
+
+// AuthToken is an extra payload some responses wrap alongside the domain model.
+//
+// swagger:model
+type AuthToken struct {
+	Token string `json:"token"`
+}
+
+// LoginResult composes UserSummary with AuthToken via swagger:allOf, so the
+// response body is the union of both models — a way to wrap a response with an
+// added payload without an open Data field. The body renders as
+// allOf:[{$ref:UserSummary},{$ref:AuthToken}].
+//
+// swagger:model
+type LoginResult struct {
+	// swagger:allOf
+	UserSummary
+
+	// swagger:allOf
+	AuthToken
+}
+
+// endsnippet:compose
+
 // snippet:routes
 
 // swagger:route GET /status status getStatus

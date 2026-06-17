@@ -90,7 +90,16 @@ func TestGenericEnvelopes(t *testing.T) {
 	require.Contains(t, doc.Paths.Paths, "/status")
 	require.Contains(t, doc.Paths.Paths, "/users/{id}")
 
+	// Composition (#2592): a body built from two models via swagger:allOf is the
+	// union of their $refs, with no open field.
+	login, ok := doc.Definitions["LoginResult"]
+	require.True(t, ok, "LoginResult definition missing")
+	require.Len(t, login.AllOf, 2, "LoginResult is an allOf of two models")
+	assert.Equal(t, "#/definitions/UserSummary", login.AllOf[0].Ref.String())
+	assert.Equal(t, "#/definitions/AuthToken", login.AllOf[1].Ref.String())
+
 	writeGolden(t, "apiresponse.json", apiResp)
 	writeGolden(t, "statusenvelope.json", statusEnv)
+	writeGolden(t, "compose.json", login)
 	writeGolden(t, "paths.json", doc.Paths)
 }

@@ -73,3 +73,17 @@ type StatusEnvelope struct {
 This produces the same concrete `data`, at the cost of repeating every field. The
 embed-and-shadow form above is preferred whenever the envelope's other fields map
 through unchanged.
+
+## Composing a body from several models
+
+A related need is *wrapping* a response with an extra payload — say a domain
+model plus an auth token — rather than specialising one open field. Embed the
+parts with [`swagger:allOf`]({{% relref "/tutorials/model-definitions#decorating-a-ref" %}})
+and the body renders as the union of their `$ref`s, with no open field at all:
+
+{{< example go="shaping/genericenvelopes/genericenvelopes.go" goregion="compose" golabel="swagger:allOf body"
+            json="shaping/genericenvelopes/testdata/compose.json" jsonlabel="definitions[LoginResult]" >}}
+
+Point a response body at `LoginResult`, or embed the same `swagger:allOf` fields
+directly in an `in:body` field to compose the `allOf` inline on the response
+schema.
