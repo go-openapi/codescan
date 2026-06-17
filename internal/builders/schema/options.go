@@ -19,6 +19,18 @@ type options struct {
 	target       ifaces.SwaggerTypable
 	simpleSchema bool
 	paramIn      string
+	path         string // base JSON pointer for cross-ref provenance (empty = off)
+}
+
+// WithPath sets the base RFC 6901 pointer this build emits provenance under
+// (cross-ref linkage). The caller initiates it for the placement context
+// (e.g. "/definitions/User" or "/paths/~1pets/get/responses/200/schema"); the
+// builder path-joins each member it produces. Empty (the default) records
+// nothing.
+func WithPath(base string) Option {
+	return func(o *options) {
+		o.path = base
+	}
 }
 
 // WithDefinitions selects the "definitions" Build mode. The builder

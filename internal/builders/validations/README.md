@@ -24,6 +24,7 @@ items/headers code paths. Its two halves are:
 - [§coercion-dispatch](#coercion-dispatch) — `CoerceValue` / `ParseDefault` / `ParseEnumValues` routing
 - [§enum-shapes](#enum-shapes) — JSON-array form vs comma-list form
 - [§format-axis](#format-axis) — why `Format` is reserved but not consulted today
+- [§format-compat](#format-compat) — `IsFormatCompatible` type×format legality
 - [§type-domain-table](#type-domain-table) — the keyword-vs-type legality table
 - [§empty-type](#empty-type) — how an unknown schema type is treated
 - [§quirks-open](#quirks-open) — deferred follow-ups
@@ -84,9 +85,18 @@ Dispatch table (after stripping surrounding quotes from
 | `integer`, `int`, `int64`, `int32`, `int16` | both | `strconv.Atoi` |
 | `bool`, `boolean` | both | `strconv.ParseBool` |
 | `number`, `float64`, `float32` | both | `strconv.ParseFloat` (bitSize=64) |
+| `string` | both | `unquoteIfQuoted` — strips a surrounding quote pair (F8) |
 | `object` | both | `json.Unmarshal` into `map[string]any` |
 | `array` | both | `json.Unmarshal` into `[]any` |
 | anything else / `nil` schema | both | raw string unchanged |
+
+The `string` arm strips one pair of surrounding double quotes from a
+quoted literal (`example: "Foo"` → `Foo`, `example: ""` → the empty
+string) while leaving a bare value (`example: Foo`) untouched — the
+quotes are delimiters, not content (quirk F8; go-swagger#2547 / #2899).
+Only the plain `string` type is unquoted here; string *formats*
+(`date`, `uuid`, …) surface their format name as the dispatch label and
+fall to the raw-string arm.
 
 Numeric and boolean parse errors are surfaced to the caller so
 the consumer can decide whether to emit a diagnostic. JSON
@@ -108,7 +118,13 @@ strict-mode option could turn this into a diagnostic.
 - **Comma-list form** — `enum: a, b, c`. Triggered when the
   JSON-array unmarshal fails. Each comma-separated token is
   `TrimSpace`d before per-value coercion so `enum: a, b`
-  produces `["a", "b"]`, not `["a", " b"]`.
+  produces `["a", "b"]`, not `["a", " b"]`. A surrounding `[ ]`
+  pair is stripped first: the bracketed `enum: [a, b, c]` form has
+  unquoted values, so it is not valid JSON and lands here — without
+  the strip the brackets glue onto the first/last value
+  (go-swagger#2396). The quoted (`["a","b"]`) and numeric
+  (`[1,2]`) bracketed variants are valid JSON and take the
+  JSON-array path instead.
 
 Per-element coercion is the same `CoerceValue` path as
 `default:` / `example:`, so type-aware typing applies
@@ -137,6 +153,32 @@ and downstream consumers re-validate against `(type, format)`
 themselves. They are tagged here as straightforward refinements
 once a concrete consumer asks for them.
 
+## <a id="format-compat"></a>§format-compat — `IsFormatCompatible` type × format legality
+
+`IsFormatCompatible(schemaType, format)` (in `format.go`) is a sibling of
+[`IsLegalForType`](#type-domain-table) on the **format** axis: it answers
+"may this `format` ride on a schema already typed `schemaType`?" It exists for
+the `swagger:type` + `swagger:strfmt` combination, where `swagger:type` wins on
+the type axis and the strfmt format is applied as a **supplementary hint only
+when it is consistent with that type** (the F3 reconciliation — see
+`.claude/plans/quirks-F-series-fix.md`). It is **not** used for the
+strfmt-alone path, where strfmt still forces `{type: string, format: X}`
+(go-swagger#1512).
+
+| Resolved type | Formats accepted |
+|---|---|
+| `string` | **any** (strfmt is string-oriented) |
+| `integer` | `int{n}` (`int`,`int8`…`int64`) + the swagger-extension `uint{n}` |
+| `number` | the integer set **+** float widths (`float`,`double`,`float32`,`float64`) |
+| `boolean` / `object` / `array` / `file` | none |
+
+`int32`/`int64` are the only OAS-2-official integer formats and `float`/`double`
+the only official number formats; the wider Go-spelled set round-trips back to
+Go (the same vendor convention #1512 documents). An empty `format` is trivially
+compatible (nothing to apply); an empty/unknown `schemaType` is accepted
+best-effort, mirroring [§empty-type](#empty-type). A `false` result returns a
+diagnostic-ready hint naming the offending format and type.
+
 ## <a id="type-domain-table"></a>§type-domain-table — keyword × Swagger type legality
 
 `keywordTypeRules` (in `shape.go`) carries the per-keyword
@@ -148,7 +190,7 @@ dialect Swagger 2.0 inherits):
 | `pattern`, `minLength`, `maxLength` | `string` |
 | `maximum`, `minimum`, `multipleOf` | `integer`, `number` |
 | `minItems`, `maxItems`, `uniqueItems` | `array` |
-| `minProperties`, `maxProperties` | `object` |
+| `minProperties`, `maxProperties`, `patternProperties` | `object` |
 
 Keywords intentionally absent from the table:
 

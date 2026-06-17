@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"go/types"
 
+	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
@@ -68,6 +69,19 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 		target.Properties = make(map[string]oaispec.Schema)
 	}
 
+	// Cross-ref linkage: advance the base path to this property's pointer for
+	// the duration of its value build, so anchors emitted within (enum values,
+	// nested-object properties, slice/map element fields) carry the correct
+	// pointer. parentPath is restored on exit; the property's own anchor is
+	// recorded at fieldPath below.
+	parentPath := s.path
+	fieldPath := ""
+	if parentPath != "" {
+		fieldPath = parentPath + scanner.JSONPointer("properties", c.name)
+	}
+	s.path = fieldPath
+	defer func() { s.path = parentPath }()
+
 	ps := target.Properties[c.name]
 	if err := s.buildFromType(c.propType, NewTypable(&ps, 0, s.skipExtensions)); err != nil {
 		return err
@@ -77,25 +91,44 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 		ps.Ref = oaispec.Ref{}
 		ps.Items = nil
 	}
-	if c.fd.StrfmtName != "" {
+	// swagger:type + swagger:strfmt precedence (F3). swagger:type wins on
+	// the type axis and always inlines; swagger:strfmt then applies as a
+	// supplementary format only when compatible with the resolved type.
+	// strfmt ALONE keeps forcing the string-encoded representation
+	// (go-swagger#1512). See [§user-overrides](./README.md#user-overrides).
+	pos := s.Ctx.PosOf(c.afld.Pos())
+	switch {
+	case c.fd.TypeOverride != "":
+		ps = oaispec.Schema{}
+		override := NewTypable(&ps, 0, s.skipExtensions)
+		if s.resolveTypeOverride(c.fd.TypeOverride, override, c.propType, pos) {
+			if c.fd.StrfmtName != "" {
+				s.applyStrfmtFormat(&ps, c.fd.StrfmtName, pos)
+			}
+		} else {
+			// Unresolved (file / unknown): fall through to the field's Go
+			// type, inlined as before.
+			ps = oaispec.Schema{}
+			if err := s.buildFromType(c.propType.Underlying(), NewTypable(&ps, 0, s.skipExtensions)); err != nil {
+				return err
+			}
+		}
+	case c.fd.StrfmtName != "":
 		ps.Typed("string", c.fd.StrfmtName)
 		ps.Ref = oaispec.Ref{}
 		ps.Items = nil
 	}
-	if c.fd.TypeOverride != "" {
-		// Field-site swagger:type override. See
-		// [§user-overrides](./README.md#user-overrides) for ordering
-		// and the Underlying() fallback rationale.
-		ps = oaispec.Schema{}
-		override := NewTypable(&ps, 0, s.skipExtensions)
-		if err := resolvers.SwaggerSchemaForType(c.fd.TypeOverride, override); err != nil {
-			if err := s.buildFromType(c.propType.Underlying(), override); err != nil {
-				return err
-			}
-		}
-	}
 
 	s.applyBlockToField(c.afld, target, &ps, c.name)
+
+	// required: inherited from an embedding field (go-swagger#2701), unless
+	// the promoted property set its own required: explicitly. The flag lives
+	// on the enclosing object's Required list, so it is written to target.
+	if s.embedInherited.RequiredSet && s.embedInherited.Required {
+		if _, ownRequired := s.ParseBlock(c.afld.Doc).GetBool(grammar.KwRequired); !ownRequired {
+			handlers.SetRequired(target, c.name, true)
+		}
+	}
 
 	if ps.Ref.String() == "" && c.name != c.goName {
 		resolvers.AddExtension(&ps.VendorExtensible, "x-go-name", c.goName, s.skipExtensions)
@@ -109,7 +142,59 @@ func (s *Builder) applyFieldCarrier(c fieldCarrier, target *oaispec.Schema, name
 		nameByJSON[c.name] = propOwner{goName: c.goName, depth: s.embedDepth}
 	}
 	target.Properties[c.name] = ps
+
+	// Cross-ref linkage: anchor the property to its struct field. Only when a
+	// base path was initiated (WithPath) for the parent node and a sink is
+	// wired. fieldPath is this property's pointer (s.path was advanced to it
+	// above and is restored to parentPath on exit).
+	if fieldPath != "" && c.afld != nil && s.Ctx.OriginEnabled() {
+		s.Ctx.RecordOrigin(fieldPath, s.Ctx.PosOf(c.afld.Pos()))
+	}
+
 	return nil
+}
+
+// repath swaps the cross-ref base path (s.path) for the duration of a child
+// build and returns a restore func, mirroring enterEmbed's idiom. Use
+// `defer s.repath("")()` to clear the path when descending into a subtree whose
+// node pointer isn't tracked (an allOf member, an aliased compound), so no
+// wrong anchor is emitted there; finer nodes resolve to the nearest anchored
+// ancestor instead.
+func (s *Builder) repath(base string) func() {
+	saved := s.path
+	s.path = base
+	return func() { s.path = saved }
+}
+
+// descend path-joins segments onto the cross-ref base path for the duration of
+// a child build (items, additionalProperties, …), keeping s.path aligned with
+// the schema node currently being filled so anchors emitted within — enum
+// values, nested-object properties — carry the correct pointer. No-op (and no
+// restore cost) when provenance is off (s.path == "").
+func (s *Builder) descend(segments ...string) func() {
+	if s.path == "" {
+		return func() {}
+	}
+	return s.repath(s.path + scanner.JSONPointer(segments...))
+}
+
+// descendItems path-joins `depth` "items" segments onto the cross-ref base path
+// for the duration of an array-element build, so anchors emitted inside the
+// innermost element (an inlined struct's properties, enum values, validations)
+// carry the …/items[/items…] pointer that matches where the element renders.
+// Used by the `[]T` array-layer arms of swagger:type and
+// swagger:additionalProperties, which build their layers via Items() rather
+// than the structural slice/array path. No-op (and no restore cost) when
+// provenance is off (s.path == "") or depth == 0.
+func (s *Builder) descendItems(depth int) func() {
+	if s.path == "" || depth == 0 {
+		return func() {}
+	}
+	segments := make([]string, depth)
+	for i := range segments {
+		segments[i] = "items"
+	}
+	return s.descend(segments...)
 }
 
 // diagnoseAmbiguousEmbed fires a SeverityWarning Diagnostic on
@@ -164,6 +249,18 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 	}
 
 	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	if afld == nil && fld.Pkg() != nil {
+		// The field is not in the embedding decl's file. This happens when an
+		// embedded named type promotes fields whose source lives elsewhere —
+		// e.g. embedding a cross-package defined type
+		// (`type AnotherPackageAlias color.Color`), where `decl` is the alias
+		// in package `a` but the fields belong to `color.Color` in package
+		// `color`. Resolve the field's AST against its own source file so its
+		// json tag and doc are read correctly. See go-swagger#2417.
+		if file, ok := s.Ctx.FileForPos(fld.Pkg().Path(), fld.Pos()); ok {
+			afld = resolvers.FindASTField(file, fld.Pos())
+		}
+	}
 	if afld == nil {
 		return fieldCarrier{}, false, nil
 	}
@@ -173,7 +270,7 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 		return fieldCarrier{}, false, nil
 	}
 
-	name, ignore, isString, omitEmpty, err := resolvers.ParseJSONTag(afld)
+	name, ignore, isString, omitEmpty, err := resolvers.ParseJSONTag(afld, fld.Name())
 	if err != nil {
 		return fieldCarrier{}, false, err
 	}
@@ -185,6 +282,15 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 			}
 		}
 		return fieldCarrier{}, false, nil
+	}
+
+	// swagger:name overrides the json-tag / field-name derivation on a
+	// struct field — matching its documented "field OR method" scope and
+	// the behaviour already honoured on interface methods (F5,
+	// doc-site-quirks.md). applyFieldCarrier still records the Go name as
+	// x-go-name when it differs from the emitted JSON name.
+	if fd.JSONName != "" {
+		name = fd.JSONName
 	}
 
 	return fieldCarrier{

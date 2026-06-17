@@ -1,0 +1,73 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/widgets": {
+      "post": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Create a widget (same model, different per-response examples).",
+        "operationId": "createWidget",
+        "responses": {
+          "201": {
+            "description": "created",
+            "examples": {
+              "application/json": {
+                "name": "created-201"
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "examples": {
+              "application/json": {
+                "name": "conflict-409"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/widgets/{id}": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Get a widget.",
+        "operationId": "getWidget",
+        "responses": {
+          "200": {
+            "description": "found",
+            "examples": {
+              "application/json": {
+                "name": "alice-200"
+              }
+            }
+          },
+          "404": {
+            "description": "missing",
+            "examples": {
+              "application/json": {
+                "name": "not-found-404"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "title": "Widget is shared across operations and carries its OWN model-level example.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "model-default"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2871"
+    }
+  }
+}

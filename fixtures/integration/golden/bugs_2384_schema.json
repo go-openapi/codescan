@@ -1,0 +1,19 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Role": {
+      "type": "object",
+      "title": "Role probes a pattern containing backslash escapes (#2384).",
+      "properties": {
+        "name": {
+          "description": "the name",
+          "type": "string",
+          "pattern": "^[^ \\t\\n](.*[^ \\t\\n])*$",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2384"
+    }
+  }
+}

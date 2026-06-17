@@ -22,17 +22,18 @@ import (
 // table, and the rationale for returning a fresh map per call.
 func keywordTypeRules() map[string][]string {
 	return map[string][]string{
-		"pattern":       {"string"},
-		"minLength":     {"string"},
-		"maxLength":     {"string"},
-		"maximum":       {"integer", "number"},
-		"minimum":       {"integer", "number"},
-		"multipleOf":    {"integer", "number"},
-		"minItems":      {"array"},
-		"maxItems":      {"array"},
-		"uniqueItems":   {"array"},
-		"minProperties": {"object"},
-		"maxProperties": {"object"},
+		"pattern":           {"string"},
+		"minLength":         {"string"},
+		"maxLength":         {"string"},
+		"maximum":           {"integer", "number"},
+		"minimum":           {"integer", "number"},
+		"multipleOf":        {"integer", "number"},
+		"minItems":          {"array"},
+		"maxItems":          {"array"},
+		"uniqueItems":       {"array"},
+		"minProperties":     {"object"},
+		"maxProperties":     {"object"},
+		"patternProperties": {"object"},
 	}
 }
 

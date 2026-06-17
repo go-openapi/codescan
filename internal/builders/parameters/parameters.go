@@ -4,14 +4,18 @@
 package parameters
 
 import (
+	"errors"
 	"fmt"
 	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/schema"
+	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/logger"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -24,6 +28,20 @@ const inBody = "body"
 // PostDeclarations, diagnostics, ParseBlocks cache).
 type Builder struct {
 	*common.Builder
+
+	// inherited carries an embedded field's in:/required: annotation down
+	// into the parameters it promotes (go-swagger#2701). The zero value
+	// means no inheritance (top-level / non-embedded path). Set with
+	// save/restore around the embedded-field recursion in buildFromStruct.
+	// The mechanism is shared with the schema and responses builders via
+	// common.EmbedInheritance.
+	inherited common.EmbedInheritance
+
+	// currentOpID is the operation id whose parameter set is being built. Set
+	// per-iteration in Build and read by processParamField to key the deferred
+	// cross-ref anchor capture. The same swagger:parameters struct may apply to
+	// several operations, so the capture runs once per op id.
+	currentOpID string
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -49,6 +67,7 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 			operation.ID = opid
 		}
 		logger.DebugLogf(p.Ctx.Debug(), "building parameters for: %s", opid)
+		p.currentOpID = opid
 
 		// analyze struct body for fields etc
 		// each exported struct field:
@@ -161,8 +180,17 @@ func (p *Builder) buildFromFieldStruct(tpe *types.Struct, typable ifaces.Swagger
 }
 
 func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
-	// Map fields are only legal under in=body — paramTypable.Schema()
-	// returns nil for non-body. No SimpleSchema variant needed.
+	// A Go map is only representable under in=body (object +
+	// additionalProperties). In any OAS v2 SimpleSchema location
+	// (query/formData/path/header) it has no representation: paramTypable
+	// (and ItemsTypable) return a nil schema there, so dereferencing it
+	// would panic (go-swagger#2804). Signal the field-level caller to skip
+	// the field with a diagnostic instead. Same rule as
+	// responses.buildFromFieldMap for SimpleSchema response headers.
+	if typable.In() != inBody {
+		return errUnrepresentableParam
+	}
+
 	sch := new(oaispec.Schema)
 	typable.Schema().Typed("object", "").AdditionalProperties = &oaispec.SchemaOrBool{
 		Schema: sch,
@@ -312,9 +340,12 @@ func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, o
 	sequence := make([]string, 0, numFields)
 	for fld := range tpe.Fields() {
 		if fld.Embedded() {
-			if err := p.buildFromType(fld.Type(), op, seen); err != nil {
-				return err
+			var err error
+			sequence, err = p.buildEmbeddedField(fld, decl, op, sequence, seen)
+			if err != nil {
+				return nil
 			}
+
 			continue
 		}
 
@@ -342,6 +373,128 @@ func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, o
 	return nil
 }
 
+func (p *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, op *oaispec.Operation, sequence []string, seen map[string]oaispec.Parameter) ([]string, error) {
+	// An in:/required: annotation on the embed itself applies to the
+	// parameters it promotes (go-swagger#2701). Thread it through the
+	// recursion as inherited context, restoring afterwards so sibling
+	// fields are unaffected.
+	saved := p.inherited
+	if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+		p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
+	}
+	// An embed marked `in: body` IS the body parameter — the embedded
+	// struct becomes one body param's schema, exactly like a named
+	// `Body Foo` field, rather than promoting its members as N separate
+	// body params (an operation allows at most one body parameter, so
+	// per-field promotion produces an invalid spec). go-swagger#1635;
+	// the parameters counterpart of the responses in: body embed.
+	// Other in: values still promote the embed's fields (#2701).
+	if p.inherited.InSet && p.inherited.In == inBody {
+		name, err := p.processParamField(fld, decl, seen)
+		p.inherited = saved
+		if err != nil {
+			return nil, err
+		}
+
+		if name != "" {
+			sequence = append(sequence, name)
+		}
+
+		return sequence, nil
+	}
+
+	err := p.buildFromType(fld.Type(), op, seen)
+	p.inherited = saved
+	if err != nil {
+		return nil, err
+	}
+
+	return sequence, nil
+}
+
+// applyTypeOverride honours a field-level `swagger:type` on a parameter
+// (go-swagger#1499). The override always produces an inline SimpleSchema and
+// wins outright over the field's Go type. Only what a parameter can represent
+// is accepted: a scalar / Go-builtin base, optionally wrapped in `[]` array
+// layers. `inline`, `file`, and type-name references have no SimpleSchema
+// representation — they (and any unknown token) are rejected with a located
+// diagnostic and the caller falls back to Go-type resolution.
+//
+// Unlike the schema builder's resolveTypeOverride, this never recurses into a
+// Go struct (which would dereference the nil SimpleSchema schema of a non-body
+// param), so it is panic-safe for every parameter location.
+func (p *Builder) applyTypeOverride(arg string, typable ifaces.SwaggerTypable, fld *types.Var) bool {
+	base, depth := stripArrayPrefixes(arg)
+
+	target := typable
+	for range depth {
+		target.Typed("array", "")
+		target = target.Items()
+	}
+
+	if err := resolvers.SwaggerSchemaForType(base, target); err != nil {
+		p.RecordDiagnostic(grammar.Warnf(
+			p.Ctx.PosOf(fld.Pos()),
+			grammar.CodeUnsupportedType,
+			"swagger:type %q has no SimpleSchema representation on parameter %q; override ignored",
+			arg, fld.Name(),
+		))
+		return false
+	}
+
+	return true
+}
+
+// stripArrayPrefixes counts leading `[]` prefixes on a swagger:type argument
+// and returns the bare base plus the array depth. `[]string` → ("string", 1),
+// `int64` → ("int64", 0). Mirrors the schema builder's identically named
+// unexported helper; kept local to avoid widening the schema package surface.
+func stripArrayPrefixes(arg string) (base string, depth int) {
+	base = strings.TrimSpace(arg)
+	for strings.HasPrefix(base, "[]") {
+		base = strings.TrimSpace(base[2:])
+		depth++
+	}
+	return base, depth
+}
+
+// resolveParamType resolves the parameter's type onto pty in precedence
+// order: a formData file field, then a field-level swagger:type override
+// (go-swagger#1499), then the field's own Go type. Returns skip=true (with a
+// recorded diagnostic) when the Go type has no OAS v2 SimpleSchema
+// representation in this location and the field should be dropped.
+func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name, in string, pty ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) (skip bool, err error) {
+	switch {
+	case in == "formData" && signals.file:
+		pty.Typed("file", "")
+	case signals.swTypeSet && p.applyTypeOverride(signals.swaggerType, pty, fld):
+		// A field-level swagger:type overrides the Go type for the parameter
+		// (go-swagger#1499) — the SimpleSchema analogue of the schema
+		// builder's field-level override. The override wins outright; the Go
+		// type is not consulted. A compatible swagger:strfmt then rides as a
+		// supplementary format back in processParamField.
+	default:
+		if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
+			if errors.Is(err, errUnrepresentableParam) {
+				// The field type has no OAS v2 SimpleSchema representation in
+				// this non-body location (e.g. a map under in=query). Record a
+				// located diagnostic and skip the field instead of panicking or
+				// failing the whole scan. See go-swagger/go-swagger#2804.
+				p.RecordDiagnostic(grammar.Warnf(
+					p.Ctx.PosOf(fld.Pos()),
+					grammar.CodeUnsupportedInSimpleSchema,
+					"parameter %q (in=%q) has Go type %s, which has no OAS v2 SimpleSchema representation; parameter skipped",
+					name, in, fld.Type().String(),
+				))
+				return true, nil
+			}
+			return false, err
+		}
+	}
+
+	return false, nil
+}
+
 // processParamField processes a single non-embedded struct field for parameter building.
 // Returns the parameter name if the field was processed, or "" if it was skipped.
 func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, seen map[string]oaispec.Parameter) (string, error) {
@@ -362,7 +515,7 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		return "", nil
 	}
 
-	name, ignore, _, _, err := resolvers.ParseJSONTag(afld)
+	name, ignore, _, _, err := resolvers.ParseJSONTag(afld, fld.Name())
 	if err != nil {
 		return "", err
 	}
@@ -370,9 +523,47 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		return "", nil
 	}
 
+	// A `name:` keyword on the field renames the JSON parameter name,
+	// overriding the json-tag / Go-field derivation (the parameter-side
+	// analogue of swagger:name on a schema field). Read it before `name`
+	// flows into the `seen` key, ps.Name, the sequence and the dedup so
+	// the rename is applied consistently. applyFieldCarrier-style
+	// x-go-name tracking below records the Go field name when it differs.
+	if kwName, ok := p.ParseBlock(afld.Doc).GetString(grammar.KwName); ok {
+		if kwName = strings.TrimSpace(kwName); kwName != "" {
+			name = kwName
+		}
+	}
+
+	// A swagger:name annotation is inert in a parameter context — the
+	// canonical rename keyword here is `name:` (doc-quirk G2). It is dropped
+	// rather than applied, so warn in case the author reached for the schema
+	// annotation when they meant the keyword.
+	for _, b := range p.ParseBlocks(afld.Doc) {
+		if b.AnnotationKind() == grammar.AnnName {
+			p.RecordDiagnostic(grammar.Warnf(
+				p.Ctx.PosOf(afld.Pos()),
+				grammar.CodeContextInvalid,
+				"swagger:name is ignored on a parameter field; use the `name:` keyword to rename parameter %q",
+				name,
+			))
+			break
+		}
+	}
+
+	// Cross-ref linkage: capture the field's position keyed by (opid, name) for
+	// the spec builder's deferred /paths/.../parameters/{i} anchor pass.
+	if p.Ctx.OriginEnabled() {
+		p.Ctx.RecordParamOrigin(p.currentOpID, name, p.Ctx.PosOf(afld.Pos()))
+	}
+
 	in := "query"
-	if signals.inSet {
+	switch {
+	case signals.inSet:
 		in = signals.in
+	case p.inherited.InSet:
+		// in: from an embedding field (go-swagger#2701).
+		in = p.inherited.In
 	}
 
 	ps := seen[name]
@@ -382,22 +573,39 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		pty = schema.NewTypable(pty.Schema(), 0, p.Ctx.SkipExtensions())
 	}
 
-	if in == "formData" && signals.file {
-		pty.Typed("file", "")
-	} else if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
+	if skip, err := p.resolveParamType(signals, fld, name, in, pty, seen); err != nil {
 		return "", err
+	} else if skip {
+		return "", nil
 	}
 
 	if signals.strfmtSet {
-		ps.Typed("string", signals.strfmt)
-		ps.Ref = oaispec.Ref{}
-		ps.Items = nil
+		if signals.swTypeSet {
+			// swagger:type already fixed the type axis (go-swagger#1499);
+			// swagger:strfmt is supplementary and applies as a format only
+			// when compatible with the resolved type, mirroring the schema
+			// builder's swagger:type + swagger:strfmt precedence. An
+			// incompatible format is dropped rather than overriding the type.
+			if ok, _ := validations.IsFormatCompatible(ps.Type, signals.strfmt); ok {
+				ps.Format = signals.strfmt
+			}
+		} else {
+			ps.Typed("string", signals.strfmt)
+			ps.Ref = oaispec.Ref{}
+			ps.Items = nil
+		}
 	}
 
+	_, fieldSetRequired := p.ParseBlock(afld.Doc).GetBool(grammar.KwRequired)
 	if err := p.applyBlockToField(afld, &ps); err != nil {
 		return "", err
 	}
 	if ps.In == "path" {
+		ps.Required = true
+	}
+	// required: from an embedding field (go-swagger#2701), unless the
+	// promoted field set its own required: explicitly.
+	if !fieldSetRequired && p.inherited.RequiredSet && p.inherited.Required {
 		ps.Required = true
 	}
 

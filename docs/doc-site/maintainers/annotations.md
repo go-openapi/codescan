@@ -260,12 +260,18 @@ itself; the format name is the entire surface.
 ## `swagger:enum`
 
 **What it does.** Marks a string-typed (or integer-typed) named type
-as an enum and collects the type's `const` declarations. The values
-are applied **inline on each model field that references the type**:
-the property gets an `enum` array plus an `x-go-enum-desc` extension
-carrying the per-value godoc descriptions in `<value> <doc-text>`
-shape. The enum type itself is **not** emitted as a standalone
-definition — the values travel with each referencing property.
+as an enum and collects the type's `const` declarations.
+
+- **Without `swagger:model`** (the default): the values are applied
+  **inline on each model field that references the type** — the
+  property gets an `enum` array plus an `x-go-enum-desc` extension
+  carrying the per-value godoc descriptions in `<value> <doc-text>`
+  shape. The enum type itself is not a standalone definition; the
+  values travel with each referencing property.
+- **With `swagger:model`**: the enum becomes a **first-class
+  definition** carrying the `enum` array (+ `x-go-enum-desc`), and
+  referencing fields point at it via `$ref` — the general
+  `swagger:model ⇒ definition + $ref` rule applied to enums.
 
 (Edge case: if `swagger:enum` names a type for which no matching
 `const` values are found, the enum semantics are dropped and the type
@@ -277,8 +283,11 @@ values are discovered via Go's type-system traversal; they do not
 need to live in the same file. The values surface only when a model
 reaches the enum type through a field.
 
-**Argument shape.** IDENT naming the type whose `const` values to
-collect (its own name).
+**Argument shape.** Optional IDENT naming the type whose `const`
+values to collect. On a type declaration the name is redundant, so the
+**bare `swagger:enum`** form is accepted and infers the name from the
+declared type. `swagger:enum Priority` and a bare `swagger:enum` on
+`type Priority …` are equivalent.
 
 **Sample.**
 
@@ -392,39 +401,29 @@ member (the second `allOf` element).
 
 ---
 
-## `swagger:alias`
+## `swagger:alias` — DEPRECATED
 
-**What it does.** Marks a Go alias declaration (`type T = Other`) as
-a model that should publish as a `$ref` to `Other`'s definition
-rather than as a duplicate of Other's schema.
+**Deprecated.** `swagger:alias` is deprecated and no longer affects the
+emitted spec — it is an empty sink that only raises a `validate.deprecated`
+diagnostic. (Earlier documentation claimed it published a `$ref` to the
+alias target; that was never accurate. Its only real effect was to
+force a named **primitive** type to inline its scalar — e.g. `{type:
+string}` — instead of producing the `$ref` a named type otherwise gets.
+That force-inline behaviour has been removed.)
 
-The scanner also honours `RefAliases` and `TransparentAliases`
-top-level options, which can globally enable alias-as-ref behaviour
-without per-decl annotation. `swagger:alias` is the per-decl override
-for cases where the global mode isn't appropriate.
+**Migration.**
 
-**Where it goes.** On a type alias declaration.
+- To **inline** a type at a use site, use `swagger:type inline` on the
+  field (see [`swagger:type`](#swaggertype)).
+- To publish a type as a **first-class definition** that fields `$ref`,
+  use `swagger:model`.
+- To control alias rendering **globally**, use the `RefAliases` /
+  `TransparentAliases` options. A plain (unannotated) Go alias `type T =
+  Other` dissolves to its target by default.
 
-**Argument shape.** Optional IDENT — the published name. Default:
-the alias's Go name.
+**Where it went.** On a type alias / named-type declaration.
 
-**Sample.**
-
-```go
-// Timestamp aliases time.Time. The published model carries
-// format: date-time via the time.Time → strfmt resolution.
-//
-// swagger:alias
-type Timestamp = time.Time
-```
-
-Without the annotation (and without global `RefAliases`), the alias
-either expands the target's full schema or is silently ignored
-depending on context.
-
-**Legal keywords.** Schema-context keywords.
-
-**Full example.** `fixtures/enhancements/ref-alias-chain/types.go`.
+**Argument shape.** Optional IDENT (ignored — the annotation has no effect).
 
 ---
 
@@ -454,7 +453,14 @@ swagger:route <METHOD> <path> [tag1 tag2 …] <operationID>
 - `<METHOD>` — `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`,
   `OPTIONS`. Case insensitive.
 - `<path>` — starts with `/`. Supports path-parameter braces:
-  `/items/{id}`.
+  `/items/{id}`. Path templating follows
+  [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI Template
+  **Level-1 expansion** only (simple `{name}` substitution), as
+  required by OpenAPI 2.0. An inline regex constraint written in the
+  gorilla/chi style (`/items/{id:[0-9]+}`) is **stripped** to the bare
+  `/items/{id}` form and a warning is emitted — OpenAPI 2.0 cannot
+  express the constraint, so it is dropped rather than silently failing
+  the whole route. The same applies to `swagger:operation`.
 - `[tag1 tag2 …]` — optional whitespace-separated list of tags. At
   least two characters each.
 - `<operationID>` — the unique operation identifier.
@@ -632,7 +638,9 @@ body in `swagger:route`, or the YAML `$ref` form in
 The struct's fields contribute the response shape:
 
 - A field named `Body` (or carrying `in: body`) becomes the response
-  body schema.
+  body schema. The body may be a struct, a `$ref`'d model, **or a
+  primitive** — e.g. `Body string` emits `schema: {type: string}` and
+  `Body []int` emits `schema: {type: array, items: {type: integer}}`.
 - Other fields carrying `in: header` become response headers.
 
 **Where it goes.** On a struct declaration.

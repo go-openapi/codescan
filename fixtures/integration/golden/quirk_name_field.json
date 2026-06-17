@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Account": {
+      "type": "object",
+      "title": "Account renames fields via swagger:name.",
+      "properties": {
+        "balance": {
+          "description": "Balance is renamed via swagger:name with no json tag present.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Balance"
+        },
+        "currencyCode": {
+          "description": "Currency is renamed via swagger:name, overriding the json tag.",
+          "type": "string",
+          "x-go-name": "Currency"
+        },
+        "plain": {
+          "description": "Plain has no override and keeps its json tag name.",
+          "type": "string",
+          "x-go-name": "Plain"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/name-on-field"
+    }
+  }
+}

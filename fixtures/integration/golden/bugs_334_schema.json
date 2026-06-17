@@ -1,0 +1,53 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/users": {
+      "get": {
+        "tags": [
+          "listUsers"
+        ],
+        "summary": "Lists users.",
+        "operationId": "users",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/usersResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "required": [
+        "id",
+        "firstname"
+      ],
+      "properties": {
+        "firstname": {
+          "type": "string",
+          "minLength": 3,
+          "x-go-name": "Firstname"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/334"
+    }
+  },
+  "responses": {
+    "usersResponse": {
+      "description": "UsersResponse is the list response.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/User"
+        }
+      }
+    }
+  }
+}

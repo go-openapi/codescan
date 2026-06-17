@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "BTest": {
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "string",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2783/b"
+    },
+    "CTest": {
+      "type": "object",
+      "required": [
+        "c"
+      ],
+      "properties": {
+        "c": {
+          "type": "string",
+          "x-go-name": "C"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2783/c"
+    },
+    "TestResponseBody": {
+      "type": "object",
+      "properties": {
+        "test1": {
+          "$ref": "#/definitions/BTest"
+        },
+        "test2": {
+          "$ref": "#/definitions/CTest"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2783"
+    }
+  }
+}

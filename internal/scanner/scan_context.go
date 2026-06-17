@@ -4,6 +4,7 @@
 package scanner
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -19,6 +20,12 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"golang.org/x/tools/go/packages"
 )
+
+// ErrDegradedLoad is the base error for a degraded package load detected by
+// detectDegradedLoad (no packages matched, or a scanned package failed to
+// load / type-check). It is wrapped with the per-package detail and, at the
+// public API boundary, with ErrCodeScan.
+var ErrDegradedLoad = errors.New("degraded package load")
 
 const pkgLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
@@ -39,6 +46,17 @@ type ScanCtx struct {
 	debug bool
 
 	opts *Options
+
+	// paramOrigins captures (operationID → parameterName → source position)
+	// during the parameters build. Parameter anchors can't be emitted inline:
+	// at parameters-build time the operation isn't yet bound to a path/method
+	// and the array index isn't final. They are resolved in a deferred pass
+	// (see the spec builder) once paths are built. Cross-ref linkage only.
+	paramOrigins map[string]map[string]token.Position
+
+	// seenDiags suppresses exact-duplicate diagnostics on the OnDiagnostic
+	// stream over one scan (see EmitDiagnostic).
+	seenDiags map[diagKey]struct{}
 }
 
 func NewScanCtx(opts *Options) (*ScanCtx, error) {
@@ -53,6 +71,9 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 
 	pkgs, err := packages.Load(cfg, opts.Packages...)
 	if err != nil {
+		return nil, err
+	}
+	if err := detectDegradedLoad(pkgs, opts); err != nil {
 		return nil, err
 	}
 
@@ -79,8 +100,108 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 	}, nil
 }
 
+// detectDegradedLoad reacts to a degraded `packages.Load` result. packages.Load
+// only returns the catastrophic error; degraded-but-loaded states otherwise pass
+// silently and produce an incomplete spec. The reaction is tiered by what is
+// still recoverable — only the pattern-matched root packages are inspected
+// (transitive deps live in the import graph and are not scanned, so dep noise
+// does not trip the check):
+//
+//   - ABORT (Error + returned error) when nothing usable loaded: no packages
+//     matched the patterns; a root package could not be loaded at all (a
+//     packages.ListError — e.g. a missing directory or unresolved import,
+//     where "code must build" cannot even be met); or a root package came back
+//     without type information (Types/TypesInfo nil — the #2874 wholesale
+//     type-check failure where swagger:allOf silently stops resolving).
+//   - WARN (and continue) when a root package carries only parse/type errors
+//     but still has usable type information. go/packages type-checks
+//     best-effort, so its scannable definitions remain usable; a single
+//     non-building package must not sink a whole `./...` scan. The spec is
+//     emitted from what loaded, with the affected package flagged.
+//
+// Every observation is reported through opts.OnDiagnostic as a
+// scan.degraded-load diagnostic; abort observations are also summarised in the
+// returned (wrapped ErrDegradedLoad) error.
+func detectDegradedLoad(pkgs []*packages.Package, opts *Options) error {
+	emit := func(sev grammar.Severity, format string, args ...any) string {
+		ctor := grammar.Errorf
+		if sev == grammar.SeverityWarning {
+			ctor = grammar.Warnf
+		}
+		d := ctor(token.Position{}, grammar.CodeDegradedLoad, format, args...)
+		if cb := opts.OnDiagnostic; cb != nil {
+			cb(d)
+		}
+		return d.Message
+	}
+
+	if len(pkgs) == 0 {
+		return fmt.Errorf("%w: %s", ErrDegradedLoad,
+			emit(grammar.SeverityError, "no packages matched the scan patterns %v in %q", opts.Packages, opts.WorkDir))
+	}
+
+	var fatal []string
+	for _, pkg := range pkgs {
+		switch {
+		case hasListError(pkg.Errors):
+			fatal = append(fatal, emit(grammar.SeverityError,
+				"package %q could not be loaded: %s", pkg.PkgPath, firstListError(pkg.Errors)))
+		case pkg.Types == nil || pkg.TypesInfo == nil:
+			fatal = append(fatal, emit(grammar.SeverityError,
+				"package %q loaded without type information; swagger:allOf / $ref resolution would be incomplete",
+				pkg.PkgPath))
+		case len(pkg.Errors) > 0:
+			emit(grammar.SeverityWarning,
+				"package %q did not fully type-check: %s (%d error(s)); its definitions may be incomplete",
+				pkg.PkgPath, pkg.Errors[0], len(pkg.Errors))
+		}
+	}
+	if len(fatal) > 0 {
+		return fmt.Errorf("%w: %s", ErrDegradedLoad, strings.Join(fatal, "; "))
+	}
+
+	return nil
+}
+
+// hasListError reports whether any error is a packages.ListError — the package
+// or pattern could not be loaded at all (vs. a parse/type error on code that
+// did load).
+func hasListError(errs []packages.Error) bool {
+	for _, e := range errs {
+		if e.Kind == packages.ListError {
+			return true
+		}
+	}
+
+	return false
+}
+
+// firstListError returns the first packages.ListError for messaging; callers
+// guard with hasListError.
+func firstListError(errs []packages.Error) packages.Error {
+	for _, e := range errs {
+		if e.Kind == packages.ListError {
+			return e
+		}
+	}
+
+	return packages.Error{}
+}
+
 func (s *ScanCtx) SkipExtensions() bool {
 	return s.opts.SkipExtensions
+}
+
+func (s *ScanCtx) SkipEnumDescriptions() bool {
+	return s.opts.SkipEnumDescriptions
+}
+
+func (s *ScanCtx) EmitXGoType() bool {
+	return s.opts.EmitXGoType
+}
+
+func (s *ScanCtx) SingleLineCommentAsDescription() bool {
+	return s.opts.SingleLineCommentAsDescription
 }
 
 func (s *ScanCtx) DescWithRef() bool {
@@ -133,6 +254,37 @@ func (s *ScanCtx) Debug() bool {
 	return s.debug
 }
 
+// diagKey identifies a diagnostic by its source location and content, for
+// suppressing exact duplicates over the lifetime of one scan.
+type diagKey struct {
+	pos  string
+	code grammar.Code
+	msg  string
+}
+
+// EmitDiagnostic delivers d to the consumer's [Options.OnDiagnostic] sink,
+// suppressing exact duplicates — same position, code and message — for the
+// lifetime of the scan. The build re-processes the same field/annotation in
+// several passes (most visibly a swagger:parameters struct applied to multiple
+// operation ids, which rebuilds every field once per id), so the identical
+// diagnostic would otherwise surface once per visit. The accumulator returned by
+// common.Builder.Diagnostics() is unaffected — only the callback stream dedups.
+func (s *ScanCtx) EmitDiagnostic(d grammar.Diagnostic) {
+	cb := s.opts.OnDiagnostic
+	if cb == nil {
+		return
+	}
+	k := diagKey{pos: d.Pos.String(), code: d.Code, msg: d.Message}
+	if _, dup := s.seenDiags[k]; dup { // read from a nil map is safe
+		return
+	}
+	if s.seenDiags == nil {
+		s.seenDiags = make(map[diagKey]struct{})
+	}
+	s.seenDiags[k] = struct{}{}
+	cb(d)
+}
+
 // OnDiagnostic returns the user-supplied diagnostic sink, or nil when
 // the consumer has not opted into diagnostic delivery.
 //
@@ -142,6 +294,65 @@ func (s *ScanCtx) Debug() bool {
 // ordering guarantee, experimental-API caveat.
 func (s *ScanCtx) OnDiagnostic() func(grammar.Diagnostic) {
 	return s.opts.OnDiagnostic
+}
+
+// NameConcatBudget returns the caller-supplied readability budget for
+// collision-deconflicted definition names, or 0 when unset — the spec
+// builder substitutes its built-in default in that case.
+func (s *ScanCtx) NameConcatBudget() float64 {
+	return s.opts.NameConcatBudget
+}
+
+// EmitHierarchicalNames reports whether the caller opted into the
+// hierarchical fail-safe for over-budget collision groups.
+func (s *ScanCtx) EmitHierarchicalNames() bool {
+	return s.opts.EmitHierarchicalNames
+}
+
+// OriginEnabled reports whether a provenance sink is wired, so callers can skip
+// JSON-pointer construction entirely when no consumer is listening.
+func (s *ScanCtx) OriginEnabled() bool {
+	return s.opts.OnProvenance != nil
+}
+
+// RecordOrigin fires the consumer's [Options.OnProvenance] callback for one
+// anchor node, when wired. Unlike diagnostics it accumulates nothing — the
+// cross-ref index is owned by the consumer (see the genspec-tui linkage design).
+func (s *ScanCtx) RecordOrigin(pointer string, pos token.Position) {
+	if cb := s.opts.OnProvenance; cb != nil {
+		cb(Provenance{Pointer: pointer, Pos: pos})
+	}
+}
+
+// RecordParamOrigin stashes the source position of one parameter field, keyed
+// by the operation id it applies to and the parameter name, for deferred anchor
+// emission. No-op when no provenance sink is wired. See [ParamOrigin].
+func (s *ScanCtx) RecordParamOrigin(opID, name string, pos token.Position) {
+	if s.opts.OnProvenance == nil {
+		return
+	}
+	if s.paramOrigins == nil {
+		s.paramOrigins = make(map[string]map[string]token.Position)
+	}
+	byName := s.paramOrigins[opID]
+	if byName == nil {
+		byName = make(map[string]token.Position)
+		s.paramOrigins[opID] = byName
+	}
+	byName[name] = pos
+}
+
+// ParamOrigin returns the captured source position for parameter name on
+// operation opID, recorded earlier via [RecordParamOrigin]. The spec builder's
+// deferred pass uses it to emit /paths/{path}/{method}/parameters/{i} anchors
+// once the final path binding and array index are known.
+func (s *ScanCtx) ParamOrigin(opID, name string) (token.Position, bool) {
+	byName := s.paramOrigins[opID]
+	if byName == nil {
+		return token.Position{}, false
+	}
+	pos, ok := byName[name]
+	return pos, ok
 }
 
 func (s *ScanCtx) Meta() iter.Seq[*ast.CommentGroup] {
@@ -301,6 +512,31 @@ func (s *ScanCtx) GetModel(pkgPath, name string) (*EntityDecl, bool) {
 	return s.FindDecl(pkgPath, name)
 }
 
+// FindModelsByLeaf returns every annotated swagger:model whose Go type
+// name equals name, across all scanned packages, sorted by package path
+// for determinism. It is the build-time analogue of the reduce stage's
+// resolveDefinitionByLeaf: the type-name keyword sites use it to resolve a
+// bare leaf to a model declared in another package (unique -> promote;
+// several -> ambiguous).
+//
+// Only the annotated model set (fixed before building) is searched — not
+// the discovery-grown ExtraModels — so the result is a pure function of the
+// source, independent of build order (W6).
+func (s *ScanCtx) FindModelsByLeaf(name string) []*EntityDecl {
+	var out []*EntityDecl
+	for _, cand := range s.app.Models {
+		obj := cand.Obj()
+		if obj == nil || obj.Name() != name {
+			continue
+		}
+		out = append(out, cand)
+	}
+	slices.SortFunc(out, func(a, b *EntityDecl) int {
+		return strings.Compare(a.Obj().Pkg().Path(), b.Obj().Pkg().Path())
+	})
+	return out
+}
+
 // AddDiscoveredModel registers decl in the ExtraModels index so the
 // spec orchestrator emits a top-level definition for it.
 //
@@ -385,6 +621,36 @@ func (s *ScanCtx) PkgForType(t types.Type) (*packages.Package, bool) {
 	}
 }
 
+// FileForPos returns the *ast.File in package pkgPath whose source
+// interval contains pos. Used when a struct's fields are defined in a
+// different file than the decl that carries them — e.g. embedding a
+// cross-package defined type (`type AnotherPackageAlias color.Color`),
+// where the promoted fields live in the underlying type's source file,
+// not in the embedding type's file. See go-swagger#2417.
+//
+// Matching is done via the shared FileSet: positions and ast.File starts
+// resolve through the same *token.File, so the comparison is independent
+// of go/ast's File range accessors.
+func (s *ScanCtx) FileForPos(pkgPath string, pos token.Pos) (*ast.File, bool) {
+	pkg, ok := s.app.AllPackages[pkgPath]
+	if !ok || pkg.Fset == nil {
+		return nil, false
+	}
+
+	target := pkg.Fset.File(pos)
+	if target == nil {
+		return nil, false
+	}
+
+	for _, file := range pkg.Syntax {
+		if pkg.Fset.File(file.Pos()) == target {
+			return file, true
+		}
+	}
+
+	return nil, false
+}
+
 func (s *ScanCtx) FindComments(pkg *packages.Package, name string) (*ast.CommentGroup, bool) {
 	for _, f := range pkg.Syntax {
 		for _, d := range f.Decls {
@@ -405,7 +671,12 @@ func (s *ScanCtx) FindComments(pkg *packages.Package, name string) (*ast.Comment
 	return nil, false
 }
 
-func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list []any, descList []string, _ bool) {
+// FindEnumValues returns the enum values, per-value descriptions and per-value
+// source positions for the constants typed enumName, plus ok. The positions are
+// parallel to the values (one token.Pos per value, the const identifier) and
+// feed the cross-ref /…/enum/{i} anchors; callers that don't need them ignore
+// the third result.
+func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list []any, descList []string, posList []token.Pos, _ bool) {
 	for _, f := range pkg.Syntax {
 		for _, d := range f.Decls {
 			gd, ok := d.(*ast.GenDecl)
@@ -418,18 +689,19 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 			}
 
 			for _, spec := range gd.Specs {
-				values, descriptions := s.findEnumValue(spec, enumName)
+				values, descriptions, positions := s.findEnumValue(spec, enumName)
 				if len(values) == 0 {
 					continue
 				}
 
 				list = append(list, values...)
 				descList = append(descList, descriptions...)
+				posList = append(posList, positions...)
 			}
 		}
 	}
 
-	return list, descList, true
+	return list, descList, posList, true
 }
 
 // findEnumValue extracts one (value, description) pair per (name, value)
@@ -438,23 +710,23 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 // sharing the spec's doc comment. The Go compiler guarantees
 // len(Names) == len(Values) when Values is non-empty, so out-of-parity
 // specs are ignored defensively.
-func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string) {
+func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string, positions []token.Pos) {
 	vs, ok := spec.(*ast.ValueSpec)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	vsIdent, ok := vs.Type.(*ast.Ident)
 	if !ok {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if vsIdent.Name != enumName {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if len(vs.Values) == 0 || len(vs.Values) != len(vs.Names) {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	docSuffix := buildEnumDocSuffix(vs.Doc, vs.Names)
@@ -473,9 +745,10 @@ func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, d
 
 		values = append(values, literalValue)
 		descriptions = append(descriptions, desc.String())
+		positions = append(positions, nameIdent.Pos())
 	}
 
-	return values, descriptions
+	return values, descriptions, positions
 }
 
 // buildEnumDocSuffix renders the shared doc comment as " <line1> <line2>..."

@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/ntp-servers": {
+      "get": {
+        "tags": [
+          "ntp"
+        ],
+        "operationId": "getNtpServers",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/getNtpServersResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "getNtpServersResponse": {
+      "description": "Ntp servers",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "example": [
+          "10.10.10.10",
+          "20.20.20.20"
+        ]
+      }
+    }
+  }
+}

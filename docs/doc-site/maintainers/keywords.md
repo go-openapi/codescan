@@ -31,7 +31,7 @@ formal productions should read [grammar.md]({{% relref "grammar" %}}).
 - [Annotation contexts](#annotation-contexts)
 - [Summary table](#summary-table)
 - [Numeric validations](#numeric-validations) — `maximum`, `minimum`, `multipleOf`
-- [Length / array validations](#length--array-validations) — `maxLength`, `minLength`, `maxItems`, `minItems`
+- [Length / array / object validations](#length--array--object-validations) — `maxLength`, `minLength`, `maxItems`, `minItems`, `maxProperties`, `minProperties`, `patternProperties`
 - [Format validations](#format-validations) — `pattern`, `unique`, `collectionFormat`
 - [Schema decorators](#schema-decorators) — `default`, `example`, `enum`, `required`, `readOnly`, `discriminator`, `deprecated`
 - [Parameter location](#parameter-location) — `in`
@@ -117,6 +117,9 @@ them. Detailed entries follow this table.
 | `minItems` | `min items`, `min-items`, `min.items`, `minimum items`, `minimum-items`, `minimumItems` | integer | param, header, schema, items |
 | `unique` | — | boolean | param, header, schema, items |
 | `collectionFormat` | `collection format`, `collection-format` | enum-option (`csv`, `ssv`, `tsv`, `pipes`, `multi`) | param, header, items |
+| `maxProperties` | `max properties`, `max-properties`, `maximum properties`, `maximum-properties`, `maximumProperties` | integer | schema |
+| `minProperties` | `min properties`, `min-properties`, `minimum properties`, `minimum-properties`, `minimumProperties` | integer | schema |
+| `patternProperties` | `pattern properties`, `pattern-properties` | string (regex) | schema |
 | `default` | — | raw-value | param, header, schema, items |
 | `example` | — | raw-value | param, header, schema, items |
 | `enum` | — | raw-value | param, header, schema, items |
@@ -195,11 +198,20 @@ type AllowedStep int
 
 ---
 
-## Length / array validations
+## Length / array / object validations
 
 `maxLength` / `minLength` apply only to **string-typed** schemas;
-`maxItems` / `minItems` apply only to **array-typed** schemas. Using
-the wrong pairing emits `CodeShapeMismatch` and drops the keyword.
+`maxItems` / `minItems` apply only to **array-typed** schemas;
+`maxProperties` / `minProperties` / `patternProperties` apply only to
+**object-typed** schemas. Using the wrong pairing emits
+`CodeShapeMismatch` and drops the keyword.
+
+The object keywords are also **full-Schema-only**: there is no
+SimpleSchema (non-body parameter, response header, or items chain) form
+for them in OAS v2. Placing one on a SimpleSchema site emits
+`CodeUnsupportedInSimpleSchema` and drops it. (Whether the offending
+schema is detected via shape or via SimpleSchema mode, the keyword is
+always dropped — never silently kept on a type it can't validate.)
 
 ### `maxLength`
 
@@ -231,6 +243,47 @@ place of `max`. Maps to `schema.minItems`.
 // maxItems: 20
 // unique: true
 type Tags []string
+```
+
+### `maxProperties`
+
+Maximum number of properties on an **object**-typed schema. Aliases:
+`max properties`, `max-properties`, `maximum properties`,
+`maximum-properties`, `maximumProperties`. Maps to
+`schema.maxProperties`. Schema-only — there is no SimpleSchema
+(param/header/items) equivalent in OAS v2.
+
+### `minProperties`
+
+Minimum number of properties on an **object**-typed schema. Same
+alias shape as `maxProperties` with `min` in place of `max`. Maps to
+`schema.minProperties`.
+
+### `patternProperties`
+
+Constrains the **names** of properties on an **object**-typed schema by
+regex. The argument is a single regex string; each `patternProperties`
+line adds one entry to `schema.patternProperties`, mapping the regex to
+an empty value schema (`{}` — "any value allowed for matching property
+names"). Repeated lines accumulate distinct entries. Aliases:
+`pattern properties`, `pattern-properties`.
+
+Like the `pattern` keyword, the regex is RE2-hygiene-checked: a value
+that does not compile under Go's RE2 engine raises a
+`CodeInvalidAnnotation` warning but is **preserved** on the schema
+(downstream tools may use JSON Schema's wider regex dialect) — it is
+never dropped silently.
+
+```go
+// MyObjectType is a free-form object with property-count bounds and a
+// property-name pattern.
+//
+// minProperties: 1
+// maxProperties: 10
+// patternProperties: ^x-
+//
+// swagger:model MyObjectType
+type MyObjectType map[string]interface{}
 ```
 
 ---
@@ -614,8 +667,20 @@ Terms-of-service prose paragraph. Multi-line body is joined with
 ### `externalDocs`
 
 External documentation pointer as a YAML map with `description` and
-`url` keys. Aliases: `external docs`, `external-docs`. Multi-context
-(meta, route, operation, schema).
+`url` keys. Aliases: `external docs`, `external-docs`.
+
+Emitted on:
+
+- **`swagger:meta`** → the top-level `externalDocs` object;
+- **`swagger:route` / `swagger:operation`** → the operation's `externalDocs`;
+- **`swagger:model`** (and any full Schema, e.g. a body parameter's schema)
+  → the schema's `externalDocs`.
+
+An empty block (no `description`/`url`) is skipped rather than emitting a
+bare `externalDocs: {}`. It is a **full-Schema-only** keyword: on a
+SimpleSchema site (a non-body parameter, response header, or items
+chain) it is dropped with a `CodeUnsupportedInSimpleSchema` diagnostic.
+`swagger:meta`'s `tags` do not yet carry `externalDocs`.
 
 ```
 ExternalDocs:

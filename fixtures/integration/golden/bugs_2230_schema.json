@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "SearchObject": {
+      "type": "object",
+      "title": "SearchObject has a json.RawMessage field (#2230).",
+      "properties": {
+        "limit": {
+          "description": "the limit",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Limit",
+          "example": 200
+        },
+        "search": {
+          "description": "the search payload",
+          "x-go-name": "Search"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2230"
+    }
+  }
+}

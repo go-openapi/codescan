@@ -1,0 +1,58 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/movies": {
+      "get": {
+        "tags": [
+          "movies"
+        ],
+        "operationId": "listMovies",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/moviesResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Movie": {
+      "type": "object",
+      "properties": {
+        "genres": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Genres"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "title": {
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "year": {
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "Year"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2907/data"
+    }
+  },
+  "responses": {
+    "moviesResponse": {
+      "description": "A list of movies",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Movie"
+        }
+      }
+    }
+  }
+}

@@ -51,6 +51,15 @@ var (
 	rxResponseOverride   = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
 	rxParametersOverride = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\p{Zs}]+)(?:\.)?$`)
 
+	// rxModelArg / rxResponseArg loosely capture the raw name argument
+	// following a single-name struct marker, regardless of whether it is a
+	// well-formed identifier. They back the malformed-name detection that
+	// warns instead of silently dropping a marker whose name the strict
+	// rxModelOverride / rxResponseOverride rejects (e.g. a package-qualified
+	// `utils.Error`). See parsers.MalformedModelName / MalformedResponseName.
+	rxModelArg    = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}+(\S.*?)\p{Zs}*$`)
+	rxResponseArg = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}+(\S.*?)\p{Zs}*$`)
+
 	rxRoute = regexp.MustCompile(
 		rxRoutePrefix +
 			"swagger:route\\p{Zs}*" +

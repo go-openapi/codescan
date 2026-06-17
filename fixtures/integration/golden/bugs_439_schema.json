@@ -1,0 +1,46 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/op": {
+      "post": {
+        "tags": [
+          "op"
+        ],
+        "summary": "Op.",
+        "operationId": "myOperation",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/BodyParamType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "BodyParamType": {
+      "type": "object",
+      "title": "BodyParamType is the actual body.",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        },
+        "b": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/439"
+    }
+  }
+}

@@ -67,6 +67,32 @@ func parseAllString(t *testing.T, src string) []Block {
 	return (&DefaultParser{}).parseAllTokens(tokens)
 }
 
+func TestParser_SingleLineCommentAsDescription(t *testing.T) {
+	pos := token.Position{Filename: "test.go", Line: 1, Column: 1}
+	parse := func(src string, on bool) Block {
+		return NewParser(token.NewFileSet(),
+			WithSingleLineCommentAsDescription(on)).ParseText(src, pos)
+	}
+
+	// Single-line title-shaped comment: default keeps it as title; the
+	// option moves it to the description.
+	const single = "A one-line comment.\n\nswagger:model Pet"
+	def := parse(single, false)
+	assert.Equal(t, "A one-line comment.", def.Title())
+	assert.Empty(t, def.Description())
+
+	on := parse(single, true)
+	assert.Empty(t, on.Title(), "single-line comment is no longer a title")
+	assert.Equal(t, "A one-line comment.", on.Description())
+
+	// Multi-line comment: the title/description split is preserved in both
+	// modes — the option only affects single-line comments.
+	const multi = "Title line.\n\nDescription body.\n\nswagger:model Pet"
+	multiOn := parse(multi, true)
+	assert.Equal(t, "Title line.", multiOn.Title(), "multi-line title unchanged by the option")
+	assert.Equal(t, "Description body.", multiOn.Description())
+}
+
 func TestParser_ParseAll_SingleAnnotation(t *testing.T) {
 	blocks := parseAllString(t, "swagger:model Pet")
 	require.Len(t, blocks, 1)
@@ -136,6 +162,9 @@ func TestBlock_AnnotationArg(t *testing.T) {
 		{"name", "swagger:name jsonField", "jsonField", true},
 		{"strfmt", "swagger:strfmt date-time", "date-time", true},
 		{"bare strfmt", "swagger:strfmt", "", false},
+		{"additionalProperties bool", "swagger:additionalProperties true", "true", true},
+		{"additionalProperties type", "swagger:additionalProperties Thing", "Thing", true},
+		{"additionalProperties array", "swagger:additionalProperties []integer", "[]integer", true},
 		{"ignore", "swagger:ignore", "", false},
 		{"alias", "swagger:alias", "", false},
 		{"unbound prose", "Just a docstring.", "", false},
@@ -148,6 +177,38 @@ func TestBlock_AnnotationArg(t *testing.T) {
 			assert.Equal(t, tc.wantOK, ok)
 		})
 	}
+}
+
+func TestParser_AdditionalPropertiesBlock_IsClassifierWithArg(t *testing.T) {
+	b := parseString(t, "swagger:additionalProperties Thing")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnAdditionalProperties, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, "Thing", arg)
+}
+
+func TestAnnotationKind_AdditionalProperties_RoundTrip(t *testing.T) {
+	assert.Equal(t, "additionalProperties", AnnAdditionalProperties.String())
+	assert.Equal(t, AnnAdditionalProperties, AnnotationKindFromName("additionalProperties"))
+}
+
+func TestAnnotationKind_PatternProperties_RoundTrip(t *testing.T) {
+	assert.Equal(t, "patternProperties", AnnPatternProperties.String())
+	assert.Equal(t, AnnPatternProperties, AnnotationKindFromName("patternProperties"))
+}
+
+func TestParser_PatternPropertiesBlock_CapturesRawPairList(t *testing.T) {
+	// The whole `"<re>": <spec>, …` remainder is captured verbatim as one arg
+	// (it contains spaces/colons/commas the builder parses).
+	b := parseString(t, `swagger:patternProperties "^x-": string, "^\d+$": integer`)
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnPatternProperties, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, `"^x-": string, "^\d+$": integer`, arg)
 }
 
 func TestParser_ParametersBlock_RequiresAtLeastOneArg(t *testing.T) {
@@ -287,11 +348,19 @@ func TestParser_ClassifierBlock_StrfmtMissingArg(t *testing.T) {
 	assert.Equal(t, CodeMissingRequiredArg, b.Diagnostics()[0].Code)
 }
 
-func TestParser_ClassifierBlock_TypeWithVocabulary(t *testing.T) {
-	b := parseString(t, "swagger:type string")
-	require.Empty(t, b.Diagnostics())
+// TestParser_ClassifierBlock_TypeWellFormed pins the relaxed swagger:type
+// parsing (F3): a well-formed argument — canonical name, Go builtin, array, or
+// an arbitrary identifier standing for a scanned-type reference — no longer
+// raises a parser diagnostic; semantic resolution (and any unknown-type
+// diagnostic) is the builder's job. Only a structurally malformed token still
+// raises CodeInvalidTypeRef.
+func TestParser_ClassifierBlock_TypeWellFormed(t *testing.T) {
+	for _, arg := range []string{"string", "integer", "int64", "[]string", "custom", "Custom"} {
+		b := parseString(t, "swagger:type "+arg)
+		assert.Emptyf(t, b.Diagnostics(), "%q is well-formed → no parser diagnostic", arg)
+	}
 
-	bad := parseString(t, "swagger:type custom")
+	bad := parseString(t, "swagger:type foo bar")
 	require.NotEmpty(t, bad.Diagnostics())
 	assert.Equal(t, CodeInvalidTypeRef, bad.Diagnostics()[0].Code)
 }
@@ -312,10 +381,20 @@ func TestParser_EnumDecl_PlainList(t *testing.T) {
 	assert.Equal(t, enumFormPlainOnly, eb.InlineForm)
 }
 
-func TestParser_EnumDecl_Empty(t *testing.T) {
+// TestParser_EnumDecl_Bare pins the relaxed bare-swagger:enum contract (F4b):
+// a bare `swagger:enum` (no name, no inline values, no body) is structurally
+// valid — it produces an EnumDeclBlock with an empty Name and raises NO parse
+// diagnostic. The builder infers the enum name from the declared type and
+// collects its consts; "no consts found" is a builder-level concern, not a
+// grammar error.
+func TestParser_EnumDecl_Bare(t *testing.T) {
 	b := parseString(t, "swagger:enum")
-	require.NotEmpty(t, b.Diagnostics())
-	assert.Equal(t, CodeMissingRequiredArg, b.Diagnostics()[0].Code)
+	eb, ok := b.(*EnumDeclBlock)
+	require.True(t, ok, "expected *EnumDeclBlock, got %T", b)
+	assert.Empty(t, eb.Name)
+	for _, d := range b.Diagnostics() {
+		assert.NotEqual(t, CodeMissingRequiredArg, d.Code, "bare swagger:enum must not error")
+	}
 }
 
 func TestParser_UnboundBlock(t *testing.T) {

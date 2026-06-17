@@ -1,0 +1,19 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/xml": {
+      "get": {
+        "produces": [
+          "application/xml"
+        ],
+        "summary": "Get XML.",
+        "operationId": "getXML",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

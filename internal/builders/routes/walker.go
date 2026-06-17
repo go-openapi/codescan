@@ -6,6 +6,7 @@ package routes
 import (
 	"fmt"
 	"go/token"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/parsers/routebody"
+	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -31,6 +33,35 @@ var primitiveTypes = map[string]struct{}{
 	"object":  {},
 }
 
+// responseBodyPrimitives are the OAS v2 scalar primitive type spellings
+// accepted as a `body:` type on a swagger:route response line. Arrays
+// are expressed with the `[]` prefix (`body:[]string`), so the bare
+// word `array` is intentionally absent. `object` is absent too — a
+// free-form/structured object body is declared by referencing a model
+// (`body:MyType`), not by the bare keyword.
+//
+//nolint:gochecknoglobals // immutable lookup table; read-only.
+var responseBodyPrimitives = map[string]struct{}{
+	"string":  {},
+	"number":  {},
+	"integer": {},
+	"boolean": {},
+}
+
+// responseBodyReservedTypes are OAS/JSON type keywords that look like a
+// body type but are NOT valid as a `body:` response type: `array` /
+// `object` (use `[]T` / a model name) and `file` / `null` (unsupported
+// in this context — `file` would need extra produces/context checks).
+// They draw a diagnostic instead of being resolved as a model $ref.
+//
+//nolint:gochecknoglobals // immutable lookup table; read-only.
+var responseBodyReservedTypes = map[string]struct{}{
+	"array":  {},
+	"object": {},
+	"file":   {},
+	"null":   {},
+}
+
 // applyBlockToRoute parses route.Remaining through grammar and
 // writes Summary / Description / per-keyword content onto op.
 //
@@ -46,7 +77,8 @@ var primitiveTypes = map[string]struct{}{
 // grammar sees it as an UnboundBlock whose Title / Description /
 // Properties behave identically to a properly-anchored block.
 func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
-	block := grammar.NewParser(r.Ctx.FileSet()).Parse(r.route.Remaining)
+	block := grammar.NewParser(r.Ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(r.Ctx.SingleLineCommentAsDescription())).Parse(r.route.Remaining)
 
 	op.Summary = block.Title()
 	op.Description = block.Description()
@@ -58,6 +90,7 @@ func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
 		if err := r.dispatchRouteKeyword(prop, op); err != nil {
 			return err
 		}
+		r.recordRouteKeywordOrigin(prop)
 	}
 
 	// Extensions and security are read straight off the block —
@@ -73,6 +106,23 @@ func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
 	}
 
 	return nil
+}
+
+// recordRouteKeywordOrigin anchors one route-level keyword to its source line
+// under /paths/{path}/{method}/{seg}, when a provenance sink is wired. The
+// keyword→segment knowledge lives in the grammar ([grammar.PointerPath]); here
+// we prepend the operation base. parameters/responses (containers) and security
+// (consumed at lex time) are absent and resolve to the operation anchor.
+func (r *Builder) recordRouteKeywordOrigin(p grammar.Property) {
+	if !r.Ctx.OriginEnabled() {
+		return
+	}
+	segs, ok := grammar.PointerPath(p.Keyword, grammar.CtxRoute)
+	if !ok {
+		return
+	}
+	base := scanner.JSONPointer("paths", r.route.Path, strings.ToLower(r.route.Method))
+	r.Ctx.RecordOrigin(base+scanner.JSONPointer(segs...), p.Pos)
 }
 
 // dispatchRouteKeyword routes one grammar Property to the matching
@@ -97,12 +147,50 @@ func (r *Builder) dispatchRouteKeyword(p grammar.Property, op *oaispec.Operation
 		op.Consumes = p.AsList()
 	case grammar.KwProduces:
 		op.Produces = p.AsList()
+	case grammar.KwTags:
+		// `Tags:` on a route is a plain string list of tag names,
+		// unioned onto any tags already parsed off the swagger:route
+		// header line (go-swagger#2655). Duplicates are dropped,
+		// source order preserved. The meta `Tags:` object shape is
+		// handled by a different builder (the spec/meta walker).
+		op.Tags = unionTags(op.Tags, p.AsList())
 	case grammar.KwParameters:
 		return r.dispatchParameters(p, op)
 	case grammar.KwResponses:
 		return r.dispatchResponses(p, op)
+	case grammar.KwExternalDocs:
+		ed, err := handlers.ParseExternalDocs(p.Body)
+		if err != nil {
+			r.RecordDiagnostic(grammar.Warnf(p.Pos, grammar.CodeInvalidAnnotation, "externalDocs: %v", err))
+			return nil
+		}
+		if ed != nil {
+			op.ExternalDocs = ed
+		}
 	}
 	return nil
+}
+
+// unionTags appends src tag names to dst, dropping any already
+// present, and returns the merged slice. Source order is preserved:
+// header-line tags (in dst) come first, then any new `Tags:`-keyword
+// names. Used to merge route-header and route-body tag sources.
+func unionTags(dst, src []string) []string {
+	if len(src) == 0 {
+		return dst
+	}
+	seen := make(map[string]struct{}, len(dst)+len(src))
+	for _, t := range dst {
+		seen[t] = struct{}{}
+	}
+	for _, t := range src {
+		if _, dup := seen[t]; dup {
+			continue
+		}
+		seen[t] = struct{}{}
+		dst = append(dst, t)
+	}
+	return dst
 }
 
 // dispatchParameters lowers a `Parameters:` raw body via routebody
@@ -272,6 +360,32 @@ func normaliseSimpleType(t string) string {
 	return t
 }
 
+// primitiveBodySchema returns a typed primitive Schema when name is an
+// OAS v2 scalar primitive type spelling (per responseBodyPrimitives),
+// wrapped in `arrays` nested array layers; it returns nil otherwise so
+// the caller can diagnose a reserved keyword or fall back to model
+// reference resolution.
+//
+// This gives swagger:route responses a path to a primitive body via the
+// unambiguous `body:` tag — `200: body:string` → {schema: {type: string}},
+// `200: body:[]integer` → {schema: {type: array, items: {type: integer}}}
+// — mirroring buildBodySchema's primitive handling for body parameters
+// (go-swagger#2942). The bare/untagged `200: string` form is NOT promoted
+// (an untagged token is a response name, not a type).
+func primitiveBodySchema(name string, arrays int) *oaispec.Schema {
+	if _, ok := responseBodyPrimitives[name]; !ok {
+		return nil
+	}
+	leaf := &oaispec.Schema{SchemaProps: oaispec.SchemaProps{Type: oaispec.StringOrArray{name}}}
+	for range arrays {
+		leaf = &oaispec.Schema{SchemaProps: oaispec.SchemaProps{
+			Type:  oaispec.StringOrArray{"array"},
+			Items: &oaispec.SchemaOrArray{Schema: leaf},
+		}}
+	}
+	return leaf
+}
+
 // resolveBodySchema builds a Schema for a body param/response's
 // type reference. arrayLayer is the number of `[]` array wrappers
 // already stripped from the ref; the function applies them as nested
@@ -314,6 +428,39 @@ func (r *Builder) resolveBodySchema(ref string, arrayLayer int) *oaispec.Schema 
 		}
 	}
 	return leaf
+}
+
+// resolveDefinitionByLeaf reports whether the definitions map holds a
+// definition whose leaf name (the segment after the last '/') equals
+// short, and whether more than one does.
+//
+// During build the definitions map is keyed by the fully-qualified
+// identity (pkgpath/name — see scanner.EntityDecl.DefKey), while author
+// annotations reference models by their short name; a leaf lookup
+// bridges the two until the spec.Builder's reduce stage shortens unique
+// leaves back to bare names. `ambiguous` means several cross-package
+// definitions share the leaf — a real collision the short name cannot
+// resolve (name-identity design §12.1).
+func resolveDefinitionByLeaf(defs map[string]oaispec.Schema, short string) (key string, found, ambiguous bool) {
+	for k := range defs {
+		if leafOfKey(k) != short {
+			continue
+		}
+		if found {
+			return "", true, true
+		}
+		key, found = k, true
+	}
+	return key, found, false
+}
+
+// leafOfKey returns the segment of a definition key after the last '/',
+// or the whole key when there is none.
+func leafOfKey(key string) string {
+	if i := strings.LastIndex(key, "/"); i >= 0 {
+		return key[i+1:]
+	}
+	return key
 }
 
 // dispatchResponses lowers a `Responses:` raw body via routebody
@@ -364,6 +511,48 @@ func (r *Builder) dispatchResponses(p grammar.Property, op *oaispec.Operation) e
 	return nil
 }
 
+// defaultResponseDescription is the last-resort description for a `body:`
+// response whose code has no standard HTTP reason phrase (the `default`
+// catch-all, or a non-standard numeric code) and whose body type carries
+// no godoc. OAS2 `default` covers any undeclared code — not necessarily an
+// error — so the placeholder stays neutral rather than asserting "error".
+// Capitalised to read as prose alongside the HTTP reason phrases ("Not
+// Found", "Internal Server Error") it sits next to in a responses table.
+const defaultResponseDescription = "Default response"
+
+// bodyResponseDescription chooses a non-empty, human-meaningful description
+// for a `body:`-form response that carries no trailing description text.
+// OAS2 requires a non-empty description, but the bare Go type token (e.g.
+// "Pet" or "string") leaks an implementation detail into the contract
+// (doc-quirk G1). Preference, most to least specific:
+//
+//  1. the referenced model's own godoc (its Title, then Description) — this
+//     mirrors how a named swagger:response derives its description from
+//     prose, instead of echoing the type name;
+//  2. the HTTP status reason phrase for a numeric code (200 → "OK",
+//     404 → "Not Found");
+//  3. a neutral placeholder for `default` / non-standard codes.
+func (r *Builder) bodyResponseDescription(code, ref string) string {
+	// The definitions map is keyed by the fully-qualified identity during
+	// build; the author wrote a short model name, so resolve by leaf (a
+	// unique match only — an ambiguous one cannot pick a godoc source).
+	if key, ok, ambiguous := resolveDefinitionByLeaf(r.definitions, ref); ok && !ambiguous {
+		def := r.definitions[key]
+		if t := strings.TrimSpace(def.Title); t != "" {
+			return t
+		}
+		if d := strings.TrimSpace(def.Description); d != "" {
+			return d
+		}
+	}
+	if n, err := strconv.Atoi(code); err == nil {
+		if phrase := http.StatusText(n); phrase != "" {
+			return phrase
+		}
+	}
+	return defaultResponseDescription
+}
+
 // buildRouteResponse materialises one ResponseDecl into a
 // spec.Response. Resolves the ref by consulting r.responses (named
 // swagger:response objects) first, then r.definitions: untagged
@@ -373,7 +562,21 @@ func (r *Builder) dispatchResponses(p grammar.Property, op *oaispec.Operation) e
 func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Response, bool) {
 	switch {
 	case decl.BodyTypeRef != "":
-		schema := r.resolveBodySchema(decl.BodyTypeRef, decl.Arrays)
+		schema := primitiveBodySchema(decl.BodyTypeRef, decl.Arrays)
+		if schema == nil {
+			if _, reserved := responseBodyReservedTypes[decl.BodyTypeRef]; reserved {
+				r.RecordDiagnostic(grammar.Diagnostic{
+					Pos:      decl.Pos,
+					Severity: grammar.SeverityWarning,
+					Code:     grammar.CodeInvalidAnnotation,
+					Message: "response " + decl.Code + ": body:" + decl.BodyTypeRef + " — " +
+						decl.BodyTypeRef + " is not a supported response body type; use a primitive " +
+						"(string/number/integer/boolean), an array of those (body:[]string), or a model name",
+				})
+				return oaispec.Response{}, false
+			}
+			schema = r.resolveBodySchema(decl.BodyTypeRef, decl.Arrays)
+		}
 		if schema == nil {
 			r.RecordDiagnostic(grammar.Diagnostic{
 				Pos:      decl.Pos,
@@ -385,7 +588,7 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 		}
 		desc := decl.Description
 		if desc == "" {
-			desc = decl.BodyTypeRef
+			desc = r.bodyResponseDescription(decl.Code, decl.BodyTypeRef)
 		}
 		return oaispec.Response{
 			ResponseProps: oaispec.ResponseProps{
@@ -400,11 +603,29 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 		// (intentional kindness for the common case where the author
 		// referenced a model by name rather than a response).
 		if _, ok := r.responses[decl.ResponseRef]; !ok {
-			if _, ok := r.definitions[decl.ResponseRef]; ok {
+			// The definitions map is keyed by the fully-qualified
+			// identity during build (pkgpath/name); the author wrote a
+			// short model name, so resolve by leaf. Exactly one match →
+			// promote; several → ambiguous cross-package collision the
+			// short name cannot disambiguate (drop + diagnose, per
+			// name-identity D-8). See §12.1.
+			_, found, ambiguous := resolveDefinitionByLeaf(r.definitions, decl.ResponseRef)
+			switch {
+			case ambiguous:
+				r.RecordDiagnostic(grammar.Diagnostic{
+					Pos:      decl.Pos,
+					Severity: grammar.SeverityWarning,
+					Code:     grammar.CodeInvalidAnnotation,
+					Message: "response " + decl.Code + ": ref " + decl.ResponseRef +
+						" is ambiguous — several models across packages share this name; " +
+						"disambiguate with an explicit `swagger:model <name>`; dropped",
+				})
+				return oaispec.Response{}, false
+			case found:
 				schema := r.resolveBodySchema(decl.ResponseRef, decl.Arrays)
 				desc := decl.Description
 				if desc == "" {
-					desc = decl.ResponseRef
+					desc = r.bodyResponseDescription(decl.Code, decl.ResponseRef)
 				}
 				return oaispec.Response{
 					ResponseProps: oaispec.ResponseProps{
@@ -415,12 +636,23 @@ func (r *Builder) buildRouteResponse(decl *routebody.ResponseDecl) (oaispec.Resp
 			}
 			// Dangling refs (not in responses, not in definitions)
 			// emit a diagnostic and are dropped rather than silently
-			// emitting an invalid $ref.
+			// emitting an invalid $ref. A bare primitive type spelling
+			// (`200: string`) is intentionally NOT promoted to a typed
+			// schema — an untagged token is a response/model NAME, and
+			// reading it as a type would make the syntax ambiguous. The
+			// unambiguous form is `body:<type>` (no Go type name carries
+			// a `:`), so point the author there.
+			msg := "response ref " + decl.ResponseRef + " not found in responses or definitions; dropped"
+			if _, isPrim := responseBodyPrimitives[decl.ResponseRef]; isPrim {
+				msg = "response " + decl.Code + ": " + decl.ResponseRef +
+					" reads " + decl.ResponseRef + " as a response name, not a type; " +
+					"for a primitive body write `" + decl.Code + ": body:" + decl.ResponseRef + "`"
+			}
 			r.RecordDiagnostic(grammar.Diagnostic{
 				Pos:      decl.Pos,
 				Severity: grammar.SeverityWarning,
 				Code:     grammar.CodeInvalidAnnotation,
-				Message:  "response ref " + decl.ResponseRef + " not found in responses or definitions; dropped",
+				Message:  msg,
 			})
 			return oaispec.Response{}, false
 		}

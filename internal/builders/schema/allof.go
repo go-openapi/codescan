@@ -5,6 +5,7 @@ package schema
 
 import (
 	"fmt"
+	"go/ast"
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -45,7 +46,7 @@ func (s *Builder) scanEmbeddedFields(
 			continue
 		}
 
-		_, ignore, _, _, err := resolvers.ParseJSONTag(afld)
+		_, ignore, isString, omitEmpty, err := resolvers.ParseJSONTag(afld, fld.Name())
 		if err != nil {
 			return nil, false, err
 		}
@@ -54,17 +55,8 @@ func (s *Builder) scanEmbeddedFields(
 		}
 
 		if !fd.IsAllOfMember {
-			// Plain embed (no `swagger:allOf` annotation) — inline the
-			// embedded type's properties into the outer schema,
-			// regardless of whether the embed is a direct named type
-			// or an alias of one. The previous `!isAliased` guard here
-			// silently promoted aliased embeds to allOf composition,
-			// violating the documented contract that allOf is only
-			// produced for explicitly-annotated embeds.
-			if target == nil {
-				target = schema
-			}
-			if err := s.buildEmbedded(fld.Type(), target, nameByJSON); err != nil {
+			target, err = s.buildPlainEmbed(fld, afld, fd, isString, omitEmpty, schema, target, nameByJSON)
+			if err != nil {
 				return nil, false, err
 			}
 			continue
@@ -88,6 +80,58 @@ func (s *Builder) scanEmbeddedFields(
 	return target, hasAllOf, nil
 }
 
+// buildPlainEmbed handles an anonymous embed that carries no
+// `swagger:allOf` annotation, returning the (possibly newly-assigned)
+// property target.
+//
+// Two shapes, mirroring Go's encoding/json:
+//
+//   - an embed with an explicit json tag name (or a `swagger:name`) is
+//     NOT promoted — it nests under that name as a single regular
+//     property, built from the embedded type (a $ref when the type is a
+//     model). See go-swagger#2038.
+//   - otherwise the embedded type's properties are inlined (promoted)
+//     into the outer schema, regardless of whether the embed is a direct
+//     named type or an alias of one. (The previous `!isAliased` guard
+//     silently promoted aliased embeds to allOf composition, violating
+//     the contract that allOf is only produced for explicitly-annotated
+//     embeds.)
+func (s *Builder) buildPlainEmbed(
+	fld *types.Var, afld *ast.Field, fd fieldDoc, isString, omitEmpty bool,
+	schema, target *oaispec.Schema, nameByJSON map[string]propOwner,
+) (*oaispec.Schema, error) {
+	if target == nil {
+		target = schema
+	}
+
+	nestName := resolvers.ExplicitJSONName(afld)
+	if fd.JSONName != "" {
+		nestName = fd.JSONName
+	}
+	if nestName != "" {
+		err := s.applyFieldCarrier(fieldCarrier{
+			name:      nestName,
+			goName:    fld.Name(),
+			propType:  fld.Type(),
+			afld:      afld,
+			fd:        fd,
+			isString:  isString,
+			omitEmpty: omitEmpty,
+		}, target, nameByJSON)
+		return target, err
+	}
+
+	// A `required:` annotation on the embed applies to the properties it
+	// promotes (go-swagger#2701). Thread it through the recursion,
+	// restoring afterwards so sibling fields are unaffected.
+	saved := s.embedInherited
+	s.embedInherited = s.ReadEmbedInheritance(afld.Doc, saved)
+	err := s.buildEmbedded(fld.Type(), target, nameByJSON)
+	s.embedInherited = saved
+
+	return target, err
+}
+
 // buildAllOf builds the schema for one allOf compound member. Peels
 // pointers and routes named types and aliases to their dedicated
 // helpers.
@@ -98,6 +142,11 @@ func (s *Builder) scanEmbeddedFields(
 // non-Named / non-Alias inputs are dropped silently with a logger
 // warning rather than an error.
 func (s *Builder) buildAllOf(tpe types.Type, schema *oaispec.Schema) error {
+	// Cross-ref linkage: an allOf member is an untracked subtree
+	// (/allOf/{k}/…); clear the base path so nothing inside emits a wrong
+	// anchor. Members that are $refs anchor via their own definition.
+	defer s.repath("")()
+
 	switch ftpe := tpe.(type) {
 	case *types.Pointer:
 		return s.buildAllOf(ftpe.Elem(), schema)

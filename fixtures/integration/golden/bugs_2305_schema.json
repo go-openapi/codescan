@@ -1,0 +1,32 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "getItems",
+        "parameters": [
+          {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string",
+            "x-go-name": "Sort",
+            "description": "Sort order",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

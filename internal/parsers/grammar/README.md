@@ -61,7 +61,8 @@ The annotation vocabulary is the go-swagger convention:
 `swagger:route`, `swagger:operation`, `swagger:meta`, plus the
 classifier annotations `swagger:strfmt`, `swagger:alias`,
 `swagger:name`, `swagger:allOf`, `swagger:enum`, `swagger:ignore`,
-`swagger:default`, `swagger:type`, `swagger:file`.
+`swagger:default`, `swagger:type`, `swagger:file`,
+`swagger:additionalProperties`.
 
 `AnnotationPrefix` is the literal `"swagger:"`. It is a constant
 rather than configurable today.
@@ -122,10 +123,29 @@ lone `\r → \n`) so the lexer never sees `\r`.
 
 The `/* */` block-comment form yields one Line per physical source
 line; the godoc continuation decoration (`\s*\*\s?`) is stripped
-from each line.
+from each line. That strip runs **before** the content-prefix trim
+(`stripLine` applies the comment-kind raw-strip first), so the only
+leading `*` the content trim can see is a markdown list bullet, never
+block-comment decoration.
 
 Leading `-` is preserved on Text so the YAML fence `---` survives
 intact.
+
+### Markdown bullet normalisation (go-swagger#1726)
+
+A leading markdown list bullet — `* item` or `+ item` — is normalised
+on `Text` to the canonical YAML form `- item`. Doing it here, once, in
+the shared preprocess step means every downstream consumer that already
+understands `- ` treats markdown-style and YAML-style lists identically:
+prose descriptions, `Property.AsList` (consumes / produces / schemes /
+tags), and enum bodies. The marker must be followed by a space (a
+CommonMark bullet), so `*emphasis*` and `**bold**` prose are untouched.
+
+gofmt performs the **same** `*`/`+` → `-` rewrite on `//` doc-comment
+bullets, so this normalisation only changes the result for source that
+has not been gofmt'd; gofmt-canonical source already arrives in the dash
+form. The two agree by construction. (`Raw` is left untouched, so YAML
+bodies — which are strict YAML and use `-` sequences — are unaffected.)
 
 ---
 
@@ -177,6 +197,25 @@ non-whitespace argument, no leading whitespace) and dropped from
 the prose surface so they never land in TITLE / DESC. The
 swagger-prefix check runs first, so `//swagger:model` (legal but
 non-idiomatic, no leading space) is not mistaken for a directive.
+
+### Kubernetes marker comments are dropped
+
+Lines whose content begins with `+` followed by a letter —
+`+kubebuilder:…`, `+genclient`, `+k8s:…`, `+optional`, the marker
+convention emitted by kubebuilder / controller-gen / k8s
+code-generation — are recognised by `isDirectiveMarker` and dropped
+from the prose surface, so they never leak into model / property
+descriptions (go-swagger#2687, the residual of #3007). Requiring a
+letter after the `+` keeps ordinary prose (`+1 for …`, markdown `+`
+bullets) intact.
+
+Unlike Go directives, this drop happens at **Stage 3**
+(`classifyProse`), not at line classification. The inline
+`swagger:route` parameters grammar uses `+name:` as a parameter
+separator (go-swagger#3100), which matches the marker shape; running
+the filter after `accumulateBodies` has folded the route body into
+its keyword token means the separator is never seen by the marker
+check. Only loose prose `tokenText` lines are filtered.
 
 ### First-character case insensitivity on keywords
 
@@ -240,6 +279,19 @@ The state-machine in `classifyTitleDescRun` walks the run once
 and re-types text tokens; blanks stay as `TokenBlank` so consumers
 can reproduce paragraph structure.
 
+### `WithSingleLineCommentAsDescription` — demote a lone title
+
+`NewParser(fset, WithSingleLineCommentAsDescription(true))` (driven by
+`Options.SingleLineCommentAsDescription`, go-swagger#2626) overrides
+heuristic 2/3 for the **single-line** case only: after
+`extractTitleDesc`, `finaliseBase` calls `demoteSingleLineTitle`, which
+moves a one-line title (non-empty title, empty description, no embedded
+newline) into the description. A multi-line comment — anything that
+already produced a description, including a heuristic-1 blank split — is
+left untouched. The demotion is applied to both the full
+title/description and the preamble pair, so the schema builder's
+`PreambleTitle` / `PreambleDescription` path observes it too.
+
 ---
 
 ## <a id="raw-block-terminators"></a>§raw-block-terminators — sibling-terminator rule
@@ -276,6 +328,21 @@ A keyword whose name is recognisable but whose family does not
 overlap is absorbed as body text — this matches the permissive
 shape of nested YAML-like content under e.g. `security:`.
 
+**Indentation override (YAML-bodied blocks only).** Inside a
+YAML-bodied block (`extensions`, `infoExtensions`,
+`securityDefinitions`, `tags`, `security`), a same-family keyword
+indented *strictly deeper* than the block head is treated as a
+nested YAML key, not a sibling — e.g. `externalDocs:` under a
+`Tags:` list item, where both are meta-family. Such a key is
+absorbed so the nested YAML structure survives. Flat raw blocks
+(`tos`, `consumes`, …) do **not** apply this: their keyword
+indentation is purely
+cosmetic (the petstore meta indents `Schemes:`/`Host:` deeper than
+a column-0 `Terms Of Service:`, yet they are siblings), so any
+sibling-family keyword terminates them regardless of depth.
+Indentation is measured from the `Raw` view via
+`leadingIndentWidth` (tabs expand to 8-column stops).
+
 ### Inline-value capture on raw-block heads
 
 `Consumes: application/json` on a single line carries its value
@@ -286,13 +353,18 @@ would be silently lost.
 
 ### Per-body indentation handling
 
-- `extensions:` and `infoExtensions:` bodies are YAML-parsed
-  downstream (`yaml.TypedExtensions`), so every body line
-  preserves its original indentation — `collectRawBlock` reads
-  the `Raw` view (right-trimmed only).
-- Flat raw blocks (`consumes:`, `produces:`, `security:`, …) use
-  the `Text` view (leading whitespace dropped, keyword lines
-  reformatted via `formatKeywordLine`).
+- `extensions:`, `infoExtensions:`, `securityDefinitions:`,
+  `tags:` and `security:` bodies are YAML-parsed downstream
+  (`yaml.TypedExtensions` or `yaml.UnmarshalBody`/`UnmarshalListBody`
+  via the meta walker, or `security.Parse`), so every body line
+  preserves its original indentation — `collectRawBlock` reads the
+  `Raw` view (right-trimmed only). The `tags:` body in particular is
+  a sequence of mappings whose nesting collapses if per-line indent
+  is dropped; a `security:` block with block-style scopes needs the
+  same.
+- Flat raw blocks (`consumes:`, `produces:`, …) use the `Text`
+  view (leading whitespace dropped, keyword lines reformatted via
+  `formatKeywordLine`).
 
 Both branches converge on the same `bodyText` slice.
 
@@ -360,10 +432,17 @@ items lives in the analyzer.
 
 ### `swagger:type` argument
 
-`isTypeRef` matches the closed type-reference vocabulary
-(`string`, `integer`, `number`, `boolean`, `array`, `object`,
-`file`, `null`). Anything else falls back to `TokenIdentName`,
-letting the parser diagnose `CodeInvalidTypeRef`.
+`looksLikeTypeRef` accepts any **well-formed** type-reference token —
+an optionally `[]`-prefixed (array), optionally dot-qualified Go-style
+identifier (`string`, `integer`, `int64`, `[]string`, `[][]int64`,
+`Custom`, `pkg.Type`, `inline`, …) — as `TokenTypeRef`. The grammar no
+longer owns a closed type vocabulary: semantic validity (known keyword /
+scanned type, format compatibility, `[]T` element resolution) is the
+builder's job, since only it knows the scanned definitions and the
+annotated Go type (the F3 reconciliation). A **structurally malformed**
+token (embedded spaces, bare `[]`, illegal chars, leading digit) falls
+back to `TokenIdentName`, and the parser flags it `CodeInvalidTypeRef`
+("not a well-formed type reference").
 
 ### HTTP method recognition
 
@@ -406,7 +485,7 @@ production implementation.
 | `familySchema` | `swagger:model`, `swagger:response`, `swagger:parameters`, `swagger:name` | `parseSchemaBlock` |
 | `familyOperation` | `swagger:route`, `swagger:operation` | `parseOperationBlock` |
 | `familyMeta` | `swagger:meta` | `parseMetaBlock` |
-| `familyClassifier` | `swagger:strfmt`, `swagger:alias`, `swagger:allOf`, `swagger:enum`, `swagger:ignore`, `swagger:default`, `swagger:type`, `swagger:file` | `parseClassifierBlock` |
+| `familyClassifier` | `swagger:strfmt`, `swagger:alias`, `swagger:allOf`, `swagger:enum`, `swagger:ignore`, `swagger:default`, `swagger:type`, `swagger:file`, `swagger:additionalProperties` | `parseClassifierBlock` |
 | `familyUnknown` | unrecognised | `parseUnboundBlock` |
 
 `swagger:name` dispatches through the schema family because its
@@ -573,6 +652,9 @@ Schemes:                        # multi-line, indented bare
 Schemes:                        # multi-line, YAML `- ` markers
   - http
   - https
+Schemes:                        # markdown `* ` / `+ ` bullets (normalised
+  * http                        #   to `- ` upstream in preprocess, so they
+  * https                       #   reach AsList already as the dash form)
 Schemes: http, https            # inline + indented continuation
   - ws
 ```
@@ -580,14 +662,17 @@ Schemes: http, https            # inline + indented continuation
 Algorithm: treat `Value` (if non-empty) as one input line, then
 each line of `Body`. For each line: trim, drop a leading `- `
 YAML marker if present, re-trim, comma-split, trim each token,
-drop empties. Aggregate.
+drop empties. Aggregate. Markdown `*`/`+` bullets need no special
+handling here — [§preprocess-contract](#preprocess-contract) has
+already normalised them to `- ` (go-swagger#1726).
 
 The helper stops at "simple token lists" — it does **not** handle
 enum values (whose elements may be JSON arrays), the `+ name:`
 Parameters chunk grammar (routebody-owned), or raw bodies that
 need YAML structural parsing (`securityDefinitions`,
-`extensions`, `infoExtensions` — those travel through
-`yaml.TypedExtensions` / `json.Unmarshal` directly).
+`extensions`, `infoExtensions`, `security` — those travel through
+`yaml.TypedExtensions` / `json.Unmarshal` / `security.Parse`
+directly).
 
 ---
 
@@ -714,10 +799,16 @@ for tooling that needs to enumerate it.
 
 `KwConsumes`, `KwProduces`, `KwSecurity`, `KwSecurityDefinitions`,
 `KwResponses`, `KwParameters`, `KwExtensions`, `KwInfoExtensions`,
-`KwTOS`, `KwExternalDocs` are all `ShapeRawBlock`. Their bodies
-travel through the lexer's body accumulator and surface on the
-Block as raw Properties; downstream sub-parsers (yaml,
-routebody, security) consume the body content.
+`KwTOS`, `KwExternalDocs`, `KwTags` are all `ShapeRawBlock`. Their
+bodies travel through the lexer's body accumulator and surface on
+the Block as raw Properties; downstream sub-parsers (yaml,
+routebody, security) consume the body content. `KwTags` carries two
+shapes by context: on swagger:meta it is a list of tag **objects**
+({name, description, externalDocs, x-*}) populating
+`spec.Swagger.Tags`; on swagger:route/operation it is a plain list of
+tag-name **strings** unioned onto `op.Tags` (alongside any names on
+the route header line). The single keyword, two consumers — the meta
+walker unmarshals objects, the route walker reads `AsList`.
 
 ### `in:` is a parameter-location directive
 
@@ -727,6 +818,21 @@ schema-body grammar; the keyword table recognises it so the lexer
 can hand a typed token to the parameters dispatch path. The
 schema parser treats it as a context-invalid warning when seen
 outside that path.
+
+### `name:` is a name directive
+
+`KwName` is declared as `ShapeString` in `CtxParam, CtxHeader`. Like
+`in:`, it is a structural keyword rather than part of the schema-body
+grammar. On a `swagger:parameters` struct field it renames the JSON
+parameter name; on a `swagger:response` struct field it renames the
+response header (the `Headers` map key). Both override the json-tag /
+Go-field derivation (the SimpleSchema-side analogue of the
+`swagger:name` annotation on a schema field). Recognising it as a
+keyword removes it from the description prose; because its contexts are
+SimpleSchema field sites, `isFullSchemaOnly` is false for it, so the
+parameter / header walkers ignore it silently rather than emitting an
+unsupported-keyword warning. The parameters / responses builders read
+the value via `Block.GetString(KwName)`.
 
 ### `Schemes:` accepts both inline and multi-line
 
@@ -776,7 +882,7 @@ Per-annotation argument shapes are classified by
 |---|---|
 | `AnnRoute`, `AnnOperation` | `TokenHTTPMethod` + `TokenURLPath` + `TokenIdentName`* (tags + trailing OpID) |
 | `AnnDefaultName` | one `TokenJSONValue` or `TokenRawValue` per `classifyDefaultValue` |
-| `AnnType` | one `TokenTypeRef` (or fallback `TokenIdentName`) per `isTypeRef` |
+| `AnnType` | one `TokenTypeRef` for any well-formed token (or fallback `TokenIdentName` when malformed) per `looksLikeTypeRef` |
 | `AnnEnum` | per `classifyEnumArgs` — `TokenIdentName` (name) + `TokenJSONValue` / `TokenCommaListValue` (values), in source order |
 | `AnnParameters` | `TokenIdentName`* (operation IDs) |
 | `AnnAllOf`, `AnnModel`, `AnnResponse`, `AnnStrfmt`, `AnnName` | one `TokenIdentName` (first identifier only — single-word capture) |
@@ -800,8 +906,11 @@ emit `CodeMalformedOperation`.
 
 - `AnnStrfmt` requires a name; empty emits `CodeMissingRequiredArg`.
 - `AnnDefaultName` requires a value; missing emits `CodeMissingRequiredArg`.
-- `AnnType` requires a `TokenTypeRef`; a non-closed-vocab value
-  emits `CodeInvalidTypeRef`.
+- `AnnType` requires a `TokenTypeRef`; a missing arg emits
+  `CodeMissingRequiredArg` and a structurally malformed token emits
+  `CodeInvalidTypeRef`. A well-formed but unknown name is NOT a parser
+  error — the builder resolves it (and emits `validate.unsupported-type`
+  if it is neither a keyword nor a scanned type).
 - `AnnEnum` requires a name and/or value list and/or a body;
   empty across all three emits `CodeMissingRequiredArg`.
 - `AnnAllOf`, `AnnIgnore`, `AnnAlias`, `AnnFile` accept optional /
@@ -853,13 +962,23 @@ applies its own validation.
 
 A `security:` raw block in a meta / route / operation context is
 parsed at lex time into a `[]security.Requirement` and made
-available via `Block.SecurityRequirements()`. Each entry is a
-single-key map from scheme name → scope list, mirroring the shape
-OAS v2 expects on `spec.Operation.Security`.
+available via `Block.SecurityRequirements()`. Each entry is a map
+from scheme name → scope list (one key per scheme; multiple keys in
+one entry are AND-combined), mirroring the shape OAS v2 expects on
+`spec.Operation.Security`.
+
+`security.Parse` decodes the body as genuine YAML — the same path
+`securityDefinitions` takes — so the standard sequence-of-objects
+form (with flow- or block-style scopes), the bare-name shorthand
+(`- name`), and the explicit opt-out (`security: []` → non-nil
+empty) all work; a legacy bare top-level mapping is still read as
+one OR requirement per key. See the `security` package doc for the
+full form list.
 
 `parser.emitRawBlock` calls `security.Parse(body)` when the
 keyword name is `KwSecurity`. Returns `nil` when no `security:`
-keyword appeared on the block.
+keyword appeared on the block (absent → inherit), distinct from the
+non-nil empty slice returned for `security: []` (opt-out).
 
 The companion accessor — `Block.Contact()` / `Block.License()` —
 exposes the typed shapes parsed from inline `contact:` /
@@ -940,13 +1059,15 @@ diagnostic-sink option (`WithDiagnosticSink`) for streaming.
 | `CodeInvalidYAMLExtensions` | YAML parse failure on extensions body |
 | `CodeUnterminatedYAML` | `---` opened, not closed |
 | `CodeInvalidAnnotation` | malformed annotation surface |
-| `CodeInvalidTypeRef` | not in the closed type-reference vocab |
+| `CodeInvalidTypeRef` | structurally malformed `swagger:type` token (semantic validity is the builder's job) |
 | `CodeUnexpectedToken` | stray token at body level |
 | `CodeMalformedOperation` | missing/invalid HTTP method / path / OpID |
 | `CodeMissingRequiredArg` | annotation requires an argument |
 | `CodeShapeMismatch` | builder-layer keyword vs schema-type mismatch |
 | `CodeAmbiguousEmbed` | builder-layer embed disambiguation diagnostic |
 | `CodeUnsupportedInSimpleSchema` | builder-layer SimpleSchema-exit violation |
+| `CodeUnsupportedType` | builder-layer unresolvable `swagger:type` (unknown name / `file` / invalid array element) |
+| `CodeDeprecated` | builder-layer accepted-but-deprecated annotation/keyword (carries a migration hint) |
 
 ---
 

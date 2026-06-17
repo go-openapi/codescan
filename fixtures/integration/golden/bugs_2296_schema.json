@@ -1,0 +1,44 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "C": {
+      "type": "object",
+      "title": "C embeds Embedded (embedded meets anonymous struct — #2296 panic).",
+      "properties": {
+        "inner": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "string",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "Inner"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2296"
+    },
+    "Embedded": {
+      "type": "object",
+      "title": "Embedded carries an anonymous struct field.",
+      "properties": {
+        "inner": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "string",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "Inner"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2296"
+    }
+  }
+}

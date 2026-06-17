@@ -1,0 +1,74 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Pet": {
+      "description": "Pet embeds SimpleOne as an allOf base and Something inline. The reporter saw\nthe allOf arms duplicated (SimpleOne $ref + the inline object each appearing\ntwice), which also tripped a \"circular ancestry\" validation error.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/SimpleOne"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cat": {
+              "type": "string",
+              "x-go-name": "Cat"
+            },
+            "did": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "DID"
+            },
+            "extra": {
+              "type": "string",
+              "x-go-name": "Extra"
+            },
+            "notes": {
+              "type": "string",
+              "x-go-name": "Notes"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2483"
+    },
+    "SimpleOne": {
+      "type": "object",
+      "title": "SimpleOne is a model with a few simple fields.",
+      "properties": {
+        "age": {
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "Age"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2483"
+    },
+    "Something": {
+      "type": "object",
+      "title": "Something is used by other structs (not itself annotated).",
+      "properties": {
+        "cat": {
+          "type": "string",
+          "x-go-name": "Cat"
+        },
+        "did": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "DID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2483"
+    }
+  }
+}

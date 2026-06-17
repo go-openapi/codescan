@@ -46,7 +46,12 @@ following ordered steps:
    the `common.Builder` parse cache so `applyBlockToField`'s later
    walk hits the same parse result).
 3. If `swagger:ignore` is present → skip.
-4. Resolve the JSON tag name. If ignored (`json:"-"`) → skip.
+4. Resolve the JSON tag name. If ignored (`json:"-"`) → skip. A `name:`
+   keyword on the field overrides this derived name (the parameter-side
+   analogue of `swagger:name` on a schema field); it is read via
+   `Block.GetString(grammar.KwName)` and applied before the name flows
+   into the `seen` key / `ps.Name` / dedup, so the rename is consistent.
+   The Go field name is still recorded as `x-go-name` when it differs.
 5. Pick the `in:` location (default `query`; see [§in-discriminator](#in-discriminator)).
 6. Build the field's type into the parameter via `buildFromField` —
    the schema builder runs in SimpleSchema mode unless `in==body`
@@ -64,6 +69,37 @@ The order matters: pre-scanning the doc signals BEFORE building lets
 the dispatch pick the right `in:` and forces the SimpleSchema mode
 correctly; applying the block AFTER the type build lets validations
 override the resolved defaults.
+
+### Embedded fields and inherited `in:`/`required:` (go-swagger#2701)
+
+`buildFromStruct` handles an embedded (anonymous) field by recursing
+into its type via `buildFromType` — its promoted fields become
+parameters of the outer set. An `in:`/`required:` annotation written on
+the **embed itself** applies to every parameter it promotes (the embed
+is the natural place to say "all of these are path params"). The
+recursion threads that as inherited context via the shared
+`common.EmbedInheritance` kernel (`ReadEmbedInheritance` reads the
+embed's doc; the schema and responses builders use the same kernel so
+the rule is identical everywhere). `processParamField` falls back to it
+when a promoted field sets no `in:`/`required:` of its own (the field's
+own annotation always wins). The context is saved/restored around each
+embed so siblings are unaffected, and it nests — an inner embed without
+its own `in:` keeps the outer one. See
+[§in-discriminator](#in-discriminator) for the `in:` precedence.
+
+`in: body` on an embed is special-cased: an operation allows at most one
+body parameter, so promoting the embed's fields as N body params would
+produce an invalid spec. Instead the embed IS the body — `buildFromStruct`
+routes it through `processParamField` (the embedded field's name is its
+type name) so it becomes a single body parameter whose schema is the
+embedded struct, exactly like a named `Body Foo` field (go-swagger#1635).
+The responses builder applies the identical rule.
+
+Exportedness is per-field, not per-embed: only exported fields promote
+(the product documents the public API surface), but exported fields
+reached *through* an unexported embedded type still promote — Go
+promotes them and they are reachable on the outer type. Unexported
+fields never surface, at any depth.
 
 ## <a id="in-discriminator"></a>§in-discriminator — reading `in:` and what it gates
 
@@ -95,7 +131,9 @@ v1's `rxIn` regex semantics:
 [Ii]n\p{Zs}*:\p{Zs}*(query|path|header|body|formData)(?:\.)?$
 ```
 
-Default when `in:` is absent: `query` (OAS v2 convention).
+Default when `in:` is absent: an enclosing embed's inherited `in:` if
+any (see the embedded-fields note above), otherwise `query` (OAS v2
+convention).
 
 ## <a id="dispatch"></a>§dispatch — Walker dispatch at level-0 and items level
 

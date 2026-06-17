@@ -39,7 +39,9 @@ type Code string
 // Diagnostic codes. The `parse.*` prefix marks lexer/parser-level
 // observations; `validate.*` marks semantic-validation observations
 // emitted by the builder layer (typically through the
-// internal/builders/validations package).
+// internal/builders/validations package); `scan.*` marks
+// scan-environment observations (package loading, recovered panics)
+// raised by the scanner / spec builder rather than the grammar parser.
 const (
 	CodeInvalidNumber     Code = "parse.invalid-number"
 	CodeInvalidInteger    Code = "parse.invalid-integer"
@@ -81,6 +83,70 @@ const (
 	// header was typed as a struct or interface that the recognizer
 	// cascade couldn't reduce to a primitive.
 	CodeUnsupportedInSimpleSchema Code = "validate.unsupported-in-simple-schema"
+
+	// CodeUnsupportedType fires when a `swagger:type` argument cannot be
+	// resolved to an inline schema: an unknown type name, a `file`
+	// override (use swagger:file instead), or a keyword used where it is
+	// not valid (e.g. `inline`/`array` as an array element). The override
+	// is dropped and the subject falls through to its Go type. See the F3
+	// reconciliation in .claude/plans/quirks-F-series-fix.md.
+	CodeUnsupportedType Code = "validate.unsupported-type"
+
+	// CodeDeprecated fires when an accepted-but-deprecated annotation or
+	// keyword value is used (the input is still processed). Carries a
+	// migration hint in the message — e.g. `swagger:type array` →
+	// `inline`, or the deprecated `swagger:alias` annotation.
+	CodeDeprecated Code = "validate.deprecated"
+
+	// CodeDuplicateModelName fires when two distinct Go types in the
+	// SAME package claim the same definition name (necessarily via a
+	// `swagger:model <name>` override, since Go type names are unique
+	// per package). The first declaration keeps the name; later ones
+	// fall back to their Go type name. See the name-identity design D-4.
+	CodeDuplicateModelName Code = "validate.duplicate-model-name"
+
+	// CodeCollidingModelName fires when the same definition name is
+	// declared across SEVERAL packages. The reduce stage keeps each
+	// distinct by qualifying the colliding ones with a PascalCase
+	// package-prefix concat (e.g. b.Test / c.Test -> BTest / CTest);
+	// the author can force a specific name with `swagger:model <name>`.
+	// See the name-identity design (D-8).
+	CodeCollidingModelName Code = "validate.colliding-model-name"
+
+	// CodeHierarchicalModelName fires when a colliding definition name's
+	// best flat concat exceeds the readability budget and the caller
+	// enabled EmitHierarchicalNames: the reduce stage emits nested
+	// container definitions (`#/definitions/<pkg>/<Name>`) instead of a
+	// long flat concat. The author can force a flat name with
+	// `swagger:model <name>`. See the name-identity design (rung 3 / W2).
+	CodeHierarchicalModelName Code = "validate.hierarchical-model-name"
+
+	// CodeAmbiguousTypeName fires when a type-name keyword argument
+	// (swagger:type, swagger:additionalProperties, swagger:patternProperties)
+	// names a bare leaf that, after failing to resolve in the builder's own
+	// package, matches a discovered model in SEVERAL packages. The reference
+	// is ambiguous so it is dropped; the author can disambiguate with a
+	// same-package type or a swagger:model override. See the name-identity
+	// leaf-resolution design.
+	CodeAmbiguousTypeName Code = "validate.ambiguous-type-name"
+
+	// CodeDegradedLoad fires when `packages.Load` returns a degraded
+	// result. It is tiered by what is still recoverable: an Error
+	// (aborting) when nothing usable loaded — no packages matched, a
+	// package could not be loaded at all, or its type information
+	// (`Types` / `TypesInfo`) is unavailable (the #2874 case where
+	// swagger:allOf silently stops resolving); a Warning (non-fatal)
+	// when a package carries only parse/type errors but its type
+	// information is still usable, so a single non-building package does
+	// not sink a whole `./...` scan. See go-swagger/go-swagger#2874.
+	CodeDegradedLoad Code = "scan.degraded-load"
+
+	// CodeInternalPanic fires when a builder panics while processing a
+	// single declaration. The scan recovers, names the offending source
+	// declaration (file:line), and aborts with a located error rather
+	// than surfacing a raw Go stack trace. See
+	// go-swagger/go-swagger#2886.
+	CodeInternalPanic Code = "scan.internal-panic"
 )
 
 // Diagnostic is one observation about a comment block.

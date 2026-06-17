@@ -1,0 +1,39 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Currency": {
+      "description": "It is rendered as an ISO-4217 alphabetic code. This second prose\nparagraph proves that a full description paragraph survives intact and\nthat the annotation declaration line below is not folded into it.",
+      "type": "string",
+      "title": "Currency is the billing currency of an order.",
+      "enum": [
+        "USD",
+        "EUR",
+        "JPY"
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3214"
+    },
+    "Order": {
+      "type": "object",
+      "title": "Order references typed primitives.",
+      "properties": {
+        "currency": {
+          "$ref": "#/definitions/Currency"
+        },
+        "state": {
+          "$ref": "#/definitions/State"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3214"
+    },
+    "State": {
+      "type": "string",
+      "title": "State represents the state of an order.",
+      "enum": [
+        "created",
+        "processed"
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3214"
+    }
+  }
+}

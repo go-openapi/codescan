@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Action": {
+      "description": "Action exercises a field-level swagger:type override: ID is a UUID (which\nwould otherwise render as a $ref/array) but the reporter wants it as a\nbare string in the spec.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "resourceId": {
+          "type": "string",
+          "x-go-name": "ResourceID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2599"
+    },
+    "UUID": {
+      "description": "UUID is a custom, non-strfmt type (mirrors gofrs/uuid.UUID: an array under\nthe hood) that the reporter cannot refactor away.",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2599"
+    }
+  }
+}

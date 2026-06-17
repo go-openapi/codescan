@@ -1,0 +1,43 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "listItems",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/itemsResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Item": {
+      "type": "object",
+      "title": "Item is an element model.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1881"
+    }
+  },
+  "responses": {
+    "itemsResponse": {
+      "description": "ItemsResponse is a response whose body is an array of objects (the #1881\n\"array-of-object response yields invalid spec\" case).",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Item"
+        }
+      }
+    }
+  }
+}

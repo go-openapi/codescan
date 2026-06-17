@@ -1,0 +1,43 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "An API Definition to show a bug in go-swagger.",
+    "title": "A Bug API"
+  },
+  "paths": {
+    "/ping/{who}": {
+      "get": {
+        "produces": [
+          "plain/text"
+        ],
+        "summary": "Test your connection with this service.",
+        "operationId": "ping",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Who",
+            "description": "Represents who is pinging",
+            "name": "who",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ping Response",
+            "schema": {
+              "$ref": "#/definitions/pingResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "pingResponse": {
+      "description": "Ping Response",
+      "type": "object",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/796"
+    }
+  }
+}

@@ -1,6 +1,0 @@
-{
-  "NullString": {
-    "type": "string",
-    "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
-  }
-}

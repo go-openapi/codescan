@@ -5,14 +5,51 @@ package schema
 
 import (
 	"go/ast"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/scanner"
 	"github.com/go-openapi/codescan/internal/scanner/classify"
 	oaispec "github.com/go-openapi/spec"
 )
+
+// recordValidationOrigins anchors each scalar validation keyword in block to its
+// source comment line, so following e.g. a `maximum` node in the spec jumps to
+// its `// maximum: 100` line rather than the struct field. Only when a base path
+// was initiated (WithPath) and a sink is wired. The keyword→segment knowledge
+// lives in the grammar ([grammar.PointerPath]); here we prepend the field base
+// and any items depth (base + (/items)×ItemsDepth + /segment, mirroring where
+// the value renders). Runs only on the non-$ref field path (a $ref field with
+// siblings is rewritten to an allOf compound elsewhere, so its validations are
+// not children of base — they resolve to the field anchor).
+func (s *Builder) recordValidationOrigins(block grammar.Block) {
+	if s.path == "" || !s.Ctx.OriginEnabled() {
+		return
+	}
+	emit := func(p grammar.Property) {
+		ctx := grammar.CtxSchema
+		if p.ItemsDepth > 0 {
+			ctx = grammar.CtxItems
+		}
+		segs, ok := grammar.PointerPath(p.Keyword, ctx)
+		if !ok {
+			return
+		}
+		ptr := s.path + strings.Repeat(scanner.JSONPointer("items"), p.ItemsDepth) + scanner.JSONPointer(segs...)
+		s.Ctx.RecordOrigin(ptr, p.Pos)
+	}
+	block.Walk(grammar.Walker{
+		FilterDepth: grammar.AllDepths,
+		Number:      func(p grammar.Property, _ float64, _ bool) { emit(p) },
+		Integer:     func(p grammar.Property, _ int64) { emit(p) },
+		Bool:        func(p grammar.Property, _ bool) { emit(p) },
+		String:      func(p grammar.Property, _ string) { emit(p) },
+		Raw:         func(p grammar.Property) { emit(p) },
+	})
+}
 
 // applyBlockToDecl is the grammar entry point for a top-level model
 // declaration. Parses the doc, short-circuits on swagger:ignore, writes
@@ -38,14 +75,19 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 
 	schema.Title = block.PreambleTitle()
 	schema.Description = block.PreambleDescription()
-	if enumDesc := resolvers.GetEnumDesc(schema.Extensions); enumDesc != "" {
-		if schema.Description != "" {
-			schema.Description += "\n"
-		}
-		schema.Description += enumDesc
+	schema.Description = resolvers.AppendEnumDesc(schema.Description, schema.Extensions, s.Ctx.SkipEnumDescriptions())
+
+	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
+	// model deprecated (go-swagger#3138). The grammar block unifies both
+	// triggers; OAS2 has no native schema `deprecated`, so emit x-deprecated.
+	if block.IsDeprecated() {
+		resolvers.MarkDeprecated(schema)
 	}
 
 	handlers.DispatchSchemaLevel0(block, schema, schema, "", s.RecordDiagnostic, s.schemaOpts())
+
+	// Cross-ref linkage: anchor decl-level validation keywords to their lines.
+	s.recordValidationOrigins(block)
 
 	return false
 }
@@ -66,14 +108,24 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 	}
 
 	ps.Description = block.Prose()
-	if enumDesc := resolvers.GetEnumDesc(ps.Extensions); enumDesc != "" {
-		if ps.Description != "" {
-			ps.Description += "\n"
-		}
-		ps.Description += enumDesc
+	ps.Description = resolvers.AppendEnumDesc(ps.Description, ps.Extensions, s.Ctx.SkipEnumDescriptions())
+
+	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
+	// field deprecated (go-swagger#3138) — see the model-level note above.
+	if block.IsDeprecated() {
+		resolvers.MarkDeprecated(ps)
 	}
 
 	handlers.DispatchSchemaLevel0(block, enclosing, ps, name, s.RecordDiagnostic, s.schemaOpts())
+
+	// additionalProperties: <spec> field keyword. Applied after the type-derived
+	// dispatch so it complements an inline object, overrides a map's element
+	// schema, or warn-drops on a non-object — the same precedence as the
+	// type-level marker. ($ref'd fields are handled in applyToRefField via an
+	// allOf sibling, above.)
+	if apSpec, ok := block.GetString(grammar.KwAdditionalProperties); ok {
+		s.applyAdditionalPropertiesSpec(ps, strings.TrimSpace(apSpec), s.Ctx.PosOf(afld.Pos()))
+	}
 
 	// Items-level dispatch — only when the field type is written as
 	// an array literal. Named/alias array types opt out: their items
@@ -85,6 +137,9 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 			handlers.DispatchSchemaItemsLevel(block, target, depth+1, s.RecordDiagnostic, s.schemaOpts())
 		}
 	}
+
+	// Cross-ref linkage: anchor each validation keyword to its comment line.
+	s.recordValidationOrigins(block)
 }
 
 // schemaOpts packages the Builder's dispatch options into the value
@@ -143,6 +198,12 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 			Description: description,
 			AllOf:       allOf,
 		},
+		// externalDocs is an annotation sibling of the $ref, like
+		// description and x-* — it lifts onto the outer compound
+		// rather than into the allOf override (go-swagger#2655).
+		SwaggerSchemaProps: oaispec.SwaggerSchemaProps{
+			ExternalDocs: c.externalDocs,
+		},
 	}
 }
 
@@ -152,20 +213,23 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 // # Details
 //
 // See [§ref-override](./README.md#ref-override) — collector role,
-// the two flags (`collectedValidation`, `collectedExtension`) and
-// the lift-onto-outer behaviour for vendor extensions.
+// the flags (`collectedValidation`, `collectedExtension`,
+// `collectedExternalDoc`) and the lift-onto-outer behaviour for
+// vendor extensions and externalDocs.
 type refOverrideCollector struct {
-	builder             *Builder
-	enclosing           *oaispec.Schema
-	name                string
-	override            oaispec.Schema
-	valid               handlers.SchemaValidations
-	collectedValidation bool
-	collectedExtension  bool
+	builder              *Builder
+	enclosing            *oaispec.Schema
+	name                 string
+	override             oaispec.Schema
+	valid                handlers.SchemaValidations
+	externalDocs         *oaispec.ExternalDocumentation
+	collectedValidation  bool
+	collectedExtension   bool
+	collectedExternalDoc bool
 }
 
 func (c *refOverrideCollector) anyCollected() bool {
-	return c.collectedValidation || c.collectedExtension
+	return c.collectedValidation || c.collectedExtension || c.collectedExternalDoc
 }
 
 func (c *refOverrideCollector) markValidation() { c.collectedValidation = true }
@@ -205,6 +269,12 @@ func (c *refOverrideCollector) onInteger(p grammar.Property, val int64) {
 	case grammar.KwMaxItems:
 		c.valid.SetMaxItems(val)
 		c.markValidation()
+	case grammar.KwMinProperties:
+		c.valid.SetMinProperties(val)
+		c.markValidation()
+	case grammar.KwMaxProperties:
+		c.valid.SetMaxProperties(val)
+		c.markValidation()
 	}
 }
 
@@ -231,16 +301,26 @@ func (c *refOverrideCollector) onString(p grammar.Property, val string) {
 	case grammar.KwPattern:
 		handlers.ApplyPattern(p, c.valid, val, c.builder.RecordDiagnostic)
 		c.markValidation()
+	case grammar.KwPatternProperties:
+		handlers.ApplyPatternProperties(p, c.valid, val, c.builder.RecordDiagnostic)
+		c.markValidation()
+	case grammar.KwAdditionalProperties:
+		// On a $ref'd field, additionalProperties rides as an allOf sibling
+		// (`{allOf: [{$ref}, {additionalProperties: …}]}`) so the reference is
+		// preserved — JSON-Schema-draft-4 semantics, like the other siblings.
+		if sob, ok := c.builder.resolveAdditionalPropertiesValue(strings.TrimSpace(val), p.Pos); ok {
+			c.override.AdditionalProperties = sob
+			c.markValidation()
+		}
 	case grammar.KwDefault:
-		if v, err := validations.ParseDefault(val, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetDefault(v)
-			c.markValidation()
-		}
+		// The $ref override arm carries no Type of its own, so a JSON
+		// object/array literal is coerced structurally here rather than
+		// type-driven via ParseDefault (quirk G3).
+		c.valid.SetDefault(validations.CoerceJSONOrString(val))
+		c.markValidation()
 	case grammar.KwExample:
-		if v, err := validations.ParseDefault(val, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetExample(v)
-			c.markValidation()
-		}
+		c.valid.SetExample(validations.CoerceJSONOrString(val))
+		c.markValidation()
 	case grammar.KwEnum:
 		c.valid.SetEnum(val)
 		c.markValidation()
@@ -264,18 +344,28 @@ func (c *refOverrideCollector) onExtension(ext grammar.Extension) {
 func (c *refOverrideCollector) onRaw(p grammar.Property) {
 	switch p.Keyword.Name {
 	case grammar.KwDefault:
-		if v, err := validations.ParseDefault(p.Value, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetDefault(v)
-			c.markValidation()
-		}
+		// See onString: type-unknown override arm → JSON-literal coercion.
+		c.valid.SetDefault(validations.CoerceJSONOrString(p.Value))
+		c.markValidation()
 	case grammar.KwExample:
-		if v, err := validations.ParseDefault(p.Value, handlers.SchemaTypeOf(&c.override), c.override.Format); err == nil {
-			c.valid.SetExample(v)
-			c.markValidation()
-		}
+		c.valid.SetExample(validations.CoerceJSONOrString(p.Value))
+		c.markValidation()
 	case grammar.KwEnum:
 		c.valid.SetEnum(p.Value)
 		c.markValidation()
+	case grammar.KwExternalDocs:
+		// externalDocs on a $ref'd field lifts onto the outer allOf
+		// compound (see applyToRefField). A non-ref field handles it
+		// via handlers.schemaRawHandler instead (go-swagger#2655).
+		ed, err := handlers.ParseExternalDocs(p.Body)
+		if err != nil {
+			c.builder.RecordDiagnostic(grammar.Warnf(p.Pos, grammar.CodeInvalidAnnotation, "externalDocs: %v", err))
+			return
+		}
+		if ed != nil {
+			c.externalDocs = ed
+			c.collectedExternalDoc = true
+		}
 	}
 }
 

@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/orders/{id}": {
+      "put": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Updates an order.",
+        "operationId": "updateOrder",
+        "responses": {
+          "200": {
+            "description": "An Order for one or more pets by a user.",
+            "schema": {
+              "$ref": "#/definitions/order"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "order": {
+      "type": "object",
+      "title": "An Order for one or more pets by a user.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-name": "Order",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1109/responseref"
+    }
+  }
+}

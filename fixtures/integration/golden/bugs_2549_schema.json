@@ -1,0 +1,34 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Decimal": {
+      "type": "integer",
+      "format": "int64",
+      "title": "Decimal is an imported defined numeric type.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2549/sub"
+    },
+    "Property": {
+      "type": "object",
+      "title": "Property has an example on a field of an imported type (#2549).",
+      "required": [
+        "marketValue"
+      ],
+      "properties": {
+        "marketValue": {
+          "description": "Initial Market Value",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "example": "210000"
+            }
+          ],
+          "x-go-name": "MarketValue"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2549"
+    }
+  }
+}

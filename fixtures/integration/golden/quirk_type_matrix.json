@@ -1,0 +1,167 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Custom": {
+      "description": "A field typed Custom whose override is dropped falls through to the Go\ntype (an inlined struct, as the golden shows).",
+      "type": "object",
+      "title": "Custom is a scanned struct type, referenced by the Matrix fields below.",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "X"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
+    },
+    "Matrix": {
+      "description": "Matrix exercises field-level swagger:type across the argument space. Every\nfield's Go type is Custom, so the baseline (no override) would be a $ref.",
+      "type": "object",
+      "properties": {
+        "aString": {
+          "type": "string",
+          "x-go-name": "AString"
+        },
+        "bInteger": {
+          "type": "integer",
+          "x-go-name": "BInteger"
+        },
+        "cInt64": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "CInt64"
+        },
+        "dNumber": {
+          "type": "number",
+          "x-go-name": "DNumber"
+        },
+        "eBoolean": {
+          "type": "boolean",
+          "x-go-name": "EBoolean"
+        },
+        "fObject": {
+          "type": "object",
+          "x-go-name": "FObject"
+        },
+        "gArray": {
+          "description": "A genuine Go slice field carrying swagger:type array (Mode-2 idiom).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "GArray"
+        },
+        "hArrayExplicit": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "HArrayExplicit"
+        },
+        "iFile": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "IFile"
+        },
+        "jBad": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "JBad"
+        },
+        "kScanned": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "KScanned"
+        },
+        "lStrfmtThenType": {
+          "description": "strfmt THEN type (field site) — which wins?",
+          "type": "integer",
+          "x-go-name": "LStrfmtThenType"
+        },
+        "mStrfmtThenString": {
+          "description": "strfmt THEN string-type (field site).",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "MStrfmtThenString"
+        },
+        "nInline": {
+          "description": "inline forces the field's own Go type (Custom) to expand in place,\nrather than the $ref a plain Custom field would emit.",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "NInline"
+        },
+        "oArrayCustom": {
+          "description": "[]Custom is an array whose items are the inlined Custom type.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "format": "int64",
+                "x-go-name": "X"
+              }
+            }
+          },
+          "x-go-name": "OArrayCustom"
+        },
+        "pCrossRef": {
+          "description": "A cross-type reference: a string field overridden to the Custom type,\ninlined (swagger:type always inlines, regardless of the Go type).",
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "X"
+            }
+          },
+          "x-go-name": "PCrossRef"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
+    },
+    "NamedScalarString": {
+      "type": "string",
+      "title": "NamedScalarString is a named int overridden to string at the named site.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
+    },
+    "NamedSlice": {
+      "type": "array",
+      "title": "NamedSlice is a named slice carrying the Mode-2 `array` inline idiom.",
+      "items": {
+        "type": "string"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
+    },
+    "NamedStrfmtAndType": {
+      "description": "NamedStrfmtAndType carries BOTH strfmt and type at the named-scalar site —\nthe named-site precedence may differ from the field site above.",
+      "type": "integer",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/swagger-type-matrix"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Thing": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Enabled flag.",
+          "type": "boolean",
+          "x-go-name": "Enabled"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3007"
+    }
+  }
+}

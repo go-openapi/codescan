@@ -1,0 +1,32 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "x-go-name": "Color"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-name-keyword"
+    }
+  },
+  "responses": {
+    "widgetResponse": {
+      "description": "",
+      "schema": {
+        "$ref": "#/definitions/Widget"
+      },
+      "headers": {
+        "X-Rate-Limit": {
+          "minimum": 0,
+          "type": "integer",
+          "format": "int64",
+          "description": "requests remaining in the window"
+        }
+      }
+    }
+  }
+}

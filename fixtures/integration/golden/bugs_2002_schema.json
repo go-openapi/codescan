@@ -1,0 +1,40 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/foobar": {
+      "post": {
+        "tags": [
+          "foobar"
+        ],
+        "summary": "Foobar does some amazing stuff.",
+        "operationId": "idOfFoobar",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/foobarResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "FooBarResponse": {
+      "type": "object",
+      "title": "FooBarResponse is a body payload type declared in a separate package.",
+      "properties": {
+        "result": {
+          "type": "string",
+          "x-go-name": "Result"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2002/api"
+    }
+  },
+  "responses": {
+    "foobarResponse": {
+      "description": "",
+      "schema": {
+        "$ref": "#/definitions/FooBarResponse"
+      }
+    }
+  }
+}

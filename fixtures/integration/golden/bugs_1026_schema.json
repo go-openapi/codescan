@@ -1,0 +1,16 @@
+{
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "Package bug1026 probes whether a custom vendor extension (x-logo) can be\ndeclared in the swagger:meta block — the #1026 \"x-logo feature\" request is\nsatisfied by generic InfoExtensions support rather than a dedicated knob.",
+    "version": "1.0.0",
+    "x-logo": {
+      "backgroundColor": "#FFFFFF",
+      "url": "./images/logo.png"
+    }
+  },
+  "host": "localhost",
+  "paths": {}
+}

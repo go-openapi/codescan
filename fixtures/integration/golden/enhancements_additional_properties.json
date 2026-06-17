@@ -1,0 +1,100 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AllowExtras": {
+      "type": "object",
+      "title": "AllowExtras is an open object: named properties plus arbitrary extra keys.",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "additionalProperties": true,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "BoundedExtras": {
+      "type": "object",
+      "title": "BoundedExtras shows additionalProperties coexisting with maxProperties.",
+      "maxProperties": 10,
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "additionalProperties": true,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "Contradiction": {
+      "description": "Contradiction resolves to a string via swagger:type; additionalProperties is\nthe lowest-priority annotation, so it is dropped with a diagnostic.",
+      "type": "string",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "ForbidExtras": {
+      "type": "object",
+      "title": "ForbidExtras is a closed object: named properties only, no extra keys.",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        },
+        "b": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "B"
+        }
+      },
+      "additionalProperties": false,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "OverrideMap": {
+      "description": "OverrideMap is a map whose element schema (string) is overridden by the\nmarker to integer additionalProperties.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "RefExtras": {
+      "type": "object",
+      "title": "RefExtras references a model as its additionalProperties value schema.",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/Thing"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "Thing": {
+      "type": "object",
+      "title": "Thing is referenced as an additionalProperties value type.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    },
+    "TypedExtras": {
+      "type": "object",
+      "title": "TypedExtras complements its named property with typed (integer) values.",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties"
+    }
+  }
+}

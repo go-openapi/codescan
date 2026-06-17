@@ -1,0 +1,21 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "TestAdditionalProperties": {
+      "type": "object",
+      "title": "TestAdditionalProperties has a named property plus free-form number values.",
+      "properties": {
+        "field1": {
+          "description": "field1",
+          "type": "string",
+          "x-go-name": "Field1"
+        }
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3005"
+    }
+  }
+}

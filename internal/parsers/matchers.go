@@ -44,6 +44,39 @@ func ParametersOverride(comments *ast.CommentGroup) ([]string, bool) {
 	return commentMultipleSubMatcher(rxParametersOverride)(comments)
 }
 
+// MalformedModelName reports a `swagger:model` marker on line whose name
+// argument is not a plain identifier. Definition/response names are JSON
+// labels, not Go-qualified identifiers, so a package-qualified name such
+// as `utils.Error` is rejected by the strict rxModelOverride and the
+// marker would otherwise be silently dropped. Returns the offending raw
+// argument and true; a bare marker or a well-formed name returns
+// ("", false).
+func MalformedModelName(line string) (string, bool) {
+	return malformedOverrideName(line, rxModelArg, rxModelOverride)
+}
+
+// MalformedResponseName is the `swagger:response` counterpart of
+// MalformedModelName.
+func MalformedResponseName(line string) (string, bool) {
+	return malformedOverrideName(line, rxResponseArg, rxResponseOverride)
+}
+
+// malformedOverrideName returns the raw name argument and true when line
+// carries a single-name struct marker (captured by rxArg) whose name the
+// strict rxOverride rejects. A bare marker (no argument) or a name the
+// strict matcher accepts returns ("", false).
+func malformedOverrideName(line string, rxArg, rxOverride *regexp.Regexp) (string, bool) {
+	m := rxArg.FindStringSubmatch(line)
+	if len(m) < minMatchCount {
+		return "", false // bare marker or no argument
+	}
+	if rxOverride.MatchString(line) {
+		return "", false // strict matcher accepts the name (incl. a trailing period)
+	}
+
+	return strings.TrimSpace(m[1]), true
+}
+
 // commentBlankSubMatcher returns a matcher that searches comments for
 // any line matching rx and returns the first non-blank submatch.
 // When the marker is present but carries no argument, returns

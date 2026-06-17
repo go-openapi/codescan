@@ -5,15 +5,18 @@ package schema
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 	"log"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/scanner"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -77,56 +80,89 @@ func (s *Builder) classifierTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypabl
 // classifierNamedTypeOverride is the named-type walker fired in
 // `buildFromType`'s named-fallback and `buildFromStruct`'s pre-
 // pass. Consumes only `swagger:type` (the explicit type-override
-// annotation). On match attempts SwaggerSchemaForType and
-// reports back via the (handled, fallthrough) tuple:
+// annotation). It is the single resolution point for `swagger:type` on a
+// named type: it routes the argument through resolveTypeOverride (always
+// inlining — keyword scalars / Go builtins / `[]T` / `inline` / `array` /
+// type-name refs), and applies a co-present `swagger:strfmt` as a
+// supplementary format only when compatible with the resolved type (F3 —
+// see .claude/plans/quirks-F-series-fix.md). ownType is the named Go type
+// (consumed by the `inline`/`array` keywords); pos drives diagnostics.
 //
-//   - handled=true,  fallthrough=false → caller returns nil
+// Reports back via the (handled, fallthrough) tuple:
+//
 //   - handled=false, fallthrough=false → no swagger:type present
-//   - handled=true,  fallthrough=true  → unrecognised type-ref
-//     value (caller should resolve via the underlying type)
-func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable) (handled, fallthroughUnderlying bool) {
+//   - handled=true,  fallthrough=false → resolved (caller returns nil)
+//   - handled=true,  fallthrough=true  → unresolved value (file / unknown;
+//     a diagnostic was recorded — caller falls through to the underlying type)
+func (s *Builder) classifierNamedTypeOverride(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, ownType types.Type, pos token.Position) (handled, fallthroughUnderlying bool) {
 	name, ok := s.findAnnotationArg(cg, grammar.AnnType)
 	if !ok {
 		return false, false
 	}
-	if err := resolvers.SwaggerSchemaForType(name, tgt); err == nil {
+	if s.resolveTypeOverride(name, tgt, ownType, pos) {
+		if sf, hasStrfmt := s.findAnnotationArg(cg, grammar.AnnStrfmt); hasStrfmt {
+			s.applyStrfmtFormat(tgt.Schema(), sf, pos)
+		}
 		return true, false
 	}
-	// Unsupported swagger:type value (e.g. "array") — caller falls
-	// through to the underlying type so the full schema (including
-	// items for slices) is properly built.
 	return true, true
+}
+
+// enumName resolves the enum type name for a swagger:enum annotation: the
+// explicit `swagger:enum <Name>` argument, or — for the BARE `swagger:enum`
+// form on a type declaration — the declared type's own name (F4b, the name is
+// redundant on a type decl). Returns ("", false) when no swagger:enum is
+// present, or when the bare form has no declared type to infer from.
+func (s *Builder) enumName(cg *ast.CommentGroup, declTypeName string) (string, bool) {
+	if name, ok := s.findAnnotationArg(cg, grammar.AnnEnum); ok {
+		return name, true
+	}
+	if declTypeName != "" && s.findAnnotation(cg, grammar.AnnEnum) != nil {
+		return declTypeName, true
+	}
+	return "", false
 }
 
 // classifierNamedBasic is the named-type walker for
 // `buildNamedBasic`. Consumes a cascade of classifier
 // annotations in source-priority order:
 //
-//	swagger:strfmt → swagger:enum → swagger:default →
-//	swagger:type   → swagger:alias
+//	swagger:strfmt → swagger:enum → swagger:default → swagger:type
 //
-// The final arm is the "primitive-inline" branch: it fires when
-// either (a) the builder is in SimpleSchema mode (the M1 contract
-// for non-body parameters and response headers — `$ref` forbidden by
-// OAS v2 so the underlying primitive ships inline) or (b) the user
-// has explicitly opted in via `swagger:alias` on the decl. These two
-// triggers are intentionally orthogonal — the SimpleSchema flag is
-// caller-driven and covers query/path/header/formData uniformly,
-// while `swagger:alias` is a per-type author override that bypasses
-// the model-ref pipeline regardless of mode.
+// The final arm is the "primitive-inline" branch, which now fires only
+// in SimpleSchema mode (the M1 contract for non-body parameters and
+// response headers — `$ref` forbidden by OAS v2 so the underlying
+// primitive ships inline). `swagger:alias` USED to be a second trigger
+// here (a per-type force-inline override); it is deprecated (F8) and no
+// longer affects output — its presence only emits a deprecation
+// diagnostic.
 //
 // Returns:
 //   - handled=true  → caller returns nil (target written, terminal)
 //   - handled=false → no classifier matched; caller continues to
 //     FindModel / SwaggerSchemaForType fallback
-func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable) (resolved bool) {
+//
+// recordEnumOrigins anchors each enum value to its const source position, but
+// only when this is the canonical definition node (s.path set; cleared in field
+// context, where the enum is a $ref to that definition instead). No-op when no
+// provenance sink is wired. Cross-ref linkage only.
+func (s *Builder) recordEnumOrigins(enumPos []token.Pos) {
+	if s.path == "" || !s.Ctx.OriginEnabled() {
+		return
+	}
+	for i, pos := range enumPos {
+		s.Ctx.RecordOrigin(s.path+scanner.JSONPointer("enum", strconv.Itoa(i)), s.Ctx.PosOf(pos))
+	}
+}
+
+func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable, declTypeName string) (resolved bool) {
 	if name, ok := s.findAnnotationArg(cg, grammar.AnnStrfmt); ok {
 		tgt.Typed("string", name)
 		return true
 	}
 
-	if enumName, ok := s.findAnnotationArg(cg, grammar.AnnEnum); ok {
-		enumValues, enumDesces, _ := s.Ctx.FindEnumValues(pkg, enumName)
+	if enumName, ok := s.enumName(cg, declTypeName); ok {
+		enumValues, enumDesces, enumPos, _ := s.Ctx.FindEnumValues(pkg, enumName)
 		if len(enumValues) > 0 {
 			tgt.WithEnum(enumValues...)
 			enumTypeName := reflect.TypeOf(enumValues[0]).String()
@@ -134,6 +170,7 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 			if len(enumDesces) > 0 {
 				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
 			}
+			s.recordEnumOrigins(enumPos)
 			return true
 		}
 		// swagger:enum with no matching const values. Fall through so
@@ -153,7 +190,21 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 		return true
 	}
 
-	if s.simpleSchema || s.findAnnotation(cg, grammar.AnnAlias) != nil {
+	// swagger:alias is DEPRECATED (F8): it is now an empty sink. It used to
+	// force a named primitive to inline ({type:string}) instead of the $ref
+	// a swagger:model primitive gets; that special behaviour is removed —
+	// the type now follows default handling. Emit a deprecation diagnostic
+	// and fall through. (Detection lives here because this is the only site
+	// that ever consulted swagger:alias; on non-primitive types it was
+	// already inert.)
+	if alias := s.findAnnotation(cg, grammar.AnnAlias); alias != nil {
+		s.RecordDiagnostic(grammar.Warnf(alias.Pos(), grammar.CodeDeprecated,
+			`swagger:alias is deprecated and no longer affects output; use "swagger:type inline" to inline a type, or swagger:model for a first-class definition`))
+	}
+
+	// SimpleSchema mode (non-body params / response headers) still inlines
+	// the underlying primitive — $ref is forbidden there by OAS v2.
+	if s.simpleSchema {
 		if err := resolvers.SwaggerSchemaForType(utitpe.Name(), tgt); err == nil {
 			return true
 		}
@@ -259,6 +310,7 @@ func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
 	if afld == nil {
 		return fd
 	}
+	var nameKeyword string
 	for _, b := range s.ParseBlocks(afld.Doc) {
 		switch b.AnnotationKind() { //nolint:exhaustive // field-level walker only consumes these five kinds
 		case grammar.AnnIgnore:
@@ -281,6 +333,21 @@ func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
 				fd.AllOfClass = name
 			}
 		}
+		// The `name:` keyword is the canonical field-naming keyword,
+		// honoured uniformly across schema / param / header (doc-quirk
+		// G2). On a model property or interface method it renames the
+		// emitted JSON name just as it already does on a parameter /
+		// header field. It takes precedence over the legacy swagger:name
+		// annotation when both are present, so capture it across all
+		// blocks and apply it last.
+		if v, ok := b.GetString(grammar.KwName); ok {
+			if v = strings.TrimSpace(v); v != "" {
+				nameKeyword = v
+			}
+		}
+	}
+	if nameKeyword != "" {
+		fd.JSONName = nameKeyword
 	}
 	return fd
 }

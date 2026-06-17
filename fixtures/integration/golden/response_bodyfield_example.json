@@ -1,0 +1,53 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/array": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "getArrayBody",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ArrayBodyResp"
+          }
+        }
+      }
+    },
+    "/scalar": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "getScalarBody",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ScalarBodyResp"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "ArrayBodyResp": {
+      "description": "ArrayBodyResp has an array Body field with an example.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "example": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    "ScalarBodyResp": {
+      "description": "ScalarBodyResp has a scalar Body field with an example.",
+      "schema": {
+        "type": "string",
+        "example": "hello"
+      }
+    }
+  }
+}

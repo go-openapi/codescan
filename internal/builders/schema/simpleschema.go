@@ -65,6 +65,11 @@ func (s *Builder) validateSimpleSchemaOutcome() {
 		s.paramIn, reason,
 	))
 	probe.ResetForViolation()
+	if refViolation {
+		// MakeRef discovered the now-dissolved target's decl; drop it so
+		// it doesn't linger as an orphan definition (go-swagger#1088).
+		s.ResetPostDeclarations()
+	}
 }
 
 // isAllowedSimpleSchemaType reports whether t is a SimpleSchema-legal

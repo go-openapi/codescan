@@ -10,6 +10,7 @@ package common
 
 import (
 	"go/ast"
+	"go/token"
 	"log/slog"
 
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -93,9 +94,28 @@ func (s *Builder) Diagnostics() []grammar.Diagnostic {
 // warnings flow through the same accumulator as builder-level ones.
 func (s *Builder) RecordDiagnostic(d grammar.Diagnostic) {
 	s.diagnostics = append(s.diagnostics, d)
-	if cb := s.Ctx.OnDiagnostic(); cb != nil {
-		cb(d)
+	s.Ctx.EmitDiagnostic(d)
+}
+
+// WarnStrippedPathRegex records a warning that one or more inline
+// regex path-parameter constraints (`{id:[0-9]+}`) were stripped to the
+// bare `{id}` template form. OpenAPI 2.0 path templating follows
+// RFC 6570 URI Template Level-1 expansion (simple `{name}`
+// substitution) only — it cannot express regex/operator constraints —
+// so the route is still emitted, with the constraint dropped. No-op
+// when params is empty. Shared by the routes and operations builders.
+func (s *Builder) WarnStrippedPathRegex(pos token.Pos, params []string) {
+	if len(params) == 0 {
+		return
 	}
+	s.RecordDiagnostic(grammar.Warnf(
+		s.Ctx.PosOf(pos),
+		grammar.CodeInvalidAnnotation,
+		"inline regex constraint on path parameter(s) %v is unsupported: OpenAPI 2.0 path "+
+			"templating follows RFC 6570 URI Template Level-1 expansion (bare {name}) only; "+
+			"the constraint was stripped",
+		params,
+	))
 }
 
 // ParseBlocks returns the cached grammar.Block slice for cg (one
@@ -112,13 +132,15 @@ func (s *Builder) RecordDiagnostic(d grammar.Diagnostic) {
 // why ParseAll is preferred over Parse, and the per-Builder
 // (single-goroutine) lifetime that obviates synchronisation.
 func (s *Builder) ParseBlocks(cg *ast.CommentGroup) []grammar.Block {
+	parser := grammar.NewParser(s.Ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(s.Ctx.SingleLineCommentAsDescription()))
 	if cg == nil {
-		return grammar.NewParser(s.Ctx.FileSet()).ParseAll(nil)
+		return parser.ParseAll(nil)
 	}
 
 	bs, ok := s.blockCache[cg]
 	if !ok {
-		bs = grammar.NewParser(s.Ctx.FileSet()).ParseAll(cg)
+		bs = parser.ParseAll(cg)
 		s.blockCache[cg] = bs
 	}
 
@@ -159,6 +181,25 @@ func (s *Builder) AppendPostDecl(decl *scanner.EntityDecl) {
 	s.postDecls = append(s.postDecls, decl)
 }
 
+// ResetPostDeclarations drops every decl this Builder enqueued during
+// the current Build pass. Used by the SimpleSchema catch-at-exit
+// validator: when a non-body parameter / response-header element
+// dissolves an illegal $ref, the decl that MakeRef discovered for that
+// ref is a byproduct of the now-removed reference and would otherwise
+// linger as an orphan definition (go-swagger#1088). A single-type Build
+// renders exactly one target, so every queued decl is reachable only
+// through it; clearing the whole queue is correct. A decl genuinely
+// referenced elsewhere is re-discovered by that other site's Builder
+// and deduplicated by the orchestrator.
+//
+// # Details
+//
+// See [§postdecls](./README.md#postdecls).
+func (s *Builder) ResetPostDeclarations() {
+	s.postDecls = nil
+	s.postDeclSet = nil
+}
+
 // MakeRef writes a `$ref: "#/definitions/<name>"` onto prop and
 // registers decl with the discovery loop via AppendPostDecl. The name
 // comes from decl.Names() (the first entry — top-level decls in this
@@ -171,8 +212,11 @@ func (s *Builder) AppendPostDecl(decl *scanner.EntityDecl) {
 // the common base and what kinds of cross-cutting refinements that
 // shape enables.
 func (s *Builder) MakeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) error {
-	nm, _ := decl.Names()
-	ref, err := oaispec.NewRef("#/definitions/" + nm)
+	// Emit the fully-qualified identity key (pkgpath/name), not the bare
+	// short name: this keeps distinct Go types from colliding before the
+	// spec.Builder's reduce stage shortens names back. See
+	// .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+	ref, err := oaispec.NewRef("#/definitions/" + decl.DefKey())
 	if err != nil {
 		return err
 	}

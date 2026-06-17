@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/bar/{id}": {
+      "get": {
+        "tags": [
+          "bar"
+        ],
+        "summary": "Get a bar.",
+        "operationId": "getBarByID",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/foo/{id}": {
+      "get": {
+        "tags": [
+          "foo"
+        ],
+        "summary": "Get a foo.",
+        "operationId": "getFooByID",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

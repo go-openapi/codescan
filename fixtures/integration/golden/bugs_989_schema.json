@@ -1,0 +1,65 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/admins": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List all the admins.",
+        "operationId": "listAdmins",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "List all the users.",
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/listResponse"
+          },
+          "401": {
+            "$ref": "#/responses/errResponse"
+          },
+          "403": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "errResponse": {
+      "description": "ErrResponse is the error response.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    },
+    "listResponse": {
+      "description": "ListResponse is the list response.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

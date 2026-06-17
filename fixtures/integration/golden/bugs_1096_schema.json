@@ -1,0 +1,34 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/orders": {
+      "post": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Creates an order.",
+        "operationId": "createOrder",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/order"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "order": {
+      "description": "Order is used to foobar.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Name of the order",
+            "type": "string",
+            "x-go-name": "Name"
+          }
+        }
+      }
+    }
+  }
+}

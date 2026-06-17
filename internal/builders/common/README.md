@@ -19,6 +19,7 @@ post-decl queue, and the slog logger.
 - [§makeref](#makeref) — why `MakeRef` lives on the common base
 - [§diagnostics](#diagnostics) — accumulator ordering, dedup posture, LSP-evolution caveat
 - [§postdecls](#postdecls) — per-Builder dedup index + cross-Builder re-dedup in the orchestrator
+- [§embed-inheritance](#embed-inheritance) — annotations on an embed flow to promoted members
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -70,21 +71,29 @@ emitting `$ref` to an unexported name — are one-place edits.
 ## <a id="diagnostics"></a>§diagnostics — accumulator + LSP-evolution caveat
 
 `Diagnostics()` returns every accumulated `grammar.Diagnostic` in
-source order. **No deduplication is applied.** Two consumers may see
-the same diagnostic via the `OnDiagnostic` callback AND via the
-returned slice — that's intentional under the current contract.
+source order, **raw — no deduplication.** The build re-processes the
+same field/annotation across passes (most visibly a `swagger:parameters`
+struct applied to several operation ids, which rebuilds every field once
+per id), so the slice can carry the identical diagnostic more than once.
+
+The **`OnDiagnostic` callback stream is deduped**, however:
+`ScanCtx.EmitDiagnostic` suppresses exact duplicates — same position,
+code and message — for the lifetime of one scan, so a consumer that only
+listens on the callback (the TUI, an LSP server) sees each distinct
+diagnostic once. This is the "structural deduplication" the caveat below
+anticipated; it lives at the single delivery boundary so the raw
+accumulator stays available for callers that want every occurrence.
 
 The diagnostic surface is **experimental** and expected to evolve
-once the LSP integration matures. Likely changes when that lands:
-typed severity classes, structural deduplication, per-position
-provenance. The shape is conservative today (slice of
-`grammar.Diagnostic` + a callback hook) precisely so it can be
-widened without breaking callers.
+further once the LSP integration matures. Likely remaining changes:
+typed severity classes and per-position provenance. The shape is
+conservative today (slice of `grammar.Diagnostic` + a callback hook)
+precisely so it can be widened without breaking callers.
 
-`RecordDiagnostic` appends to the slice and fires
-`Ctx.OnDiagnostic()` when wired. Walkers' `Diagnostic` callback
-points at this method so grammar-level warnings flow into the same
-accumulator.
+`RecordDiagnostic` appends to the slice and delivers through
+`Ctx.EmitDiagnostic` (the deduped boundary) when a sink is wired.
+Walkers' `Diagnostic` callback points at this method so grammar-level
+warnings flow into the same accumulator.
 
 ## <a id="postdecls"></a>§postdecls — dedup index + orchestrator re-dedup
 
@@ -102,6 +111,42 @@ register it.
 
 Nil and Ident-less decls are silently ignored — defensive against
 the scanner emitting partial decls during error recovery.
+
+`ResetPostDeclarations()` drops the whole queue for a Build pass. Its
+one caller is the schema builder's SimpleSchema catch-at-exit validator
+(go-swagger#1088): when a non-body parameter / response-header element
+dissolves an illegal `$ref`, the decl `MakeRef` discovered for that ref
+is a byproduct of the now-removed reference and must not linger as an
+orphan definition. A single-type Build renders exactly one target, so
+every queued decl is reachable only through it; clearing the whole queue
+is correct, and a decl genuinely referenced elsewhere is re-discovered
+by that other site's Builder and deduplicated here and in the
+orchestrator.
+
+## <a id="embed-inheritance"></a>§embed-inheritance — annotations on an embed flow to promoted members
+
+`EmbedInheritance` + `ReadEmbedInheritance` are the shared kernel of the
+rule "a doc-comment directive on an embedded (anonymous) struct field
+applies to the members that embed promotes" (go-swagger#2701). All three
+field-walking builders embed `*common.Builder` and use it so the
+behaviour is identical:
+
+- **parameters** consume `In` and `Required` (an `in: path` / `required:`
+  on the embed flows to the promoted parameters);
+- **schema** consumes `Required` (a `required:` on the embed adds the
+  promoted properties to the enclosing object's required list); it has no
+  `in:` concept;
+- **responses** consume `In` (the body/header routing discriminator);
+  OAS2 response headers carry no `required`.
+
+Each builder keeps its own struct walk (the output objects differ —
+`Parameter` vs `Header` vs schema property), threading the context with
+save/restore around its embed recursion: the embed's own directive wins
+over the inherited one, an absent directive carries the parent's through
+(so nesting accumulates), and a promoted member's own directive always
+wins over the inherited fallback. `ScanInLocation` (the `in:` line scan,
+shared with the parameters/responses field-signal scanners) and
+`grammar.NormalizeIn` back the `In` half.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 

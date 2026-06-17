@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/orders/{id}": {
+      "delete": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Delete an order.",
+        "operationId": "deleteOrder",
+        "responses": {
+          "204": {
+            "$ref": "#/responses/noContentResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "noContentResponse": {
+      "description": "noContentResponse has NO description comment — the #1852 trigger. The legacy\nengine omitted the OAS2-required `description` key entirely (editor.swagger.io\nreported \"missingProperty: description\"); codescan now always emits it."
+    }
+  }
+}

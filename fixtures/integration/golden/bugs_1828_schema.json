@@ -1,0 +1,19 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/cats": {
+      "delete": {
+        "tags": [
+          "cats"
+        ],
+        "summary": "Delete cat.",
+        "operationId": "deleteCats",
+        "responses": {
+          "200": {
+            "description": "Message Success"
+          }
+        }
+      }
+    }
+  }
+}

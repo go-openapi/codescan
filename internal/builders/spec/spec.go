@@ -4,7 +4,13 @@
 package spec
 
 import (
+	"errors"
+	"fmt"
 	"go/ast"
+	"go/token"
+	"iter"
+	"sort"
+	"strconv"
 
 	"github.com/go-openapi/codescan/internal/builders/operations"
 	"github.com/go-openapi/codescan/internal/builders/parameters"
@@ -15,6 +21,12 @@ import (
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
+
+// ErrInternalPanic is the base error for a builder panic recovered while
+// processing a single declaration. Rather than surfacing a raw Go stack
+// trace, the scan names the offending source declaration (file:line) and
+// aborts with this error. See go-swagger/go-swagger#2886.
+var ErrInternalPanic = errors.New("internal panic during build")
 
 type Builder struct {
 	scanModels  bool
@@ -56,6 +68,11 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 }
 
 func (s *Builder) Build() (*oaispec.Swagger, error) {
+	// Resolve same-package duplicate swagger:model names up front so that
+	// every later DefKey() / MakeRef() observes a consistent, conflict-free
+	// key for each declaration (D-4). Must run before anything emits a ref.
+	s.resolveSamePackageDuplicates()
+
 	// this initial scan step is skipped if !scanModels.
 	// Discovered dependencies should however be resolved.
 	if err := s.buildModels(); err != nil {
@@ -87,11 +104,111 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 		return nil, err
 	}
 
+	// Cross-ref linkage: parameter anchors are resolved here, once paths,
+	// methods and final array indices are all known (see emitParameterAnchors).
+	// Param anchors live under /paths/.../parameters/{i}, independent of the
+	// definition-name reduction below.
+	s.emitParameterAnchors()
+
+	// Final stage: shorten the fully-qualified, collision-proof
+	// definition keys produced during discovery back to user-facing
+	// names and re-point every $ref. Runs last because buildRoutes /
+	// buildOperations also emit definition refs. See
+	// .claude/plans/name-identity-cyclic-ref.md §9/§12.
+	s.reduceDefinitionNames()
+
 	if s.input.Swagger == "" {
 		s.input.Swagger = "2.0"
 	}
 
 	return s.input, nil
+}
+
+// emitParameterAnchors fires the deferred /paths/{path}/{method}/parameters/{i}
+// anchors. Parameters are built before their operation is bound to a path and
+// before the parameter array order is final, so the parameters builder only
+// captured (opid → name → position) via ScanCtx.RecordParamOrigin; here the
+// absolute pointer is assembled from the finished paths tree. Finer parameter
+// sub-nodes resolve to the parameter (or the operation) anchor.
+func (s *Builder) emitParameterAnchors() {
+	if !s.ctx.OriginEnabled() || s.input.Paths == nil {
+		return
+	}
+
+	for path, item := range s.input.Paths.Paths {
+		for method, op := range operationsByMethod(&item) {
+			for i, prm := range op.Parameters {
+				pos, ok := s.ctx.ParamOrigin(op.ID, prm.Name)
+				if !ok {
+					continue
+				}
+				s.ctx.RecordOrigin(
+					scanner.JSONPointer("paths", path, method, "parameters", strconv.Itoa(i)),
+					pos,
+				)
+			}
+		}
+	}
+}
+
+// operationsByMethod yields each populated (lowercase method → operation) slot
+// of a path item, in a stable order. (Distinct from reduce.go's operationsOf,
+// which returns the bare operation pointers for ref rewriting; here the method
+// name is needed to build the /paths/{path}/{method}/... anchor pointer.)
+func operationsByMethod(item *oaispec.PathItem) iter.Seq2[string, *oaispec.Operation] {
+	return func(yield func(string, *oaispec.Operation) bool) {
+		slots := []struct {
+			method string
+			op     *oaispec.Operation
+		}{
+			{"get", item.Get},
+			{"put", item.Put},
+			{"post", item.Post},
+			{"delete", item.Delete},
+			{"options", item.Options},
+			{"head", item.Head},
+			{"patch", item.Patch},
+		}
+		for _, slot := range slots {
+			if slot.op == nil {
+				continue
+			}
+			if !yield(slot.method, slot.op) {
+				return
+			}
+		}
+	}
+}
+
+// guard runs a per-declaration build step under panic recovery. On panic it
+// emits a located scan.internal-panic diagnostic naming the offending source
+// (pos + what), then returns an aborting error wrapping ErrInternalPanic — so
+// a builder bug surfaces as a clean, located failure instead of a raw stack
+// trace (#2886). A non-panicking run is transparent. pos/what identify the
+// declaration being built; the spec.Builder build loops wrap each per-decl
+// step. Panics outside any decl loop are caught by the Run backstop.
+func (s *Builder) guard(pos token.Position, what string, run func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if cb := s.ctx.OnDiagnostic(); cb != nil {
+				cb(grammar.Errorf(pos, grammar.CodeInternalPanic,
+					"panic while building %s: %v", what, r))
+			}
+			err = fmt.Errorf("%w: %s: %s: %v", ErrInternalPanic, pos, what, r)
+		}
+	}()
+
+	return run()
+}
+
+// declLabel names an EntityDecl for a diagnostic — the fully-qualified Go
+// type when the package path is known, else the bare identifier.
+func declLabel(d *scanner.EntityDecl) string {
+	if d.Pkg != nil && d.Pkg.PkgPath != "" {
+		return d.Pkg.PkgPath + "." + d.Ident.Name
+	}
+
+	return d.Ident.Name
 }
 
 func (s *Builder) buildDiscovered() error {
@@ -106,19 +223,27 @@ func (s *Builder) buildDiscovered() error {
 		// existing schema's AllOf and producing doubled entries.
 		queued := make(map[string]struct{})
 		for _, d := range s.discovered {
-			nm, _ := d.Names()
-			if _, alreadyDone := s.definitions[nm]; alreadyDone {
+			// Dedup by the fully-qualified identity key (pkgpath/name),
+			// matching the definitions-map key written by the schema
+			// builder. A cycle / re-discovery of the SAME decl resolves
+			// to the same key and is skipped (reuse); two distinct decls
+			// that merely share a short name now get distinct keys and
+			// both build. See name-identity design §9.1/§12.1.
+			key := d.DefKey()
+			if _, alreadyDone := s.definitions[key]; alreadyDone {
 				continue
 			}
-			if _, dupInPass := queued[nm]; dupInPass {
+			if _, dupInPass := queued[key]; dupInPass {
 				continue
 			}
-			queued[nm] = struct{}{}
+			queued[key] = struct{}{}
 			queue = append(queue, d)
 		}
 		s.discovered = nil
 		for _, sd := range queue {
-			if err := s.buildDiscoveredSchema(sd); err != nil {
+			if err := s.guard(s.ctx.PosOf(sd.Ident.Pos()), declLabel(sd), func() error {
+				return s.buildDiscoveredSchema(sd)
+			}); err != nil {
 				return err
 			}
 		}
@@ -131,8 +256,25 @@ func (s *Builder) buildDiscovered() error {
 func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	sb := schema.NewBuilder(s.ctx, decl)
 	sb.SetDiscovered(s.discovered)
-	if err := sb.Build(schema.WithDefinitions(s.definitions)); err != nil {
+
+	// Cross-ref linkage: initiate the base pointer for this definition so the
+	// schema builder path-joins its members (properties, …) under it, and anchor
+	// the definition node itself to its type declaration.
+	var defPtr string
+	opts := []schema.Option{schema.WithDefinitions(s.definitions)}
+	if s.ctx.OriginEnabled() {
+		if name, _ := decl.Names(); name != "" {
+			defPtr = scanner.JSONPointer("definitions", name)
+			opts = append(opts, schema.WithPath(defPtr))
+		}
+	}
+
+	if err := sb.Build(opts...); err != nil {
 		return err
+	}
+
+	if defPtr != "" {
+		s.ctx.RecordOrigin(defPtr, s.ctx.PosOf(decl.Ident.Pos()))
 	}
 
 	s.discovered = append(s.discovered, sb.PostDeclarations()...)
@@ -141,21 +283,49 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 }
 
 func (s *Builder) buildMeta() error {
-	parser := grammar.NewParser(s.ctx.FileSet())
+	parser := grammar.NewParser(s.ctx.FileSet(),
+		grammar.WithSingleLineCommentAsDescription(s.ctx.SingleLineCommentAsDescription()))
 	for cg := range s.ctx.Meta() {
 		block := parser.Parse(cg)
 		if err := applyMetaBlock(s.input, block); err != nil {
 			return err
+		}
+
+		// Cross-ref linkage: anchor the info node to its swagger:meta block,
+		// then each meta keyword to its own line (the top-level fields —
+		// host/basePath/consumes/… — have no ancestor anchor otherwise, since
+		// /info is their sibling, not parent).
+		if s.ctx.OriginEnabled() {
+			s.ctx.RecordOrigin(scanner.JSONPointer("info"), s.ctx.PosOf(cg.Pos()))
+			s.recordMetaOrigins(block)
 		}
 	}
 
 	return nil
 }
 
+// recordMetaOrigins anchors each meta keyword in block to its source line. The
+// keyword→pointer knowledge lives in the grammar ([grammar.PointerPath]); meta
+// pointers are absolute (Info.* under /info, the rest at the document root), so
+// there is no base to prepend.
+func (s *Builder) recordMetaOrigins(block grammar.Block) {
+	for p := range block.Properties() {
+		if p.ItemsDepth != 0 {
+			continue
+		}
+		if segs, ok := grammar.PointerPath(p.Keyword, grammar.CtxMeta); ok {
+			s.ctx.RecordOrigin(scanner.JSONPointer(segs...), p.Pos)
+		}
+	}
+}
+
 func (s *Builder) buildOperations() error {
 	for pp := range s.ctx.Operations() {
-		ob := operations.NewBuilder(s.ctx, pp, s.operations)
-		if err := ob.Build(s.input.Paths); err != nil {
+		if err := s.guard(s.ctx.PosOf(pp.Pos), "operation "+pp.Method+" "+pp.Path, func() error {
+			ob := operations.NewBuilder(s.ctx, pp, s.operations)
+
+			return ob.Build(s.input.Paths)
+		}); err != nil {
 			return err
 		}
 	}
@@ -166,16 +336,19 @@ func (s *Builder) buildOperations() error {
 func (s *Builder) buildRoutes() error {
 	// build paths dictionary
 	for pp := range s.ctx.Routes() {
-		rb := routes.NewBuilder(
-			s.ctx,
-			pp,
-			routes.Inputs{
-				Responses:   s.responses,
-				Operations:  s.operations,
-				Definitions: s.definitions,
-			},
-		)
-		if err := rb.Build(s.input.Paths); err != nil {
+		if err := s.guard(s.ctx.PosOf(pp.Pos), "route "+pp.Method+" "+pp.Path, func() error {
+			rb := routes.NewBuilder(
+				s.ctx,
+				pp,
+				routes.Inputs{
+					Responses:   s.responses,
+					Operations:  s.operations,
+					Definitions: s.definitions,
+				},
+			)
+
+			return rb.Build(s.input.Paths)
+		}); err != nil {
 			return err
 		}
 	}
@@ -186,11 +359,25 @@ func (s *Builder) buildRoutes() error {
 func (s *Builder) buildResponses() error {
 	// build responses dictionary
 	for decl := range s.ctx.Responses() {
-		rb := responses.NewBuilder(s.ctx, decl)
-		if err := rb.Build(s.responses); err != nil {
+		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+			rb := responses.NewBuilder(s.ctx, decl)
+			if err := rb.Build(s.responses); err != nil {
+				return err
+			}
+			s.discovered = append(s.discovered, rb.PostDeclarations()...)
+
+			// Cross-ref linkage: anchor the top-level response node to its
+			// swagger:response declaration; headers/body resolve to it.
+			if s.ctx.OriginEnabled() {
+				if name, _ := decl.ResponseNames(); name != "" {
+					s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
+				}
+			}
+
+			return nil
+		}); err != nil {
 			return err
 		}
-		s.discovered = append(s.discovered, rb.PostDeclarations()...)
 	}
 
 	return nil
@@ -199,14 +386,63 @@ func (s *Builder) buildResponses() error {
 func (s *Builder) buildParameters() error {
 	// build parameters dictionary
 	for decl := range s.ctx.Parameters() {
-		pb := parameters.NewBuilder(s.ctx, decl)
-		if err := pb.Build(s.operations); err != nil {
+		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+			pb := parameters.NewBuilder(s.ctx, decl)
+			if err := pb.Build(s.operations); err != nil {
+				return err
+			}
+			s.discovered = append(s.discovered, pb.PostDeclarations()...)
+
+			return nil
+		}); err != nil {
 			return err
 		}
-		s.discovered = append(s.discovered, pb.PostDeclarations()...)
 	}
 
 	return nil
+}
+
+// resolveSamePackageDuplicates detects two distinct annotated models in
+// the SAME package that claim the same definition name — necessarily via
+// a `swagger:model <name>` override, since Go type names are unique per
+// package. The first (in a deterministic order) keeps the name; later
+// ones have their override suppressed (reverting to the Go type name) and
+// get a diagnostic. This is the build-side half of D-4; cross-package
+// same-name collisions are handled later by the reduce stage. See
+// .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+func (s *Builder) resolveSamePackageDuplicates() {
+	models := make([]*scanner.EntityDecl, 0)
+	for _, d := range s.ctx.Models() {
+		models = append(models, d)
+	}
+	// Deterministic order so "first wins" is stable across runs: by key,
+	// then by Go name within a colliding group.
+	sort.Slice(models, func(i, j int) bool {
+		ki, kj := models[i].DefKey(), models[j].DefKey()
+		if ki != kj {
+			return ki < kj
+		}
+		return models[i].Ident.Name < models[j].Ident.Name
+	})
+
+	seen := make(map[string]*scanner.EntityDecl, len(models))
+	for _, d := range models {
+		key := d.DefKey()
+		if first, dup := seen[key]; dup && first.Ident != d.Ident {
+			d.SuppressModelOverride()
+			if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+				_, goName := d.Names()
+				onDiag(grammar.Warnf(
+					s.ctx.PosOf(d.Spec.Pos()),
+					grammar.CodeDuplicateModelName,
+					"duplicate swagger:model name %q in package %q (already used by type %q); using Go name %q instead",
+					leafName(key), d.Obj().Pkg().Path(), first.Ident.Name, goName,
+				))
+			}
+			continue
+		}
+		seen[key] = d
+	}
 }
 
 func (s *Builder) buildModels() error {
@@ -216,7 +452,9 @@ func (s *Builder) buildModels() error {
 	}
 
 	for _, decl := range s.ctx.Models() {
-		if err := s.buildDiscoveredSchema(decl); err != nil {
+		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+			return s.buildDiscoveredSchema(decl)
+		}); err != nil {
 			return err
 		}
 	}

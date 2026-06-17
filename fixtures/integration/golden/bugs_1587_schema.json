@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "JSONWebKeySet": {
+      "type": "object",
+      "title": "JSONWebKeySet is the referenced type.",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Keys"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1587/josev2"
+    },
+    "oAuth2Client": {
+      "description": "Client references a type from a package whose import-path tail (josev2)\ndiffers from its package name (jose). The legacy scanner failed with\n\"no import found for jose\".",
+      "type": "object",
+      "properties": {
+        "jwks": {
+          "$ref": "#/definitions/JSONWebKeySet"
+        }
+      },
+      "x-go-name": "Client",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1587"
+    }
+  }
+}

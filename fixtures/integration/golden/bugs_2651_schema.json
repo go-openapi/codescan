@@ -1,0 +1,46 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/v1/users/{id}": {
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Updates user",
+        "operationId": "userUpdate",
+        "parameters": [
+          {
+            "type": "integer",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/UpdateUser"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "UpdateUser": {
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "x-go-name": "FirstName"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2651"
+    }
+  }
+}

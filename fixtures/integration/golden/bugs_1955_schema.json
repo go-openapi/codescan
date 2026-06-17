@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/cross": {
+      "get": {
+        "summary": "Cross-package operation.",
+        "operationId": "crossOp",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Q",
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

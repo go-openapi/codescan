@@ -1,0 +1,21 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Holder": {
+      "type": "object",
+      "title": "Holder uses the custom-marshaled type as a field.",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/String"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2520"
+    },
+    "String": {
+      "type": "object",
+      "title": "String is a custom-marshaled wrapper with only an unexported field (#2520).",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2520"
+    }
+  }
+}

@@ -12,6 +12,7 @@ import (
 	"github.com/go-openapi/swag/mangling"
 
 	"github.com/go-openapi/codescan/internal/builders/common"
+	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
@@ -34,10 +35,19 @@ type Builder struct {
 	discovered     []*scanner.EntityDecl
 	methodMangler  mangling.NameMangler // see [§method-mangler](./README.md#method-mangler).
 	skipExtensions bool
+	emitXGoType    bool // stamp x-go-type on definitions; see [§traceability](./README.md#traceability).
 
 	// Embed-recursion depth for ambiguous-embed diagnostics;
 	// see [§embed-depth](./README.md#embed-depth).
 	embedDepth int
+
+	// embedInherited carries a `required:` annotation on an embedded field
+	// down to the properties it promotes (go-swagger#2701). Set with
+	// save/restore around the embed recursion in scanEmbeddedFields. The
+	// mechanism is shared with the parameters and responses builders via
+	// common.EmbedInheritance; the schema builder consumes only Required
+	// (it has no `in:` location concept).
+	embedInherited common.EmbedInheritance
 }
 
 // NewBuilder constructs an initialized [Builder].
@@ -46,6 +56,7 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 		Builder:        common.New(ctx, decl),
 		methodMangler:  mangling.NewNameMangler(),
 		skipExtensions: ctx.SkipExtensions(),
+		emitXGoType:    ctx.EmitXGoType(),
 	}
 }
 
@@ -63,13 +74,36 @@ func (s *Builder) Build(opts ...Option) error {
 		// top-level declarations
 		s.inferNames()
 
-		schema := s.definitions[s.Name] // if not named, empty schema
+		// Key the definitions map by the fully-qualified identity key
+		// (pkgpath/name), not the bare s.Name: distinct Go types that
+		// share a short name must not collide here. s.Name stays the
+		// leaf so annotateSchema's x-go-name / x-go-package emission is
+		// unchanged. The reduce stage shortens keys back afterwards.
+		// See .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+		defKey := s.Decl.DefKey()
+
+		schema := s.definitions[defKey] // if not named, empty schema
 		err := s.buildFromDecl(&schema)
 		if err != nil {
 			return err
 		}
 
-		s.definitions[s.Name] = schema
+		// Decl-level `swagger:additionalProperties` rides on top of the
+		// type-derived schema (lowest priority; object-only). Applied after the
+		// Go type is resolved so it can complement a struct, override a map's
+		// element schema, or warn-and-drop on a non-object. See
+		// classifierAdditionalProperties.
+		s.classifierAdditionalProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+		s.classifierPatternProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+
+		// The decl-comment block is dispatched before the Go type is
+		// resolved onto the schema (see buildFromDecl), so the inline
+		// checkShape ran against an empty type. Re-gate now that the
+		// type is known: strip validations illegal for the resolved
+		// type and warn. See [§decl-shape-recheck](./README.md#decl-shape-recheck).
+		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
+
+		s.definitions[defKey] = schema
 
 		return nil
 	}
@@ -113,7 +147,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 	// Decl-site swagger:type override wins over type-driven default.
 	// See [§user-overrides](./README.md#user-overrides) for the
 	// (handled, recurse) contract and the Underlying() fallback rationale.
-	if handled, recurse := s.classifierNamedTypeOverride(s.Decl.Comments, ps); handled {
+	if handled, recurse := s.classifierNamedTypeOverride(s.Decl.Comments, ps, s.Decl.ObjType(), s.Ctx.PosOf(s.Decl.Ident.Pos())); handled {
 		if !recurse {
 			return nil
 		}
@@ -126,6 +160,26 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 	case *types.Named:
 		if s.guardDecl(tpe) {
 			return nil
+		}
+		// F1/F4: a swagger:model type carrying a swagger:strfmt or
+		// swagger:enum override publishes the FULL override schema on its
+		// own definition, not the bare-underlying orphan
+		// ({type:string} with the format dropped / no enum values). The
+		// override classifiers — the same ones the field site uses —
+		// inline that schema onto the definition target here; field sites
+		// then $ref the definition (see buildNamedType's swagger:model
+		// gate). swagger:type is already applied above (decl-site
+		// classifierNamedTypeOverride).
+		defTgt := NewTypable(schema, 0, s.skipExtensions)
+		switch ut := tpe.Underlying().(type) {
+		case *types.Struct:
+			if s.classifierNamedStructStrfmt(s.Decl.Comments, defTgt) {
+				return nil
+			}
+		case *types.Basic:
+			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, ut, defTgt, tpe.Obj().Name()) {
+				return nil
+			}
 		}
 		ti := s.Decl.Pkg.TypesInfo.Types[s.Decl.Spec.Type]
 		resolvers.MustBeAType(ti) // invariant
@@ -295,8 +349,10 @@ func (s *Builder) buildFromType(tpe types.Type, target ifaces.SwaggerTypable) er
 	case *types.Interface:
 		return s.buildFromInterface(s.Decl, titpe, target.Schema(), make(map[string]propOwner))
 	case *types.Slice:
+		defer s.descend("items")()
 		return s.buildFromType(titpe.Elem(), target.Items())
 	case *types.Array:
+		defer s.descend("items")()
 		return s.buildFromType(titpe.Elem(), target.Items())
 	case *types.Map:
 		return s.buildFromMap(titpe, target)
@@ -377,15 +433,29 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	}
 
 	var cmt *ast.CommentGroup
+	var isModel bool
 	if decl, ok := s.Ctx.DeclForType(titpe); ok && decl != nil {
 		cmt = decl.Comments
+		isModel = decl.HasModelAnnotation()
 	}
 
-	if handled, recurse := s.classifierNamedTypeOverride(cmt, target); handled {
-		if recurse {
-			return s.buildFromType(titpe.Underlying(), target)
+	// refModel: reference this type by $ref instead of inlining the override.
+	// A swagger:model type carrying an override (strfmt/type/enum) publishes
+	// its override schema on its OWN definition (applied at buildFromDecl) and
+	// is referenced here by $ref — the inline override classifiers below are
+	// skipped (F1/F2/F4). BUT only in full-schema mode: under SimpleSchema
+	// (non-body params / response headers) a $ref is illegal in OAS v2, so the
+	// override must still inline even for a swagger:model type. Without
+	// swagger:model an override type inlines everywhere, as before.
+	refModel := isModel && !s.simpleSchema
+
+	if !refModel {
+		if handled, recurse := s.classifierNamedTypeOverride(cmt, target, titpe, s.Ctx.PosOf(tio.Pos())); handled {
+			if recurse {
+				return s.buildFromType(titpe.Underlying(), target)
+			}
+			return nil
 		}
-		return nil
 	}
 
 	// Dissolve when there's no source-level TypeSpec to $ref:
@@ -400,7 +470,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	// Underlying-shape table. See [§dispatch-table](./README.md#dispatch-table).
 	switch utitpe := titpe.Underlying().(type) {
 	case *types.Struct:
-		if s.classifierNamedStructStrfmt(cmt, target) {
+		if !refModel && s.classifierNamedStructStrfmt(cmt, target) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, nil)
@@ -413,7 +483,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 			s.Warn("skipped unsupported builtin", slog.Any("type", tio))
 			return nil
 		}
-		if s.classifierNamedBasic(cmt, pkg, utitpe, target) {
+		if !refModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, func() error {
@@ -421,9 +491,9 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		})
 
 	case *types.Array:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false, refModel)
 	case *types.Slice:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true, refModel)
 
 	case *types.Map:
 		return s.resolveRefOr(tio, target, nil)
@@ -436,39 +506,67 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 
 // buildNamedArrayLike is the unified Array/Slice arm.
 // forSlice toggles the slice-only "bsonobjectid" special case in classifierNamedArrayLike.
-func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, forSlice bool) error {
-	if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, forSlice); handled {
-		if recurse {
-			return s.buildFromType(elem, tgt.Items())
+// isModel skips the inline override classifier so a swagger:model array/slice
+// type is referenced by $ref (its override schema lives on its own definition).
+func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, forSlice, isModel bool) error {
+	if !isModel {
+		if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, forSlice); handled {
+			if recurse {
+				defer s.descend("items")()
+				return s.buildFromType(elem, tgt.Items())
+			}
+			return nil
 		}
-		return nil
 	}
 
 	return s.resolveRefOr(tio, tgt, func() error {
+		defer s.descend("items")()
 		return s.buildFromType(elem, tgt.Items())
 	})
 }
 
 // buildFromMap renders a Go map as a Swagger object with additionalProperties.
-// Maps whose key type is neither string nor TextMarshaler are skipped — Swagger object keys are strings.
+//
+// A map is representable as {type: object, additionalProperties: V} only when
+// its key marshals to a JSON string — string kinds, integer/uint kinds, or an
+// encoding.TextMarshaler key (resolvers.IsJSONMapKey, mirroring encoding/json).
+// A key that json.Marshal itself rejects (float, bool, struct without
+// TextMarshaler, interface, …) is not silently dropped to a typeless property:
+// it raises a warning and emits no additionalProperties (go-swagger#2251, §18).
 func (s *Builder) buildFromMap(titpe *types.Map, tgt ifaces.SwaggerTypable) error {
 	sch := tgt.Schema()
 	if sch == nil {
 		return fmt.Errorf("items doesn't support maps: %w", ErrSchema)
 	}
 
-	eleProp := NewTypable(sch, tgt.Level(), s.skipExtensions)
 	key := titpe.Key()
-	if key.Underlying().String() == "string" || resolvers.IsTextMarshaler(key) {
-		return s.buildFromType(titpe.Elem(), eleProp.AdditionalProperties())
+	if !resolvers.IsJSONMapKey(key) {
+		s.RecordDiagnostic(grammar.Warnf(
+			s.Ctx.PosOf(s.Decl.Spec.Pos()),
+			grammar.CodeUnsupportedType,
+			"map key type %s does not marshal to a JSON object key "+
+				"(encoding/json supports string, integer kinds, or encoding.TextMarshaler); "+
+				"additionalProperties dropped",
+			key.String(),
+		))
+		return nil
 	}
 
-	return nil
+	eleProp := NewTypable(sch, tgt.Level(), s.skipExtensions)
+	defer s.descend("additionalProperties")()
+
+	return s.buildFromType(titpe.Elem(), eleProp.AdditionalProperties())
 }
 
 // annotateSchema returns a deferrable that decorates schema with x-go-name / x-go-package traceability extensions,
 // unless the schema is just a $ref, in which case the source origin is the target's definition,
 // not the reference site.
+//
+// When Options.EmitXGoType is set it also stamps x-go-type with the
+// fully-qualified Go type — but only if a recognizer hasn't already set it
+// (the special-type cases for `error` / the generic fallback carry their own
+// deliberate value, which we must not clobber). See
+// [§traceability](./README.md#traceability).
 func (s *Builder) annotateSchema(schema *oaispec.Schema) func() {
 	return func() {
 		if schema.Ref.String() != "" {
@@ -478,6 +576,11 @@ func (s *Builder) annotateSchema(schema *oaispec.Schema) func() {
 			resolvers.AddExtension(&schema.VendorExtensible, "x-go-name", s.GoName, s.skipExtensions)
 		}
 		resolvers.AddExtension(&schema.VendorExtensible, "x-go-package", s.Decl.Obj().Pkg().Path(), s.skipExtensions)
+		if s.emitXGoType {
+			if _, exists := schema.Extensions["x-go-type"]; !exists {
+				resolvers.AddExtension(&schema.VendorExtensible, "x-go-type", s.Decl.Obj().Pkg().Path()+"."+s.GoName, s.skipExtensions)
+			}
+		}
 	}
 }
 

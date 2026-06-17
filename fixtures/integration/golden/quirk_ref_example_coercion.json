@@ -1,0 +1,119 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/holder": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "summary": "Get a holder.",
+        "operationId": "getHolder",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/holderResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Holder": {
+      "description": "Holder carries fields typed by other models, each annotated with a\nJSON-literal example/default that must coerce structurally.",
+      "type": "object",
+      "properties": {
+        "defaultPet": {
+          "description": "a single pet, with a JSON-object default riding the override arm",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Pet"
+            },
+            {
+              "default": {
+                "name": "Default"
+              }
+            }
+          ],
+          "x-go-name": "DefaultPet"
+        },
+        "pet": {
+          "description": "a single pet, with a JSON-object example riding the override arm",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Pet"
+            },
+            {
+              "example": {
+                "name": "Rex"
+              }
+            }
+          ],
+          "x-go-name": "Pet"
+        },
+        "plain": {
+          "description": "a scalar example on a $ref'd field is left as a plain string (the\nreferenced type is unknown on the override arm; only JSON object /\narray literals are coerced).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Pet"
+            },
+            {
+              "example": "plain-scalar"
+            }
+          ],
+          "x-go-name": "Plain"
+        },
+        "tags": {
+          "description": "a tag, with a JSON-array example riding the override arm",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Tag"
+            },
+            {
+              "example": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "b"
+                }
+              ]
+            }
+          ],
+          "x-go-name": "Tags"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/ref-example-coercion"
+    },
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a referenced model so that fields typed by it carry a $ref.",
+      "properties": {
+        "name": {
+          "description": "the pet's name",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/ref-example-coercion"
+    },
+    "Tag": {
+      "type": "object",
+      "title": "Tag is a referenced model used for the array-literal example case.",
+      "properties": {
+        "value": {
+          "description": "the tag value",
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/ref-example-coercion"
+    }
+  },
+  "responses": {
+    "holderResponse": {
+      "description": "holderResponse wraps the Holder model.",
+      "schema": {
+        "$ref": "#/definitions/Holder"
+      }
+    }
+  }
+}

@@ -291,17 +291,26 @@ func TestLexer_DefaultAnnotation_RawFallback(t *testing.T) {
 	assert.Equal(t, TokenRawValue, out[0].Args[0].Kind)
 }
 
-func TestLexer_TypeAnnotation_ClosedVocabulary(t *testing.T) {
-	out := lexString(t, "swagger:type string")
+// TestLexer_TypeAnnotation_WellFormed pins the relaxed swagger:type lexing
+// (F3): the grammar no longer owns a closed type vocabulary. Any well-formed
+// token — a canonical name, a Go-builtin spelling, a []-prefixed array, a
+// dot-qualified or arbitrary identifier (a scanned-type reference) — lexes as
+// TYPE_REF; semantic validity is resolved by the builder. Only a structurally
+// malformed token falls back to IDENT_NAME for the parser to flag.
+func TestLexer_TypeAnnotation_WellFormed(t *testing.T) {
+	for _, arg := range []string{"string", "integer", "int64", "[]string", "[][]int64", "Custom", "pkg.Type", "inline"} {
+		out := lexString(t, "swagger:type "+arg)
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 1)
+		assert.Equalf(t, TokenTypeRef, out[0].Args[0].Kind, "%q is well-formed → TYPE_REF", arg)
+		assert.Equal(t, arg, out[0].Args[0].Text)
+	}
+
+	// A malformed token (embedded space) is not a TYPE_REF.
+	out := lexString(t, "swagger:type foo bar")
 	require.NotEmpty(t, out)
 	require.Len(t, out[0].Args, 1)
-	assert.Equal(t, TokenTypeRef, out[0].Args[0].Kind)
-	assert.Equal(t, "string", out[0].Args[0].Text)
-
-	out2 := lexString(t, "swagger:type custom")
-	require.NotEmpty(t, out2)
-	require.Len(t, out2[0].Args, 1)
-	assert.Equal(t, TokenIdentName, out2[0].Args[0].Kind, "unknown type tokens fall back to IDENT_NAME for analyzer diagnosis")
+	assert.Equal(t, TokenIdentName, out[0].Args[0].Kind, "a malformed token falls back to IDENT_NAME for the parser to flag")
 }
 
 func TestLexer_EnumAnnotation_NameOnly(t *testing.T) {
@@ -508,3 +517,61 @@ type _ struct{}
 	assert.Contains(t, joined, "application/xml")
 	assert.NotContains(t, joined, "nolint")
 }
+
+func TestLexer_DirectiveMarkerPredicate(t *testing.T) {
+	markers := []string{
+		"+genclient",
+		"+kubebuilder:resource:shortName=mytype",
+		"+kubebuilder:validation:Required",
+		"+kubebuilder:default:=false",
+		"+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object",
+		"+optional",
+		"+name: encryption_public_key", // shape matches; only excluded by context (see below)
+	}
+	for _, m := range markers {
+		assert.True(t, isDirectiveMarker(m), "expected %q to be a directive marker", m)
+	}
+
+	notMarkers := []string{
+		"+1 for this idea", // digit after + — ordinary prose
+		"+ a markdown bullet",
+		"+",
+		"",
+		"plain prose",
+		"a +kubebuilder reference mid-sentence",
+		"++double",
+	}
+	for _, m := range notMarkers {
+		assert.False(t, isDirectiveMarker(m), "did not expect %q to be a directive marker", m)
+	}
+}
+
+func TestLexer_DirectiveMarkersDroppedFromProse(t *testing.T) {
+	// go-swagger#2687 / #3007: Kubernetes marker comments must not leak into
+	// the model title/description.
+	src := `package fake
+
+// MyType description
+//
+// +genclient
+// +kubebuilder:resource:shortName=mytype
+// +kubebuilder:subresource:status
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// swagger:model Application
+type MyType struct{}
+`
+	b := parseGoSource(t, src)
+	mb, ok := b.(*ModelBlock)
+	require.True(t, ok, "expected *ModelBlock, got %T", b)
+	prose := mb.Title() + mb.Description()
+	assert.Contains(t, prose, "MyType description", "authored prose must survive")
+	assert.NotContains(t, prose, "+kubebuilder")
+	assert.NotContains(t, prose, "+genclient")
+	assert.NotContains(t, prose, "+k8s")
+}
+
+// Note: the #3100 boundary — the inline swagger:route `+name:` parameter
+// separator must NOT be stripped despite matching the marker shape — is locked
+// end-to-end by TestCoverage_Bug3100 in the integration suite. The filter runs
+// at Stage 3 (prose), after accumulateBodies has folded the route body into its
+// keyword token, so the separator never reaches the marker check.

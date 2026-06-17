@@ -1,0 +1,53 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Authenticate a user.",
+        "operationId": "login",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "description": "The login credentials.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AppUserCredentials"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AppUserCredentials": {
+      "type": "object",
+      "title": "AppUserCredentials is the JSON request body for a login.",
+      "properties": {
+        "password": {
+          "description": "The user's password.",
+          "type": "string",
+          "x-go-name": "Password"
+        },
+        "username": {
+          "$ref": "#/definitions/CPF"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2663"
+    },
+    "CPF": {
+      "type": "string",
+      "title": "CPF is an in-house codified username (a named string type).",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2663"
+    }
+  }
+}

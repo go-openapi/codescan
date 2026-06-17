@@ -1,0 +1,18 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "MyType": {
+      "type": "object",
+      "title": "MyType probes a TYPE-level Extensions block (#2409).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-custom-type-ext": "hello",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2409"
+    }
+  }
+}

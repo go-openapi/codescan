@@ -133,7 +133,7 @@
         ],
         "responses": {
           "200": {
-            "description": "order",
+            "description": "An Order for one or more pets by a user.",
             "schema": {
               "$ref": "#/definitions/order"
             }
@@ -207,7 +207,7 @@
         ],
         "responses": {
           "200": {
-            "description": "pet",
+            "description": "A Pet is the main product in the store.",
             "schema": {
               "type": "array",
               "items": {
@@ -240,7 +240,7 @@
         ],
         "responses": {
           "200": {
-            "description": "pet",
+            "description": "A Pet is the main product in the store.",
             "schema": {
               "$ref": "#/definitions/pet"
             }
@@ -274,7 +274,7 @@
         ],
         "responses": {
           "200": {
-            "description": "pet",
+            "description": "A Pet is the main product in the store.",
             "schema": {
               "$ref": "#/definitions/pet"
             }
@@ -313,7 +313,7 @@
         ],
         "responses": {
           "200": {
-            "description": "pet",
+            "description": "A Pet is the main product in the store.",
             "schema": {
               "$ref": "#/definitions/pet"
             }

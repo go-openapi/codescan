@@ -3,7 +3,10 @@
 
 package grammar
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // ValueShape names the lexical shape of a keyword's value, mapping
 // directly onto the value terminals:
@@ -161,40 +164,46 @@ func ctx(ctxs ...KeywordContext) keywordOpt {
 // decorators / boolean markers / param-location / meta single-line /
 // raw-block) follow the same order as the keywords table below.
 const (
-	KwMaximum             = "maximum"
-	KwMinimum             = "minimum"
-	KwMultipleOf          = "multipleOf"
-	KwMaxLength           = "maxLength"
-	KwMinLength           = "minLength"
-	KwPattern             = "pattern"
-	KwMaxItems            = "maxItems"
-	KwMinItems            = "minItems"
-	KwUnique              = "unique"
-	KwCollectionFormat    = "collectionFormat"
-	KwDefault             = "default"
-	KwExample             = "example"
-	KwEnum                = "enum"
-	KwRequired            = "required"
-	KwReadOnly            = "readOnly"
-	KwDiscriminator       = "discriminator"
-	KwDeprecated          = "deprecated"
-	KwIn                  = "in"
-	KwSchemes             = "schemes"
-	KwVersion             = "version"
-	KwHost                = "host"
-	KwBasePath            = "basePath"
-	KwLicense             = "license"
-	KwContact             = "contact"
-	KwConsumes            = "consumes"
-	KwProduces            = "produces"
-	KwSecurity            = "security"
-	KwSecurityDefinitions = "securityDefinitions"
-	KwResponses           = "responses"
-	KwParameters          = "parameters"
-	KwExtensions          = "extensions"
-	KwInfoExtensions      = "infoExtensions"
-	KwTOS                 = "tos"
-	KwExternalDocs        = "externalDocs"
+	KwMaximum              = "maximum"
+	KwMinimum              = "minimum"
+	KwMultipleOf           = "multipleOf"
+	KwMaxLength            = "maxLength"
+	KwMinLength            = "minLength"
+	KwPattern              = "pattern"
+	KwMaxItems             = "maxItems"
+	KwMinItems             = "minItems"
+	KwUnique               = "unique"
+	KwCollectionFormat     = "collectionFormat"
+	KwMaxProperties        = "maxProperties"
+	KwMinProperties        = "minProperties"
+	KwPatternProperties    = "patternProperties"
+	KwAdditionalProperties = "additionalProperties"
+	KwDefault              = "default"
+	KwExample              = "example"
+	KwEnum                 = "enum"
+	KwRequired             = "required"
+	KwReadOnly             = "readOnly"
+	KwDiscriminator        = "discriminator"
+	KwDeprecated           = "deprecated"
+	KwIn                   = "in"
+	KwName                 = "name"
+	KwSchemes              = "schemes"
+	KwVersion              = "version"
+	KwHost                 = "host"
+	KwBasePath             = "basePath"
+	KwLicense              = "license"
+	KwContact              = "contact"
+	KwConsumes             = "consumes"
+	KwProduces             = "produces"
+	KwSecurity             = "security"
+	KwSecurityDefinitions  = "securityDefinitions"
+	KwResponses            = "responses"
+	KwParameters           = "parameters"
+	KwExtensions           = "extensions"
+	KwInfoExtensions       = "infoExtensions"
+	KwTOS                  = "tos"
+	KwExternalDocs         = "externalDocs"
+	KwTags                 = "tags"
 )
 
 // keywords is the authoritative table. Additions land here.
@@ -245,6 +254,33 @@ var keywords = []Keyword{
 		asEnumOption("csv", "ssv", "tsv", "pipes", "multi"),
 		ctx(CtxParam, CtxHeader, CtxItems)),
 
+	// Object validations. Full-Schema-only (CtxSchema): object
+	// property-count bounds have no SimpleSchema (param/header/items)
+	// equivalent in OAS v2. Shape-restricted to `object` schemas by
+	// validations.keywordTypeRules.
+	keyword(KwMaxProperties,
+		aka("max properties", "max-properties",
+			"maximum properties", "maximum-properties", "maximumProperties"),
+		asInt(),
+		ctx(CtxSchema)),
+	keyword(KwMinProperties,
+		aka("min properties", "min-properties",
+			"minimum properties", "minimum-properties", "minimumProperties"),
+		asInt(),
+		ctx(CtxSchema)),
+	keyword(KwPatternProperties,
+		aka("pattern properties", "pattern-properties"),
+		asString(),
+		ctx(CtxSchema)),
+	// additionalProperties: <spec> field keyword (true | false | a
+	// swagger:type-style spec). Full-Schema-only; the schema builder resolves
+	// the spec and applies the lowest-priority precedence. See
+	// schema/additional_properties.go.
+	keyword(KwAdditionalProperties,
+		aka("additional properties", "additional-properties"),
+		asString(),
+		ctx(CtxSchema)),
+
 	// Schema decorators with body-accepting bodies (default/example/enum).
 	keyword(KwDefault,
 		asRawValue(),
@@ -274,6 +310,23 @@ var keywords = []Keyword{
 	keyword(KwIn,
 		asEnumOption("query", "path", "header", "body", "formData"),
 		ctx(CtxParam)),
+
+	// Name directive — the canonical field-naming keyword. Like `in:`,
+	// this is a structural keyword rather than part of the schema-body
+	// grammar: it renames the published name of a field at every field
+	// site — a swagger:parameters field (the JSON parameter name), a
+	// swagger:response field (the response header / Headers map key) and
+	// a swagger:model property or interface method (the JSON property
+	// name) — always overriding the json-tag / Go-field derivation.
+	// Legal in CtxParam, CtxHeader and CtxSchema so it is removed from
+	// the description prose and silently ignored by the (Simple)Schema
+	// walker (isFullSchemaOnly stays false; no shape rule, so checkShape
+	// passes) at all three; the parameters / responses / schema builders
+	// read the value via GetString(KwName). The older `swagger:name`
+	// annotation remains honoured as a legacy form (and is the only form
+	// on interface methods historically), but `name:` takes precedence
+	// when both appear. See README §keyword-table. (doc-quirk G2.)
+	keyword(KwName, asString(), ctx(CtxParam, CtxHeader, CtxSchema)),
 
 	// List-shaped keywords. KwSchemes uses asRawBlock() so multi-line
 	// bodies (`Schemes:\n  - http\n  - https`) populate the same way
@@ -321,6 +374,86 @@ var keywords = []Keyword{
 		aka("external docs", "external-docs"),
 		asRawBlock(),
 		ctx(CtxMeta, CtxRoute, CtxOperation, CtxSchema)),
+	// `Tags:` block. On swagger:meta it is a YAML list of tag objects
+	// ({name, description, externalDocs}) populating spec.Swagger.Tags.
+	// On swagger:route/operation it is a plain string list of tag
+	// names, unioned onto the operation's tags (the same names may also
+	// appear on the swagger:route header line). The single keyword
+	// carries two shapes; the consuming builder decides which (the meta
+	// walker unmarshals objects, the route walker reads AsList). See
+	// go-swagger/go-swagger#2655.
+	keyword(KwTags, asRawBlock(), ctx(CtxMeta, CtxRoute, CtxOperation)),
+}
+
+// specPointer records where a keyword's value renders in the produced spec:
+// the JSON-pointer segments (relative to the node the keyword decorates, or the
+// document root for the meta-only keywords) and, optionally, the contexts where
+// that node is actually produced when they differ from the keyword's lexical
+// Contexts.
+type specPointer struct {
+	segs []string
+	// ctxs overrides the render contexts; nil means "use the keyword's Contexts".
+	// Set only where lexical legality and node production diverge — e.g.
+	// `deprecated` is legal on a schema but only renders a node on operations.
+	ctxs []KeywordContext
+}
+
+// specPointers is the single source of truth mapping each keyword that produces
+// an addressable spec node to its pointer segments. It keeps the keyword→spec-
+// location knowledge in the grammar (beside Name/Shape/Contexts) instead of
+// re-encoded in every builder walker; cross-ref provenance reads it via
+// [PointerPath]. Keywords absent here produce no directly-addressable node
+// (required → parent array, in/collectionFormat → simple-schema, prose, …) and
+// resolve to their enclosing node's anchor.
+//
+//nolint:gochecknoglobals // canonical lookup table, mirrors keywords above
+var specPointers = map[string]specPointer{
+	// Schema / param / header / items validations (segment == keyword name).
+	KwMaximum:    {segs: []string{KwMaximum}},
+	KwMinimum:    {segs: []string{KwMinimum}},
+	KwMultipleOf: {segs: []string{KwMultipleOf}},
+	KwMaxLength:  {segs: []string{KwMaxLength}},
+	KwMinLength:  {segs: []string{KwMinLength}},
+	KwPattern:    {segs: []string{KwPattern}},
+	KwMaxItems:   {segs: []string{KwMaxItems}},
+	KwMinItems:   {segs: []string{KwMinItems}},
+	KwUnique:     {segs: []string{"uniqueItems"}}, // the lone name≠segment case
+	KwDefault:    {segs: []string{KwDefault}},
+	KwExample:    {segs: []string{KwExample}},
+	KwEnum:       {segs: []string{KwEnum}},
+	KwReadOnly:   {segs: []string{KwReadOnly}},
+	// Operation / route header keywords (child of the operation node).
+	KwConsumes:   {segs: []string{KwConsumes}},
+	KwProduces:   {segs: []string{KwProduces}},
+	KwSchemes:    {segs: []string{KwSchemes}},
+	KwDeprecated: {segs: []string{KwDeprecated}, ctxs: []KeywordContext{CtxOperation, CtxRoute}},
+	// Meta keywords. Info.* nest under /info; the rest land at the document root.
+	KwVersion:  {segs: []string{"info", KwVersion}},
+	KwTOS:      {segs: []string{"info", "termsOfService"}},
+	KwContact:  {segs: []string{"info", KwContact}},
+	KwLicense:  {segs: []string{"info", KwLicense}},
+	KwHost:     {segs: []string{KwHost}},
+	KwBasePath: {segs: []string{KwBasePath}},
+}
+
+// PointerPath returns the JSON-pointer segments where kw's value renders, when
+// kw produces an addressable node legal in ctx. Consumers (the builder walkers)
+// prepend the decorated node's base pointer and any items depth. The ctx gate
+// reuses the keyword's lexical Contexts unless the entry overrides them, so a
+// keyword is never anchored in a context where its node does not exist.
+func PointerPath(kw Keyword, ctx KeywordContext) ([]string, bool) {
+	sp, ok := specPointers[kw.Name]
+	if !ok {
+		return nil, false
+	}
+	ctxs := sp.ctxs
+	if ctxs == nil {
+		ctxs = kw.Contexts
+	}
+	if slices.Contains(ctxs, ctx) {
+		return sp.segs, true
+	}
+	return nil, false
 }
 
 // Lookup returns the Keyword matching name (canonical or alias),

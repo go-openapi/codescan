@@ -1,0 +1,14 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Package gofmtmeta is the F7 quirk witness: a swagger:meta block in its\ngofmt-CANONICAL shape. A user writes a column-0 YAML key with indented\nchildren; gofmt then inserts the blank \"//\" line below (its doc-comment\ncode-block rule), producing exactly the form below. The meta YAML parser\nonce rejected it with \"found character that cannot start any token\" because\nthe tab indentation after the blank line reached the YAML parser; it now\ndedents off the first non-blank line and parses the block identically to\nthe uniformly-indented form."
+  },
+  "paths": {},
+  "securityDefinitions": {
+    "oauth2": {
+      "type": "oauth2",
+      "in": "header",
+      "flow": "application"
+    }
+  }
+}

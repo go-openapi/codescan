@@ -1,0 +1,67 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Root": {
+      "type": "object",
+      "properties": {
+        "eitem1": {
+          "$ref": "#/definitions/XItem"
+        },
+        "eitem2": {
+          "$ref": "#/definitions/YItem"
+        },
+        "irec1": {
+          "$ref": "#/definitions/XRecord"
+        },
+        "irec2": {
+          "$ref": "#/definitions/YRecord"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-mixed"
+    },
+    "XItem": {
+      "type": "object",
+      "properties": {
+        "x1": {
+          "type": "string",
+          "x-go-name": "X1"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-mixed/x"
+    },
+    "XRecord": {
+      "description": "Record is intentionally NOT annotated: it becomes a definition only because\nit is referenced from mixed.Root (the implicit-collision arm).",
+      "type": "object",
+      "properties": {
+        "rx": {
+          "type": "string",
+          "x-go-name": "RX"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-mixed/x"
+    },
+    "YItem": {
+      "type": "object",
+      "properties": {
+        "y1": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Y1"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-mixed/y"
+    },
+    "YRecord": {
+      "description": "Record is intentionally NOT annotated: it becomes a definition only because\nit is referenced from mixed.Root (the implicit-collision arm).",
+      "type": "object",
+      "properties": {
+        "ry": {
+          "type": "boolean",
+          "x-go-name": "RY"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-mixed/y"
+    }
+  }
+}

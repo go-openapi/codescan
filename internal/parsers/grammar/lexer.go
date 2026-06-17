@@ -138,6 +138,29 @@ func isGoDirective(raw string) bool {
 	return true
 }
 
+// isDirectiveMarker reports whether text is a Go "marker" comment of the
+// kind emitted by Kubernetes code-generation tooling (kubebuilder,
+// controller-gen, k8s deepcopy-gen, genclient): a line whose content
+// begins with `+` immediately followed by an ASCII letter, e.g.
+// `+genclient`, `+kubebuilder:validation:Required`, `+k8s:deepcopy-gen=…`.
+//
+// These markers are not part of the swagger annotation grammar and must
+// not leak into model / property descriptions (go-swagger#2687, the
+// residual of #3007); lexLine drops them from the prose surface exactly
+// like Go directives.
+//
+// text is the godoc-stripped Line.Text, so both the common kubebuilder
+// form `// +marker` (space after the comment marker) and the bare
+// `//+marker` arrive here as `+marker`. Requiring a letter after the `+`
+// avoids eating prose that merely opens with a sign (e.g. "+1 for …").
+func isDirectiveMarker(text string) bool {
+	if len(text) < 2 || text[0] != '+' {
+		return false
+	}
+	c := text[1]
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
 // hasSwaggerPrefix is the case-insensitive match on the first char of
 // AnnotationPrefix — only the first character is permissive.
 //
@@ -272,8 +295,16 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 		return classifyOperationArgs(rest, pos)
 	case AnnDefaultName:
 		return []Token{argDefaultValue(rest, pos)}
-	case AnnType:
+	case AnnType, AnnAdditionalProperties:
+		// Both take a swagger:type-style spec as a single ref token
+		// (true / false / primitive / []T / type-name). The builder does
+		// the semantic resolution.
 		return []Token{argTypeRef(rest, pos)}
+	case AnnPatternProperties:
+		// The arg is a `"<re>": <spec>, …` pair list that may contain
+		// spaces/colons/commas inside quoted regexes — capture the whole
+		// remainder verbatim; the builder parses the pairs.
+		return []Token{{Kind: TokenRawValue, Pos: pos, Text: strings.TrimSpace(rest)}}
 	case AnnEnum:
 		return classifyEnumAnnotationArgs(rest, pos)
 	case AnnParameters:
@@ -328,11 +359,13 @@ func argDefaultValue(rest string, pos token.Position) Token {
 	return Token{Kind: kind, Pos: pos, Text: strings.TrimSpace(rest)}
 }
 
-// argTypeRef recognises the closed TYPE_REF vocabulary; non-matches
-// fall back to TokenIdentName so the analyzer can diagnose.
+// argTypeRef tags a well-formed `swagger:type` argument as TYPE_REF and
+// leaves the semantic check (known keyword / scanned type, format
+// compatibility) to the builder. A structurally malformed token falls back
+// to TokenIdentName so the parser can flag it (see looksLikeTypeRef).
 func argTypeRef(rest string, pos token.Position) Token {
 	rest = strings.TrimSpace(rest)
-	if isTypeRef(rest) {
+	if looksLikeTypeRef(rest) {
 		return Token{Kind: TokenTypeRef, Pos: pos, Text: rest}
 	}
 	return Token{Kind: TokenIdentName, Pos: pos, Text: rest}
@@ -471,6 +504,18 @@ func lexKeyword(text, raw string, pos token.Position) (Token, bool) {
 
 	value := strings.TrimSpace(after)
 	value = stripTrailingDot(value)
+
+	// A `deprecated:` line whose argument is not a bool is the godoc
+	// "Deprecated: <reason>" convention, not the bool keyword. Leave it as
+	// prose (Block.IsDeprecated detects it via the godoc regexp) instead of
+	// forcing a bool parse that would spuriously error and strip the reason
+	// from the description. The bool form keeps being a keyword (and drives
+	// the native operation `deprecated` field). See go-swagger/go-swagger#3138.
+	if kw.Name == KwDeprecated {
+		if _, isBool := parseBool(value); !isBool {
+			return Token{}, false
+		}
+	}
 
 	return Token{
 		Kind:       tokenKeywordPre,
@@ -649,16 +694,21 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 		bodyRaw = append(bodyRaw, head.Text)
 	}
 
-	// extensions / infoExtensions / securityDefinitions bodies are
-	// YAML-parsed downstream (yaml.TypedExtensions or yaml.UnmarshalBody
-	// via the meta walker), so every body line MUST preserve its
-	// original indentation. Flat raw blocks (consumes / produces /
-	// security / …) use the Text view (leading whitespace dropped,
-	// recognised keywords reformatted). Both branches converge on the
-	// same bodyText slice.
+	// extensions / infoExtensions / securityDefinitions / Tags /
+	// security bodies are YAML-parsed downstream (yaml.TypedExtensions,
+	// yaml.UnmarshalBody via the meta walker, or security.Parse), so
+	// every body line MUST preserve its original indentation — Tags in
+	// particular is a sequence of mappings whose nesting collapses if
+	// the per-item indent is dropped, and a `Security:` requirement
+	// with block-style scopes (`- name:` then indented `- scope`) needs
+	// the same. Flat raw blocks (consumes / produces / …) use the Text
+	// view (leading whitespace dropped, recognised keywords
+	// reformatted). Both branches converge on the same bodyText slice.
 	yamlBody := kw.Name == "extensions" ||
 		kw.Name == "infoExtensions" ||
-		kw.Name == "securityDefinitions"
+		kw.Name == "securityDefinitions" ||
+		kw.Name == KwTags ||
+		kw.Name == KwSecurity
 	bodyLine := func(t Token) string {
 		if yamlBody {
 			return strings.TrimRightFunc(t.Raw, unicode.IsSpace)
@@ -689,7 +739,22 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 			// body text. Rule: same family / a sub-context keyword
 			// is body; another route/operation/meta-context keyword
 			// is a sibling.
-			if isSiblingTerminatorFor(kw, next.Name) {
+			//
+			// Indentation override (YAML-bodied blocks only): inside a
+			// YAML body — Tags / securityDefinitions / extensions — a
+			// same-family keyword indented strictly deeper than the head
+			// is a nested YAML key, not a sibling (e.g. `externalDocs:`
+			// under a `Tags:` list item, both meta-family). Absorb it so
+			// the YAML structure survives. Flat raw blocks (TOS /
+			// consumes / …) do NOT apply this: their keyword indentation
+			// is cosmetic — the petstore meta indents Schemes/Host deeper
+			// than a column-0 `Terms Of Service:`, yet they are siblings.
+			sibling := isSiblingTerminatorFor(kw, next.Name)
+			if sibling && yamlBody &&
+				leadingIndentWidth(next.Raw) > leadingIndentWidth(head.Raw) {
+				sibling = false
+			}
+			if sibling {
 				emitRawBlock(out, headPos, head, kw, bodyText, bodyRaw)
 				return i
 			}
@@ -893,6 +958,30 @@ func formatKeywordLine(t Token) string {
 //
 // Look-up uses the keyword table's Contexts. See README
 // §raw-block-terminators.
+// tabStopWidth is the column width a tab advances to when measuring
+// leading indentation — the conventional 8-column tab stop.
+const tabStopWidth = 8
+
+// leadingIndentWidth measures the visual width of raw's leading
+// whitespace run, expanding tabs to 8-column tab stops and counting
+// spaces as one column each. Used by the raw-block terminator to tell
+// a nested YAML key (indented deeper than its block head) from a true
+// sibling keyword at the same indentation. Non-whitespace ends the run.
+func leadingIndentWidth(raw string) int {
+	w := 0
+	for _, r := range raw {
+		switch r {
+		case ' ':
+			w++
+		case '\t':
+			w += tabStopWidth - (w % tabStopWidth)
+		default:
+			return w
+		}
+	}
+	return w
+}
+
 func isSiblingTerminatorFor(kw Keyword, nextName string) bool {
 	nextKw, ok := Lookup(nextName)
 	if !ok {
@@ -1005,6 +1094,17 @@ func classifyProse(in []Token) []Token {
 			} else {
 				state = proseInBody
 			}
+			continue
+		}
+		// Drop Kubernetes-style marker comments (`+kubebuilder:…`,
+		// `+genclient`, `+k8s:…`) from the prose surface so they never leak
+		// into model / property descriptions (go-swagger#2687, the residual
+		// of #3007). Done here (Stage 3) rather than at line classification
+		// so annotation bodies are untouched — the inline swagger:route
+		// parameters grammar uses `+name:` as a parameter separator
+		// (go-swagger#3100), and by this stage that body has already been
+		// folded into its keyword token by accumulateBodies.
+		if t.Kind == tokenText && isDirectiveMarker(t.Text) {
 			continue
 		}
 		// Buffer prose runs; the run-classifier runs at run-end.

@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/object/{id}": {
+      "get": {
+        "tags": [
+          "object"
+        ],
+        "summary": "Get object.",
+        "operationId": "objectGet",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "ID",
+            "description": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

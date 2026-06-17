@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/snap": {
+      "post": {
+        "tags": [
+          "snap"
+        ],
+        "summary": "Snap.",
+        "operationId": "snapVolumeGroup",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "x-go-name": "ID"
+                },
+                "labels": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "x-go-name": "Labels"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

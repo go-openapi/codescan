@@ -1,0 +1,63 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Holder": {
+      "type": "object",
+      "title": "Holder carries fields decorated with the additionalProperties: keyword.",
+      "properties": {
+        "anyMap": {
+          "description": "AnyMap allows any extra value.",
+          "type": "object",
+          "additionalProperties": true,
+          "x-go-name": "AnyMap"
+        },
+        "badField": {
+          "description": "BadField is a string; additionalProperties is the lowest-priority\nannotation, so it is dropped with a diagnostic.",
+          "type": "string",
+          "x-go-name": "BadField"
+        },
+        "closedInner": {
+          "description": "ClosedInner references a model and forbids extra keys via an allOf\nsibling (the $ref is preserved).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Inner"
+            },
+            {
+              "additionalProperties": false
+            }
+          ],
+          "x-go-name": "ClosedInner"
+        },
+        "overriddenMap": {
+          "description": "OverriddenMap's element schema (string) is overridden to integer.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "x-go-name": "OverriddenMap"
+        },
+        "refMap": {
+          "description": "RefMap's values reference a model.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Inner"
+          },
+          "x-go-name": "RefMap"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties-field"
+    },
+    "Inner": {
+      "type": "object",
+      "title": "Inner is referenced as a field-level additionalProperties value.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/additional-properties-field"
+    }
+  }
+}

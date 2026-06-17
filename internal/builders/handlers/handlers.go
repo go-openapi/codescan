@@ -66,9 +66,14 @@ func Number(v ifaces.ValidationBuilder) func(grammar.Property, float64, bool) {
 	}
 }
 
-// Integer returns a Walker.Integer callback that routes
-// `min/maxLength:` and `min/maxItems:` onto v.
-func Integer(v ifaces.ValidationBuilder) func(grammar.Property, int64) {
+// Integer returns a Walker.Integer callback for the SimpleSchema
+// surface. It routes `min/maxLength:` and `min/maxItems:` onto v and,
+// when diag is non-nil, emits CodeUnsupportedInSimpleSchema for any
+// other integer keyword — the full-Schema-only object keywords
+// `minProperties:` / `maxProperties:`, which have no SimpleSchema form.
+//
+// diag may be nil; when nil, the unsupported-keyword warning is dropped.
+func Integer(v ifaces.ValidationBuilder, diag func(grammar.Diagnostic)) func(grammar.Property, int64) {
 	return func(pr grammar.Property, val int64) {
 		if !pr.IsTyped() {
 			return
@@ -82,8 +87,71 @@ func Integer(v ifaces.ValidationBuilder) func(grammar.Property, int64) {
 			v.SetMinItems(val)
 		case grammar.KwMaxItems:
 			v.SetMaxItems(val)
+		default:
+			if isFullSchemaOnly(pr.Keyword) {
+				warnUnsupportedInSimpleSchema(pr, diag)
+			}
 		}
 	}
+}
+
+// UnsupportedSimpleSchemaString returns a Walker.String callback that
+// emits CodeUnsupportedInSimpleSchema for full-Schema-only string
+// keywords (`patternProperties:`) that reach a SimpleSchema site. The
+// SimpleSchema-legal string keywords (`pattern:`, `collectionFormat:`)
+// are handled by their own callbacks and ignored here.
+//
+// Composed alongside PatternString / CollectionFormatString in the
+// parameter / header / items dispatchers. diag may be nil.
+func UnsupportedSimpleSchemaString(diag func(grammar.Diagnostic)) func(grammar.Property, string) {
+	return func(pr grammar.Property, _ string) {
+		// No IsTyped() gate: ShapeString keywords (the slot this fires
+		// in) report IsTyped()==false by construction, so guarding on it
+		// would skip every candidate. PatternString likewise gates only
+		// on the keyword name.
+		if isFullSchemaOnly(pr.Keyword) {
+			warnUnsupportedInSimpleSchema(pr, diag)
+		}
+	}
+}
+
+// isFullSchemaOnly reports whether kw is legal only on full-Schema
+// sites: it lists CtxSchema and none of the SimpleSchema contexts
+// (CtxParam / CtxHeader / CtxItems). The SimpleSchema dispatchers use
+// this to single out the object validation keywords (minProperties /
+// maxProperties / patternProperties) from the location/structural
+// keywords (e.g. `in:`) that legitimately travel the same Walker slots.
+func isFullSchemaOnly(kw grammar.Keyword) bool {
+	onSchema := false
+	for _, c := range kw.Contexts {
+		switch c {
+		case grammar.CtxParam, grammar.CtxHeader, grammar.CtxItems:
+			return false
+		case grammar.CtxSchema:
+			onSchema = true
+		default:
+			// Other/future contexts (meta, route, operation, response):
+			// not SimpleSchema sites, so they don't affect the verdict.
+		}
+	}
+	return onSchema
+}
+
+// warnUnsupportedInSimpleSchema emits the canonical
+// CodeUnsupportedInSimpleSchema warning for a full-Schema-only keyword
+// encountered on a SimpleSchema site. No-op when diag is nil. The
+// keyword is dropped (the caller writes nothing) — mirroring the schema
+// Bool handler's treatment of readOnly / discriminator.
+func warnUnsupportedInSimpleSchema(pr grammar.Property, diag func(grammar.Diagnostic)) {
+	if diag == nil {
+		return
+	}
+	diag(grammar.Warnf(
+		pr.Pos,
+		grammar.CodeUnsupportedInSimpleSchema,
+		"%q is a full-Schema-only keyword and is not allowed under SimpleSchema mode; ignored",
+		pr.Keyword.Name,
+	))
 }
 
 // UniqueBool returns a Walker.Bool callback that handles only the
@@ -187,12 +255,18 @@ func ComposeString(hs ...func(grammar.Property, string)) func(grammar.Property, 
 //     error up so the build surfaces a malformed default/example
 //     as a hard failure.
 //
+// diag receives a CodeUnsupportedInSimpleSchema warning when a
+// full-Schema-only raw keyword (e.g. externalDocs:) appears on this
+// SimpleSchema site; the keyword is dropped. diag may be nil.
+//
 // # Details
 //
 // See [§raw-errsink](./README.md#raw-errsink) for the per-dispatcher
 // wiring and the integration tests that exercise the parameter-path
 // hard-failure behaviour.
-func Raw(v ifaces.ValidationBuilder, scheme *oaispec.SimpleSchema, errSink func(error) bool) func(grammar.Property) {
+func Raw(v ifaces.ValidationBuilder, scheme *oaispec.SimpleSchema, errSink func(error) bool,
+	diag func(grammar.Diagnostic),
+) func(grammar.Property) {
 	stopped := false
 	return func(pr grammar.Property) {
 		if stopped {
@@ -219,6 +293,17 @@ func Raw(v ifaces.ValidationBuilder, scheme *oaispec.SimpleSchema, errSink func(
 			v.SetExample(val)
 		case grammar.KwEnum:
 			v.SetEnum(pr.Value)
+		default:
+			// Full-Schema-only raw keyword (externalDocs:) on a
+			// SimpleSchema site — drop with a diagnostic.
+			if diag != nil && !IsSimpleSchemaKeyword(pr.Keyword.Name) {
+				diag(grammar.Warnf(
+					pr.Pos,
+					grammar.CodeUnsupportedInSimpleSchema,
+					"%q is a full-Schema-only keyword and is not allowed under SimpleSchema mode; ignored",
+					pr.Keyword.Name,
+				))
+			}
 		}
 	}
 }

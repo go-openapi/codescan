@@ -1,0 +1,50 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "DefinedStruct": {
+      "type": "object",
+      "title": "DefinedStruct uses a named (defined) type field carrying both default and example.",
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "description": "Sample value in the struct",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SpecificType"
+            },
+            {
+              "default": "samplesample",
+              "example": "examplevalue"
+            }
+          ],
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/958"
+    },
+    "PlainStruct": {
+      "type": "object",
+      "title": "PlainStruct uses a plain string field carrying both default and example.",
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "description": "Sample value in the struct",
+          "type": "string",
+          "default": "samplesample",
+          "x-go-name": "Value",
+          "example": "examplevalue"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/958"
+    },
+    "SpecificType": {
+      "type": "string",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/958"
+    }
+  }
+}

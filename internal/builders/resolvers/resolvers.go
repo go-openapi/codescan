@@ -74,6 +74,20 @@ func SwaggerSchemaForType(typeName string, prop ifaces.SwaggerTypable) error {
 		prop.Typed("integer", "uint64")
 	case "object":
 		prop.Typed("object", "")
+	// Canonical OAS-2 scalar type names, accepted as `swagger:type`
+	// arguments alongside the Go-builtin spellings above (quirk F3).
+	// No implied format — `string`/`integer`/`number`/`boolean` carry
+	// only their type; a format may still be supplied via swagger:strfmt
+	// (applied when format-compatible — see validations.IsFormatCompatible).
+	// The Go-basic resolution path never passes these names (a
+	// *types.Basic stringifies as `int64`/`string`/…), so this only
+	// widens the swagger:type surface.
+	case "integer":
+		prop.Typed("integer", "")
+	case "number":
+		prop.Typed("number", "")
+	case "boolean":
+		prop.Typed("boolean", "")
 	default:
 		return fmt.Errorf("unsupported type %q: %w", typeName, ErrResolver)
 	}
@@ -159,8 +173,19 @@ func (t tagOptions) Name() string {
 	return t[0]
 }
 
-func ParseJSONTag(field *ast.Field) (name string, ignore, isString, omitEmpty bool, err error) {
-	if len(field.Names) > 0 {
+// ParseJSONTag derives the JSON property name and tag options for a struct
+// field. goName is the field's Go identifier as reported by go/types; it is
+// authoritative for the default name because a single AST field group may
+// declare several names (`R, G, B, A uint8`), each a distinct go/types field
+// promoted to its own property (go-swagger#2638). When goName is empty the
+// first AST name is used as a fallback.
+//
+// A json rename (`json:"foo"`) can only name a single field, so it is ignored
+// for a multi-name group — each member keeps its own Go name — while the `-`,
+// `,omitempty` and `,string` options still apply to every member.
+func ParseJSONTag(field *ast.Field, goName string) (name string, ignore, isString, omitEmpty bool, err error) {
+	name = goName
+	if name == "" && len(field.Names) > 0 {
 		name = field.Names[0].Name
 	}
 	if field.Tag == nil || len(strings.TrimSpace(field.Tag.Value)) == 0 {
@@ -190,8 +215,38 @@ func ParseJSONTag(field *ast.Field) (name string, ignore, isString, omitEmpty bo
 		case "":
 			return name, false, isString, omitEmpty, nil
 		default:
+			if len(field.Names) > 1 {
+				// A rename names a single field; with a multi-name group it
+				// can't name N members, so each keeps its own Go name.
+				return name, false, isString, omitEmpty, nil
+			}
 			return jsonParts.Name(), false, isString, omitEmpty, nil
 		}
 	}
 	return name, false, false, false, nil
+}
+
+// ExplicitJSONName returns the name set in a field's json struct tag —
+// the part before the first comma — or "" when the field has no json
+// tag, the tag sets no name (`json:",omitempty"`), or the tag skips the
+// field (`json:"-"`).
+//
+// Go's encoding/json treats an *embedded* struct field carrying an
+// explicit json name as a regular named field: the embedded value nests
+// under that name instead of being promoted. Callers use a non-empty
+// result to distinguish a nesting embed from a flattening one
+// (go-swagger#2038).
+func ExplicitJSONName(field *ast.Field) string {
+	if field == nil || field.Tag == nil || len(strings.TrimSpace(field.Tag.Value)) == 0 {
+		return ""
+	}
+	tv, err := strconv.Unquote(field.Tag.Value)
+	if err != nil || strings.TrimSpace(tv) == "" {
+		return ""
+	}
+	name := tagOptions(strings.Split(reflect.StructTag(tv).Get("json"), ",")).Name()
+	if name == "-" {
+		return ""
+	}
+	return name
 }

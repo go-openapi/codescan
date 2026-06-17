@@ -22,6 +22,9 @@ trade-offs, and known quirks live here.
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
+- [§traceability](#traceability) — `x-go-name` / `x-go-package` / `x-go-type` origin extensions and `EmitXGoType`
+- [§additional-properties](#additional-properties) — the `swagger:additionalProperties` decl-level marker
+- [§pattern-properties](#pattern-properties) — the typed `swagger:patternProperties` decl-level marker
 - [§ref-override](#ref-override) — `applyToRefField`, the allOf-on-$ref shape, `refOverrideCollector`, `applyPattern`
 - [§simple-schema-mode](#simple-schema-mode) — the SimpleSchema build mode for OAS v2 non-body params and response headers
 - [§classifier-walkers](#classifier-walkers) — per-call-site classifier walkers and `findAnnotationArg`'s single-word filter
@@ -416,7 +419,14 @@ classification per embed:
 - `swagger:allOf` (via `fieldDoc.IsAllOfMember`) **or** the
   embedded type is `*types.Alias` — embed becomes an allOf member;
   remaining properties land on a fresh target schema.
-- otherwise — plain embed; properties merge into the outer schema.
+- otherwise — plain embed, handled by `buildPlainEmbed`, which splits on
+  whether the embed carries an explicit name:
+  - an explicit json tag name (`Inner `json:"inner"``) — or a
+    `swagger:name` — makes the embed **nest** under that name as a
+    single regular property (a `$ref` when the embedded type is a model),
+    matching Go's `encoding/json`, which treats a named embed as an
+    ordinary field rather than promoting it (go-swagger#2038).
+  - no explicit name — properties merge (promote) into the outer schema.
 
 The `swagger:allOf` arg, when present, is recorded as
 `x-class: <arg>` on the outer schema (`fd.AllOfClass`). This is the
@@ -500,6 +510,40 @@ The asymmetry is deliberate:
   path. If `time.Time` ends up embedded and the package isn't in
   `AllPackages`, `missingSource` fires — same as v1.
 
+### Cross-source-file field promotion (go-swagger#2417)
+
+When `buildNamedEmbedded` reaches the struct arm, `tpe.Underlying()`
+collapses any chain of defined types straight to the `*types.Struct`,
+so a cross-package defined type (`type AnotherPackageAlias
+color.Color`) is built from the embedding type's `decl` even though the
+promoted fields' source lives in the *underlying* type's file. The same
+shape arises within a single package across files (a transparent alias
+to a struct defined in a sibling file).
+
+`structFieldCarrier` resolves each field's AST with
+`FindASTField(decl.File, fld.Pos())`. That returns nil when the field
+isn't in `decl.File` (a different file or package), which previously
+dropped the field silently — the model came out a bare empty object.
+The carrier now falls back to `ScanCtx.FileForPos(fld.Pkg().Path(),
+fld.Pos())`, which locates the field's own source file via the shared
+FileSet, so its json tag and doc are read correctly. The fallback only
+fires when the primary lookup misses, so the common single-file path is
+unchanged.
+
+### Inherited `required:` from an embed (go-swagger#2701)
+
+A `required:` annotation on a plain embed applies to the properties it
+promotes. `scanEmbeddedFields` reads it via the shared
+`common.EmbedInheritance` kernel (`ReadEmbedInheritance`) and threads it
+through the embed recursion with save/restore; `applyFieldCarrier` then
+adds each promoted property to the **enclosing** object's required list
+(via `handlers.SetRequired`) unless the property set its own `required:`.
+This is the schema half of the cross-builder rule shared with parameters
+and responses — the schema builder consumes only `Required` (it has no
+`in:` location). Response bodies inherit through this same path, since a
+body is built by the schema builder. See
+[common §embed-inheritance](../common/README.md#embed-inheritance).
+
 ### `AddDiscoveredModel` pairing
 
 Both arms call `s.Ctx.AddDiscoveredModel(decl)` before recursing.
@@ -568,6 +612,16 @@ returns the json-tag value when present, otherwise the Go field name
 verbatim. So `CreatedAt string` with no tag emits property
 `CreatedAt`, while `CreatedAt() string` on an interface emits
 property `createdAt`.
+
+The "Go field name" is the per-field name reported by `go/types`, not
+the first identifier of the AST field group. A field group declaring
+several names on one line (`R, G, B, A uint8`) expands to one
+`*types.Var` per name, each promoted to its own property; the shared
+AST `*ast.Field` is the same node for all of them, so the name must
+come from the var, not `field.Names[0]` (go-swagger#2638). A json
+rename names a single field, so it is dropped for a multi-name group
+(each member keeps its Go name) while `-`, `,omitempty` and `,string`
+still apply to every member.
 
 This asymmetry is intentional, not a quirk:
 
@@ -708,6 +762,120 @@ consult `skipExt`. All eight schema-internal call sites pass
 
 ---
 
+## <a id="traceability"></a>§traceability — `x-go-*` origin extensions and `EmitXGoType`
+
+`annotateSchema` (`schema.go`) decorates each emitted **definition** with
+scanner-derived origin metadata, deferred so it runs after the type is built:
+
+- `x-go-name` — the Go identifier, emitted only when it differs from the
+  spec definition name (`s.Name != s.GoName`).
+- `x-go-package` — the originating package import path.
+- `x-go-type` — the fully-qualified Go type (`<package path>.<type name>`),
+  **opt-in** behind `Options.EmitXGoType` (go-swagger#2924). Useful for
+  round-tripping a generated spec back to its source types.
+
+All three pass through `resolvers.AddExtension(..., s.skipExtensions)`, so
+`SkipExtensions` suppresses the whole family.
+
+`x-go-type` predates the option as a narrow type-rendering signal: the
+generic `PkgForType` fallback (`special_types.go`) and `recognizeError`
+stamp it deliberately to record an otherwise-unmodellable type. The
+`annotateSchema` stamp is **presence-guarded** (`if _, exists :=
+schema.Extensions["x-go-type"]; !exists`) so it never clobbers a value a
+recognizer already chose — for ordinary types the recognizer leaves it
+unset and the option supplies it.
+
+---
+
+## <a id="additional-properties"></a>§additional-properties — the `swagger:additionalProperties` marker
+
+`swagger:additionalProperties <spec>` is a decl-level classifier
+(`grammar.AnnAdditionalProperties`) consumed by
+`classifierAdditionalProperties` (`additional_properties.go`), applied from
+`Build` **after** `buildFromDecl` has resolved the Go type so it can ride on
+top of the type-derived schema.
+
+`<spec>` is one of:
+
+| Arg | Effect | Render |
+|---|---|---|
+| `true` | allow extra keys | `additionalProperties: true` (`SchemaOrBool{Allows:true}`) |
+| `false` | forbid extra keys | `additionalProperties: false` (`SchemaOrBool{Allows:false}`) |
+| `<TypeSpec>` | typed value schema | `additionalProperties: {<schema>}` |
+
+`<TypeSpec>` reuses the `swagger:type` argument grammar (primitive / Go-builtin
+spelling / leading `[]` array layers) via `resolveAdditionalPropertiesType`,
+with one deliberate difference from `resolveTypeOverride`: a **type-name
+reference resolves to a `$ref`** (and registers the model for discovery), not an
+inline expansion — an `additionalProperties` value naturally references a model,
+matching how a `map[string]Model` field renders.
+
+Semantics depend on what the Go type produced:
+
+- **struct** → COMPLEMENT: the named properties stay; the marker adds
+  `additionalProperties`. This is the #2539 / §17 case (`false` to close an
+  object) and the #3005 case (a typed value alongside named properties).
+- **map** → OVERRIDE: `buildFromMap` already emitted `additionalProperties: V`;
+  the marker replaces it.
+- **bare `$ref`** (a map/wrapper type that resolved to a reference) → DEFINE: the
+  `$ref` is cleared and a clean `{type: object, additionalProperties: …}` is
+  emitted (the marker beats the Go type; a `$ref` cannot carry siblings).
+
+**Precedence — lowest priority.** `additionalProperties` only rides on an
+`object`. If a prior rule already fixed a non-object type (`swagger:type` on a
+non-object, `swagger:strfmt`, a special/known type), the marker is dropped with a
+`CodeShapeMismatch` diagnostic. It composes freely with the other object
+validations (`maxProperties`, `minProperties`, `patternProperties`).
+
+### Field keyword — `additionalProperties: <spec>`
+
+The same `<spec>` is also accepted as a **field keyword**
+(`grammar.KwAdditionalProperties`, `CtxSchema`) decorating a struct field, with
+the same value grammar and lowest-priority precedence. Two landing paths:
+
+- **non-`$ref` field** (a map, an inline object, a primitive) —
+  `applyBlockToField` post-scans the block (`block.GetString`) after the normal
+  keyword dispatch and calls `applyAdditionalPropertiesSpec` on the field schema:
+  it overrides a map's element schema, or warn-drops on a primitive.
+- **`$ref`'d field** — handled in `applyToRefField`'s `refOverrideCollector`: the
+  value rides as an **allOf sibling** (`{allOf: [{$ref}, {additionalProperties:
+  …}]}`) so the reference is preserved (JSON-Schema-draft-4), rather than the
+  marker's `$ref`-reset.
+
+Both paths share `resolveAdditionalPropertiesValue` (the pure
+`true | false | <TypeSpec>` → `SchemaOrBool` resolver, no parent mutation).
+
+---
+
+## <a id="pattern-properties"></a>§pattern-properties — the typed `swagger:patternProperties` marker
+
+`swagger:patternProperties "<re>": <spec>, …` is a decl-level classifier
+(`grammar.AnnPatternProperties`) consumed by `classifierPatternProperties`
+(`pattern_properties.go`), applied from `Build` alongside the
+additionalProperties marker. It is the **typed** counterpart of the regex-only
+`patternProperties:` field keyword (which sets an empty `{}` value schema): each
+pair maps a property-name regex to a value schema resolved through the same
+`<TypeSpec>` grammar (`resolveAdditionalPropertiesType`, so a type-name → `$ref`).
+
+The whole `"<re>": <spec>, …` remainder is captured by the lexer as one raw arg
+token (regexes may contain spaces / colons / commas), read back via the
+non-filtering `findRawAnnotationArg`, and split by `parsePatternPropertyPairs` —
+a small hand-parser that respects the double-quoted regex (only `\"` is an escape
+inside it; every other backslash, e.g. `\d`, is preserved verbatim) and reads
+each spec up to the next top-level comma.
+
+Same precedence as additionalProperties: object-only (a non-object resolution
+warn-drops the marker; a bare `$ref` is reset). Each regex is RE2-hygiene-checked
+— an invalid regex is preserved on the schema but raises a `CodeInvalidAnnotation`
+warning, mirroring the `patternProperties:` keyword wording. A structurally
+malformed pair list is dropped with a diagnostic rather than partially applied.
+
+OAS-2 caveat: `patternProperties` is a JSON-Schema-draft-4 keyword, not part of
+the Swagger-2.0 Schema Object subset — emitted ungated by design (go-openapi
+favours JSON Schema; see the additional-properties plan).
+
+---
+
 ## <a id="ref-override"></a>§ref-override — field-level overrides on a `$ref`'d field
 
 `applyToRefField` handles the case where a struct field's Go type
@@ -743,6 +911,11 @@ replaces siblings. The correct shape is an **allOf compound**:
   same level as scanner-derived metadata (`x-go-name`,
   `x-go-package`) for consistency. See `refOverrideCollector`'s
   flag explanation below.
+- **externalDocs** (the `externalDocs:` raw block) is likewise an
+  annotation sibling of the `$ref` and is **lifted onto the outer
+  compound** alongside the description and `x-*` keys, not nested
+  inside `allOf[1]` (go-swagger#2655). A non-ref field emits its
+  externalDocs via `handlers.schemaRawHandler` instead.
 
 ### The `DescWithRef` toggle and the description-only case
 
@@ -766,7 +939,7 @@ would be lost otherwise.
 
 The collector accumulates field-level overrides into a scratch
 schema so `applyToRefField` can pick the final shape after the
-Walker has finished firing. Two flags track what was collected:
+Walker has finished firing. Three flags track what was collected:
 
 - **`collectedValidation`** — a JSON-Schema validation keyword
   fired (`maximum`, `pattern`, `enum`, …). When true, the override
@@ -775,6 +948,9 @@ Walker has finished firing. Two flags track what was collected:
   the collected extensions are **lifted onto the outer compound**
   (not the override arm) so `x-*` keys live alongside the
   scanner-derived `x-go-name` / `x-go-package`.
+- **`collectedExternalDoc`** — an `externalDocs:` block fired. When
+  true, the parsed `*ExternalDocumentation` is set on the outer
+  compound (sibling of the `$ref`), mirroring the extension lift.
 
 Splitting the collector out of `applyToRefField` keeps the
 per-shape Walker callbacks short and the orchestrator's cognitive
@@ -890,15 +1066,38 @@ type SimpleSchemaProbe interface {
 ```
 
 Implemented structurally by `paramTypable` in
-`internal/builders/parameters` and (forthcoming with M2)
-`headerTypable` in `internal/builders/responses`. Consumers don't
-need to import the schema package — the interface is satisfied by
-method set.
+`internal/builders/parameters`, the response header typable in
+`internal/builders/responses`, and `resolvers.ItemsTypable` (the
+shared array-items adapter). Consumers don't need to import the schema
+package — the interface is satisfied by method set.
 
 A target that doesn't implement `SimpleSchemaProbe` is trusted: the
 validator no-ops. A `nil` `SimpleSchemaShape` is also trusted — the
 caller chose SimpleSchema mode for something that can't surface a
 violation, by intent.
+
+#### Array element shapes (go-swagger#1088)
+
+`ItemsTypable` implementing the probe is what extends the catch-at-exit
+contract **one level down**, to array element shapes. An array IS legal
+under SimpleSchema, but its `items` are themselves a SimpleSchema and so
+may not be a `$ref`. A named object element (`[]Ele` under `in: query`,
+or an array-of-object response header) otherwise resolves to
+`items: {$ref}`, which the Swagger 2.0 editor rejects. Because the
+element is built through a fresh `WithSimpleSchema` sub-build whose
+target is the `ItemsTypable`, the same validator now inspects the items
+shape and dissolves the illegal `$ref` to an empty `{}` (named
+primitives like `[]Label` still expand inline to `{type: string}` and
+are untouched).
+
+When the dissolved shape was a `$ref`, the validator also calls
+`ResetPostDeclarations` on the sub-builder: `MakeRef` had discovered the
+target's decl and enqueued it, and once the reference is gone that decl
+would linger as an orphan definition. A single-type sub-build renders
+exactly one target, so every queued decl is reachable only through it;
+a decl genuinely referenced elsewhere is re-discovered by that site and
+deduplicated by the orchestrator. This is why a `[]Ele` query parameter
+no longer drags an unreferenced `Ele` into `definitions`.
 
 ### Knock-on cleanups this contract enables
 
@@ -946,6 +1145,40 @@ The `IsSimpleSchemaKeyword` set is locked down by unit tests in
 the handlers package — any future addition (or removal) of a
 SimpleSchema keyword has to update the test alongside the map,
 so the contract can't drift silently.
+
+---
+
+## <a id="decl-shape-recheck"></a>§decl-shape-recheck — top-level model shape re-check after type resolution
+
+For a top-level model declaration, `buildFromDecl` dispatches the
+doc-comment block (`applyDeclCommentBlock` → `DispatchSchemaLevel0`)
+**before** `buildFromType` resolves the Go type onto the schema. So at
+dispatch time `schema.Type` is still empty, and the inline `checkShape`
+guard — which gates a validation keyword on the schema's resolved type —
+sees `""` ("type unknown") and accepts everything. A shape-constrained
+keyword on a mismatched scalar model (e.g. `minProperties:` on a
+`type Foo string`) would therefore be written and never flagged.
+
+Field- and items-level dispatch don't have this problem: their target's
+type is already set when their block is dispatched, so `checkShape`
+gates correctly inline.
+
+To close the top-level gap, `Build` calls
+`handlers.RecheckSchemaShape(&schema, pos, diag)` after `buildFromDecl`
+returns. It re-validates the shape-constrained validations now present on
+the schema against the resolved `schema.Type`, stripping any that are
+illegal for that type and emitting one `CodeShapeMismatch` warning per
+strip (at the decl position). `uniqueItems` is intentionally not
+rechecked — its grammar keyword (`unique`) carries no type-domain rule,
+matching the field/items paths which likewise never shape-gate it.
+
+This is a deliberate post-hoc strip rather than a reorder of
+`buildFromDecl`: moving the validation dispatch after type-building would
+also move `default:` / `enum:` coercion (which reads `schema.Type` /
+`schema.Format`), changing coercion results for top-level scalar models
+and rippling through goldens. The recheck is purely additive — it only
+removes already-illegal validations — so it leaves every valid case (and
+its golden) untouched.
 
 ---
 

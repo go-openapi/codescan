@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Friend": {
+      "type": "object",
+      "title": "Friend is referenced via pointer.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2317"
+    },
+    "Person": {
+      "type": "object",
+      "title": "Person has a pointer field with an x-nullable Extensions block (#2317).",
+      "properties": {
+        "friend": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Friend"
+            }
+          ],
+          "x-go-name": "Friend",
+          "x-nullable": true
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2317"
+    }
+  }
+}

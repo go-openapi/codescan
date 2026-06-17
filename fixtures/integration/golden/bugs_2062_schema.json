@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/user": {
+      "put": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Update an existing user.",
+        "operationId": "updateUser",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    }
+  }
+}

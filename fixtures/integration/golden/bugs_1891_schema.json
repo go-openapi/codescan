@@ -1,0 +1,49 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/foo": {
+      "get": {
+        "description": "get socket address",
+        "tags": [
+          "foo"
+        ],
+        "operationId": "fooInput",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "App",
+            "name": "app",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "UID",
+            "name": "uid",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FooOutput for output",
+            "schema": {
+              "$ref": "#/definitions/FooOutput"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "FooOutput": {
+      "description": "FooOutput for output",
+      "type": "object",
+      "properties": {
+        "addr": {
+          "type": "string",
+          "x-go-name": "Addr"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1891"
+    }
+  }
+}

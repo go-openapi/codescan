@@ -81,6 +81,41 @@ func TestCommentBlankSubMatcher(t *testing.T) {
 	})
 }
 
+// TestMalformedOverrideName covers go-swagger issue #874: a package-
+// qualified swagger:response / swagger:model name (e.g. "utils.Error")
+// is not a plain identifier. The strict override regex rejects it, so it
+// would be silently dropped; these detectors let the scanner warn instead.
+// A bare marker or a well-formed name (including a trailing sentence
+// period) must NOT be flagged.
+func TestMalformedOverrideName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		line    string
+		fn      func(string) (string, bool)
+		wantBad string
+		wantOK  bool
+	}{
+		{"response dotted name", "// swagger:response utils.Error", MalformedResponseName, "utils.Error", true},
+		{"model dotted name", "// swagger:model utils.Error", MalformedModelName, "utils.Error", true},
+		{"response plain name", "// swagger:response notFound", MalformedResponseName, "", false},
+		{"model plain name", "// swagger:model MyModel", MalformedModelName, "", false},
+		{"response bare marker", "// swagger:response", MalformedResponseName, "", false},
+		{"model bare marker", "// swagger:model", MalformedModelName, "", false},
+		{"model trailing period", "// swagger:model MyModel.", MalformedModelName, "", false},
+		{"response not an annotation", "// just a comment", MalformedResponseName, "", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bad, ok := tc.fn(tc.line)
+			assert.EqualT(t, tc.wantOK, ok)
+			assert.EqualT(t, tc.wantBad, bad)
+		})
+	}
+}
+
 func TestCommentMultipleSubMatcher(t *testing.T) {
 	t.Parallel()
 

@@ -1,0 +1,47 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/api/v1/clusters": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "text/plain"
+        ],
+        "summary": "Creates a cluster.",
+        "operationId": "createCluster",
+        "parameters": [
+          {
+            "description": "the cluster specification to create",
+            "name": "cluster",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/cluster"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "cluster": {
+      "type": "object",
+      "title": "Cluster is the body model.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-name": "Cluster",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1416"
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/accounts": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Create an account.",
+        "operationId": "createAccount",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "AccountID",
+            "description": "regression guard: name: keeps working on a parameter field.",
+            "name": "account_id",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "G2 diagnostic: swagger:name is inert here; the author likely meant\nthe name: keyword. The annotation is dropped and a warning emitted,\nso this parameter keeps its Go-derived name.",
+            "name": "Region",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/accountCreated"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Account": {
+      "type": "object",
+      "title": "Account exercises the name: keyword on model struct fields.",
+      "properties": {
+        "accountType": {
+          "description": "the legacy name annotation is still honoured on its own.",
+          "type": "string",
+          "x-go-name": "Kind"
+        },
+        "balance": {
+          "description": "the running balance",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Bal"
+        },
+        "currencyCode": {
+          "description": "the keyword wins over a co-located legacy name annotation.",
+          "type": "string",
+          "x-go-name": "Currency"
+        },
+        "plain": {
+          "description": "no override → the json tag is retained.",
+          "type": "string",
+          "x-go-name": "Plain"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/name-keyword-universal"
+    },
+    "Token": {
+      "type": "object",
+      "title": "Token exercises the name: keyword on interface-method properties.",
+      "properties": {
+        "issuedAt": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "IssuedAt"
+        },
+        "subject": {
+          "description": "the legacy name annotation still works on a method too.",
+          "type": "string",
+          "x-go-name": "Sub"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/name-keyword-universal"
+    }
+  },
+  "responses": {
+    "accountCreated": {
+      "description": "accountCreated is a response whose header field misuses swagger:name.",
+      "schema": {
+        "$ref": "#/definitions/Account"
+      },
+      "headers": {
+        "Token": {
+          "type": "string",
+          "description": "G2 diagnostic: swagger:name is inert on a response header; the\ncanonical rename is the name: keyword."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/things": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "summary": "List things.",
+        "operationId": "listThings",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Limit",
+            "description": "the maximum number of items to return",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

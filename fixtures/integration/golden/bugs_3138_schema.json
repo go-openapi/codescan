@@ -1,0 +1,69 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/widgets": {
+      "get": {
+        "operationId": "listWidgets",
+        "deprecated": true,
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "OldWidget": {
+      "type": "object",
+      "title": "OldWidget is a model deprecated via the explicit annotation.",
+      "properties": {
+        "name": {
+          "description": "The name.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-deprecated": true,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3138"
+    },
+    "RetiredWidget": {
+      "description": "Deprecated: use Widget instead.",
+      "type": "object",
+      "title": "RetiredWidget is a model deprecated via a godoc paragraph.",
+      "properties": {
+        "name": {
+          "description": "The name.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-deprecated": true,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3138"
+    },
+    "Widget": {
+      "type": "object",
+      "title": "Widget is a current model with a mix of deprecated and live fields.",
+      "properties": {
+        "legacyID": {
+          "description": "LegacyID is the old identifier.\n\nDeprecated: use Name instead.",
+          "type": "string",
+          "x-deprecated": true,
+          "x-go-name": "LegacyID"
+        },
+        "name": {
+          "description": "The current name.",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "oldName": {
+          "description": "The legacy name.",
+          "type": "string",
+          "x-deprecated": true,
+          "x-go-name": "OldName"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3138"
+    }
+  }
+}

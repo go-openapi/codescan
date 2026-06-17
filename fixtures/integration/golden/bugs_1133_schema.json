@@ -1,0 +1,18 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "foo": {
+      "type": "object",
+      "title": "MyModel is the only annotated model.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-name": "MyModel",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1133"
+    }
+  }
+}

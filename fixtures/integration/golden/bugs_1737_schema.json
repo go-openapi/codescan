@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AResponseBody": {
+      "description": "AResponseBody carries a field whose type resolves to a $ref. The reporter\nfound the field-level description was dropped because a Swagger 2.0 property\nthat is a bare $ref cannot carry sibling keys.",
+      "type": "object",
+      "properties": {
+        "someId": {
+          "description": "SomeID description that the reporter wants to keep.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ObjectID"
+            }
+          ],
+          "x-go-name": "SomeID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1737"
+    },
+    "ObjectID": {
+      "description": "ObjectID stands in for an external named type (e.g. bson.ObjectId) that\ncodescan turns into its own definition (go-swagger#1737).",
+      "type": "object",
+      "properties": {
+        "hex": {
+          "type": "string",
+          "x-go-name": "Hex"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1737"
+    }
+  },
+  "responses": {
+    "aResponse": {
+      "description": "AResponse is the body response wrapping AResponseBody.",
+      "schema": {
+        "$ref": "#/definitions/AResponseBody"
+      }
+    }
+  }
+}

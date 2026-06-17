@@ -1,0 +1,28 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "User": {
+      "type": "object",
+      "title": "User probes field-level Extensions on a NON-array vs array field (#2106).",
+      "properties": {
+        "friends": {
+          "description": "the friends",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-array-ext": "arrayvalue",
+          "x-go-name": "Friends"
+        },
+        "name": {
+          "description": "the name",
+          "type": "string",
+          "x-go-name": "Name",
+          "x-scalar-ext": "scalarvalue"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2106"
+    }
+  }
+}

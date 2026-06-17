@@ -1,0 +1,58 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Holder": {
+      "type": "object",
+      "title": "Holder references each override type to expose field-site rendering.",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "priority": {
+          "$ref": "#/definitions/Priority"
+        },
+        "raw": {
+          "$ref": "#/definitions/RawID"
+        },
+        "state": {
+          "$ref": "#/definitions/Status"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
+    },
+    "Priority": {
+      "description": "does it collect the consts below?",
+      "type": "integer",
+      "format": "int64",
+      "title": "Priority is an enum declared with the BARE swagger:enum (no name arg) (F4b):",
+      "enum": [
+        1,
+        9
+      ],
+      "x-go-enum-desc": "1 PriorityLow is low.\n9 PriorityHigh is high.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
+    },
+    "RawID": {
+      "type": "string",
+      "title": "RawID is a byte-array type overridden to string, with swagger:model (F2).",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
+    },
+    "Status": {
+      "description": "Status is an enum type (named swagger:enum) with swagger:model (F4): values\ninline on referencing fields, or a $ref to an enum definition?",
+      "type": "string",
+      "enum": [
+        "active",
+        "closed"
+      ],
+      "x-go-enum-desc": "active StatusActive is active.\nclosed StatusClosed is closed.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
+    },
+    "UUID": {
+      "description": "UUID is a string-format type carrying BOTH swagger:strfmt and swagger:model\n(F1): does it publish a {type:string,format:uuid} definition that fields\n$ref, or inline + an orphan definition?",
+      "type": "string",
+      "format": "uuid",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/quirks/model-override-matrix"
+    }
+  }
+}

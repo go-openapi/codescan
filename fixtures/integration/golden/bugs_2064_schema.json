@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/thing": {
+      "post": {
+        "tags": [
+          "thing"
+        ],
+        "summary": "Create.",
+        "operationId": "createThing",
+        "parameters": [
+          {
+            "default": "def",
+            "example": "example",
+            "description": "desc",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

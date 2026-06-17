@@ -1,0 +1,36 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Resources": {
+      "type": "object",
+      "title": "Resources references an external-like struct via a slice-of-pointer field.",
+      "properties": {
+        "ulimits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Ulimit"
+          },
+          "x-go-name": "Ulimits"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/613"
+    },
+    "Ulimit": {
+      "type": "object",
+      "title": "Ulimit stands in for an external referenced struct (#613).",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "soft": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Soft"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/613"
+    }
+  }
+}

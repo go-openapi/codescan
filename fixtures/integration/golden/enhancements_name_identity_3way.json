@@ -1,0 +1,55 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "AWidget": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-3way/a"
+    },
+    "BWidget": {
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-3way/b"
+    },
+    "CWidget": {
+      "type": "object",
+      "required": [
+        "c"
+      ],
+      "properties": {
+        "c": {
+          "type": "boolean",
+          "x-go-name": "C"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-3way/c"
+    },
+    "Container": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "$ref": "#/definitions/AWidget"
+        },
+        "b": {
+          "$ref": "#/definitions/BWidget"
+        },
+        "c": {
+          "$ref": "#/definitions/CWidget"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-3way"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search, declaring the query param inline (no wrapper struct, #91).",
+        "operationId": "doSearch",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "the tag type",
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

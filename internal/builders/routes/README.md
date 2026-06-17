@@ -77,6 +77,11 @@ One switch over `p.Keyword.Name`. Per-shape:
   flow through `Property.AsList`, which unifies inline comma-lists,
   multi-line bare-line bodies, and YAML-style `-` markers. The
   resulting `[]string` is assigned directly onto the operation.
+- **`tags`** also flows through `Property.AsList` (a plain string
+  list — the meta `Tags:` object shape is a different builder), but
+  is **unioned** onto `op.Tags` via `unionTags` rather than
+  assigned, so route-header-line tags and body `Tags:` names merge
+  with duplicates dropped (go-swagger#2655).
 - **Inline boolean** (`deprecated`) reads `p.Typed.Boolean` after
   an `IsTyped()` guard, so malformed inputs (which leave
   `ShapeNone`) are skipped silently.

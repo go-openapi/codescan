@@ -51,7 +51,12 @@ For each non-embedded exported field, `processResponseField` runs:
 2. Pre-scan the doc-comment signals via `scanFieldDocSignals` (uses
    the `common.Builder` parse cache).
 3. If `swagger:ignore` → skip.
-4. Resolve JSON tag name. If `json:"-"` → skip.
+4. Resolve JSON tag name. If `json:"-"` → skip. A `name:` keyword on the
+   field overrides this derived name — it renames the response header
+   (the `Headers` map key), mirroring `name:` on a parameters field
+   (`Block.GetString(grammar.KwName)`, applied before `name` flows into
+   the `Headers` key / `seen` set). Harmless on a body field, which never
+   consults `name`.
 5. Resolve `in:` (default `header`; see [§in-discriminator](#in-discriminator)).
 6. **File-body gate**: if `swagger:file` AND `in==body` → set
    `resp.Schema = {type:"file"}` and skip the field build (see
@@ -87,6 +92,27 @@ by accident: an empty string is not `"body"` and so behaved
 identically to `header`. Q1 made this default **explicit** in code
 — `inHeader` is assigned when `!signals.inSet`. Observable behaviour
 is unchanged; the implicit fall-through is gone.
+
+### Inherited `in:` from an embed (go-swagger#2701)
+
+An `in:` annotation on an embedded (anonymous) field applies to the
+response fields it promotes. `buildFromStruct` reads it via the shared
+`common.EmbedInheritance` kernel and threads it through the embed
+recursion with save/restore; `processResponseField` consults it as the
+fallback between a field's own `in:` and the `header` default. The common
+case — an embed of header fields marked `// in: header` (or unmarked) —
+promotes each field as a response header.
+
+`// in: body` on an embed is special: a response has a single body, so
+per-field promotion is meaningless. The embed IS the body — the embedded
+struct drives `resp.Schema` (a `$ref` to a model, or its inline shape),
+exactly like a named `Body Foo` field. `buildFromStruct` detects the
+inherited `in: body` and routes the embed through `buildBodyEmbed`
+instead of the field-promotion recursion (go-swagger#1635). Response
+**bodies** also inherit `required:` from embeds, but through the schema
+builder (a body is built there), not here — OAS2 response headers carry
+no `required`. See
+[common §embed-inheritance](../common/README.md#embed-inheritance).
 
 ### Invalid `in:` values
 

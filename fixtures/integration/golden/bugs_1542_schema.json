@@ -1,0 +1,29 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Metadata": {
+      "description": "Metadata exercises example annotations on scalar and map fields (the #1542\n\"examples in response schema\" scenario).",
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "Annotations",
+          "example": {
+            "com.example1.com": "SomeString"
+          }
+        },
+        "name": {
+          "description": "Volume Name",
+          "type": "string",
+          "x-go-name": "VolumeName",
+          "example": "OpenEBS Volume"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1542"
+    }
+  }
+}

@@ -44,6 +44,14 @@ func (s *Builder) buildFromStruct(decl *scanner.EntityDecl, st *types.Struct, sc
 	}
 	target.Typed("object", "")
 
+	// Cross-ref linkage: when own fields land in a fresh allOf member (target
+	// diverges from schema), their pointer is /allOf/{k}/properties/… — not the
+	// tracked base — so clear the path and let them resolve to schema's anchor.
+	// Plain structs and plain embeds keep target == schema and anchor directly.
+	if target != schema {
+		defer s.repath("")()
+	}
+
 	if err := s.buildStructFields(decl, st, target, nameByJSON); err != nil {
 		return err
 	}

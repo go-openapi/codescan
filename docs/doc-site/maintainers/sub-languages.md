@@ -275,7 +275,7 @@ untagged token.
 
 | Tag | Value shape | Lands on |
 |-----|-------------|----------|
-| `body:` | Go ident with optional `[]` prefixes (`body:[]Pet`) | A `$ref` to `#/definitions/<name>`, array-wrapped per `[]` count |
+| `body:` | A scalar primitive (`string` / `number` / `integer` / `boolean`) OR a Go ident, each with optional `[]` prefixes (`body:[]string`, `body:[]Pet`) | A primitive emits a typed schema; a Go ident emits a `$ref` to `#/definitions/<name>` — array-wrapped per `[]` count. The reserved keywords `array` / `object` / `file` / `null` are rejected with a diagnostic (use `[]T` or a model name) |
 | `response:` | Go ident referring to a `swagger:response`-declared type | A `$ref` to `#/responses/<name>` |
 | `description:` | Free-form prose (rest of line) | `response.description` |
 
@@ -284,7 +284,10 @@ untagged token.
 - The **first untagged token** defaults to a response ref. The
   orchestrator resolves it against the operation's `responses` map
   first, then falls back to `definitions` — if found in definitions
-  (not responses), it's silently promoted to a body ref.
+  (not responses), it's silently promoted to a body ref. An untagged
+  token is always read as a NAME, never a type: a bare `200: string`
+  is a (dangling) response ref, not a primitive body — use the
+  unambiguous `body:string` form for a primitive body.
 - **Subsequent untagged tokens** accumulate into the description.
 
 ### Examples
@@ -292,6 +295,8 @@ untagged token.
 ```
 Responses:
   200: User the user as returned                  # untagged → response="User", desc="the user as returned"
+  200: body:string the version                    # primitive body (use the body: tag) + description
+  200: body:[]integer the id list                 # array-of-primitive body
   200: body:User the user                         # body ref + description
   200: response:userResponse the user             # named response ref
   201: body:Pet the created pet
@@ -313,7 +318,13 @@ Responses:
   non-existent response).
 - **Unresolvable response ref** — when a response name appears in
   neither `responses` nor `definitions`, the line drops with
-  diagnostic. The legacy parser emitted a dangling `$ref`.
+  diagnostic. The legacy parser emitted a dangling `$ref`. When the
+  unresolved name is a primitive type spelling (`200: string`), the
+  diagnostic points the author at the `body:` form (`200: body:string`).
+- **Reserved `body:` type** (`200: body:object`, `body:file`,
+  `body:array`, `body:null`) — these look like a type but are not valid
+  response body types; the line drops with a diagnostic suggesting a
+  scalar primitive, `[]T`, or a model name.
 
 ### Empty value lines
 

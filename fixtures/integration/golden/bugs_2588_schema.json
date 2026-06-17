@@ -1,0 +1,20 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "A": {
+      "type": "object",
+      "title": "A is an interface.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2588"
+    },
+    "B": {
+      "title": "B is a named type whose underlying type is an interface (#2588).",
+      "$ref": "#/definitions/A"
+    },
+    "C": {
+      "type": "object",
+      "title": "C embeds B (an interface-underlying named type).",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2588"
+    }
+  }
+}

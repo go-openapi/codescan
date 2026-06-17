@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Cfg": {
+      "description": "Cfg shows that a map field accepts a custom `example` with meaningful keys\n(go-swagger#1459) — the Swagger UI's additionalProp1/2/3 placeholders only\nappear when no example is set.",
+      "type": "object",
+      "properties": {
+        "settings": {
+          "description": "settings",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "Settings",
+          "example": {
+            "retries": "3",
+            "timeout": "30s"
+          }
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1459"
+    }
+  }
+}

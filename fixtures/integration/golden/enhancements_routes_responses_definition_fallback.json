@@ -10,7 +10,7 @@
         "operationId": "getPetFallback",
         "responses": {
           "200": {
-            "description": "Pet",
+            "description": "Pet is a pet on offer.",
             "schema": {
               "$ref": "#/definitions/Pet"
             }

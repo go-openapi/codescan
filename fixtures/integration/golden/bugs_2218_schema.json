@@ -1,0 +1,28 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/things": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "summary": "List things.",
+        "operationId": "listThings",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Filter",
+            "description": "the filter",
+            "name": "filter",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

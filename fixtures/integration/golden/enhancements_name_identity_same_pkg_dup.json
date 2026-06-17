@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Dup": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "x-go-name": "First",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-same-pkg-dup"
+    },
+    "Root": {
+      "type": "object",
+      "title": "Root references both so they are both discovered.",
+      "properties": {
+        "f": {
+          "$ref": "#/definitions/Dup"
+        },
+        "s": {
+          "$ref": "#/definitions/Second"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-same-pkg-dup"
+    },
+    "Second": {
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-identity-same-pkg-dup"
+    }
+  }
+}

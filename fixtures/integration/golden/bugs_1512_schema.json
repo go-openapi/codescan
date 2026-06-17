@@ -1,0 +1,33 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Sizes": {
+      "description": "Sizes carries unsigned integer fields. Swagger 2.0 officially defines only\nint32 / int64 integer formats; go-swagger emits the Go-specific uint formats\n(uint64, uint32, …) as a vendor convention. For OAI-conformant / precision-safe\noutput, a field can be overridden with `swagger:strfmt int64`, which yields the\nstring-encoded {type: string, format: int64} representation.",
+      "type": "object",
+      "properties": {
+        "big": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "Big"
+        },
+        "overridden": {
+          "type": "string",
+          "format": "int64",
+          "x-go-name": "Overridden"
+        },
+        "signed": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Signed"
+        },
+        "small": {
+          "type": "integer",
+          "format": "uint32",
+          "x-go-name": "Small"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1512"
+    }
+  }
+}

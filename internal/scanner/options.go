@@ -52,7 +52,84 @@ type Options struct {
 	// See [§descwithref](./README.md#descwithref).
 	DescWithRef    bool
 	SkipExtensions bool // skip generating x-go-* vendor extensions in the spec
-	Debug          bool // enable verbose debug logging during scanning
+
+	// SkipEnumDescriptions controls whether the per-enum-value const-name
+	// mapping built from `swagger:enum` (e.g. "FIRST TestEnumFirst") is
+	// folded into the property / parameter / header `description`.
+	//
+	//   - false (default): the mapping is appended to the authored
+	//     description AND exposed via the `x-go-enum-desc` vendor extension
+	//     (backward-compatible behaviour).
+	//   - true: the description is left as the authored prose; the mapping
+	//     rides `x-go-enum-desc` only.
+	//
+	// Independent of SkipExtensions: with SkipExtensions also set, the
+	// mapping is suppressed everywhere. See go-swagger/go-swagger#2922.
+	SkipEnumDescriptions bool
+
+	// NameConcatBudget tunes the readability cutoff used when the
+	// name-identity reduce stage deconflicts colliding definition names
+	// by concatenating package segments (b.Test / c.Test -> BTest /
+	// CTest). Each candidate concat is scored in [0,1] — lower is more
+	// readable (shorter overall, fewer parts, no over-long segment). A
+	// collision group whose best concat scores ABOVE the budget is a
+	// candidate for the hierarchical fallback (name-identity Stage 3 /
+	// K3).
+	//
+	// The zero value selects the built-in default (0.65). Raise it
+	// toward 1.0 to accept longer concats; lower it to fall back sooner.
+	NameConcatBudget float64
+
+	// EmitHierarchicalNames enables the hierarchical fail-safe for the
+	// rare collision groups whose best flat concat exceeds
+	// NameConcatBudget. When set, such a group is emitted as nested
+	// container definitions (`#/definitions/<pkg>/<Name>`, with
+	// `additionalProperties:true` + `x-go-package` on each container)
+	// instead of a long flat concat, and an explanatory diagnostic is
+	// raised.
+	//
+	// Default false — and deliberately so: a nested definition is a deep
+	// JSON pointer that only `ExpandSpec` resolves, and a definitions-
+	// enumerating consumer (e.g. go-swagger codegen, one model per entry)
+	// sees the container nodes rather than the models. The always-correct
+	// flat concat stays the default; enable this only when you prefer the
+	// nested shape for the over-budget tail.
+	EmitHierarchicalNames bool
+
+	// EmitXGoType stamps an `x-go-type` vendor extension on every emitted
+	// definition, recording the fully-qualified originating Go type
+	// (`<package path>.<type name>`) alongside the existing `x-go-name` /
+	// `x-go-package` traceability extensions.
+	//
+	//   - false (default): no `x-go-type` is emitted for ordinary types
+	//     (the extension still appears on the narrow special-type cases
+	//     that have always carried it — `error`, the unmodellable
+	//     generic-type fallback).
+	//   - true: each definition carries `x-go-type`, useful for
+	//     round-tripping a generated spec back to its source Go types.
+	//
+	// Under the SkipExtensions umbrella: with SkipExtensions also set,
+	// no vendor extension is emitted regardless. See
+	// go-swagger/go-swagger#2924.
+	EmitXGoType bool
+
+	// SingleLineCommentAsDescription routes a single-line doc comment to
+	// the object's `description` regardless of trailing punctuation,
+	// never to `title` / `summary`.
+	//
+	//   - false (default): the first-sentence convention applies — a
+	//     single-line comment ending in punctuation (`.`, `!`, `?`)
+	//     becomes the `title` (model / info) or `summary` (operation);
+	//     without trailing punctuation it is a `description`.
+	//   - true: a single-line comment is always a `description`. Multi-
+	//     line comments keep the existing title/description split (the
+	//     first line, or the paragraph before the first blank line, is
+	//     still the title).
+	//
+	// See go-swagger/go-swagger#2626.
+	SingleLineCommentAsDescription bool
+
+	Debug bool // enable verbose debug logging during scanning
 
 	// OnDiagnostic, when non-nil, is invoked for every diagnostic the
 	// builder layer records (lexer/parser warnings, semantic-validation
@@ -65,4 +142,15 @@ type Options struct {
 	// to change while LSP integration matures. See
 	// [§diagnostics](./README.md#diagnostics).
 	OnDiagnostic func(grammar.Diagnostic)
+
+	// OnProvenance, when non-nil, is invoked once per anchor node in the
+	// produced spec, carrying its JSON pointer and the source position of
+	// the Go construct that produced it (see [Provenance]). Anchors are
+	// code-detail nodes (type decls, fields, values, route/meta blocks);
+	// finer nodes resolve to their nearest anchored ancestor at the
+	// consumer. The callback never blocks the build.
+	//
+	// Experimental: the cross-ref surface may change while LSP / TUI
+	// integration matures.
+	OnProvenance func(Provenance)
 }

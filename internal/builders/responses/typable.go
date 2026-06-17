@@ -25,7 +25,17 @@ func (ht responseTypable) In() string { return ht.in }
 
 func (ht responseTypable) Level() int { return 0 }
 
+// Typed writes the primitive type onto the body schema in body mode,
+// or onto the header in SimpleSchema mode. Without the body branch a
+// primitive `Body` field (e.g. `Body string`) lands its type on the
+// header, which body responses discard — leaving the response with no
+// schema at all (go-swagger#2942). Mirrors SetRef's body/non-body
+// split.
 func (ht responseTypable) Typed(tpe, format string) {
+	if ht.in == inBody {
+		ht.Schema().Typed(tpe, format)
+		return
+	}
 	ht.header.Typed(tpe, format)
 }
 
@@ -71,11 +81,29 @@ func (ht responseTypable) AddExtension(key string, value any) {
 }
 
 func (ht responseTypable) WithEnum(values ...any) {
-	ht.header.WithEnum(values)
+	// Spread the variadic through: passing the slice itself would nest it
+	// one level deep (enum: [[FIRST, SECOND]]), producing malformed OAS2.
+	// Mirrors paramTypable / schema.Typable / ItemsTypable.
+	ht.header.WithEnum(values...)
 }
 
-func (ht responseTypable) WithEnumDescription(_ string) {
-	// no
+// WithEnumDescription rides the enum const-name mapping on the
+// header's x-go-enum-desc vendor extension, mirroring
+// paramTypable.WithEnumDescription.
+//
+// This is wired against go-openapi/spec >= v0.22.6, where
+// Header.MarshalJSON emits the embedded VendorExtensible (go-openapi/spec#277).
+// Earlier versions dropped header extensions at marshal, so this was a
+// documented no-op. The enum *values* themselves ship via WithEnum and
+// were never affected.
+func (ht responseTypable) WithEnumDescription(desc string) {
+	if desc == "" {
+		return
+	}
+	// Gated on SkipExtensions (mirrors schema.Typable): the contract is that
+	// x-go-* vendor extensions are suppressed everywhere when SkipExtensions
+	// is set.
+	resolvers.AddExtension(&ht.header.VendorExtensible, resolvers.ExtEnumDesc, desc, ht.skipExt)
 }
 
 // SimpleSchemaShape satisfies schema.SimpleSchemaProbe (non-body

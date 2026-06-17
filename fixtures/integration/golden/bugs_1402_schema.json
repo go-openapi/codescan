@@ -1,0 +1,18 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Bag": {
+      "type": "object",
+      "title": "Bag has a map[string]interface{} field (#1402).",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {},
+          "x-go-name": "Data"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/1402"
+    }
+  }
+}

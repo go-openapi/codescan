@@ -93,6 +93,22 @@ func IsTextMarshaler(tpe types.Type) bool {
 	return types.Implements(tpe, asInterface)
 }
 
+// IsJSONMapKey reports whether a Go map with this key type marshals to a JSON
+// object under encoding/json — i.e. whether the map is representable as
+// {type: object, additionalProperties: V}.
+//
+// The rule mirrors encoding/json's newMapEncoder: the key kind is string or any
+// integer / unsigned-integer kind (int, int8…int64, uint, uint8…uint64,
+// uintptr — all stringified), or the key implements encoding.TextMarshaler.
+// Everything else (float, bool, struct without TextMarshaler, interface, func)
+// makes json.Marshal fail; json.Marshaler is never consulted for keys.
+func IsJSONMapKey(key types.Type) bool {
+	if b, ok := key.Underlying().(*types.Basic); ok && b.Info()&(types.IsString|types.IsInteger) != 0 {
+		return true
+	}
+	return IsTextMarshaler(key)
+}
+
 func IsStdTime(o *types.TypeName) bool {
 	return o.Pkg() != nil && o.Pkg().Name() == "time" && o.Name() == "Time"
 }

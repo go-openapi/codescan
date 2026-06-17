@@ -1,0 +1,36 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/version": {
+      "get": {
+        "operationId": "getVersion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "/version2": {
+      "get": {
+        "operationId": "getVersion2",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/versionResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "versionResponse": {
+      "description": "versionResponse wraps a primitive string body.",
+      "schema": {
+        "type": "string"
+      }
+    }
+  }
+}

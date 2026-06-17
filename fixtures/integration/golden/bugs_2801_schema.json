@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/op": {
+      "post": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "MyOperation",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "int": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Val"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2801"
+    }
+  }
+}

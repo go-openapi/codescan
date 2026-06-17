@@ -1,0 +1,50 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "BaseResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error"
+        },
+        "ok": {
+          "type": "boolean",
+          "x-go-name": "OK"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2761"
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2761"
+    }
+  },
+  "responses": {
+    "userResponse": {
+      "description": "",
+      "schema": {
+        "allOf": [
+          {
+            "$ref": "#/definitions/BaseResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "user": {
+                "$ref": "#/definitions/User"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

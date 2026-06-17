@@ -1,0 +1,34 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Alpha": {
+      "type": "object",
+      "title": "Alpha is the first grouped model.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3213"
+    },
+    "Beta": {
+      "type": "object",
+      "title": "Beta is the second grouped model, sharing Alpha's type group.",
+      "properties": {
+        "status": {
+          "description": "The current status.\non StatusOn\noff StatusOff",
+          "type": "string",
+          "enum": [
+            "on",
+            "off"
+          ],
+          "x-go-enum-desc": "on StatusOn\noff StatusOff",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3213"
+    }
+  }
+}

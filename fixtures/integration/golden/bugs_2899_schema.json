@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logs in.",
+        "operationId": "doLogin",
+        "parameters": [
+          {
+            "description": "Six digit SMS code",
+            "name": "twoFactorCode",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "example": "123456"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "Package bug1121 probes whether tag descriptions (the OAI root-level tags\nsection, with description / externalDocs per tag) can be declared from code.",
+    "version": "1.0.0"
+  },
+  "host": "localhost",
+  "paths": {},
+  "tags": [
+    {
+      "description": "Operations about users",
+      "name": "users"
+    }
+  ]
+}

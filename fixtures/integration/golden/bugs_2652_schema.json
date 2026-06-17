@@ -1,0 +1,49 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "LabelSelector": {
+      "type": "object",
+      "properties": {
+        "matchLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "MatchLabels"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2652"
+    },
+    "Selector": {
+      "type": "object",
+      "required": [
+        "name",
+        "podSelector"
+      ],
+      "properties": {
+        "name": {
+          "description": "the name of Selector",
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "apple selector"
+        },
+        "podSelector": {
+          "description": "the condition of Selector",
+          "allOf": [
+            {
+              "$ref": "#/definitions/LabelSelector"
+            },
+            {
+              "example": {
+                "matchLabels": {}
+              }
+            }
+          ],
+          "x-go-name": "PodSelector"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/2652"
+    }
+  }
+}
