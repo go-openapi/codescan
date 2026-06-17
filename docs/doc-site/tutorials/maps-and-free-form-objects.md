@@ -68,6 +68,15 @@ On a **map** type the marker *overrides* the element-derived value schema; on a
 struct it *complements* the named properties (as above). It composes with the
 object validations `maxProperties` / `minProperties` / `patternProperties`.
 
+{{% notice style="info" %}}
+The model name is a **bare leaf**: codescan resolves it in the annotating type's
+own package first, then uniquely across the scanned model set, so a value type
+declared in another package resolves to a `$ref` by name. A leaf that matches a
+model in several packages is ambiguous — it is dropped with a
+`validate.ambiguous-type-name` diagnostic. See
+[Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts#referencing-a-model-by-leaf-across-packages" %}}).
+{{% /notice %}}
+
 ## Per-field control
 
 The same `<spec>` is available as a field keyword,

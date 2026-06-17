@@ -1,0 +1,19 @@
+{
+  "description": "Dashboard references the same-named Account from two packages plus both\nledger entries, forcing all of them to be discovered together. The two\nAccounts collide on the short name and are deconflicted by package segment;\nthe refs below point at the resolved names, never a bare \"Account\".",
+  "type": "object",
+  "properties": {
+    "billing": {
+      "$ref": "#/definitions/BillingAccount"
+    },
+    "identity": {
+      "$ref": "#/definitions/IdentityAccount"
+    },
+    "primary": {
+      "$ref": "#/definitions/Entry"
+    },
+    "secondary": {
+      "$ref": "#/definitions/Reversal"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/nameconflicts"
+}

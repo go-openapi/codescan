@@ -164,12 +164,14 @@ by the `DescWithRef` option (see
 and a `default`/`example` on a `$ref`'d field is shown in
 [Examples & defaults]({{% relref "/tutorials/examples-and-defaults" %}}).
 
-{{% notice style="warning" %}}
+{{% notice style="info" %}}
 **Same-name collisions.** Two structs that share the same short name in
-different packages currently both map to `#/definitions/<Name>` and are silently
-merged into one definition — the result is lossy and depends on scan order.
-Until auto-disambiguation lands, give one type an explicit
-`swagger:model <DistinctName>` to force a separate definition key.
+different packages stay distinct: codescan keys each by a compiler-unique
+identity and qualifies the colliding ones with a package segment
+(`billing.Account` / `identity.Account` → `BillingAccount` / `IdentityAccount`),
+deterministically. Pin the names in your public contract with an explicit
+`swagger:model <Name>`, and let auto-resolution handle the rest — see
+[Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts" %}}).
 {{% /notice %}}
 
 ## What's next
