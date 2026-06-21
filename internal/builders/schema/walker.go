@@ -5,6 +5,7 @@ package schema
 
 import (
 	"go/ast"
+	"go/token"
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/handlers"
@@ -176,10 +177,35 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	description := block.Prose()
 
 	if !c.anyCollected() && description == "" {
+		return // bare {$ref}: nothing to attach
+	}
+
+	// SkipAllOfCompounding: never emit an allOf compound. Validations and
+	// externalDocs can only ride a compound, so they are dropped;
+	// description and extensions are dropped too UNLESS EmitRefSiblings
+	// keeps them as direct $ref siblings. `required` already landed on the
+	// enclosing schema during the Walk (a parent-side concern, not a $ref
+	// sibling) and is unaffected.
+	if s.Ctx.SkipAllOfCompounding() {
+		s.applyRefSiblingDrop(c, ps, description, name, block.Pos())
 		return
 	}
-	if !c.anyCollected() && !s.Ctx.DescWithRef() {
+
+	// EmitRefSiblings: when nothing forces a compound (no validations, no
+	// externalDocs), description and extensions ride directly beside the
+	// $ref rather than in a single-arm allOf wrap. A forced compound falls
+	// through to the wrap path below, where they ride the outer compound.
+	forcedCompound := c.collectedValidation || c.collectedExternalDoc
+	if s.Ctx.EmitRefSiblings() && !forcedCompound {
+		ps.Description = description
+		for k, v := range c.override.Extensions {
+			ps.AddExtension(k, v)
+		}
 		return
+	}
+
+	if !c.anyCollected() && !s.Ctx.DescWithRef() {
+		return // description-only, not preserved → bare {$ref}
 	}
 
 	// Lift x-* siblings onto the outer compound (see §ref-override).
@@ -207,6 +233,37 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	}
 }
 
+// applyRefSiblingDrop handles the SkipAllOfCompounding case: no allOf
+// compound is produced, so the field keeps its bare {$ref}. Extensions
+// survive as direct siblings when EmitRefSiblings is set; description
+// likewise. Everything else (validations, externalDocs) — and, without
+// EmitRefSiblings, description / extensions too — is dropped, each with
+// one CodeDroppedRefSibling diagnostic so the loss is never silent.
+func (s *Builder) applyRefSiblingDrop(c *refOverrideCollector, ps *oaispec.Schema, description, name string, blockPos token.Position) {
+	keepSiblings := s.Ctx.EmitRefSiblings()
+
+	for _, d := range c.collected {
+		if keepSiblings && d.kind == siblingExtension {
+			ps.AddExtension(d.keyword, c.override.Extensions[d.keyword])
+			continue
+		}
+		s.RecordDiagnostic(grammar.Warnf(d.pos, grammar.CodeDroppedRefSibling,
+			"field %q: %q dropped — not representable on a bare $ref (SkipAllOfCompounding)",
+			name, d.keyword))
+	}
+
+	if description == "" {
+		return
+	}
+	if keepSiblings {
+		ps.Description = description
+		return
+	}
+	s.RecordDiagnostic(grammar.Warnf(blockPos, grammar.CodeDroppedRefSibling,
+		"field %q: description dropped — not representable on a bare $ref (SkipAllOfCompounding)",
+		name))
+}
+
 // refOverrideCollector accumulates field-level overrides into a
 // scratch schema for the allOf compound rewrite.
 //
@@ -226,14 +283,45 @@ type refOverrideCollector struct {
 	collectedValidation  bool
 	collectedExtension   bool
 	collectedExternalDoc bool
+	// collected records each collected sibling (keyword + source
+	// position + class) so applyToRefField can decide, per category,
+	// what to drop under SkipAllOfCompounding and raise a per-keyword
+	// diagnostic. See [§ref-override].
+	collected []collectedSibling
+}
+
+// siblingKind classifies a $ref sibling by how it can be emitted.
+// Extensions can ride directly beside a $ref (EmitRefSiblings);
+// validations and externalDocs can only ride an allOf compound.
+type siblingKind int
+
+const (
+	siblingValidation siblingKind = iota
+	siblingExtension
+	siblingExternalDoc
+)
+
+// collectedSibling names one $ref-sibling keyword, where it was written,
+// and its class — for the drop diagnostics and category-aware handling.
+type collectedSibling struct {
+	keyword string
+	pos     token.Position
+	kind    siblingKind
 }
 
 func (c *refOverrideCollector) anyCollected() bool {
 	return c.collectedValidation || c.collectedExtension || c.collectedExternalDoc
 }
 
-func (c *refOverrideCollector) markValidation() { c.collectedValidation = true }
-func (c *refOverrideCollector) markExtension()  { c.collectedExtension = true }
+func (c *refOverrideCollector) markValidation(p grammar.Property) {
+	c.collectedValidation = true
+	c.collected = append(c.collected, collectedSibling{keyword: p.Keyword.Name, pos: p.Pos, kind: siblingValidation})
+}
+
+func (c *refOverrideCollector) markExtension(ext grammar.Extension) {
+	c.collectedExtension = true
+	c.collected = append(c.collected, collectedSibling{keyword: ext.Name, pos: ext.Pos, kind: siblingExtension})
+}
 
 func (c *refOverrideCollector) onNumber(p grammar.Property, val float64, exclusive bool) {
 	if !p.IsTyped() {
@@ -242,13 +330,13 @@ func (c *refOverrideCollector) onNumber(p grammar.Property, val float64, exclusi
 	switch p.Keyword.Name {
 	case grammar.KwMaximum:
 		c.valid.SetMaximum(val, exclusive)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMinimum:
 		c.valid.SetMinimum(val, exclusive)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMultipleOf:
 		c.valid.SetMultipleOf(val)
-		c.markValidation()
+		c.markValidation(p)
 	}
 }
 
@@ -259,22 +347,22 @@ func (c *refOverrideCollector) onInteger(p grammar.Property, val int64) {
 	switch p.Keyword.Name {
 	case grammar.KwMinLength:
 		c.valid.SetMinLength(val)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMaxLength:
 		c.valid.SetMaxLength(val)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMinItems:
 		c.valid.SetMinItems(val)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMaxItems:
 		c.valid.SetMaxItems(val)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMinProperties:
 		c.valid.SetMinProperties(val)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwMaxProperties:
 		c.valid.SetMaxProperties(val)
-		c.markValidation()
+		c.markValidation(p)
 	}
 }
 
@@ -289,10 +377,10 @@ func (c *refOverrideCollector) onBool(p grammar.Property, val bool) {
 		}
 	case grammar.KwReadOnly:
 		c.override.ReadOnly = val
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwUnique:
 		c.valid.SetUnique(val)
-		c.markValidation()
+		c.markValidation(p)
 	}
 }
 
@@ -300,30 +388,30 @@ func (c *refOverrideCollector) onString(p grammar.Property, val string) {
 	switch p.Keyword.Name {
 	case grammar.KwPattern:
 		handlers.ApplyPattern(p, c.valid, val, c.builder.RecordDiagnostic)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwPatternProperties:
 		handlers.ApplyPatternProperties(p, c.valid, val, c.builder.RecordDiagnostic)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwAdditionalProperties:
 		// On a $ref'd field, additionalProperties rides as an allOf sibling
 		// (`{allOf: [{$ref}, {additionalProperties: …}]}`) so the reference is
 		// preserved — JSON-Schema-draft-4 semantics, like the other siblings.
 		if sob, ok := c.builder.resolveAdditionalPropertiesValue(strings.TrimSpace(val), p.Pos); ok {
 			c.override.AdditionalProperties = sob
-			c.markValidation()
+			c.markValidation(p)
 		}
 	case grammar.KwDefault:
 		// The $ref override arm carries no Type of its own, so a JSON
 		// object/array literal is coerced structurally here rather than
 		// type-driven via ParseDefault (quirk G3).
 		c.valid.SetDefault(validations.CoerceJSONOrString(val))
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwExample:
 		c.valid.SetExample(validations.CoerceJSONOrString(val))
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwEnum:
 		c.valid.SetEnum(val)
-		c.markValidation()
+		c.markValidation(p)
 	}
 }
 
@@ -338,7 +426,7 @@ func (c *refOverrideCollector) onExtension(ext grammar.Extension) {
 		return
 	}
 	c.override.AddExtension(ext.Name, ext.Value)
-	c.markExtension()
+	c.markExtension(ext)
 }
 
 func (c *refOverrideCollector) onRaw(p grammar.Property) {
@@ -346,13 +434,13 @@ func (c *refOverrideCollector) onRaw(p grammar.Property) {
 	case grammar.KwDefault:
 		// See onString: type-unknown override arm → JSON-literal coercion.
 		c.valid.SetDefault(validations.CoerceJSONOrString(p.Value))
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwExample:
 		c.valid.SetExample(validations.CoerceJSONOrString(p.Value))
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwEnum:
 		c.valid.SetEnum(p.Value)
-		c.markValidation()
+		c.markValidation(p)
 	case grammar.KwExternalDocs:
 		// externalDocs on a $ref'd field lifts onto the outer allOf
 		// compound (see applyToRefField). A non-ref field handles it
@@ -365,6 +453,7 @@ func (c *refOverrideCollector) onRaw(p grammar.Property) {
 		if ed != nil {
 			c.externalDocs = ed
 			c.collectedExternalDoc = true
+			c.collected = append(c.collected, collectedSibling{keyword: p.Keyword.Name, pos: p.Pos, kind: siblingExternalDoc})
 		}
 	}
 }

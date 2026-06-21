@@ -208,6 +208,14 @@ func (s *ScanCtx) DescWithRef() bool {
 	return s.opts.DescWithRef
 }
 
+func (s *ScanCtx) SkipAllOfCompounding() bool {
+	return s.opts.SkipAllOfCompounding
+}
+
+func (s *ScanCtx) EmitRefSiblings() bool {
+	return s.opts.EmitRefSiblings
+}
+
 func (s *ScanCtx) SetXNullableForPointers() bool {
 	return s.opts.SetXNullableForPointers
 }

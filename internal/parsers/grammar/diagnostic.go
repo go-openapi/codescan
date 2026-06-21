@@ -147,6 +147,15 @@ const (
 	// than surfacing a raw Go stack trace. See
 	// go-swagger/go-swagger#2886.
 	CodeInternalPanic Code = "scan.internal-panic"
+
+	// CodeDroppedRefSibling fires when SkipAllOfCompounding is set and a
+	// $ref'd struct field carries sibling decoration (description,
+	// validations, vendor extensions, externalDocs) that cannot ride a
+	// bare $ref. With compounding disabled the field emits as a bare
+	// $ref and each such sibling is dropped — one diagnostic per dropped
+	// keyword so the loss is never silent. See scanner.Options
+	// SkipAllOfCompounding.
+	CodeDroppedRefSibling Code = "validate.dropped-ref-sibling"
 )
 
 // Diagnostic is one observation about a comment block.
