@@ -5,6 +5,7 @@ package schema
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
@@ -1586,6 +1587,206 @@ func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
 	assert.MapNotContainsT(t, v2.Extensions, "x-go-name")
 	assert.MapNotContainsT(t, v2.Extensions, "x-go-package")
 	assert.MapNotContainsT(t, v2.Extensions, "x-nullable", "value2 has no x-nullable in source")
+}
+
+// TestEmbeddedDescriptionAndTags_SkipAllOfCompounding is the A/B
+// witness for the SkipAllOfCompounding option on the bugs/3125
+// fixture. Both Value1 (*ValueStruct, user-authored x-nullable +
+// description) and Value2 (ValueStruct, example + description) are
+// $ref'd fields whose siblings normally wrap into an allOf compound
+// (see TestEmbeddedDescriptionAndTags).
+//
+// With SkipAllOfCompounding=true:
+//
+//   - each field emits a BARE {$ref} — no AllOf wrapper, no
+//     description, no override extension/example sibling;
+//   - `required` (a parent-side concern) is PRESERVED on the enclosing
+//     object — it is not a $ref sibling;
+//   - every dropped sibling raises one CodeDroppedRefSibling diagnostic
+//     (x-nullable, example, and one per dropped description) so the
+//     loss is never silent.
+func TestEmbeddedDescriptionAndTags_SkipAllOfCompounding(t *testing.T) {
+	packagePath := fixturesModule + "/" + fixtureMinimal3125
+
+	var diags []grammar.Diagnostic
+	ctx, err := scanner.NewScanCtx(&scanner.Options{
+		Packages:             []string{"./" + fixtureMinimal3125},
+		WorkDir:              scantest.FixturesDir(),
+		SkipAllOfCompounding: true,
+		OnDiagnostic:         func(d grammar.Diagnostic) { diags = append(diags, d) },
+	})
+	require.NoError(t, err)
+	decl, _ := ctx.FindDecl(packagePath, "Item")
+	require.NotNil(t, decl)
+	prs := NewBuilder(ctx, decl)
+	models := make(map[string]oaispec.Schema)
+	require.NoError(t, prs.Build(WithDefinitions(models)))
+	schema := models[scantest.ResolveTestKey(t, models, "Item")]
+
+	require.Len(t, schema.Properties, 2)
+
+	// required is parent-side: preserved even with compounding disabled.
+	assert.ElementsMatch(t, []string{sampleValue1, sampleValue2}, schema.Required)
+
+	refFrag := "#/definitions/" + fixturesModule + "/" + fixtureMinimal3125 + "/ValueStruct"
+
+	// Value1: bare $ref — no allOf, no description, no x-nullable sibling.
+	v1 := schema.Properties[sampleValue1]
+	assert.Equal(t, refFrag, v1.Ref.String(), "value1 must be a bare $ref")
+	assert.Empty(t, v1.AllOf, "no allOf compound when compounding is disabled")
+	assert.Empty(t, v1.Description, "description dropped on a bare $ref")
+	assert.MapNotContainsT(t, v1.Extensions, "x-nullable", "override extension dropped on a bare $ref")
+
+	// Value2: bare $ref — no allOf, no description, no example sibling.
+	v2 := schema.Properties[sampleValue2]
+	assert.Equal(t, refFrag, v2.Ref.String(), "value2 must be a bare $ref")
+	assert.Empty(t, v2.AllOf, "no allOf compound when compounding is disabled")
+	assert.Empty(t, v2.Description, "description dropped on a bare $ref")
+	assert.Nil(t, v2.Example, "override example dropped on a bare $ref")
+
+	// Every dropped sibling is reported. Value1 → x-nullable + description;
+	// Value2 → example + description. All carry CodeDroppedRefSibling.
+	var keywords, descDrops int
+	for _, d := range diags {
+		if d.Code != grammar.CodeDroppedRefSibling {
+			continue
+		}
+		switch {
+		case strings.Contains(d.Message, "description dropped"):
+			descDrops++
+		default:
+			keywords++
+		}
+	}
+	assert.Equal(t, 2, descDrops, "one description-drop diagnostic per $ref'd field")
+	assert.Equal(t, 2, keywords, "x-nullable and example each raise a drop diagnostic")
+
+	msgs := make([]string, 0, len(diags))
+	for _, d := range diags {
+		msgs = append(msgs, d.Message)
+	}
+	assert.True(t, sliceContainsSubstr(msgs, "x-nullable"), "x-nullable drop reported: %v", msgs)
+	assert.True(t, sliceContainsSubstr(msgs, "example"), "example drop reported: %v", msgs)
+}
+
+func sliceContainsSubstr(ss []string, sub string) bool {
+	for _, s := range ss {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestEmbeddedDescriptionAndTags_EmitRefSiblings exercises the
+// EmitRefSiblings lenient mode (no SkipAllOfCompounding) on bugs/3125.
+//
+//   - Value1 (*ValueStruct, user x-nullable + description): no
+//     validation forces a compound, so description and x-nullable ride
+//     as DIRECT $ref siblings — bare {$ref, description, x-nullable},
+//     no allOf.
+//   - Value2 (ValueStruct, example + description): `example` is a
+//     validation-class override, which still forces an allOf compound;
+//     the description rides the outer compound and the example lands on
+//     the override arm. EmitRefSiblings does not change the
+//     forced-compound case.
+func TestEmbeddedDescriptionAndTags_EmitRefSiblings(t *testing.T) {
+	packagePath := fixturesModule + "/" + fixtureMinimal3125
+
+	var diags []grammar.Diagnostic
+	ctx, err := scanner.NewScanCtx(&scanner.Options{
+		Packages:        []string{"./" + fixtureMinimal3125},
+		WorkDir:         scantest.FixturesDir(),
+		EmitRefSiblings: true,
+		OnDiagnostic:    func(d grammar.Diagnostic) { diags = append(diags, d) },
+	})
+	require.NoError(t, err)
+	decl, _ := ctx.FindDecl(packagePath, "Item")
+	require.NotNil(t, decl)
+	prs := NewBuilder(ctx, decl)
+	models := make(map[string]oaispec.Schema)
+	require.NoError(t, prs.Build(WithDefinitions(models)))
+	schema := models[scantest.ResolveTestKey(t, models, "Item")]
+
+	require.Len(t, schema.Properties, 2)
+	assert.ElementsMatch(t, []string{sampleValue1, sampleValue2}, schema.Required)
+
+	refFrag := "#/definitions/" + fixturesModule + "/" + fixtureMinimal3125 + "/ValueStruct"
+
+	// Value1: direct siblings, no allOf.
+	v1 := schema.Properties[sampleValue1]
+	assert.Equal(t, refFrag, v1.Ref.String(), "value1 keeps a bare $ref")
+	assert.Empty(t, v1.AllOf, "no allOf wrap for sibling-eligible decoration")
+	assert.EqualT(t, "Nullable value", v1.Description, "description rides as a $ref sibling")
+	assert.Equal(t, true, v1.Extensions["x-nullable"], "extension rides as a $ref sibling")
+
+	// Value2: a validation (example) still forces the compound.
+	v2 := schema.Properties[sampleValue2]
+	assert.Empty(t, v2.Ref.String(), "value2 outer carries no ref — it is a compound")
+	require.Len(t, v2.AllOf, 2, "example (a validation) forces a two-arm allOf")
+	assert.Equal(t, refFrag, v2.AllOf[0].Ref.String())
+	assert.EqualT(t, "Non-nullable value", v2.Description, "description rides the outer compound")
+	assert.Equal(t, map[string]any{"value": float64(42)}, v2.AllOf[1].Example)
+
+	// Nothing was dropped → no drop diagnostics.
+	for _, d := range diags {
+		assert.NotEqual(t, grammar.CodeDroppedRefSibling, d.Code, "unexpected drop: %s", d.Message)
+	}
+}
+
+// TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip covers the
+// EmitRefSiblings + SkipAllOfCompounding combination on bugs/3125
+// (the "both on" quadrant). No allOf compound is ever produced:
+//
+//   - Value1: description + x-nullable survive as direct $ref siblings.
+//   - Value2: description survives as a sibling, but `example` (a
+//     validation, which can only ride a compound) is dropped with a
+//     diagnostic.
+func TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip(t *testing.T) {
+	packagePath := fixturesModule + "/" + fixtureMinimal3125
+
+	var diags []grammar.Diagnostic
+	ctx, err := scanner.NewScanCtx(&scanner.Options{
+		Packages:             []string{"./" + fixtureMinimal3125},
+		WorkDir:              scantest.FixturesDir(),
+		EmitRefSiblings:      true,
+		SkipAllOfCompounding: true,
+		OnDiagnostic:         func(d grammar.Diagnostic) { diags = append(diags, d) },
+	})
+	require.NoError(t, err)
+	decl, _ := ctx.FindDecl(packagePath, "Item")
+	require.NotNil(t, decl)
+	prs := NewBuilder(ctx, decl)
+	models := make(map[string]oaispec.Schema)
+	require.NoError(t, prs.Build(WithDefinitions(models)))
+	schema := models[scantest.ResolveTestKey(t, models, "Item")]
+
+	require.Len(t, schema.Properties, 2)
+	assert.ElementsMatch(t, []string{sampleValue1, sampleValue2}, schema.Required)
+
+	refFrag := "#/definitions/" + fixturesModule + "/" + fixtureMinimal3125 + "/ValueStruct"
+
+	// Value1: siblings survive (no compound ever needed).
+	v1 := schema.Properties[sampleValue1]
+	assert.Equal(t, refFrag, v1.Ref.String())
+	assert.Empty(t, v1.AllOf)
+	assert.EqualT(t, "Nullable value", v1.Description)
+	assert.Equal(t, true, v1.Extensions["x-nullable"])
+
+	// Value2: description survives as a sibling; example (validation) dropped.
+	v2 := schema.Properties[sampleValue2]
+	assert.Equal(t, refFrag, v2.Ref.String(), "value2 stays a bare $ref")
+	assert.Empty(t, v2.AllOf, "no compound produced under SkipAllOfCompounding")
+	assert.EqualT(t, "Non-nullable value", v2.Description, "description survives as a sibling")
+	assert.Nil(t, v2.Example, "example dropped — a validation cannot ride a bare $ref")
+
+	var drops int
+	for _, d := range diags {
+		if d.Code == grammar.CodeDroppedRefSibling {
+			drops++
+		}
+	}
+	assert.Equal(t, 1, drops, "only the example (a validation) is dropped")
 }
 
 // TestParamsShape_DescWithRef_BothModes covers the description-only

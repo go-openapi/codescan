@@ -1,0 +1,10 @@
+{
+  "description": "Home is where the person lives.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Address"
+    }
+  ],
+  "x-go-name": "Home",
+  "x-ui-order": 3
+}

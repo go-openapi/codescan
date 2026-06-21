@@ -116,7 +116,15 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
   - `ScanModels` — also emit definitions for `swagger:model` types.
   - `InputSpec` — overlay: merge discoveries on top of an existing spec.
   - `BuildTags`, `Include`/`Exclude`, `IncludeTags`/`ExcludeTags`, `ExcludeDeps` — scope control.
-  - `RefAliases`, `TransparentAliases`, `DescWithRef` — alias handling knobs.
+  - `RefAliases`, `TransparentAliases`, `DescWithRef` — alias handling knobs
+    (`DescWithRef` is deprecated; see `EmitRefSiblings`).
+  - `$ref`-sibling rendering (see `internal/builders/schema/README.md#ref-override`):
+    - `EmitRefSiblings` — emit a `$ref`'d field's description & extensions as direct
+      siblings (`{$ref, description, x-*}`) instead of an `allOf` wrap; validations/
+      externalDocs still force a compound.
+    - `SkipAllOfCompounding` — never emit an `allOf` compound; validations/externalDocs
+      dropped (description/extensions too, unless `EmitRefSiblings` keeps them as
+      siblings), each with a diagnostic. For consumers (e.g. go-swagger) wanting bare refs.
   - `SetXNullableForPointers` — emit `x-nullable: true` on pointer fields.
   - `SkipExtensions` — suppress `x-go-*` vendor extensions.
   - `Debug` — verbose logging via `internal/logger`.

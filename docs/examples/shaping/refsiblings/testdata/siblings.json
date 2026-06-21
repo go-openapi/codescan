@@ -1,0 +1,5 @@
+{
+  "description": "Home is where the person lives.",
+  "x-ui-order": 3,
+  "$ref": "#/definitions/Address"
+}

@@ -917,23 +917,47 @@ replaces siblings. The correct shape is an **allOf compound**:
   inside `allOf[1]` (go-swagger#2655). A non-ref field emits its
   externalDocs via `handlers.schemaRawHandler` instead.
 
-### The `DescWithRef` toggle and the description-only case
+### Sibling-rendering toggles — two orthogonal axes
 
-`scanner.Options.DescWithRef` controls how a description-only
-override is emitted:
+`$ref` siblings split into two classes by how they can be emitted:
 
-- **DescWithRef=true**: a $ref'd field whose only field-level
-  decoration is a description produces a single-arm allOf
-  compound. The description rides the outer parent so JSON-Schema
-  consumers see it alongside the `$ref`.
-- **DescWithRef=false** (the default — matches v1 strict
-  behaviour): the description is dropped and a bare `$ref` is
-  emitted. Users who want the description preserved via the
-  JSON-Schema-correct compound shape opt in explicitly.
+- **description & extensions** — *siblings-eligible*: they can ride
+  directly beside the `$ref` (`{$ref, description, x-*}`), which strict
+  draft-4 ignores but OpenAPI 3.1 / JSON Schema 2020-12 / modern
+  Swagger-UI honour; or via the allOf wrap.
+- **validations & externalDocs** — *compound-only*: they have no valid
+  bare-`$ref` form, so they can only ride an allOf compound (validations
+  on the override arm).
 
-When validations or user-authored extensions are present, the
-allOf wrap is mandatory regardless of the flag — the override
-would be lost otherwise.
+Three options steer the rendering. The **defaults reproduce the legacy
+behaviour byte-for-byte** — both new opt-ins off:
+
+- **`EmitRefSiblings`** (default false): when true, description and
+  extensions ride as **direct `$ref` siblings** (no allOf), *unless* a
+  validation/externalDocs already forces a compound — in which case they
+  ride the outer compound as before. Changes only the no-forced-compound
+  cases.
+- **`DescWithRef`** (default false; **deprecated**, kept for
+  compatibility): governs only the *description-only* case in the legacy
+  wrap path — `true` preserves the description as a single-arm allOf
+  (`{description, allOf:[{$ref}]}`), `false` drops it. A no-op when
+  `EmitRefSiblings` is set. Prefer `EmitRefSiblings`.
+- **`SkipAllOfCompounding`** (default false): when true, **no allOf
+  compound is ever produced**. Validations and externalDocs are
+  therefore **dropped**; description and extensions are dropped too
+  *unless* `EmitRefSiblings` keeps them as direct siblings. Each drop
+  raises one `CodeDroppedRefSibling` diagnostic through
+  `Options.OnDiagnostic`, so the loss is never silent. For downstream
+  consumers (e.g. go-swagger codegen) that expect a bare `$ref`.
+
+Invariants:
+
+- When validations or externalDocs are present, the allOf wrap is
+  mandatory (unless `SkipAllOfCompounding` drops them) — no toggle
+  promotes a validation to a bare sibling.
+- **`required:` is always preserved.** It is a parent-side concern (it
+  lands on the enclosing object's `required` list, not as a `$ref`
+  sibling), applied during the collector Walk regardless of any flag.
 
 ### `refOverrideCollector` — accumulate-then-decide
 
@@ -951,6 +975,13 @@ Walker has finished firing. Three flags track what was collected:
 - **`collectedExternalDoc`** — an `externalDocs:` block fired. When
   true, the parsed `*ExternalDocumentation` is set on the outer
   compound (sibling of the `$ref`), mirroring the extension lift.
+
+The collector also records each collected sibling in `collected`
+(keyword, source position, and `siblingKind` — validation / extension
+/ externalDoc). `applyRefSiblingDrop` consumes this under
+`SkipAllOfCompounding`: extension-kind siblings survive when
+`EmitRefSiblings` is set, everything else is dropped with one
+`CodeDroppedRefSibling` diagnostic per keyword.
 
 Splitting the collector out of `applyToRefField` keeps the
 per-shape Walker callbacks short and the orchestrator's cognitive

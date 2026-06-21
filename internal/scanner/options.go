@@ -49,8 +49,57 @@ type Options struct {
 	// allOf compound is mandatory regardless of this flag — the
 	// override would be lost otherwise.
 	//
-	// See [§descwithref](./README.md#descwithref).
-	DescWithRef    bool
+	// Deprecated: prefer EmitRefSiblings, which preserves description
+	// AND extensions as direct $ref siblings (the modern, lenient
+	// shape). DescWithRef is retained with its original semantics (the
+	// strict draft-4 single-arm allOf wrap for the description-only
+	// case) and remains a no-op when EmitRefSiblings is set.
+	//
+	// See [§ref-override](../builders/schema/README.md#ref-override).
+	DescWithRef bool
+
+	// EmitRefSiblings emits a $ref'd field's description and vendor
+	// extensions as DIRECT siblings of the `$ref`
+	// (`{$ref, description, x-*}`) instead of wrapping them in an allOf
+	// compound. Strict JSON-Schema-draft-4 ignores siblings of `$ref`
+	// (hence the default allOf wrap), but OpenAPI 3.1 / JSON Schema
+	// 2020-12 and most modern Swagger-UI renderers honour them.
+	//
+	//   - false (default): description / extensions follow the legacy
+	//     wrap behaviour (extensions lift onto a single-arm allOf;
+	//     description-only is governed by DescWithRef).
+	//   - true: description and extensions ride directly alongside the
+	//     `$ref`, no allOf.
+	//
+	// Validations and externalDocs are NOT siblings-eligible: when
+	// present they still force an allOf compound (validations on the
+	// override arm), and description / extensions then ride the outer
+	// compound. This flag changes only the no-forced-compound cases.
+	//
+	// See [§ref-override](../builders/schema/README.md#ref-override).
+	EmitRefSiblings bool
+
+	// SkipAllOfCompounding disables the allOf-compound rewrite for
+	// $ref'd struct fields entirely: no allOf compound is ever emitted.
+	//
+	//   - false (default): siblings are preserved via the allOf compound
+	//     (or, under EmitRefSiblings, as direct $ref siblings).
+	//   - true: no compound is produced. Validations and externalDocs —
+	//     which can only ride a compound — are DROPPED. Description and
+	//     extensions are likewise dropped UNLESS EmitRefSiblings is also
+	//     set, in which case they survive as direct `$ref` siblings.
+	//     Every drop raises one diagnostic through OnDiagnostic — the
+	//     loss is never silent.
+	//
+	// `required:` is a parent-side concern (it lands on the enclosing
+	// object's `required` list, not as a $ref sibling) and is preserved
+	// regardless of this flag.
+	//
+	// Intended for downstream consumers (e.g. go-swagger codegen) that
+	// expect a bare `$ref` for a field pointing at a model and do not
+	// handle the allOf-compounded shape. See [§ref-override].
+	SkipAllOfCompounding bool
+
 	SkipExtensions bool // skip generating x-go-* vendor extensions in the spec
 
 	// SkipEnumDescriptions controls whether the per-enum-value const-name
