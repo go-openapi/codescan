@@ -25,6 +25,7 @@ to builders without direct coupling.
 | File | Contents |
 |------|----------|
 | `api.go` | `Run(*Options) (*spec.Swagger, error)` entry point; re-exports `Options = scanner.Options` |
+| `diagnostics.go` | Re-exports the diagnostic surface for `Options.OnDiagnostic` callers: `Diagnostic`/`Severity`/`Code` aliases + `Severity*` constants |
 | `doc.go` | Package godoc |
 | `errors.go` | `ErrCodeScan` sentinel error |
 
@@ -82,10 +83,6 @@ Each sub-package owns one concern; `walker.go` carries the per-block grammar dis
 `SwaggerTypable`, `ValidationBuilder`, `OperationValidationBuilder`, `ValueParser`, `Objecter` —
 the glue that lets `parsers` write into any builder's target without importing concrete builders.
 
-### `internal/logger/` — debug logging
-
-`debug.go` — gated on `Options.Debug`.
-
 ### `internal/scantest/` — test utilities (do **not** import from production code)
 
 | File | Contents |
@@ -127,7 +124,10 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
       siblings), each with a diagnostic. For consumers (e.g. go-swagger) wanting bare refs.
   - `SetXNullableForPointers` — emit `x-nullable: true` on pointer fields.
   - `SkipExtensions` — suppress `x-go-*` vendor extensions.
-  - `Debug` — verbose logging via `internal/logger`.
+  - `OnDiagnostic` — callback sink for all scan-time observations (the only output
+    channel; codescan never writes to stdout/stderr).
+  - `Debug` — deprecated no-op (the legacy stderr debug logger was retired; wire
+    `OnDiagnostic` instead).
 
 ## Dependencies
 

@@ -42,7 +42,6 @@ Internal tree:
 | `internal/builders/validations` | Type-aware coercion (`CoerceEnum`, `ParseDefault`) + shape checks (`IsLegalForType`) |
 | `internal/builders/resolvers` | `SwaggerSchemaForType`, identity / assertion helpers, items-chain ifaces adapters |
 | `internal/ifaces` | `SwaggerTypable`, `ValidationBuilder`, `OperationValidationBuilder`, `ValueParser`, `Objecter` — decouples parsers from builders |
-| `internal/logger` | Debug logging (gated on `Options.Debug`) |
 | `internal/scantest` | Test utilities: golden compare, fixture loading, mocks, classification helpers |
 | `internal/integration` | Black-box integration tests against `fixtures/integration/golden/*.json` |
 

@@ -39,7 +39,6 @@ func TestScanCtx_OptionAccessors(t *testing.T) {
 	assert.False(t, sctx.SetXNullableForPointers())
 	assert.False(t, sctx.TransparentAliases())
 	assert.False(t, sctx.RefAliases())
-	assert.False(t, sctx.Debug())
 }
 
 func TestScanCtx_OptionAccessors_Enabled(t *testing.T) {
@@ -51,7 +50,6 @@ func TestScanCtx_OptionAccessors_Enabled(t *testing.T) {
 		SetXNullableForPointers: true,
 		TransparentAliases:      true,
 		RefAliases:              true,
-		Debug:                   true,
 	})
 	require.NoError(t, err)
 
@@ -60,7 +58,6 @@ func TestScanCtx_OptionAccessors_Enabled(t *testing.T) {
 	assert.True(t, sctx.SetXNullableForPointers())
 	assert.True(t, sctx.TransparentAliases())
 	assert.True(t, sctx.RefAliases())
-	assert.True(t, sctx.Debug())
 }
 
 func TestScanCtx_Meta(t *testing.T) {

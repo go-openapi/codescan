@@ -4,9 +4,6 @@
 package codescan
 
 import (
-	"flag"
-	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,27 +13,10 @@ import (
 
 // Public-API smoke suite. Fixture-heavy tests live in internal/integration.
 
-var enableDebug bool //nolint:gochecknoglobals // test flag registered in init
-
-func init() { //nolint:gochecknoinits // registers test flags before TestMain
-	flag.BoolVar(&enableDebug, "enable-debug", false, "enable debug output in tests")
-}
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-
-	if !enableDebug {
-		log.SetOutput(io.Discard)
-	} else {
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
-		log.SetOutput(os.Stderr)
-	}
-
-	os.Exit(m.Run())
-}
-
-func TestApplication_DebugLogging(t *testing.T) {
-	// Exercises the logger.DebugLogf code path with Debug: true.
+func TestApplication_DeprecatedDebugOption(t *testing.T) {
+	// Options.Debug is a deprecated no-op (the legacy debug logger was
+	// retired in favour of diagnostics). Verify Run still accepts it without
+	// error and produces a spec.
 	_, err := Run(&Options{
 		Packages:   []string{"./goparsing/petstore/..."},
 		WorkDir:    "fixtures",

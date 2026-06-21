@@ -11,7 +11,6 @@ package common
 import (
 	"go/ast"
 	"go/token"
-	"log/slog"
 
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
@@ -35,22 +34,16 @@ type Builder struct {
 	postDeclSet map[*ast.Ident]struct{} // dedup index keyed by EntityDecl.Ident
 	diagnostics []grammar.Diagnostic
 	blockCache  map[*ast.CommentGroup][]grammar.Block
-	logger      *slog.Logger
 }
 
 // New builds a [Builder] bound to ctx and decl.
 //
-// The blockCache is pre-allocated empty; logger defaults to [slog.Default].
-//
-// See [§quirks-open] for the planned configurability.
-//
-// [§quirks-open]: https://github.com/go-openapi/codescan/blob/master/internal/common/README.md#quirks-open
+// The blockCache is pre-allocated empty.
 func New(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 	return &Builder{
 		Ctx:        ctx,
 		Decl:       decl,
 		blockCache: make(map[*ast.CommentGroup][]grammar.Block),
-		logger:     slog.Default(),
 	}
 }
 
@@ -60,16 +53,6 @@ func New(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 // See [§postdecls](./README.md#postdecls).
 func (s *Builder) PostDeclarations() []*scanner.EntityDecl {
 	return s.postDecls
-}
-
-// Warn writes a warning to the Builder's slog logger.
-func (s *Builder) Warn(msg string, args ...any) {
-	s.logger.Warn(msg, args...)
-}
-
-// Debug writes a debug message to the Builder's slog logger.
-func (s *Builder) Debug(msg string, args ...any) {
-	s.logger.Debug(msg, args...)
 }
 
 // Diagnostics returns every grammar.Diagnostic accumulated by this Builder during a Build pass.

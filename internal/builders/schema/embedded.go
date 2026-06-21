@@ -6,10 +6,8 @@ package schema
 import (
 	"go/ast"
 	"go/types"
-	"log/slog"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -60,7 +58,7 @@ func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, nameByJS
 		//     these promotes nothing.
 		return s.buildEmbedded(types.Unalias(ftpe), schema, nameByJSON)
 	default:
-		logger.UnsupportedTypeKind("buildEmbedded", ftpe)
+		s.warnUnsupportedGoType("buildEmbedded", ftpe)
 		return nil
 	}
 }
@@ -78,7 +76,7 @@ func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, nameByJS
 // diagnostic.
 func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, nameByJSON map[string]propOwner) error {
 	if resolvers.UnsupportedBuiltin(tpe) {
-		s.Warn("skipped unsupported builtin", slog.Any("type", tpe))
+		s.warnUnsupportedGoType("buildNamedEmbedded", tpe)
 
 		return nil
 	}
@@ -113,7 +111,7 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 		defer s.enterEmbed()()
 		return s.buildFromInterface(decl, utpe, schema, nameByJSON)
 	default:
-		logger.UnsupportedTypeKind("buildNamedEmbedded", utpe)
+		s.warnUnsupportedGoType("buildNamedEmbedded", utpe)
 		return nil
 	}
 }
@@ -166,7 +164,7 @@ func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *
 			schema.AddToAllOf(aliasedSchema)
 		}
 	default:
-		logger.UnsupportedTypeKind("buildNamedInterface.allOf", ftpe)
+		s.warnUnsupportedGoType("buildNamedInterface.allOf", ftpe)
 	}
 
 	return fieldHasAllOf, nil

@@ -6,8 +6,8 @@ package schema
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
-	"log/slog"
 
 	"github.com/go-openapi/swag/mangling"
 
@@ -122,6 +122,30 @@ func (s *Builder) SetDiscovered(discovered []*scanner.EntityDecl) {
 	s.discovered = discovered
 }
 
+// declPos returns the position of the declaration being built, used as a
+// coarse fallback for diagnostics raised deep in the type dispatch where no
+// finer AST node is in scope. Returns the zero Position when unavailable.
+func (s *Builder) declPos() token.Position {
+	if s.Decl == nil || s.Decl.Ident == nil {
+		return token.Position{}
+	}
+
+	return s.Ctx.PosOf(s.Decl.Ident.Pos())
+}
+
+// warnUnsupportedGoType records a [grammar.CodeUnsupportedGoType] Warning that
+// tpe could not be translated to a Swagger 2.0 construct and was dropped from
+// the spec. where names the dispatch site (function / switch arm) for triage.
+// tpe is any (a types.Type, *types.TypeName, ifaces.Objecter, …); the message
+// renders its dynamic type and value.
+func (s *Builder) warnUnsupportedGoType(where string, tpe any) {
+	s.RecordDiagnostic(grammar.Warnf(
+		s.declPos(),
+		grammar.CodeUnsupportedGoType,
+		"%s: unsupported Go type %[2]T (%[2]v); skipping", where, tpe,
+	))
+}
+
 // buildFromDecl emits the schema for a top-level type declaration
 // (named or alias).
 //
@@ -190,7 +214,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 		}
 		return s.buildDeclAlias(tpe, NewTypable(schema, 0, s.skipExtensions))
 	default:
-		s.Warn("unsupported Go type. Skipping", slog.Any("type", tpe))
+		s.warnUnsupportedGoType("buildFromDecl", tpe)
 		return nil
 	}
 }
@@ -292,7 +316,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 	case *types.Alias:
 		ro := rtpe.Obj()
 		if resolvers.UnsupportedBuiltin(rtpe) {
-			s.Warn("skipped unsupported builtin", slog.Any("type", rtpe))
+			s.warnUnsupportedGoType("buildDeclAlias", rtpe)
 
 			return nil
 		}
@@ -338,7 +362,7 @@ func (s *Builder) buildFromType(tpe types.Type, target ifaces.SwaggerTypable) er
 	switch titpe := tpe.(type) {
 	case *types.Basic:
 		if resolvers.UnsupportedBuiltinType(titpe) {
-			s.Warn("skipped unsupported builtin", slog.Any("type", tpe))
+			s.warnUnsupportedGoType("buildFromType", tpe)
 			return nil
 		}
 		return resolvers.SwaggerSchemaForType(titpe.String(), target)
@@ -361,7 +385,7 @@ func (s *Builder) buildFromType(tpe types.Type, target ifaces.SwaggerTypable) er
 	default:
 		// Unknown kind (TypeParam, Chan, Signature, Union, future additions).
 		// Warn-and-skip — panicking would degrade UX on user code we can't inspect.
-		s.Warn("unsupported Go type. Skipping", slog.Any("type", tpe))
+		s.warnUnsupportedGoType("buildFromType", tpe)
 		return nil
 	}
 }
@@ -375,7 +399,7 @@ func (s *Builder) buildFromType(tpe types.Type, target ifaces.SwaggerTypable) er
 // See [§aliases](./README.md#aliases).
 func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) error {
 	if resolvers.UnsupportedBuiltinType(tpe) {
-		s.Warn("skipped unsupported builtin", slog.Any("type", tpe))
+		s.warnUnsupportedGoType("buildAlias", tpe)
 		return nil
 	}
 
@@ -413,7 +437,7 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 // See [§dispatch-table](./README.md#dispatch-table) and [§dissolve-named](./README.md#dissolve-named).
 func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypable) error {
 	if resolvers.UnsupportedBuiltin(titpe) {
-		s.Warn("skipped unsupported builtin", slog.Any("type", titpe))
+		s.warnUnsupportedGoType("buildNamedType", titpe)
 
 		return nil
 	}
@@ -480,7 +504,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 
 	case *types.Basic:
 		if resolvers.UnsupportedBuiltinType(utitpe) {
-			s.Warn("skipped unsupported builtin", slog.Any("type", tio))
+			s.warnUnsupportedGoType("buildNamedType", tio)
 			return nil
 		}
 		if !refModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
@@ -499,7 +523,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		return s.resolveRefOr(tio, target, nil)
 
 	default:
-		s.Warn("unsupported Go type. Skipping", slog.Any("type", utitpe))
+		s.warnUnsupportedGoType("buildNamedType", utitpe)
 		return nil
 	}
 }
@@ -589,7 +613,7 @@ func (s *Builder) annotateSchema(schema *oaispec.Schema) func() {
 // Returns true if the caller should skip processing.
 func (s *Builder) guardDecl(tpe ifaces.Objecter) (skip bool) {
 	if resolvers.UnsupportedBuiltin(tpe) {
-		s.Warn("skipped unsupported builtin", slog.Any("type", tpe))
+		s.warnUnsupportedGoType("guardDecl", tpe)
 		return true
 	}
 	resolvers.MustNotBeABuiltinType(tpe.Obj()) // invariant

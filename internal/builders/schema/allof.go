@@ -9,7 +9,6 @@ import (
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -156,7 +155,7 @@ func (s *Builder) buildAllOf(tpe types.Type, schema *oaispec.Schema) error {
 		tgt := NewTypable(schema, 0, s.skipExtensions)
 		return s.buildAlias(ftpe, tgt)
 	default:
-		logger.UnsupportedTypeKind("buildAllOf", ftpe)
+		s.warnUnsupportedGoType("buildAllOf", ftpe)
 		return nil
 	}
 }
@@ -197,7 +196,7 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 	case *types.Interface:
 		return s.buildFromInterface(decl, utpe, schema, make(map[string]propOwner))
 	default:
-		logger.UnsupportedTypeKind("buildNamedAllOf", utpe)
+		s.warnUnsupportedGoType("buildNamedAllOf", utpe)
 		return nil
 	}
 }

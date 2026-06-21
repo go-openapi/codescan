@@ -6,12 +6,12 @@ package scanner
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
-	"log"
 	"regexp"
 
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -65,9 +65,14 @@ func WithTransparentAliases(enabled bool) TypeIndexOption {
 	}
 }
 
-func WithDebug(enabled bool) TypeIndexOption {
+// WithOnDiagnostic wires the consumer's diagnostic sink so the index can
+// surface scan-environment observations (e.g. a package or route omitted by
+// the caller's own include/exclude rules) as informational Hints. The index
+// is built before the ScanCtx exists, so it reports through the raw callback
+// directly, exactly as detectDegradedLoad does.
+func WithOnDiagnostic(cb func(grammar.Diagnostic)) TypeIndexOption {
 	return func(a *TypeIndex) {
-		a.debug = enabled
+		a.onDiagnostic = cb
 	}
 }
 
@@ -88,7 +93,24 @@ type TypeIndex struct {
 	setXNullableForPointers bool
 	refAliases              bool
 	transparentAliases      bool
-	debug                   bool
+	onDiagnostic            func(grammar.Diagnostic)
+}
+
+// emit delivers d to the consumer's diagnostic sink when one is wired. No-op
+// otherwise. The index is built before the ScanCtx exists, so it reports
+// through the raw callback (no dedup), exactly as detectNodes-level and
+// detectDegradedLoad observations do.
+func (a *TypeIndex) emit(d grammar.Diagnostic) {
+	if a.onDiagnostic == nil {
+		return
+	}
+	a.onDiagnostic(d)
+}
+
+// emitHintf delivers an informational Hint with no source position (the index
+// observes whole-package / whole-route omissions, not a single token).
+func (a *TypeIndex) emitHintf(code grammar.Code, format string, args ...any) {
+	a.emit(grammar.Hintf(token.Position{}, code, format, args...))
 }
 
 func NewTypeIndex(pkgs []*packages.Package, opts ...TypeIndexOption) (*TypeIndex, error) {
@@ -126,7 +148,8 @@ func (a *TypeIndex) build(pkgs []*packages.Package) error {
 
 func (a *TypeIndex) processPackage(pkg *packages.Package) error {
 	if !shouldAcceptPkg(pkg.PkgPath, a.includePkgs, a.excludePkgs) {
-		logger.DebugLogf(a.debug, "package %s is ignored due to rules", pkg.Name)
+		a.emitHintf(grammar.CodeIgnoredByRules,
+			"package %q is omitted by the include/exclude package rules", pkg.PkgPath)
 		return nil
 	}
 
@@ -170,7 +193,8 @@ func (a *TypeIndex) collectOperationPathAnnotations(comments []*ast.CommentGroup
 		}
 
 		if !shouldAcceptTag(pp.Tags, a.includeTags, a.excludeTags) {
-			logger.DebugLogf(a.debug, "operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
+			a.emitHintf(grammar.CodeIgnoredByTag,
+				"operation %s %s is omitted by the include/exclude tag rules", pp.Method, pp.Path)
 			continue
 		}
 		dst = append(dst, pp)
@@ -187,7 +211,8 @@ func (a *TypeIndex) collectRoutePathAnnotations(comments []*ast.CommentGroup, ds
 		}
 
 		if !shouldAcceptTag(pp.Tags, a.includeTags, a.excludeTags) {
-			logger.DebugLogf(a.debug, "operation %s %s is ignored due to tag rules", pp.Method, pp.Path)
+			a.emitHintf(grammar.CodeIgnoredByTag,
+				"route %s %s is omitted by the include/exclude tag rules", pp.Method, pp.Path)
 			continue
 		}
 		dst = append(dst, pp)
@@ -222,22 +247,17 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 	for _, sp := range gd.Specs {
 		switch ts := sp.(type) {
 		case *ast.ValueSpec:
-			logger.DebugLogf(a.debug, "saw value spec: %v", ts.Names)
 			return
 		case *ast.ImportSpec:
-			logger.DebugLogf(a.debug, "saw import spec: %v", ts.Name)
 			return
 		case *ast.TypeSpec:
 			def, ok := pkg.TypesInfo.Defs[ts.Name]
 			if !ok {
-				logger.DebugLogf(a.debug, "couldn't find type info for %s", ts.Name)
 				continue
 			}
 			nt, isNamed := def.Type().(*types.Named)
 			at, isAliased := def.Type().(*types.Alias)
 			if !isNamed && !isAliased {
-				logger.DebugLogf(a.debug, "%s is not a named or aliased type but a %T", ts.Name, def.Type())
-
 				continue
 			}
 
@@ -263,12 +283,6 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 				a.Parameters = append(a.Parameters, decl)
 			case n&responseNode != 0 && decl.HasResponseAnnotation():
 				a.Responses = append(a.Responses, decl)
-			default:
-				logger.DebugLogf(a.debug,
-					"type %q skipped because it is not tagged as a model, a parameter or a response. %s",
-					decl.Obj().Name(),
-					"It may reenter the scope because it is a discovered dependency",
-				)
 			}
 		}
 	}
@@ -330,7 +344,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				n |= operationNode
 			case "model": // annotation keyword matched from swagger comment.
 				n |= modelNode
-				warnMalformedStructName(annotation, cline.Text)
+				a.warnMalformedStructName(annotation, cline.Text)
 				if err := checkStructConflict(&seenStruct, annotation, cline.Text); err != nil {
 					return 0, err
 				}
@@ -343,7 +357,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				}
 			case "response":
 				n |= responseNode
-				warnMalformedStructName(annotation, cline.Text)
+				a.warnMalformedStructName(annotation, cline.Text)
 				if err := checkStructConflict(&seenStruct, annotation, cline.Text); err != nil {
 					return 0, err
 				}
@@ -360,25 +374,27 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 	return n, nil
 }
 
-// warnMalformedStructName emits a warning when a single-name struct
+// warnMalformedStructName emits a Warning diagnostic when a single-name struct
 // marker (swagger:model / swagger:response) on line carries a name that is
 // not a plain identifier — e.g. a package-qualified "utils.Error"
 // (go-swagger#874). Such names are JSON labels, not Go-qualified
 // identifiers; the strict override matcher rejects them and the marker is
-// ignored. Warning rather than silently dropping it gives the author a
-// clue. The type's package is resolved automatically, so a plain name
+// ignored. The diagnostic gives the author a clue rather than silently
+// dropping it. The type's package is resolved automatically, so a plain name
 // suffices regardless of which package the type lives in.
-func warnMalformedStructName(annotation, line string) {
+func (a *TypeIndex) warnMalformedStructName(annotation, line string) {
 	switch annotation {
 	case "model":
 		if bad, ok := parsers.MalformedModelName(line); ok {
-			log.Printf("WARNING: swagger:model name %q is not a plain identifier "+
-				"(definition names are JSON labels, not Go-qualified); annotation ignored", bad)
+			a.emit(grammar.Warnf(token.Position{}, grammar.CodeInvalidAnnotation,
+				"swagger:model name %q is not a plain identifier "+
+					"(definition names are JSON labels, not Go-qualified); annotation ignored", bad))
 		}
 	case "response":
 		if bad, ok := parsers.MalformedResponseName(line); ok {
-			log.Printf("WARNING: swagger:response name %q is not a plain identifier "+
-				"(response names are JSON labels, not Go-qualified); annotation ignored", bad)
+			a.emit(grammar.Warnf(token.Position{}, grammar.CodeInvalidAnnotation,
+				"swagger:response name %q is not a plain identifier "+
+					"(response names are JSON labels, not Go-qualified); annotation ignored", bad))
 		}
 	}
 }
