@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	oaispec "github.com/go-openapi/spec"
 	"github.com/go-openapi/swag/mangling"
@@ -121,7 +120,6 @@ func (s *Builder) computeNameReductions() map[string]string {
 			taken[chosen[k]] = struct{}{}
 		}
 		s.diagnoseCollision(leaf, keys, chosen)
-		s.noteBudget(leaf, score)
 	}
 	return renames
 }
@@ -354,23 +352,9 @@ func (s *Builder) diagnoseCollision(leaf string, keys []string, chosen map[strin
 		leaf, len(keys), strings.Join(mappings, ", ")))
 }
 
-// noteBudget records — under Debug only — when a collision group's best
-// concat exceeds the configured readability budget. This is the seam for
-// the hierarchical fallback (name-identity Stage 3 / K3): today it just
-// logs; K3 will, when score > budget, replace the flat concat with a
-// hierarchical name instead of merely noting it.
-func (s *Builder) noteBudget(leaf string, score float64) {
-	budget := s.concatBudget()
-	if score > budget {
-		logger.DebugLogf(s.ctx.Debug(),
-			"reduce: concat names for %q score %.3f > budget %.3f; "+
-				"enable EmitHierarchicalNames for the nested fallback", leaf, score, budget)
-	}
-}
-
 // rekeyDefinitions moves each definition from its old key to its new
 // name. A clash on the new name cannot occur for unique leaves; it is
-// guarded defensively and logged under Debug rather than silently
+// guarded defensively, skipping the rekey rather than silently
 // overwriting.
 func (s *Builder) rekeyDefinitions(renames map[string]string) {
 	for old, nw := range renames {
@@ -382,8 +366,6 @@ func (s *Builder) rekeyDefinitions(renames map[string]string) {
 			continue
 		}
 		if _, clash := s.input.Definitions[nw]; clash {
-			logger.DebugLogf(s.ctx.Debug(),
-				"reduce: refusing to rekey %q -> %q: target already exists", old, nw)
 			continue
 		}
 		s.input.Definitions[nw] = schema

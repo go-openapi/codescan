@@ -14,7 +14,6 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
@@ -66,7 +65,6 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 			operations[opid] = operation
 			operation.ID = opid
 		}
-		logger.DebugLogf(p.Ctx.Debug(), "building parameters for: %s", opid)
 		p.currentOpID = opid
 
 		// analyze struct body for fields etc
@@ -91,7 +89,6 @@ func (p *Builder) buildFromType(otpe types.Type, op *oaispec.Operation, seen map
 	case *types.Named:
 		return p.buildNamedType(tpe, op, seen)
 	case *types.Alias:
-		logger.DebugLogf(p.Ctx.Debug(), "alias(parameters.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
 		return p.buildAlias(tpe, op, seen)
 	default:
 		return fmt.Errorf("unhandled type (%T): %s: %w", otpe, tpe.String(), ErrParameters)
@@ -107,7 +104,6 @@ func (p *Builder) buildNamedType(tpe *types.Named, op *oaispec.Operation, seen m
 
 	switch stpe := o.Type().Underlying().(type) {
 	case *types.Struct:
-		logger.DebugLogf(p.Ctx.Debug(), "build from named type %s: %T", o.Name(), tpe)
 		if decl, found := p.Ctx.DeclForType(o.Type()); found {
 			return p.buildFromStruct(decl, stpe, op, seen)
 		}
@@ -140,8 +136,6 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 }
 
 func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) error {
-	logger.DebugLogf(p.Ctx.Debug(), "build from field %s: %T", fld.Name(), tpe)
-
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
@@ -160,7 +154,6 @@ func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	case *types.Named:
 		return p.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		logger.DebugLogf(p.Ctx.Debug(), "alias(parameters.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs())
 		return p.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrParameters)
@@ -499,13 +492,11 @@ func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name
 // Returns the parameter name if the field was processed, or "" if it was skipped.
 func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, seen map[string]oaispec.Parameter) (string, error) {
 	if !fld.Exported() {
-		logger.DebugLogf(p.Ctx.Debug(), "skipping field %s because it's not exported", fld.Name())
 		return "", nil
 	}
 
 	afld := resolvers.FindASTField(decl.File, fld.Pos())
 	if afld == nil {
-		logger.DebugLogf(p.Ctx.Debug(), "can't find source associated with %s", fld.String())
 		return "", nil
 	}
 

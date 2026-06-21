@@ -10,12 +10,10 @@ import (
 	"go/token"
 	"go/types"
 	"iter"
-	"log"
 	"maps"
 	"slices"
 	"strings"
 
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"golang.org/x/tools/go/packages"
@@ -41,9 +39,8 @@ const (
 )
 
 type ScanCtx struct {
-	pkgs  []*packages.Package
-	app   *TypeIndex
-	debug bool
+	pkgs []*packages.Package
+	app  *TypeIndex
 
 	opts *Options
 
@@ -86,17 +83,16 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 		WithXNullableForPointers(opts.SetXNullableForPointers),
 		WithRefAliases(opts.RefAliases),
 		WithTransparentAliases(opts.TransparentAliases),
-		WithDebug(opts.Debug),
+		WithOnDiagnostic(opts.OnDiagnostic),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ScanCtx{
-		pkgs:  pkgs,
-		app:   app,
-		debug: opts.Debug,
-		opts:  opts,
+		pkgs: pkgs,
+		app:  app,
+		opts: opts,
 	}, nil
 }
 
@@ -256,10 +252,6 @@ func (s *ScanCtx) PosOf(p token.Pos) token.Position {
 		return token.Position{}
 	}
 	return fset.Position(p)
-}
-
-func (s *ScanCtx) Debug() bool {
-	return s.debug
 }
 
 // diagKey identifies a diagnostic by its source location and content, for
@@ -458,14 +450,12 @@ func (s *ScanCtx) FindDecl(pkgPath, name string) (*EntityDecl, bool) {
 
 				def, ok := pkg.TypesInfo.Defs[ts.Name]
 				if !ok {
-					logger.DebugLogf(s.debug, "couldn't find type info for %s", ts.Name)
 					continue
 				}
 
 				nt, isNamed := def.Type().(*types.Named)
 				at, isAliased := def.Type().(*types.Alias)
 				if !isNamed && !isAliased {
-					logger.DebugLogf(s.debug, "%s is not a named or an aliased type but a %T", ts.Name, def.Type())
 					continue
 				}
 
@@ -602,7 +592,8 @@ func (s *ScanCtx) DeclForType(t types.Type) (*EntityDecl, bool) {
 	case *types.Alias:
 		return s.FindDecl(tpe.Obj().Pkg().Path(), tpe.Obj().Name())
 	default:
-		log.Printf("WARNING: unknown type to find the package for [%T]: %s", t, t.String())
+		s.EmitDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeUnsupportedGoType,
+			"unknown Go type %[1]T (%[1]v); cannot resolve its declaring source", t))
 
 		return nil, false
 	}
@@ -624,7 +615,8 @@ func (s *ScanCtx) PkgForType(t types.Type) (*packages.Package, bool) {
 		v, ok := s.app.AllPackages[tpe.Obj().Pkg().Path()]
 		return v, ok
 	default:
-		log.Printf("WARNING: unknown type to find the package for [%T]: %s", t, t.String())
+		s.EmitDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeUnsupportedGoType,
+			"unknown Go type %[1]T (%[1]v); cannot resolve its declaring package", t))
 		return nil, false
 	}
 }

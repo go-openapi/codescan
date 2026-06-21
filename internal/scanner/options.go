@@ -178,7 +178,17 @@ type Options struct {
 	// See go-swagger/go-swagger#2626.
 	SingleLineCommentAsDescription bool
 
-	Debug bool // enable verbose debug logging during scanning
+	// Debug is deprecated and has no effect.
+	//
+	// It formerly enabled verbose debug logging to stderr during scanning.
+	// That logger was retired: scan-time observations now flow exclusively
+	// through OnDiagnostic (which the caller routes to a logger of their
+	// choice), and codescan no longer writes to stdout/stderr — keeping it
+	// usable from a TUI or a WASI/WASM host.
+	//
+	// Deprecated: wire OnDiagnostic instead. This field is retained for API
+	// compatibility and is ignored.
+	Debug bool
 
 	// OnDiagnostic, when non-nil, is invoked for every diagnostic the
 	// builder layer records (lexer/parser warnings, semantic-validation

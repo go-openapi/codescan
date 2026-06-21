@@ -98,6 +98,16 @@ const (
 	// `inline`, or the deprecated `swagger:alias` annotation.
 	CodeDeprecated Code = "validate.deprecated"
 
+	// CodeUnsupportedGoType fires when a Go type, a `go/types` kind, or a
+	// builtin cannot be translated to a Swagger 2.0 construct and is
+	// therefore dropped from the spec. The scanner runs on arbitrary user
+	// code, so an unmodeled construct must not panic — it is skipped and
+	// surfaced as a Warning (real data loss, but the scan continues). The
+	// message names the construct (and the dispatch site) so a future
+	// go/types evolution surfaces one grep-able diagnostic instead of
+	// vanishing behind a silent default.
+	CodeUnsupportedGoType Code = "validate.unsupported-go-type"
+
 	// CodeDuplicateModelName fires when two distinct Go types in the
 	// SAME package claim the same definition name (necessarily via a
 	// `swagger:model <name>` override, since Go type names are unique
@@ -147,6 +157,17 @@ const (
 	// than surfacing a raw Go stack trace. See
 	// go-swagger/go-swagger#2886.
 	CodeInternalPanic Code = "scan.internal-panic"
+
+	// CodeIgnoredByRules fires when a package is skipped because it does not
+	// pass the caller's Include/Exclude package rules. Informational (Hint):
+	// the omission is the caller's own configuration, surfaced to aid
+	// "why is my package missing" triage.
+	CodeIgnoredByRules Code = "scan.ignored-by-rules"
+
+	// CodeIgnoredByTag fires when a route or operation is skipped because its
+	// tags do not pass the caller's IncludeTags/ExcludeTags rules.
+	// Informational (Hint), like CodeIgnoredByRules.
+	CodeIgnoredByTag Code = "scan.ignored-by-tag"
 
 	// CodeDroppedRefSibling fires when SkipAllOfCompounding is set and a
 	// $ref'd struct field carries sibling decoration (description,

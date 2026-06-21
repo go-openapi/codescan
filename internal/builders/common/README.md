@@ -8,8 +8,8 @@ The source files keep godoc concise; complex invariants, design trade-offs, and 
 (`schema`, `parameters`, `responses`, `routes`, `operations`, `spec`).
 
 It owns the scanner context, the active declaration, the
-parsed-block memoisation cache, the diagnostic accumulator, the
-post-decl queue, and the slog logger.
+parsed-block memoisation cache, the diagnostic accumulator, and the
+post-decl queue.
 
 ---
 
@@ -152,11 +152,6 @@ shared with the parameters/responses field-signal scanners) and
 
 These are real maintenance items the package author noted; they remain open for a future pass.
 
-- **logger configurability.** `New` instantiates `slog.Default()`.
-  An option to accept a user-supplied `*slog.Logger` (level,
-  coloured output, structured fields) would let callers opt into a
-  consistent logging surface across builders. Currently every
-  builder's `Warn`/`Debug` writes through the global default.
 - **`ireturn` on `ParseBlock`.** The `nolint:ireturn` directive on
   `ParseBlock` carries because `grammar.Block` is a polymorphic
   interface — that's the documented return type. The lint could

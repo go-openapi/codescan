@@ -14,7 +14,6 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/schema"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
@@ -68,7 +67,6 @@ func (r *Builder) Build(responses map[string]oaispec.Response) error {
 
 	name, _ := r.Decl.ResponseNames()
 	response := responses[name]
-	logger.DebugLogf(r.Ctx.Debug(), "building response: %s", name)
 
 	// Cross-ref linkage: anchor this response's headers and in:body schema under
 	// /responses/{name}. The response name is known here (no deferral, unlike a
@@ -156,8 +154,6 @@ func (r *Builder) bodyPathFor(typable ifaces.SwaggerTypable) string {
 }
 
 func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]bool) error {
-	logger.DebugLogf(r.Ctx.Debug(), "build from field %s: %T", fld.Name(), tpe)
-
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
@@ -178,7 +174,6 @@ func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	case *types.Named:
 		return r.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		logger.DebugLogf(r.Ctx.Debug(), "alias(responses.buildFromField): got alias %v to %v", ftpe, ftpe.Rhs())
 		return r.buildFieldAlias(ftpe, typable, fld, seen)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrResponses)
@@ -255,7 +250,6 @@ func (r *Builder) buildFromType(otpe types.Type, resp *oaispec.Response, seen ma
 	case *types.Named:
 		return r.buildNamedType(tpe, resp, seen)
 	case *types.Alias:
-		logger.DebugLogf(r.Ctx.Debug(), "alias(responses.buildFromType): got alias %v to %v", tpe, tpe.Rhs())
 		return r.buildAlias(tpe, resp, seen)
 	default:
 		return fmt.Errorf("anonymous types are currently not supported for responses: %w", ErrResponses)
@@ -271,7 +265,6 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 
 	switch stpe := o.Type().Underlying().(type) {
 	case *types.Struct:
-		logger.DebugLogf(r.Ctx.Debug(), "build from type %s: %T", o.Name(), tpe)
 		if decl, found := r.Ctx.DeclForType(o.Type()); found {
 			return r.buildFromStruct(decl, stpe, resp, seen)
 		}
@@ -431,7 +424,6 @@ func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, r
 		}
 
 		if fld.Anonymous() {
-			logger.DebugLogf(r.Ctx.Debug(), "skipping anonymous field")
 			continue
 		}
 
@@ -500,20 +492,17 @@ func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response, seen ma
 
 func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl, resp *oaispec.Response, seen map[string]bool) error {
 	if !fld.Exported() {
-		logger.DebugLogf(r.Ctx.Debug(), "skipping field %s because it's not exported", fld.Name())
 		return nil
 	}
 
 	afld := resolvers.FindASTField(decl.File, fld.Pos())
 	if afld == nil {
-		logger.DebugLogf(r.Ctx.Debug(), "can't find source associated with %s", fld.String())
 		return nil
 	}
 
 	signals := scanFieldDocSignals(r.ParseBlocks(afld.Doc), afld.Doc)
 
 	if signals.ignored {
-		logger.DebugLogf(r.Ctx.Debug(), "field %v is deliberately ignored", fld)
 		return nil
 	}
 
@@ -593,7 +582,6 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		resp.Schema = &oaispec.Schema{}
 		resp.Schema.Typed("file", "")
 	} else {
-		logger.DebugLogf(r.Ctx.Debug(), "build response %v (%v) (not a file)", fld, fld.Type())
 		var refAttempted bool
 		if err := r.buildFromField(fld, fld.Type(), responseTypable{
 			in:           in,

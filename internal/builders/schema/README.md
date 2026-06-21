@@ -436,8 +436,8 @@ discriminator hint downstream go-swagger consumes.
 
 Strips pointers (recurses), routes `*types.Named` through
 `buildNamedAllOf`, routes `*types.Alias` through `buildAlias`. Any
-other input is dropped silently with a `logger.UnsupportedTypeKind`
-warning — parity with v1, which had no surface for non-Named /
+other input is dropped with a `validate.unsupported-go-type` Warning
+diagnostic (`warnUnsupportedGoType`) — v1 had no surface for non-Named /
 non-Alias allOf members.
 
 ### `buildNamedAllOf` — symmetric arm dispatch

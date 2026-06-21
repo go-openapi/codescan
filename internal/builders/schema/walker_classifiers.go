@@ -7,14 +7,12 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
-	"github.com/go-openapi/codescan/internal/logger"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	"golang.org/x/tools/go/packages"
@@ -177,11 +175,11 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 		// the type-resolution engine can still decide what to do with
 		// the underlying Go type (it may be a model, an alias, a
 		// strfmt, …) rather than dropping the field entirely.
-		log.Printf("WARNING: swagger:enum %s: no matching const values found; dropping enum semantics", enumName)
+		s.RecordDiagnostic(grammar.Warnf(s.declPos(), grammar.CodeInvalidEnumOption,
+			"swagger:enum %s: no matching const values found; enum semantics dropped", enumName))
 	}
 
-	if defaultName, ok := s.findAnnotationArg(cg, grammar.AnnDefaultName); ok {
-		logger.DebugLogf(s.Ctx.Debug(), "default name: %s", defaultName)
+	if _, ok := s.findAnnotationArg(cg, grammar.AnnDefaultName); ok {
 		return true
 	}
 
