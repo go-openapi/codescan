@@ -115,7 +115,19 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// names and re-point every $ref. Runs last because buildRoutes /
 	// buildOperations also emit definition refs. See
 	// .claude/plans/name-identity-cyclic-ref.md §9/§12.
-	s.reduceDefinitionNames()
+	renames := s.reduceDefinitionNames()
+
+	// Definition provenance was buffered under each definition's fully-qualified
+	// key while building (BeginDefOrigins); now that names are final, re-point
+	// every buffered anchor to its final name and emit it. Anchors for pruned
+	// definitions were already dropped, so none dangle. See
+	// .claude/plans/prune-unused-models.md.
+	s.ctx.FlushDefOrigins(func(defKey string) string {
+		if final, ok := renames[defKey]; ok {
+			return final
+		}
+		return defKey
+	})
 
 	if s.input.Swagger == "" {
 		s.input.Swagger = "2.0"
@@ -260,13 +272,20 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	// Cross-ref linkage: initiate the base pointer for this definition so the
 	// schema builder path-joins its members (properties, …) under it, and anchor
 	// the definition node itself to its type declaration.
+	//
+	// The base uses the fully-qualified DefKey, not the user-facing name: the
+	// definition is keyed by DefKey throughout discovery and only renamed to its
+	// final name at the end of the build (reduceDefinitionNames), after a
+	// possible prune. Anchors are buffered under DefKey (BeginDefOrigins) and
+	// re-pointed to the final name by FlushDefOrigins once names are settled, so
+	// every emitted pointer resolves against the final document.
 	var defPtr string
 	opts := []schema.Option{schema.WithDefinitions(s.definitions)}
 	if s.ctx.OriginEnabled() {
-		if name, _ := decl.Names(); name != "" {
-			defPtr = scanner.JSONPointer("definitions", name)
-			opts = append(opts, schema.WithPath(defPtr))
-		}
+		defPtr = scanner.JSONPointer("definitions", decl.DefKey())
+		opts = append(opts, schema.WithPath(defPtr))
+		s.ctx.BeginDefOrigins(decl.DefKey())
+		defer s.ctx.EndDefOrigins()
 	}
 
 	if err := sb.Build(opts...); err != nil {

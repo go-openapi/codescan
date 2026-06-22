@@ -62,6 +62,63 @@ func TestCoverage_ProvenanceDefinitions(t *testing.T) {
 	}
 }
 
+// TestCoverage_ProvenanceCollisionRename is the regression witness for the
+// definition-provenance / name-reduction ordering bug. Two packages declare the
+// same short-named model (x.Item + y.Item); reduceDefinitionNames renames them
+// (Item -> XItem / YItem). Provenance is buffered under the fully-qualified key
+// while building and re-pointed to the final name on flush, so every anchor —
+// the definition node AND its fields — resolves against the renamed definition.
+// Before the fix, anchors fired inline under the un-renamed leaf
+// (/definitions/Item/...) and dangled after the rename.
+func TestCoverage_ProvenanceCollisionRename(t *testing.T) {
+	byPointer := map[string]scanner.Provenance{}
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:   []string{"./enhancements/name-identity-mixed/..."},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
+		OnProvenance: func(p scanner.Provenance) {
+			byPointer[p.Pointer] = p
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	// The colliding models were renamed; the bare leaf is gone from the spec.
+	require.Contains(t, doc.Definitions, "XItem")
+	require.Contains(t, doc.Definitions, "YItem")
+	require.NotContains(t, doc.Definitions, "Item")
+
+	// Anchors land on the renamed definition nodes, each carrying a source line.
+	for _, ptr := range []string{"/definitions/XItem", "/definitions/YItem"} {
+		prov, ok := byPointer[ptr]
+		require.Truef(t, ok, "expected an anchor for renamed definition %q; got %v", ptr, keysOf(byPointer))
+		assert.Positivef(t, prov.Pos.Line, "%q should carry a source line", ptr)
+	}
+
+	// No anchor may reference the pre-rename leaf — that's the dangling bug.
+	for ptr := range byPointer {
+		assert.Falsef(t, ptr == "/definitions/Item" || strings.HasPrefix(ptr, "/definitions/Item/"),
+			"anchor %q references the un-renamed leaf — provenance was not re-pointed", ptr)
+	}
+
+	// Every emitted anchor resolves in the rendered spec, including at least one
+	// field-level anchor under a renamed definition.
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	var root any
+	require.NoError(t, json.Unmarshal(raw, &root))
+	var fieldAnchors int
+	for ptr := range byPointer {
+		assert.Truef(t, resolveJSONPointer(root, ptr),
+			"anchor %q does not resolve in the rendered spec", ptr)
+		if strings.HasPrefix(ptr, "/definitions/XItem/properties/") ||
+			strings.HasPrefix(ptr, "/definitions/YItem/properties/") {
+			fieldAnchors++
+		}
+	}
+	assert.Positive(t, fieldAnchors, "expected at least one field-level anchor under a renamed definition")
+}
+
 // TestCoverage_ProvenanceOffByDefault confirms the callback is opt-in: a scan
 // without OnProvenance set produces the same spec and records nothing.
 func TestCoverage_ProvenanceOffByDefault(t *testing.T) {
@@ -111,6 +168,13 @@ func TestCoverage_ProvenanceGeometry(t *testing.T) {
 		"./enhancements/pattern-properties-typed",
 		"./enhancements/swagger-type-array",
 		"./enhancements/provenance-params-responses", // param + response header/body anchors
+		// Cross-package name collisions: definitions are renamed by
+		// reduceDefinitionNames (Item -> XItem/YItem, Widget -> …). Provenance is
+		// buffered under the fully-qualified key and re-pointed to the final name
+		// on flush; before that fix these anchored under the un-renamed leaf and
+		// dangled. See TestCoverage_ProvenanceCollisionRename.
+		"./enhancements/name-identity-mixed/...",
+		"./enhancements/name-identity-3way/...",
 		// Full-surface fixture: meta, routes/operations, parameters,
 		// top-level responses and enum definitions — exercises every anchor
 		// kind against the resolves-in-spec invariant.

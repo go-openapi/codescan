@@ -41,19 +41,24 @@ import (
 // output is deterministic regardless of discovery / map-iteration order
 // (G4): the previous silent merge was the only source of non-determinism
 // and it is gone now that distinct types get distinct keys.
-func (s *Builder) reduceDefinitionNames() {
+// reduceDefinitionNames returns the old->new rename map it applied, so the
+// caller can re-point buffered provenance anchors to the final names
+// (FlushDefOrigins). A nil/empty map means no definition was renamed.
+func (s *Builder) reduceDefinitionNames() map[string]string {
 	if len(s.input.Definitions) == 0 {
-		return
+		return nil
 	}
 
 	renames := s.computeNameReductions()
 	if len(renames) == 0 {
-		return
+		return nil
 	}
 
 	rewriteAllRefs(s.input, repointer(renames))
 	s.rekeyDefinitions(renames)
 	s.placeHierarchical(renames)
+
+	return renames
 }
 
 // computeNameReductions groups definition keys by their leaf name (the
