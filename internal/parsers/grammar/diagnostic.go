@@ -177,6 +177,22 @@ const (
 	// keyword so the loss is never silent. See scanner.Options
 	// SkipAllOfCompounding.
 	CodeDroppedRefSibling Code = "validate.dropped-ref-sibling"
+
+	// CodePrunedUnused fires when PruneUnusedModels is set and a discovered
+	// definition is dropped because it is not transitively referenced from any
+	// path, shared response, shared parameter or overlay definition. Carries the
+	// originating Go type's source position so the loss is never silent.
+	// Informational (Hint): the prune is the caller's own opt-in, surfaced to aid
+	// "why is my model missing" triage. See scanner.Options PruneUnusedModels.
+	CodePrunedUnused Code = "scan.pruned-unused"
+
+	// CodeRenamedDefinition fires when the reduce stage renames a definition to
+	// deconflict a cross-package name collision (e.g. b.Test / c.Test -> BTest /
+	// CTest), so a consumer that tracks source <-> spec links (the genspec TUI)
+	// learns the final name a Go type landed under. Informational (Hint); carries
+	// the Go type's source position. The bare-leaf zero-churn case (a globally
+	// unique name lifted to its leaf) is NOT reported — only true renames.
+	CodeRenamedDefinition Code = "scan.renamed-definition"
 )
 
 // Diagnostic is one observation about a comment block.

@@ -1,0 +1,116 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/used": {
+      "get": {
+        "summary": "Used.",
+        "operationId": "usedOp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/usedResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AThing": {
+      "description": "Thing is referenced from Used.Thing, so it survives a prune. With b.Thing\npruned away first, this keeps the bare name \"Thing\".",
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused/a"
+    },
+    "B": {
+      "type": "object",
+      "title": "B is reached via Used -\u003e B -\u003e C.",
+      "properties": {
+        "c": {
+          "$ref": "#/definitions/C"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused"
+    },
+    "BThing": {
+      "type": "object",
+      "title": "Thing is a swagger:model that nothing references — pruned.",
+      "properties": {
+        "b": {
+          "type": "string",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused/b"
+    },
+    "C": {
+      "type": "object",
+      "title": "C is the chain tail.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused"
+    },
+    "Node": {
+      "description": "Node is self-recursive and reached from Used; the reachability walk must\nterminate on the cycle, not loop.",
+      "type": "object",
+      "properties": {
+        "next": {
+          "$ref": "#/definitions/Node"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused"
+    },
+    "OnlyByUnused": {
+      "description": "OnlyByUnused is referenced only by Unused (itself unreferenced), so it is\nreachable only through dead nodes — pruned too.",
+      "type": "object",
+      "properties": {
+        "v": {
+          "type": "string",
+          "x-go-name": "V"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused"
+    },
+    "Unused": {
+      "type": "object",
+      "title": "Unused is a swagger:model that nothing references — pruned.",
+      "properties": {
+        "only": {
+          "$ref": "#/definitions/OnlyByUnused"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused"
+    },
+    "Used": {
+      "type": "object",
+      "title": "Used is referenced from the route response — the reachability root.",
+      "properties": {
+        "b": {
+          "$ref": "#/definitions/B"
+        },
+        "node": {
+          "$ref": "#/definitions/Node"
+        },
+        "thing": {
+          "$ref": "#/definitions/AThing"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/prune-unused"
+    }
+  },
+  "responses": {
+    "usedResp": {
+      "description": "usedResp carries Used in its body so the route reaches it.",
+      "schema": {
+        "$ref": "#/definitions/Used"
+      }
+    }
+  }
+}

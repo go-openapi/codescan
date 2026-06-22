@@ -323,6 +323,13 @@ func (s *ScanCtx) EmitHierarchicalNames() bool {
 	return s.opts.EmitHierarchicalNames
 }
 
+// PruneUnusedModels reports whether the caller opted into pruning discovered
+// definitions that are not transitively referenced from a root (paths, shared
+// responses/parameters, overlay definitions). See [Options.PruneUnusedModels].
+func (s *ScanCtx) PruneUnusedModels() bool {
+	return s.opts.PruneUnusedModels
+}
+
 // OriginEnabled reports whether a provenance sink is wired, so callers can skip
 // JSON-pointer construction entirely when no consumer is listening.
 func (s *ScanCtx) OriginEnabled() bool {
