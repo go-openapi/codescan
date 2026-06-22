@@ -35,7 +35,9 @@ Scanned with `ScanModels: true`, the definitions are:
 {{% notice style="info" %}}
 If a model is missing from your spec, it is almost always **unreachable**: no
 operation/parameter/response/model leads to it. Either reference it, or annotate
-it `swagger:model` and scan with `ScanModels`.
+it `swagger:model` and scan with `ScanModels`. For the opposite problem — a
+`ScanModels` scan that pulls in models you do *not* want, like `Standalone` —
+see [Pruning unused models]({{% relref "/shaping-the-output/pruning-unused-models" %}}).
 {{% /notice %}}
 
 ## Generic and embedded types
