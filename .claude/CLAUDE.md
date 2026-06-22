@@ -111,6 +111,12 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
 - `codescan.Run(*Options) (*spec.Swagger, error)` — the main entry point.
 - `codescan.Options` — configuration. Notable fields beyond `Packages`/`WorkDir`:
   - `ScanModels` — also emit definitions for `swagger:model` types.
+  - `PruneUnusedModels` — with `ScanModels`, prune discovered definitions not
+    transitively referenced from any path/response/parameter/overlay root.
+    Runs before name reduction (so an unused model can't force a spurious
+    collision rename on a used one); `InputSpec` definitions are pinned. Each
+    drop raises a `scan.pruned-unused` Hint; collision renames raise
+    `scan.renamed-definition`. See `internal/scanner/README.md#prune`.
   - `InputSpec` — overlay: merge discoveries on top of an existing spec.
   - `BuildTags`, `Include`/`Exclude`, `IncludeTags`/`ExcludeTags`, `ExcludeDeps` — scope control.
   - `RefAliases`, `TransparentAliases`, `DescWithRef` — alias handling knobs

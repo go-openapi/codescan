@@ -18,6 +18,8 @@ parameters, responses) consumed by the builder layer.
   $ref shape and why it has a flag
 - [§diagnostics](#diagnostics) — `OnDiagnostic` contract and
   experimental-API caveat
+- [§prune](#prune) — `PruneUnusedModels` reachability and why it
+  runs before name reduction
 - [§model-lookup](#model-lookup) — `GetModel` vs `FindModel` —
   pure read vs implicit registration
 - [§classifier](#classifier) — `detectNodes` bitmask semantics and
@@ -42,6 +44,8 @@ warrant the inline godoc and the deeper notes below:
   See [§descwithref](#descwithref).
 - `OnDiagnostic` — diagnostic callback hook. See
   [§diagnostics](#diagnostics).
+- `PruneUnusedModels` — drop discovered definitions unreachable from
+  any root, on top of `ScanModels`. See [§prune](#prune).
 
 ## <a id="descwithref"></a>§descwithref — description-only-decoration $ref shape
 
@@ -93,6 +97,49 @@ breaking change in a future minor release.
 
 `ScanCtx.OnDiagnostic` returns the user-supplied callback verbatim;
 builders pipe diagnostics through it via `common.Builder.RecordDiagnostic`.
+
+## <a id="prune"></a>§prune — `PruneUnusedModels` reachability
+
+`Options.PruneUnusedModels` is a modifier on `ScanModels` (`-m`). The
+three emission modes:
+
+1. **no `ScanModels`** — only models transitively reachable from
+   routes/responses/parameters are emitted (discovery-driven).
+2. **`ScanModels`** — every `swagger:model` type is emitted, reachable
+   or not.
+3. **`ScanModels` + `PruneUnusedModels`** — discovery runs as in (2),
+   then unreachable definitions are pruned again. The middle ground a
+   shared-library scan wants: keep only the `$ref`'d subset
+   (go-swagger/go-swagger#2639).
+
+Without `ScanModels` the flag is a no-op (the set is already
+reachable-only) and raises one positionless `scan.pruned-unused` Hint.
+
+**Reachability.** Roots are the paths (operation body parameters +
+response schemas), the shared `responses` and `parameters`, and every
+definition supplied via `InputSpec`. Overlay definitions are **pinned**:
+never pruned and seeded as roots so their `$ref` targets survive. The
+walk (`spec/prune.go`, `collectDefRefs`) is the read-only mirror of the
+ref-rewriter (`reduce.go`, `rewriteSchemaRefs`) and must cover the same
+container set; a `visited` set handles recursive / cyclic models. A
+model referenced only by another unreferenced model is itself pruned.
+
+**Ordering — before name reduction.** The prune runs *before*
+`reduceDefinitionNames`, in the fully-qualified `#/definitions/<pkgpath>/
+<name>` key namespace. This is the point of the feature, not an
+implementation detail: name reduction deconflicts cross-package leaf
+collisions (`a.Thing` / `b.Thing` → `AThing` / `BThing`). Pruning an
+*unused* twin first means the collision never materialises, so the
+surviving model keeps its bare leaf name — no spurious concat churn.
+Each prune raises a located `scan.pruned-unused` Hint; the buffered
+provenance for a pruned node is dropped so no anchor dangles. The
+collision renames the reduce stage *does* perform are surfaced as
+`scan.renamed-definition` Hints (located at the Go type).
+
+**Known limitation.** A discriminator base references its subtypes by
+mapping string, not by `$ref`, so a subtype reachable only through a
+discriminator could be pruned. codescan does not auto-wire discriminator
+subtypes today; revisit if it ever does (forthcoming-features §15).
 
 ## <a id="model-lookup"></a>§model-lookup — `GetModel` vs `FindModel`
 

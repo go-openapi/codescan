@@ -139,6 +139,9 @@ the nested shape only when you prefer it for the over-budget tail.
 
 - [Type discovery]({{% relref "/shaping-the-output/type-discovery" %}}) — which
   types become definitions in the first place.
+- [Pruning unused models]({{% relref "/shaping-the-output/pruning-unused-models" %}}) —
+  drops unreferenced models *before* this name stage, so collisions caused only
+  by models you do not use never arise.
 - [Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}) —
   the typed `additionalProperties` / `patternProperties` value forms.
 - [Model definitions]({{% relref "/tutorials/model-definitions" %}}) —

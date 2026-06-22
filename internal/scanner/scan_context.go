@@ -51,6 +51,20 @@ type ScanCtx struct {
 	// (see the spec builder) once paths are built. Cross-ref linkage only.
 	paramOrigins map[string]map[string]token.Position
 
+	// defOrigins buffers definition-scoped provenance anchors (the definition
+	// node and every field/enum sub-anchor under it), keyed by the
+	// fully-qualified definition key (EntityDecl.DefKey). They cannot fire
+	// inline: the definition is keyed by its fqn during discovery but renamed to
+	// its final user-facing name only at the end of the build
+	// (reduceDefinitionNames), and an unreferenced definition may be pruned
+	// before that. Buffered here, then re-pointed to the final name and emitted
+	// by FlushDefOrigins after prune + name reduction, so every pointer handed
+	// to OnProvenance resolves against the final document. curDefKey marks the
+	// definition currently being built (empty outside a definition build);
+	// non-reentrant, since each definition is built in its own pass.
+	defOrigins map[string][]Provenance
+	curDefKey  string
+
 	// seenDiags suppresses exact-duplicate diagnostics on the OnDiagnostic
 	// stream over one scan (see EmitDiagnostic).
 	seenDiags map[diagKey]struct{}
@@ -309,6 +323,13 @@ func (s *ScanCtx) EmitHierarchicalNames() bool {
 	return s.opts.EmitHierarchicalNames
 }
 
+// PruneUnusedModels reports whether the caller opted into pruning discovered
+// definitions that are not transitively referenced from a root (paths, shared
+// responses/parameters, overlay definitions). See [Options.PruneUnusedModels].
+func (s *ScanCtx) PruneUnusedModels() bool {
+	return s.opts.PruneUnusedModels
+}
+
 // OriginEnabled reports whether a provenance sink is wired, so callers can skip
 // JSON-pointer construction entirely when no consumer is listening.
 func (s *ScanCtx) OriginEnabled() bool {
@@ -318,10 +339,79 @@ func (s *ScanCtx) OriginEnabled() bool {
 // RecordOrigin fires the consumer's [Options.OnProvenance] callback for one
 // anchor node, when wired. Unlike diagnostics it accumulates nothing — the
 // cross-ref index is owned by the consumer (see the genspec-tui linkage design).
+//
+// Exception: while a definition build is in progress (between [BeginDefOrigins]
+// and [EndDefOrigins]) the anchor is buffered instead of fired, so it can be
+// re-pointed to the definition's final name — or dropped if the definition is
+// pruned — by [FlushDefOrigins] at the end of the build. Anchors outside a
+// definition build (paths, responses, info, parameters) fire inline as before;
+// name reduction never renames those.
 func (s *ScanCtx) RecordOrigin(pointer string, pos token.Position) {
-	if cb := s.opts.OnProvenance; cb != nil {
-		cb(Provenance{Pointer: pointer, Pos: pos})
+	cb := s.opts.OnProvenance
+	if cb == nil {
+		return
 	}
+	if s.curDefKey != "" {
+		s.defOrigins[s.curDefKey] = append(s.defOrigins[s.curDefKey], Provenance{Pointer: pointer, Pos: pos})
+		return
+	}
+	cb(Provenance{Pointer: pointer, Pos: pos})
+}
+
+// BeginDefOrigins opens a buffering window for the definition keyed by defKey
+// (its fully-qualified [EntityDecl.DefKey]). Until [EndDefOrigins], every
+// [RecordOrigin] call is buffered under defKey instead of fired. No-op when no
+// provenance sink is wired. Non-reentrant: each definition is built in its own
+// pass, so windows never nest.
+func (s *ScanCtx) BeginDefOrigins(defKey string) {
+	if s.opts.OnProvenance == nil {
+		return
+	}
+	if s.defOrigins == nil {
+		s.defOrigins = make(map[string][]Provenance)
+	}
+	s.curDefKey = defKey
+}
+
+// EndDefOrigins closes the current definition buffering window.
+func (s *ScanCtx) EndDefOrigins() {
+	s.curDefKey = ""
+}
+
+// DropDefOrigins discards the buffered anchors for a definition that has been
+// pruned, so its provenance is never emitted (no orphan pointer into a
+// definition absent from the final document).
+func (s *ScanCtx) DropDefOrigins(defKey string) {
+	delete(s.defOrigins, defKey)
+}
+
+// FlushDefOrigins fires every buffered definition anchor, re-pointing each from
+// its build-time fully-qualified base (#/definitions/<defKey>) to the
+// definition's final name. finalName maps a definition key to the name the spec
+// emits for it (identity when unchanged). Pointers are emitted in a
+// deterministic (sorted) order. After the flush the buffer is cleared.
+func (s *ScanCtx) FlushDefOrigins(finalName func(defKey string) string) {
+	cb := s.opts.OnProvenance
+	if cb == nil || len(s.defOrigins) == 0 {
+		return
+	}
+
+	keys := make([]string, 0, len(s.defOrigins))
+	for k := range s.defOrigins {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	for _, defKey := range keys {
+		oldBase := JSONPointer("definitions", defKey)
+		newBase := JSONPointer("definitions", finalName(defKey))
+		for _, rec := range s.defOrigins[defKey] {
+			cb(Provenance{Pointer: newBase + strings.TrimPrefix(rec.Pointer, oldBase), Pos: rec.Pos})
+		}
+	}
+
+	s.defOrigins = nil
+	s.curDefKey = ""
 }
 
 // RecordParamOrigin stashes the source position of one parameter field, keyed

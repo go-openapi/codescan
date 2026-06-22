@@ -41,19 +41,59 @@ import (
 // output is deterministic regardless of discovery / map-iteration order
 // (G4): the previous silent merge was the only source of non-determinism
 // and it is gone now that distinct types get distinct keys.
-func (s *Builder) reduceDefinitionNames() {
+// reduceDefinitionNames returns the old->new rename map it applied, so the
+// caller can re-point buffered provenance anchors to the final names
+// (FlushDefOrigins). A nil/empty map means no definition was renamed.
+func (s *Builder) reduceDefinitionNames() map[string]string {
 	if len(s.input.Definitions) == 0 {
-		return
+		return nil
 	}
 
 	renames := s.computeNameReductions()
 	if len(renames) == 0 {
-		return
+		return nil
 	}
 
 	rewriteAllRefs(s.input, repointer(renames))
 	s.rekeyDefinitions(renames)
 	s.placeHierarchical(renames)
+	s.diagnoseRenames(renames)
+
+	return renames
+}
+
+// diagnoseRenames emits a scan.renamed-definition Hint for every definition the
+// reduce stage renamed to deconflict a cross-package collision. The trivial
+// lift of a globally-unique leaf to its bare name is not a rename and is
+// skipped (final == leaf). Unlike the positionless group Warning
+// (diagnoseCollision), each Hint carries the source position of the originating
+// Go type — captured during the build in declPos — so a source<->spec consumer
+// (the genspec TUI) can follow a renamed type back to its declaration. No
+// provenance is emitted here: the renamed node's anchor is the normal flushed
+// one under its final name (see FlushDefOrigins).
+func (s *Builder) diagnoseRenames(renames map[string]string) {
+	onDiag := s.ctx.OnDiagnostic()
+	if onDiag == nil {
+		return
+	}
+
+	keys := make([]string, 0, len(renames))
+	for key, final := range renames {
+		if final != leafName(key) { // skip unique-leaf lifts, keep true renames
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		pos, ok := s.declPos[key]
+		if !ok {
+			continue // no source declaration (e.g. an overlay-supplied definition)
+		}
+		onDiag(grammar.Hintf(pos, grammar.CodeRenamedDefinition,
+			"definition %q renamed to %q to deconflict a cross-package name collision",
+			key, renames[key]))
+	}
 }
 
 // computeNameReductions groups definition keys by their leaf name (the

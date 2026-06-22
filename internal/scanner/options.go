@@ -178,6 +178,34 @@ type Options struct {
 	// See go-swagger/go-swagger#2626.
 	SingleLineCommentAsDescription bool
 
+	// PruneUnusedModels, when set together with ScanModels, drops every
+	// discovered definition that is not transitively referenced from a path, a
+	// shared response, a shared parameter, or a definition supplied via
+	// InputSpec. It is the middle ground between the two default modes:
+	//
+	//   - without ScanModels: only route-reachable models are emitted;
+	//   - with ScanModels (`-m`): every swagger:model type is emitted, reachable
+	//     or not;
+	//   - with ScanModels + PruneUnusedModels: swagger:model discovery runs, then
+	//     the unreachable definitions are pruned again — useful when scanning a
+	//     large shared library where only the $ref'd subset is wanted.
+	//
+	// Pruning runs BEFORE definition-name reduction, so an unused model can no
+	// longer force a spurious cross-package name collision on a model that IS
+	// used (the survivor keeps its clean short name). Definitions supplied via
+	// InputSpec are pinned: they are never pruned and seed the reachability
+	// roots. Each pruned definition raises a scan.pruned-unused Hint through
+	// OnDiagnostic — the loss is never silent.
+	//
+	// Without ScanModels this flag is a no-op (the emitted set is already
+	// reachable-only); setting it alone raises one Hint. Default false.
+	//
+	// Note: a discriminator base references its subtypes by mapping string, not
+	// by $ref, so a subtype reachable only through a discriminator could be
+	// pruned. codescan does not auto-wire discriminator subtypes today; revisit
+	// if it ever does. See go-swagger/go-swagger#2639.
+	PruneUnusedModels bool
+
 	// Debug is deprecated and has no effect.
 	//
 	// It formerly enabled verbose debug logging to stderr during scanning.

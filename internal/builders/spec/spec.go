@@ -36,6 +36,11 @@ type Builder struct {
 	definitions map[string]oaispec.Schema
 	responses   map[string]oaispec.Response
 	operations  map[string]*oaispec.Operation
+	// declPos records the source position of each discovered definition, keyed
+	// by its fully-qualified DefKey, so the prune (scan.pruned-unused) and
+	// rename (scan.renamed-definition) Hints can be located at the originating
+	// Go type even though the spec node may by then be gone or renamed.
+	declPos map[string]token.Position
 }
 
 func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *Builder {
@@ -64,6 +69,7 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 		operations:  collectOperationsFromInput(input),
 		definitions: input.Definitions,
 		responses:   input.Responses,
+		declPos:     make(map[string]token.Position),
 	}
 }
 
@@ -110,12 +116,30 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// definition-name reduction below.
 	s.emitParameterAnchors()
 
+	// Prune discovered definitions not reachable from a root, when the caller
+	// opted in (PruneUnusedModels). Runs before name reduction so an unused
+	// model cannot force a spurious collision rename on a used one. See
+	// .claude/plans/prune-unused-models.md.
+	s.pruneUnusedModels()
+
 	// Final stage: shorten the fully-qualified, collision-proof
 	// definition keys produced during discovery back to user-facing
 	// names and re-point every $ref. Runs last because buildRoutes /
 	// buildOperations also emit definition refs. See
 	// .claude/plans/name-identity-cyclic-ref.md §9/§12.
-	s.reduceDefinitionNames()
+	renames := s.reduceDefinitionNames()
+
+	// Definition provenance was buffered under each definition's fully-qualified
+	// key while building (BeginDefOrigins); now that names are final, re-point
+	// every buffered anchor to its final name and emit it. Anchors for pruned
+	// definitions were already dropped, so none dangle. See
+	// .claude/plans/prune-unused-models.md.
+	s.ctx.FlushDefOrigins(func(defKey string) string {
+		if final, ok := renames[defKey]; ok {
+			return final
+		}
+		return defKey
+	})
 
 	if s.input.Swagger == "" {
 		s.input.Swagger = "2.0"
@@ -257,16 +281,27 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	sb := schema.NewBuilder(s.ctx, decl)
 	sb.SetDiscovered(s.discovered)
 
+	// Stash the definition's source position for the prune / rename Hints, which
+	// fire after the spec node may have been dropped or renamed.
+	s.declPos[decl.DefKey()] = s.ctx.PosOf(decl.Ident.Pos())
+
 	// Cross-ref linkage: initiate the base pointer for this definition so the
 	// schema builder path-joins its members (properties, …) under it, and anchor
 	// the definition node itself to its type declaration.
+	//
+	// The base uses the fully-qualified DefKey, not the user-facing name: the
+	// definition is keyed by DefKey throughout discovery and only renamed to its
+	// final name at the end of the build (reduceDefinitionNames), after a
+	// possible prune. Anchors are buffered under DefKey (BeginDefOrigins) and
+	// re-pointed to the final name by FlushDefOrigins once names are settled, so
+	// every emitted pointer resolves against the final document.
 	var defPtr string
 	opts := []schema.Option{schema.WithDefinitions(s.definitions)}
 	if s.ctx.OriginEnabled() {
-		if name, _ := decl.Names(); name != "" {
-			defPtr = scanner.JSONPointer("definitions", name)
-			opts = append(opts, schema.WithPath(defPtr))
-		}
+		defPtr = scanner.JSONPointer("definitions", decl.DefKey())
+		opts = append(opts, schema.WithPath(defPtr))
+		s.ctx.BeginDefOrigins(decl.DefKey())
+		defer s.ctx.EndDefOrigins()
 	}
 
 	if err := sb.Build(opts...); err != nil {
