@@ -149,3 +149,37 @@ type Profile struct {
 }
 
 // endsnippet:complexexample
+
+// snippet:responseexamplesbymime
+
+// Pet is the response payload.
+//
+// swagger:model Pet
+type Pet struct {
+	Name string `json:"name"`
+}
+
+// PetResponse returns a pet, with one example payload per media type.
+//
+// The plural `examples:` keyword on a struct swagger:response is a YAML map
+// keyed by media type, populating the OpenAPI response `examples` object.
+//
+// swagger:response petResponse
+//
+// examples:
+//
+//	application/json:
+//	  name: Fluffy
+//	application/xml: "<pet><name>Fluffy</name></pet>"
+type PetResponse struct {
+	// in: body
+	Body Pet `json:"body"`
+}
+
+// swagger:route GET /pets pets listPets
+//
+// responses:
+//
+//	200: petResponse
+
+// endsnippet:responseexamplesbymime

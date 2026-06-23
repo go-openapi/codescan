@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Filter is a query model whose fields carry both json: and form: tags.",
+  "properties": {
+    "pageSize": {
+      "description": "PageSize bounds the page length.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "PageSize"
+    },
+    "sortKey": {
+      "description": "SortKey selects the sort column.",
+      "type": "string",
+      "x-go-name": "SortKey"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/naming-from-tags"
+}

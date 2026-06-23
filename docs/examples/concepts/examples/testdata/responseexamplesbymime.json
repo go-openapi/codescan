@@ -1,0 +1,12 @@
+{
+  "description": "PetResponse returns a pet, with one example payload per media type.\n\nThe plural `examples:` keyword on a struct swagger:response is a YAML map\nkeyed by media type, populating the OpenAPI response `examples` object.",
+  "schema": {
+    "$ref": "#/definitions/Pet"
+  },
+  "examples": {
+    "application/json": {
+      "name": "Fluffy"
+    },
+    "application/xml": "\u003cpet\u003e\u003cname\u003eFluffy\u003c/name\u003e\u003c/pet\u003e"
+  }
+}
