@@ -45,7 +45,7 @@ func (s *Builder) scanEmbeddedFields(
 			continue
 		}
 
-		_, ignore, isString, omitEmpty, err := resolvers.ParseJSONTag(afld, fld.Name())
+		_, ignore, isString, omitEmpty, err := resolvers.ParseFieldTag(afld, fld.Name(), s.Ctx.NameFromTags())
 		if err != nil {
 			return nil, false, err
 		}

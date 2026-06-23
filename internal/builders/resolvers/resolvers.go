@@ -173,17 +173,25 @@ func (t tagOptions) Name() string {
 	return t[0]
 }
 
-// ParseJSONTag derives the JSON property name and tag options for a struct
-// field. goName is the field's Go identifier as reported by go/types; it is
-// authoritative for the default name because a single AST field group may
-// declare several names (`R, G, B, A uint8`), each a distinct go/types field
-// promoted to its own property (go-swagger#2638). When goName is empty the
-// first AST name is used as a fallback.
+// ParseFieldTag derives the emitted name and the encoding/json directives for a
+// struct field.
 //
-// A json rename (`json:"foo"`) can only name a single field, so it is ignored
-// for a multi-name group — each member keeps its own Go name — while the `-`,
-// `,omitempty` and `,string` options still apply to every member.
-func ParseJSONTag(field *ast.Field, goName string) (name string, ignore, isString, omitEmpty bool, err error) {
+// The name is sourced from the first struct-tag type in nameTags that supplies a
+// usable name — a non-empty name-part that isn't "-"; a tag type that is absent
+// or carries only options (e.g. `,omitempty`) is skipped and the next type is
+// tried. nameTags is typically Options.NameFromTags, defaulting to ["json"].
+// When nameTags is empty, or none of the listed tags name the field, the name
+// falls back to goName — the field's Go identifier as reported by go/types,
+// authoritative because a single AST field group may declare several names
+// (`R, G, B, A uint8`), each a distinct go/types field promoted to its own
+// property (go-swagger#2638). When goName is empty the first AST name is used.
+//
+// The `-` (ignore), `,omitempty` and `,string` directives are ALWAYS read from
+// the `json` tag, independent of nameTags — they describe the encoding/json wire
+// shape, not the Swagger name. `json:"-"` ignores the field. A rename can only
+// name a single field, so it is dropped for a multi-name group — each member
+// keeps its own Go name — while the directives still apply to every member.
+func ParseFieldTag(field *ast.Field, goName string, nameTags []string) (name string, ignore, isString, omitEmpty bool, err error) {
 	name = goName
 	if name == "" && len(field.Names) > 0 {
 		name = field.Names[0].Name
@@ -196,34 +204,36 @@ func ParseJSONTag(field *ast.Field, goName string) (name string, ignore, isStrin
 	if err != nil {
 		return name, false, false, false, err
 	}
+	if strings.TrimSpace(tv) == "" {
+		return name, false, false, false, nil
+	}
 
-	if strings.TrimSpace(tv) != "" {
-		st := reflect.StructTag(tv)
-		jsonParts := tagOptions(strings.Split(st.Get("json"), ","))
+	st := reflect.StructTag(tv)
 
-		if jsonParts.Contain("string") {
-			// Need to check if the field type is a scalar. Otherwise, the
-			// ",string" directive doesn't apply.
-			isString = IsFieldStringable(field.Type)
-		}
+	// Directives are encoding/json-specific: always read them from the json tag,
+	// whatever nameTags selects for the name.
+	jsonParts := tagOptions(strings.Split(st.Get("json"), ","))
+	if jsonParts.Contain("string") {
+		// The ",string" directive only applies to scalar field types.
+		isString = IsFieldStringable(field.Type)
+	}
+	omitEmpty = jsonParts.Contain("omitempty")
+	if jsonParts.Name() == "-" {
+		return name, true, isString, omitEmpty, nil
+	}
 
-		omitEmpty = jsonParts.Contain("omitempty")
-
-		switch jsonParts.Name() {
-		case "-":
-			return name, true, isString, omitEmpty, nil
-		case "":
-			return name, false, isString, omitEmpty, nil
-		default:
-			if len(field.Names) > 1 {
-				// A rename names a single field; with a multi-name group it
-				// can't name N members, so each keeps its own Go name.
-				return name, false, isString, omitEmpty, nil
+	// The name comes from the first tag type that yields a usable name. A rename
+	// can't name N members of a multi-name group, so each keeps its own Go name.
+	if len(field.Names) <= 1 {
+		for _, tagType := range nameTags {
+			if candidate := tagOptions(strings.Split(st.Get(tagType), ",")).Name(); candidate != "" && candidate != "-" {
+				name = candidate
+				break
 			}
-			return jsonParts.Name(), false, isString, omitEmpty, nil
 		}
 	}
-	return name, false, false, false, nil
+
+	return name, false, isString, omitEmpty, nil
 }
 
 // ExplicitJSONName returns the name set in a field's json struct tag —

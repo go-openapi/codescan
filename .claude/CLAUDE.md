@@ -129,6 +129,12 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
       dropped (description/extensions too, unless `EmitRefSiblings` keeps them as
       siblings), each with a diagnostic. For consumers (e.g. go-swagger) wanting bare refs.
   - `SetXNullableForPointers` — emit `x-nullable: true` on pointer fields.
+  - `NameFromTags` — ordered list of struct-tag types a field's emitted name is
+    derived from (schema properties, parameters, response headers). First listed
+    tag that supplies a usable name wins. nil/unset ⇒ `["json"]` (historic);
+    explicit empty slice ⇒ Go field name. Only the name; encoding/json directives
+    (`-`, `,omitempty`, `,string`) always come from the `json` tag. e.g.
+    `["form","json"]` for gin (go-swagger#2912/#1391).
   - `SkipExtensions` — suppress `x-go-*` vendor extensions.
   - `OnDiagnostic` — callback sink for all scan-time observations (the only output
     channel; codescan never writes to stdout/stderr).

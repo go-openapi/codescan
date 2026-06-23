@@ -102,6 +102,27 @@ type Options struct {
 
 	SkipExtensions bool // skip generating x-go-* vendor extensions in the spec
 
+	// NameFromTags is the ordered list of struct-tag types consulted to derive
+	// the emitted name of a schema property, parameter, or response header from
+	// a Go struct field. The first listed tag type that supplies a usable name
+	// wins; a tag type that is absent or carries only options (e.g.
+	// `,omitempty`) is skipped and the next is tried. When no listed tag names
+	// the field, the Go field name is used.
+	//
+	//   - nil / unset (default): ["json"] — the historic behaviour.
+	//   - explicit empty slice: no struct tag is consulted; the name derives
+	//     from the Go field name.
+	//   - e.g. ["form","json"]: prefer the `form:` name (used by gin), falling
+	//     back to `json:` (go-swagger#2912, go-swagger#1391).
+	//
+	// Only the NAME is sourced this way. The encoding/json directives `-`
+	// (exclude), `,omitempty` (→ not required) and `,string` are always read
+	// from the `json` tag regardless of this setting. Targeted renames — the
+	// `name:` keyword (parameters / response headers) and `swagger:name` /
+	// `swagger:model {name}` (schema) — still take precedence over any
+	// tag-derived name.
+	NameFromTags []string
+
 	// SkipEnumDescriptions controls whether the per-enum-value const-name
 	// mapping built from `swagger:enum` (e.g. "FIRST TestEnumFirst") is
 	// folded into the property / parameter / header `description`.

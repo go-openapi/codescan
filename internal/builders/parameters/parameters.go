@@ -506,7 +506,7 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		return "", nil
 	}
 
-	name, ignore, _, _, err := resolvers.ParseJSONTag(afld, fld.Name())
+	name, ignore, _, _, err := resolvers.ParseFieldTag(afld, fld.Name(), p.Ctx.NameFromTags())
 	if err != nil {
 		return "", err
 	}

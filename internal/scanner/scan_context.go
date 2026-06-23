@@ -230,6 +230,17 @@ func (s *ScanCtx) SetXNullableForPointers() bool {
 	return s.opts.SetXNullableForPointers
 }
 
+// NameFromTags returns the ordered list of struct-tag types consulted to derive
+// a field's emitted name. A nil/unset option defaults to ["json"] (the historic
+// behaviour); an explicit empty slice means no tag is consulted and names fall
+// back to the Go field name.
+func (s *ScanCtx) NameFromTags() []string {
+	if s.opts.NameFromTags == nil {
+		return []string{"json"}
+	}
+	return s.opts.NameFromTags
+}
+
 func (s *ScanCtx) TransparentAliases() bool {
 	return s.opts.TransparentAliases
 }
