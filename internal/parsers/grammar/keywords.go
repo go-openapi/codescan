@@ -180,6 +180,7 @@ const (
 	KwAdditionalProperties = "additionalProperties"
 	KwDefault              = "default"
 	KwExample              = "example"
+	KwExamples             = "examples"
 	KwEnum                 = "enum"
 	KwRequired             = "required"
 	KwReadOnly             = "readOnly"
@@ -359,6 +360,16 @@ var keywords = []Keyword{
 		ctx(CtxMeta)),
 	keyword(KwResponses, asRawBlock(), ctx(CtxRoute, CtxOperation)),
 	keyword(KwParameters, asRawBlock(), ctx(CtxRoute, CtxOperation)),
+	// `examples:` is a YAML map keyed by mime type
+	// (`examples:` then an indented `application/json: {…}`) populating
+	// spec.Response.examples on a `swagger:response`. OAS2 reserves the
+	// PLURAL `examples` for responses; the singular `example` above is
+	// the schema / param / header / items decorator. Only the struct-
+	// based `swagger:response` path needs this keyword — the
+	// `swagger:operation` YAML path carries examples for free via the
+	// spec unmarshal. The body is YAML-parsed downstream, so it joins the
+	// yamlBody set in the lexer. See features/response-examples-by-mime.
+	keyword(KwExamples, asRawBlock(), ctx(CtxResponse)),
 	keyword(KwExtensions,
 		asRawBlock(),
 		ctx(CtxMeta, CtxRoute, CtxOperation, CtxSchema, CtxParam, CtxHeader)),

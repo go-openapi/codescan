@@ -39,11 +39,22 @@ same. Divergences are called out below.
 
 `Build(responses)` looks up the response by name (from
 `r.Decl.ResponseNames()`), runs `applyBlockToDecl` to capture the
-top-level description, then calls `buildFromType` on the declared
-type. `buildFromType` unwraps pointers, dispatches named types and
-aliases. Unlike parameters, **anonymous types are rejected**:
-`responses_test.go` documents the rationale — the top-level
-response-as-alias case under default mode is deferred to v2.
+top-level description **and the response-level `examples:` block**, then
+calls `buildFromType` on the declared type. `buildFromType` unwraps
+pointers, dispatches named types and aliases. Unlike parameters,
+**anonymous types are rejected**: `responses_test.go` documents the
+rationale — the top-level response-as-alias case under default mode is
+deferred to v2.
+
+`examples:` is the OAS2 **response-scoped** keyword (plural): a YAML map
+keyed by mime type (`examples:` then an indented `application/json: {…}`)
+parsed into `Response.examples` (go-swagger#2871). It is the
+`CtxResponse`-only `examples` grammar keyword, joined to the lexer's
+YAML-body set so the mime→object nesting survives. The singular
+`example:` is a schema/param/header decorator, handled per-field /
+per-body, not here. The `swagger:operation` YAML path carries examples
+for free via the spec unmarshal; this is the struct-`swagger:response`
+counterpart.
 
 For each non-embedded exported field, `processResponseField` runs:
 

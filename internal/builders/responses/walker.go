@@ -4,9 +4,12 @@
 package responses
 
 import (
+	"encoding/json"
 	"go/ast"
 
 	"github.com/go-openapi/codescan/internal/builders/handlers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/codescan/internal/parsers/yaml"
 	oaispec "github.com/go-openapi/spec"
 )
 
@@ -64,12 +67,48 @@ func collectHeaderItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []hea
 
 // applyBlockToDecl parses the top-level response doc through grammar
 // and writes the description to resp.Description via the grammar
-// parser's prose accumulator. Does not dispatch any property
-// keywords — the v1 SectionedParser only accepted description at the
-// top level, no taggers.
+// parser's prose accumulator, plus the response-level `examples:`
+// block (the only keyword the response decl level accepts).
 func (r *Builder) applyBlockToDecl(resp *oaispec.Response) {
 	block := r.ParseBlock(r.Decl.Comments)
 	resp.Description = block.Prose()
+	r.applyResponseExamples(block, resp)
+}
+
+// applyResponseExamples parses a response-level `examples:` block — a YAML
+// map keyed by mime type (`examples:` then `application/json: {…}`) — onto
+// resp.Examples (the OAS2 Response.examples field). This is the plural,
+// response-scoped keyword (go-swagger#2871); the singular schema `example:`
+// is handled per-field / per-body elsewhere. The `swagger:operation` YAML
+// path already carries examples for free via the spec unmarshal — this
+// covers only the struct-based `swagger:response`.
+func (r *Builder) applyResponseExamples(block grammar.Block, resp *oaispec.Response) {
+	var prop grammar.Property
+	var found bool
+	for p := range block.Properties() {
+		if p.Keyword.Name == grammar.KwExamples {
+			prop, found = p, true
+			break
+		}
+	}
+	if !found || prop.Body == "" {
+		return
+	}
+
+	examples := make(map[string]any)
+	if err := yaml.UnmarshalBody(prop.Body, func(b []byte) error {
+		return json.Unmarshal(b, &examples)
+	}); err != nil {
+		r.RecordDiagnostic(grammar.Warnf(
+			prop.Pos, grammar.CodeInvalidAnnotation,
+			"could not parse response examples block as a mime-keyed YAML map: %v", err,
+		))
+		return
+	}
+
+	if len(examples) > 0 {
+		resp.Examples = examples
+	}
 }
 
 // applyBlockToHeader parses afld.Doc through grammar and dispatches

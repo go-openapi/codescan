@@ -708,7 +708,8 @@ func collectRawBlock(in []Token, i int, kw Keyword, out *[]Token) int {
 		kw.Name == "infoExtensions" ||
 		kw.Name == "securityDefinitions" ||
 		kw.Name == KwTags ||
-		kw.Name == KwSecurity
+		kw.Name == KwSecurity ||
+		kw.Name == KwExamples
 	bodyLine := func(t Token) string {
 		if yamlBody {
 			return strings.TrimRightFunc(t.Raw, unicode.IsSpace)

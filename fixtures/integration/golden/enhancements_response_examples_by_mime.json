@@ -1,0 +1,47 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/widgets": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Get a widget.",
+        "operationId": "getWidgets",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/widgetResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "title": "Widget is the response payload.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-examples-by-mime"
+    }
+  },
+  "responses": {
+    "widgetResponse": {
+      "description": "WidgetResponse returns a widget, with response-level examples per mime type.",
+      "schema": {
+        "$ref": "#/definitions/Widget"
+      },
+      "examples": {
+        "application/json": {
+          "count": 3,
+          "name": "alice"
+        },
+        "application/xml": "\u003cwidget\u003e\u003cname\u003ealice\u003c/name\u003e\u003c/widget\u003e"
+      }
+    }
+  }
+}
