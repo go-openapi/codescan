@@ -1,0 +1,82 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "listPets",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "APIKey",
+            "description": "APIKey overrides the path-item parameter to make it optional here.",
+            "name": "X-API-Key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "createPet",
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "x-go-name": "APIKey",
+          "description": "APIKey authorises access to the pet store.",
+          "name": "X-API-Key",
+          "in": "header",
+          "required": true
+        },
+        {
+          "$ref": "#/parameters/X-Request-ID"
+        }
+      ]
+    },
+    "/pets/{id}": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "getPet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "X-Request-ID": {
+      "type": "string",
+      "x-go-name": "RequestID",
+      "description": "RequestID correlates a request across services.",
+      "name": "X-Request-ID",
+      "in": "header"
+    }
+  }
+}

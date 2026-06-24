@@ -95,6 +95,68 @@ func TestCoverage_SharedParameters_Refs(t *testing.T) {
 	assert.TrueT(t, hasLimit, "listPets keeps its inline `limit` parameter")
 }
 
+// TestCoverage_SharedParameters_PathItem exercises P4 (fixture 2,
+// go-swagger#2632): `swagger:parameters /path` inlines a struct's fields
+// into the path-item; `swagger:parameters /path name` adds a
+// #/parameters/{name} $ref to it. Application is exact-path (no hierarchy),
+// and path-item parameters co-exist with operation-level ones (the
+// operation one wins at resolution — co-presence, not removal).
+func TestCoverage_SharedParameters_PathItem(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages: []string{"./enhancements/shared-parameters-pathitem/..."},
+		WorkDir:  scantest.FixturesDir(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	require.NotNil(t, doc.Paths)
+
+	pets, ok := doc.Paths.Paths["/pets"]
+	require.TrueT(t, ok, "expected a /pets path")
+
+	// Path-item parameters: inline X-API-Key (from the /pets struct) + a
+	// $ref to the shared X-Request-ID (from the /pets reference marker).
+	var inlineAPIKey *spec.Parameter
+	var refReqID bool
+	for i := range pets.Parameters {
+		p := pets.Parameters[i]
+		switch {
+		case p.Name == "X-API-Key" && p.In == "header":
+			inlineAPIKey = &pets.Parameters[i]
+		case p.Ref.String() == "#/parameters/X-Request-ID":
+			refReqID = true
+		}
+	}
+	require.NotNil(t, inlineAPIKey, "expected inline X-API-Key on the /pets path-item")
+	assert.TrueT(t, inlineAPIKey.Required, "path-item X-API-Key is required:true")
+	assert.TrueT(t, refReqID, "expected a #/parameters/X-Request-ID $ref on the /pets path-item")
+
+	// Co-presence override: listPets carries its OWN X-API-Key (required:false)
+	// at the operation level; the path-item's required:true one is untouched.
+	require.NotNil(t, pets.Get)
+	var opAPIKey *spec.Parameter
+	for i := range pets.Get.Parameters {
+		if pets.Get.Parameters[i].Name == "X-API-Key" {
+			opAPIKey = &pets.Get.Parameters[i]
+		}
+	}
+	require.NotNil(t, opAPIKey, "listPets has its own X-API-Key (operation-level override)")
+	assert.FalseT(t, opAPIKey.Required, "operation-level X-API-Key is required:false")
+
+	// Exact path, no hierarchy: /pets/{id} must NOT inherit the /pets
+	// path-item parameters.
+	petByID, ok := doc.Paths.Paths["/pets/{id}"]
+	require.TrueT(t, ok, "expected a /pets/{id} path")
+	for _, p := range petByID.Parameters {
+		assert.FalseT(t, p.Name == "X-API-Key" || p.Ref.String() == "#/parameters/X-Request-ID",
+			"/pets/{id} must not inherit /pets path-item parameters (no hierarchy)")
+	}
+
+	// Full-spec snapshot: the path-item parameters array, the #/parameters
+	// $ref target, and the co-present operation override are the most novel
+	// output of the feature — pin them in a golden for review.
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_pathitem.json")
+}
+
 // TestCoverage_SharedParameters_OverridesAndDedup exercises P3 reference
 // edge cases (fixture 5, go-swagger#2632): the shared key/reference is the
 // resolved (overridden) name (C3); duplicate operation-id targets (C1) and

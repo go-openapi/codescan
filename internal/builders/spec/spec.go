@@ -41,6 +41,10 @@ type Builder struct {
 	// during buildParameters and applied (as #/parameters/{name} $refs into
 	// operations) once the shared map is complete. See applyParameterRefs.
 	paramRefIntents []paramRefIntent
+	// pathItemInlines are `swagger:parameters /path` inline registrations
+	// collected during buildParameters and applied to PathItem.Parameters
+	// once all paths exist. See applyPathItemParameters.
+	pathItemInlines []pathItemInlineIntent
 	// declPos records the source position of each discovered definition, keyed
 	// by its fully-qualified DefKey, so the prune (scan.pruned-unused) and
 	// rename (scan.renamed-definition) Hints can be located at the originating
@@ -119,6 +123,12 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	if err := s.buildOperations(); err != nil {
 		return nil, err
 	}
+
+	// Apply path-item parameters now that all paths exist (they are created
+	// by buildRoutes / buildOperations). `swagger:parameters /path` inlines
+	// fields into the path-item; `swagger:parameters /path name` adds a
+	// #/parameters/{name} $ref.
+	s.applyPathItemParameters()
 
 	if err := s.buildMeta(); err != nil {
 		return nil, err
@@ -478,6 +488,14 @@ func (s *Builder) buildParameters() error {
 				}
 			}
 
+			// `swagger:parameters /path` inlines the struct's fields into a
+			// path-item. Collect now; applied after paths are built.
+			for path, params := range pb.PathItemParameters() {
+				s.pathItemInlines = append(s.pathItemInlines, pathItemInlineIntent{
+					path: path, params: params, pkg: pkg, pos: pos, label: declLabel(decl),
+				})
+			}
+
 			return nil
 		}); err != nil {
 			return err
@@ -659,6 +677,141 @@ func (s *Builder) addParameterRef(in paramRefIntent) {
 		}
 	}
 	op.Parameters = append(op.Parameters, oaispec.Parameter{Refable: oaispec.Refable{Ref: ref}})
+}
+
+// pathItemInlineIntent is one `swagger:parameters /path` registration: the
+// struct's fields, inlined into the named path-item.
+type pathItemInlineIntent struct {
+	path   string
+	params []oaispec.Parameter
+	pkg    string
+	pos    token.Position
+	label  string
+}
+
+// pathItemRefIntent is one `swagger:parameters /path name` reference: a
+// #/parameters/{name} $ref added to the named path-item.
+type pathItemRefIntent struct {
+	path  string
+	name  string
+	pos   token.Position
+	label string
+}
+
+// applyPathItemParameters applies path-item parameters once all paths
+// exist. `swagger:parameters /path` inlines a struct's fields into the
+// path-item; `swagger:parameters /path name` adds a #/parameters/{name}
+// $ref. Per-path the inline parameters come first (ordered by package path
+// then position), then the $refs (ordered by name). The path must already
+// exist as a route/operation target (OAS2 has no path hierarchy — the match
+// is exact); a reference to an unknown path or unregistered shared
+// parameter is dropped with a warning. Operation-level parameters are left
+// untouched: path-item and operation parameters co-exist (the operation one
+// wins at resolution per OAS2).
+func (s *Builder) applyPathItemParameters() {
+	if s.input.Paths == nil {
+		return
+	}
+
+	// Accumulate the ordered parameter list to append per path.
+	perPath := map[string][]oaispec.Parameter{}
+
+	inlines := append([]pathItemInlineIntent(nil), s.pathItemInlines...)
+	sort.Slice(inlines, func(i, j int) bool {
+		a, b := inlines[i], inlines[j]
+		if a.path != b.path {
+			return a.path < b.path
+		}
+		if a.pkg != b.pkg {
+			return a.pkg < b.pkg
+		}
+		if a.pos.Filename != b.pos.Filename {
+			return a.pos.Filename < b.pos.Filename
+		}
+		return a.pos.Offset < b.pos.Offset
+	})
+	for _, in := range inlines {
+		perPath[in.path] = append(perPath[in.path], in.params...)
+	}
+
+	refs := s.collectPathItemRefs()
+	sort.Slice(refs, func(i, j int) bool {
+		if refs[i].path != refs[j].path {
+			return refs[i].path < refs[j].path
+		}
+		return refs[i].name < refs[j].name
+	})
+	onDiag := s.ctx.OnDiagnostic()
+	for _, r := range refs {
+		if _, ok := s.parameters[r.name]; !ok {
+			if onDiag != nil {
+				onDiag(grammar.Warnf(r.pos, grammar.CodeDanglingParameterRef,
+					"%s references shared parameter %q, but no #/parameters/%s is registered; dropped",
+					r.label, r.name, r.name))
+			}
+			continue
+		}
+		ref, err := oaispec.NewRef("#/parameters/" + r.name)
+		if err != nil {
+			continue
+		}
+		if !containsParamRef(perPath[r.path], ref) {
+			perPath[r.path] = append(perPath[r.path], oaispec.Parameter{Refable: oaispec.Refable{Ref: ref}})
+		}
+	}
+
+	for path, params := range perPath {
+		pi, ok := s.input.Paths.Paths[path]
+		if !ok {
+			if onDiag != nil {
+				onDiag(grammar.Warnf(token.Position{}, grammar.CodeInvalidAnnotation,
+					"swagger:parameters %s names a path with no operations; path-item parameters dropped", path))
+			}
+			continue
+		}
+		pi.Parameters = append(pi.Parameters, params...)
+		s.input.Paths.Paths[path] = pi
+	}
+}
+
+// collectPathItemRefs turns each standalone `swagger:parameters /path name …`
+// reference marker (ScanCtx.ParameterRefs with a path target) into per-name
+// path-item ref intents. Duplicate names dropped by the grammar raise a
+// duplicate-ref warning (C2).
+func (s *Builder) collectPathItemRefs() []pathItemRefIntent {
+	var out []pathItemRefIntent
+	for ref := range s.ctx.ParameterRefs() {
+		pb := s.parametersBlockOf(ref.Comments)
+		if pb == nil || pb.Target != grammar.ParamTargetPath {
+			continue
+		}
+		label := "a swagger:parameters path reference"
+		if ref.Pkg != nil {
+			label = "a swagger:parameters path reference in " + ref.Pkg.PkgPath
+		}
+		for _, dup := range pb.Dups {
+			if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+				onDiag(grammar.Warnf(pb.Pos(), grammar.CodeDuplicateRef,
+					"swagger:parameters: duplicate reference %q dropped", dup))
+			}
+		}
+		// For a path target the path is pb.Path; every Arg is a shared name.
+		for _, name := range pb.Args {
+			out = append(out, pathItemRefIntent{path: pb.Path, name: name, pos: pb.Pos(), label: label})
+		}
+	}
+	return out
+}
+
+// containsParamRef reports whether params already holds a $ref to the same
+// target.
+func containsParamRef(params []oaispec.Parameter, ref oaispec.Ref) bool {
+	for _, p := range params {
+		if p.Ref.String() == ref.String() {
+			return true
+		}
+	}
+	return false
 }
 
 // resolveSamePackageDuplicates detects two distinct annotated models in

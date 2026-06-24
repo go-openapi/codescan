@@ -52,6 +52,11 @@ type Builder struct {
 	// marker references the struct's shared parameters into. The $ref wiring
 	// is applied by the spec builder. Exposed via SharedRefOperations.
 	sharedRefOps []string
+
+	// pathItems holds the parameters a `swagger:parameters /path` marker
+	// inlines into a path-item, keyed by exact path. nil unless a path
+	// marker was built. Exposed via PathItemParameters.
+	pathItems map[string][]oaispec.Parameter
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -91,8 +96,12 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 			// is complete (see SharedRefOperations).
 			p.sharedRefOps = append(p.sharedRefOps, pb.Args...)
 		case grammar.ParamTargetPath:
-			// Path-item parameters are applied after paths are built; see the
-			// shared-parameters build plan (P4). Not yet wired.
+			// `swagger:parameters /path` on a struct inlines the struct's
+			// fields into the path-item. Harvested here; the spec builder
+			// applies them once paths are built (PathItemParameters).
+			if err := p.buildPathItem(pb.Path); err != nil {
+				return err
+			}
 		default:
 			// ParametersTarget is a closed set produced by the grammar; every
 			// member is handled above. A new member must add its case.
@@ -118,6 +127,14 @@ func (p *Builder) SharedParameters() map[string]oaispec.Parameter {
 // shared map is complete. Valid after Build.
 func (p *Builder) SharedRefOperations() []string {
 	return p.sharedRefOps
+}
+
+// PathItemParameters returns the parameters this struct inlines into
+// path-items via `swagger:parameters /path`, keyed by exact path, in field
+// order. Empty unless a path marker was present. The spec builder applies
+// them once paths are built. Valid after Build.
+func (p *Builder) PathItemParameters() map[string][]oaispec.Parameter {
+	return p.pathItems
 }
 
 // warnDuplicateTargets emits a duplicate-target warning (C1) for each
@@ -189,6 +206,26 @@ func (p *Builder) buildShared() error {
 	for _, prm := range tmp.Parameters {
 		p.shared[prm.Name] = prm
 	}
+
+	return nil
+}
+
+// buildPathItem builds the struct's fields as an ordered parameter set for
+// inlining into the given path-item. Reuses the full field-building path by
+// building into a throwaway operation; currentOpID is left empty (no
+// operation-path cross-ref anchor — path-item parameters are not under an
+// operation).
+func (p *Builder) buildPathItem(path string) error {
+	p.currentOpID = ""
+	tmp := new(oaispec.Operation)
+	if err := p.buildFromType(p.Decl.ObjType(), tmp, make(map[string]oaispec.Parameter)); err != nil {
+		return err
+	}
+
+	if p.pathItems == nil {
+		p.pathItems = make(map[string][]oaispec.Parameter)
+	}
+	p.pathItems[path] = append(p.pathItems[path], tmp.Parameters...)
 
 	return nil
 }

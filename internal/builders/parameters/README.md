@@ -49,8 +49,15 @@ dispatches per target:
   so a duplicate short name keeps the first and drops the later with a
   `scan.shared-parameter-conflict` warning; resolution order is
   package-path then position, so it is load-order independent).
-- **path** (`swagger:parameters /path`) — path-item parameters; not yet
-  wired (later build phase).
+- **path** (`swagger:parameters /path`) — `buildPathItem` inlines the
+  struct's fields into the named path-item, harvested into `pathItems`
+  (keyed by exact path) and exposed via `PathItemParameters()`. The spec
+  builder (`applyPathItemParameters`) appends them to `PathItem.Parameters`
+  after all paths exist, alongside any `swagger:parameters /path name`
+  $refs. Application is exact-path (OAS2 has no path hierarchy); a target
+  naming a path with no operations is dropped with a warning. Path-item and
+  operation parameters co-exist — the operation one wins at resolution
+  (co-presence, not removal).
 
 A `swagger:parameters * opid …` marker also *references* the struct's
 shared parameters into the listed operations; the target ops are exposed
