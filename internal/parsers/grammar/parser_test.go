@@ -38,6 +38,14 @@ func TestParser_ResponseBlock_OptionalName(t *testing.T) {
 	rb2, ok := b2.(*ResponseBlock)
 	require.True(t, ok)
 	assert.Empty(t, rb2.Name)
+
+	// `swagger:response *` is a synonym for the bare form: no name (the
+	// builder keys it by the type name), no diagnostics.
+	b3 := parseString(t, "swagger:response *")
+	rb3, ok := b3.(*ResponseBlock)
+	require.True(t, ok)
+	assert.Empty(t, rb3.Name)
+	assert.Empty(t, b3.Diagnostics())
 }
 
 func TestParser_NameBlock_CapturesIdentArg(t *testing.T) {

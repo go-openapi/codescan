@@ -47,8 +47,17 @@ var (
 	// mid-prose mentions and would truncate descriptions.
 	rxSwaggerAnnotation = regexp.MustCompile(`(?:^|[\s/])swagger:([\p{L}\p{N}\p{Pd}\p{Pc}]+)`)
 
-	rxModelOverride    = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxResponseOverride = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxModelOverride = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	// rxResponseOverride is the scanner's classification gate for
+	// `swagger:response`. The argument is optional (bare marker → name
+	// inferred from the type), an identifier name, or the shared-namespace
+	// wildcard `*` (a synonym for the bare form — `swagger:response *` and
+	// `swagger:response` both register a shared response keyed by the type
+	// name). A malformed name (e.g. a package-qualified `utils.Error`) still
+	// fails the match, so MalformedResponseName can flag it. The response
+	// NAME itself is resolved from the grammar (grammar.ResponseBlock), not
+	// from this capture.
+	rxResponseOverride = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\*|\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
 	// rxParametersOverride is the scanner's PERMISSIVE classification gate
 	// for `swagger:parameters`: it matches the keyword followed by any
 	// non-empty argument and captures it. The capture is required by the

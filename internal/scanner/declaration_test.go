@@ -119,43 +119,10 @@ func TestEntityDecl(t *testing.T) {
 		})
 	})
 
-	t.Run("ResponseNames", func(t *testing.T) {
-		t.Run("response with override name", func(t *testing.T) {
-			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
-				"GenericError",
-			)
-			require.True(t, ok)
-
-			name, goName := decl.ResponseNames()
-			assert.EqualT(t, "GenericError", goName)
-			assert.EqualT(t, "genericError", name)
-		})
-
-		t.Run("type without response annotation", func(t *testing.T) {
-			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
-				"SimpleOne",
-			)
-			require.True(t, ok)
-
-			name, goName := decl.ResponseNames()
-			assert.EqualT(t, "SimpleOne", goName)
-			assert.EqualT(t, "", name)
-		})
-
-		t.Run("response with bare annotation no override", func(t *testing.T) {
-			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
-				"NumPlatesResp",
-			)
-			require.True(t, ok)
-
-			name, goName := decl.ResponseNames()
-			assert.EqualT(t, "NumPlatesResp", goName)
-			assert.EqualT(t, "NumPlatesResp", name)
-		})
-	})
+	// Response name resolution moved to the grammar (grammar.ResponseBlock →
+	// responses.Builder.ResponseName); the scanner no longer parses the
+	// swagger:response argument. See the grammar parser tests and the
+	// shared-parameters response coverage.
 
 	// Operation-id targeting parse moved to the grammar
 	// (grammar.ParametersBlock); see the grammar parser tests. The scanner

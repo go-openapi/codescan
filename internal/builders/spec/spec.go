@@ -416,21 +416,57 @@ func (s *Builder) buildRoutes() error {
 }
 
 func (s *Builder) buildResponses() error {
-	// build responses dictionary
+	// Order response declarations deterministically (package import path,
+	// then position) so the keep-first conflict winner does not depend on
+	// package-load order. Distinct names are independent, so the order does
+	// not otherwise affect output.
+	var decls []*scanner.EntityDecl
 	for decl := range s.ctx.Responses() {
+		decls = append(decls, decl)
+	}
+	sort.Slice(decls, func(i, j int) bool {
+		pi, pj := declPkgPath(decls[i]), declPkgPath(decls[j])
+		if pi != pj {
+			return pi < pj
+		}
+		a, b := s.ctx.PosOf(decls[i].Ident.Pos()), s.ctx.PosOf(decls[j].Ident.Pos())
+		if a.Filename != b.Filename {
+			return a.Filename < b.Filename
+		}
+		return a.Offset < b.Offset
+	})
+
+	// scanned tracks the response short names already registered by a scanned
+	// struct in this pass. A later scanned struct with the same name is a
+	// keep-first conflict; an InputSpec (overlay) response of that name is
+	// NOT in the set, so a scanned struct still legitimately extends it.
+	scanned := make(map[string]string)
+
+	// build responses dictionary
+	for _, decl := range decls {
 		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
 			rb := responses.NewBuilder(s.ctx, decl)
+			name := rb.ResponseName()
+
+			if kept, dup := scanned[name]; dup {
+				if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+					onDiag(grammar.Warnf(s.ctx.PosOf(decl.Ident.Pos()), grammar.CodeSharedResponseConflict,
+						"shared response %q is already registered by %s; this declaration (%s) is dropped (keep-first)",
+						name, kept, declLabel(decl)))
+				}
+				return nil
+			}
+
 			if err := rb.Build(s.responses); err != nil {
 				return err
 			}
 			s.discovered = append(s.discovered, rb.PostDeclarations()...)
+			scanned[name] = declLabel(decl)
 
 			// Cross-ref linkage: anchor the top-level response node to its
 			// swagger:response declaration; headers/body resolve to it.
-			if s.ctx.OriginEnabled() {
-				if name, _ := decl.ResponseNames(); name != "" {
-					s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
-				}
+			if s.ctx.OriginEnabled() && name != "" {
+				s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
 			}
 
 			return nil
@@ -466,10 +502,7 @@ func (s *Builder) buildParameters() error {
 			}
 			s.discovered = append(s.discovered, pb.PostDeclarations()...)
 
-			pkg := ""
-			if decl.Pkg != nil {
-				pkg = decl.Pkg.PkgPath
-			}
+			pkg := declPkgPath(decl)
 			pos := s.ctx.PosOf(decl.Ident.Pos())
 			for name, prm := range pb.SharedParameters() {
 				sharedCandidates = append(sharedCandidates, sharedParamCandidate{
@@ -554,6 +587,15 @@ func (s *Builder) registerSharedParameters(candidates []sharedParamCandidate) {
 		s.parameters[c.name] = c.param
 		owners[c.name] = c.label
 	}
+}
+
+// declPkgPath returns the import path of the declaration's package, or ""
+// when unknown.
+func declPkgPath(d *scanner.EntityDecl) string {
+	if d.Pkg != nil {
+		return d.Pkg.PkgPath
+	}
+	return ""
 }
 
 // paramRefIntent is one shared-parameter reference to apply as a

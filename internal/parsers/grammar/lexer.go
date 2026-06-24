@@ -309,7 +309,16 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 		return classifyEnumAnnotationArgs(rest, pos)
 	case AnnParameters:
 		return classifyParametersArgs(rest, pos)
-	case AnnAllOf, AnnModel, AnnResponse, AnnStrfmt, AnnName:
+	case AnnResponse:
+		// `swagger:response *` is a synonym for the bare form (a shared
+		// response keyed by the type name). The wildcard carries no trailing
+		// tokens — responses have no op-id injection (unlike parameters) and
+		// no /path form. Any other argument is the explicit response name.
+		if head, _ := splitFirstField(rest); head == "*" {
+			return []Token{{Kind: TokenWildcard, Pos: pos, Text: "*"}}
+		}
+		return []Token{firstIdent(rest, pos)}
+	case AnnAllOf, AnnModel, AnnStrfmt, AnnName:
 		return []Token{firstIdent(rest, pos)}
 	case AnnAlias, AnnIgnore, AnnFile, AnnMeta, AnnUnknown:
 		// No formal arguments. Capture any trailing tokens as RAW so a

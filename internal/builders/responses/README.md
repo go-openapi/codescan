@@ -38,13 +38,31 @@ same. Divergences are called out below.
 ## <a id="builder"></a>§builder — the build chain
 
 `Build(responses)` looks up the response by name (from
-`r.Decl.ResponseNames()`), runs `applyBlockToDecl` to capture the
+`ResponseName()`), runs `applyBlockToDecl` to capture the
 top-level description **and the response-level `examples:` block**, then
 calls `buildFromType` on the declared type. `buildFromType` unwraps
 pointers, dispatches named types and aliases. Unlike parameters,
 **anonymous types are rejected**: `responses_test.go` documents the
 rationale — the top-level response-as-alias case under default mode is
 deferred to v2.
+
+`ResponseName()` resolves the spec name from the **grammar**
+(`grammar.ResponseBlock.Name`) — the explicit `swagger:response {name}`
+argument, else the Go type name. The bare `swagger:response` and the
+`swagger:response *` synonym both key by the type name (`*` is a shared
+marker mirroring `swagger:parameters *`; responses are always top-level and
+referenceable, so it carries no op-ids and no `/path` form). The targeting
+parse lives in the grammar, not the scanner — `rxResponseOverride` is only a
+classification gate (it accepts `*` but still rejects a malformed
+package-qualified name so `MalformedResponseName` can flag it).
+
+Every `swagger:response` registers a shared `#/responses/{name}`; the spec
+builder (`buildResponses`) merges them in deterministic order (package path,
+then position) with **keep-first** conflict handling — a duplicate short
+name keeps the first and drops the later with a
+`scan.shared-response-conflict` warning, never renaming (responses are
+referenced only by short name). An InputSpec (overlay) response of the same
+name is not a conflict: a scanned struct extends it.
 
 `examples:` is the OAS2 **response-scoped** keyword (plural): a YAML map
 keyed by mime type (`examples:` then an indented `application/json: {…}`)

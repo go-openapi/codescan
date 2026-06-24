@@ -203,6 +203,14 @@ const (
 	// .claude/plans/features/shared-parameters-fixtures.md §2.
 	CodeSharedParameterConflict Code = "scan.shared-parameter-conflict"
 
+	// CodeSharedResponseConflict fires when two `swagger:response`
+	// declarations register the same top-level response short name
+	// (#/responses/{name}). Like shared parameters, responses are referenced
+	// only by short name and are never renamed: the first registration is
+	// kept, later ones are dropped. Warning. An InputSpec (overlay) response
+	// of the same name is not a conflict — a scanned struct extends it.
+	CodeSharedResponseConflict Code = "scan.shared-response-conflict"
+
 	// CodeDanglingParameterRef fires when a `swagger:parameters` reference
 	// names a shared parameter that no `swagger:parameters *` declaration
 	// registered (#/parameters/{name} does not exist). The reference is

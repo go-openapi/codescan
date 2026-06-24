@@ -111,21 +111,6 @@ func (d *EntityDecl) DefKey() string {
 	return name
 }
 
-func (d *EntityDecl) ResponseNames() (name, goName string) {
-	goName = d.Ident.Name
-	response, ok := parsers.ResponseOverride(d.Comments)
-	if !ok {
-		return name, goName
-	}
-
-	d.hasResponseAnnotation = true
-	if response == "" {
-		return goName, goName
-	}
-
-	return response, goName
-}
-
 func (d *EntityDecl) HasModelAnnotation() bool {
 	if d.hasModelAnnotation {
 		return true

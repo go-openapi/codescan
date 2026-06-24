@@ -59,13 +59,31 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 	}
 }
 
+// ResponseName resolves the spec name of this response declaration from
+// the grammar (grammar.ResponseBlock): the explicit `swagger:response
+// {name}` argument when present, else the Go type name (covering the bare
+// `swagger:response` and the `swagger:response *` synonym, which both key
+// the response by its type name). The targeting parse lives in the grammar,
+// not the scanner.
+func (r *Builder) ResponseName() string {
+	for _, b := range r.ParseBlocks(r.Decl.Comments) {
+		if rb, ok := b.(*grammar.ResponseBlock); ok {
+			if rb.Name != "" {
+				return rb.Name
+			}
+			break
+		}
+	}
+	return r.Decl.Ident.Name
+}
+
 func (r *Builder) Build(responses map[string]oaispec.Response) error {
 	// check if there is a swagger:response tag that is followed by one or more words,
 	// these words are the ids of the operations this parameter struct applies to
 	// once type name is found convert it to a schema, by looking up the schema in the
 	// parameters dictionary that got passed into this parse method
 
-	name, _ := r.Decl.ResponseNames()
+	name := r.ResponseName()
 	response := responses[name]
 
 	// Cross-ref linkage: anchor this response's headers and in:body schema under

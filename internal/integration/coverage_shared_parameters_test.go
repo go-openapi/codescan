@@ -157,6 +157,36 @@ func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_pathitem.json")
 }
 
+// TestCoverage_SharedResponses exercises P5 (go-swagger#2632): a
+// `swagger:response *` struct registers a shared response at #/responses/
+// (the `*` is a synonym for the bare/named form, keyed by the type name),
+// and operations that name it in their Responses block resolve to a
+// $ref: #/responses/{name}. Before P5 the `*` failed the name regex and the
+// response was silently dropped, leaving the route ref dangling.
+func TestCoverage_SharedResponses(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages: []string{"./enhancements/shared-parameters/..."},
+		WorkDir:  scantest.FixturesDir(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	// ErrorResponse (swagger:response *) is registered at #/responses.
+	_, ok := doc.Responses["ErrorResponse"]
+	require.TrueT(t, ok, "expected #/responses/ErrorResponse from swagger:response *")
+
+	// Both routes' `default: ErrorResponse` now resolve to a $ref (previously
+	// dropped as dangling).
+	require.NotNil(t, doc.Paths)
+	pets := doc.Paths.Paths["/pets"]
+	for _, op := range []*spec.Operation{pets.Get, pets.Post} {
+		require.NotNil(t, op)
+		require.NotNil(t, op.Responses)
+		require.NotNil(t, op.Responses.Default, "operation should have a default response")
+		assert.EqualT(t, "#/responses/ErrorResponse", op.Responses.Default.Ref.String())
+	}
+}
+
 // TestCoverage_SharedParameters_OverridesAndDedup exercises P3 reference
 // edge cases (fixture 5, go-swagger#2632): the shared key/reference is the
 // resolved (overridden) name (C3); duplicate operation-id targets (C1) and
@@ -243,12 +273,18 @@ func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	_, hasDefStatus := doc.Definitions["Status"]
 	assert.TrueT(t, hasDefStatus, "expected #/definitions/Status (independent namespace)")
 
-	// A keep-first conflict warning was emitted for X-Token.
-	var sawConflict bool
+	// Responses follow the same keep-first policy: pkga and pkgb both declare
+	// `swagger:response *` ErrorResponse; pkga (scanned first by import-path
+	// order) wins, pkgb is dropped — registered once, not renamed.
+	_, hasErr := doc.Responses["ErrorResponse"]
+	require.TrueT(t, hasErr, "expected #/responses/ErrorResponse")
+	assert.Len(t, doc.Responses, 1, "ErrorResponse registered once, no renamed duplicate")
+
+	// Keep-first conflict warnings were emitted for both namespaces.
+	codes := map[grammar.Code]bool{}
 	for _, d := range diags {
-		if d.Code == grammar.CodeSharedParameterConflict {
-			sawConflict = true
-		}
+		codes[d.Code] = true
 	}
-	assert.TrueT(t, sawConflict, "expected a scan.shared-parameter-conflict warning")
+	assert.TrueT(t, codes[grammar.CodeSharedParameterConflict], "expected a scan.shared-parameter-conflict warning")
+	assert.TrueT(t, codes[grammar.CodeSharedResponseConflict], "expected a scan.shared-response-conflict warning")
 }
