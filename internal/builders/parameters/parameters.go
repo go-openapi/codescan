@@ -47,6 +47,11 @@ type Builder struct {
 	// top level (`swagger:parameters *`), keyed by resolved parameter name.
 	// nil unless a shared marker was built. Exposed via SharedParameters.
 	shared map[string]oaispec.Parameter
+
+	// sharedRefOps are the operation ids a `swagger:parameters * opid …`
+	// marker references the struct's shared parameters into. The $ref wiring
+	// is applied by the spec builder. Exposed via SharedRefOperations.
+	sharedRefOps []string
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -70,6 +75,7 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 	//     the spec builder via SharedParameters().
 	//   - path (`/path`): path-item parameters — handled in a later phase.
 	for _, pb := range p.parametersBlocks() {
+		p.warnDuplicateTargets(pb)
 		switch pb.Target {
 		case grammar.ParamTargetOperations:
 			if err := p.buildIntoOperations(pb.OperationIDs(), operations); err != nil {
@@ -79,6 +85,11 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 			if err := p.buildShared(); err != nil {
 				return err
 			}
+			// A `swagger:parameters * opid …` marker also references the
+			// struct's shared parameters into the listed operations; the
+			// $ref wiring is applied by the spec builder after the shared map
+			// is complete (see SharedRefOperations).
+			p.sharedRefOps = append(p.sharedRefOps, pb.Args...)
 		case grammar.ParamTargetPath:
 			// Path-item parameters are applied after paths are built; see the
 			// shared-parameters build plan (P4). Not yet wired.
@@ -98,6 +109,25 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 // conflict handling. Valid after Build.
 func (p *Builder) SharedParameters() map[string]oaispec.Parameter {
 	return p.shared
+}
+
+// SharedRefOperations returns the operation ids that a
+// `swagger:parameters * opid …` marker references this struct's shared
+// parameters into (as #/parameters/{name} $refs). Empty unless such a
+// marker was present. The spec builder applies the $ref wiring once the
+// shared map is complete. Valid after Build.
+func (p *Builder) SharedRefOperations() []string {
+	return p.sharedRefOps
+}
+
+// warnDuplicateTargets emits a duplicate-target warning (C1) for each
+// argument token the grammar dropped as a duplicate on a definition
+// marker (operations / shared targets).
+func (p *Builder) warnDuplicateTargets(pb *grammar.ParametersBlock) {
+	for _, dup := range pb.Dups {
+		p.RecordDiagnostic(grammar.Warnf(pb.Pos(), grammar.CodeDuplicateTarget,
+			"swagger:parameters: duplicate target %q dropped", dup))
+	}
 }
 
 // parametersBlocks returns every grammar.ParametersBlock attached to the

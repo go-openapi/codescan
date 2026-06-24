@@ -37,6 +37,10 @@ type Builder struct {
 	responses   map[string]oaispec.Response
 	parameters  map[string]oaispec.Parameter
 	operations  map[string]*oaispec.Operation
+	// paramRefIntents are `swagger:parameters * opid …` references collected
+	// during buildParameters and applied (as #/parameters/{name} $refs into
+	// operations) once the shared map is complete. See applyParameterRefs.
+	paramRefIntents []paramRefIntent
 	// declPos records the source position of each discovered definition, keyed
 	// by its fully-qualified DefKey, so the prune (scan.pruned-unused) and
 	// rename (scan.renamed-definition) Hints can be located at the originating
@@ -93,6 +97,11 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	if err := s.buildParameters(); err != nil {
 		return nil, err
 	}
+
+	// Wire shared-parameter references (#/parameters/{name} $refs) into
+	// operations now that the top-level #/parameters map is complete, and
+	// before buildRoutes attaches operations to paths.
+	s.applyParameterRefs()
 
 	if err := s.buildResponses(); err != nil {
 		return nil, err
@@ -458,6 +467,17 @@ func (s *Builder) buildParameters() error {
 				})
 			}
 
+			// `swagger:parameters * opid …` also references the struct's
+			// shared parameters into the listed operations. Collect the
+			// intents now; they are applied once the shared map is complete.
+			for _, op := range pb.SharedRefOperations() {
+				for name := range pb.SharedParameters() {
+					s.paramRefIntents = append(s.paramRefIntents, paramRefIntent{
+						op: op, name: name, pos: pos, label: declLabel(decl),
+					})
+				}
+			}
+
 			return nil
 		}); err != nil {
 			return err
@@ -516,6 +536,129 @@ func (s *Builder) registerSharedParameters(candidates []sharedParamCandidate) {
 		s.parameters[c.name] = c.param
 		owners[c.name] = c.label
 	}
+}
+
+// paramRefIntent is one shared-parameter reference to apply as a
+// #/parameters/{name} $ref on an operation.
+type paramRefIntent struct {
+	op    string
+	name  string
+	pos   token.Position
+	label string
+}
+
+// applyParameterRefs wires shared-parameter references into operations as
+// #/parameters/{name} $refs. Two sources feed it: `swagger:parameters *
+// opid …` markers (collected in paramRefIntents during buildParameters) and
+// standalone `swagger:parameters opid name …` reference markers on func
+// declarations (ScanCtx.ParameterRefs, discovered by the scanner). A
+// reference to an unregistered shared parameter is dropped with a
+// scan.dangling-parameter-ref warning rather than emitting a dangling $ref.
+//
+// Runs after the top-level #/parameters map is complete and before
+// buildRoutes attaches operations to paths. Intents are applied in a
+// deterministic order (operation id, then parameter name).
+func (s *Builder) applyParameterRefs() {
+	intents := append([]paramRefIntent(nil), s.paramRefIntents...)
+	intents = append(intents, s.collectStandaloneParameterRefs()...)
+	if len(intents) == 0 {
+		return
+	}
+
+	sort.Slice(intents, func(i, j int) bool {
+		if intents[i].op != intents[j].op {
+			return intents[i].op < intents[j].op
+		}
+		return intents[i].name < intents[j].name
+	})
+
+	for _, in := range intents {
+		s.addParameterRef(in)
+	}
+}
+
+// collectStandaloneParameterRefs turns each standalone `swagger:parameters`
+// reference marker on a func (ScanCtx.ParameterRefs) into per-name ref
+// intents. The marker's first token is the target operation id and the
+// remaining tokens are shared-parameter names. Path-item references
+// (`/path` target) are handled in a later phase. Duplicate names dropped by
+// the grammar raise a duplicate-ref warning (C2).
+func (s *Builder) collectStandaloneParameterRefs() []paramRefIntent {
+	var out []paramRefIntent
+	for ref := range s.ctx.ParameterRefs() {
+		pb := s.parametersBlockOf(ref.Comments)
+		if pb == nil || pb.Target != grammar.ParamTargetOperations {
+			continue
+		}
+		label := "a swagger:parameters reference"
+		if ref.Pkg != nil {
+			label = "a swagger:parameters reference in " + ref.Pkg.PkgPath
+		}
+		for _, dup := range pb.Dups {
+			if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+				onDiag(grammar.Warnf(pb.Pos(), grammar.CodeDuplicateRef,
+					"swagger:parameters: duplicate reference %q dropped", dup))
+			}
+		}
+		// Args[0] is the target operation id; Args[1:] are shared names. A
+		// reference needs at least a target plus one name.
+		const minReferenceTokens = 2
+		if len(pb.Args) < minReferenceTokens {
+			continue
+		}
+		op := pb.Args[0]
+		for _, name := range pb.Args[1:] {
+			out = append(out, paramRefIntent{op: op, name: name, pos: pb.Pos(), label: label})
+		}
+	}
+	return out
+}
+
+// parametersBlockOf returns the first ParametersBlock parsed from cg, or
+// nil. References are parsed straight from the grammar (the targeting parse
+// lives there); the spec builder owns no parameters.Builder for a
+// func-hosted marker.
+func (s *Builder) parametersBlockOf(cg *ast.CommentGroup) *grammar.ParametersBlock {
+	for _, b := range grammar.NewParser(s.ctx.FileSet()).ParseAll(cg) {
+		if pb, ok := b.(*grammar.ParametersBlock); ok {
+			return pb
+		}
+	}
+	return nil
+}
+
+// addParameterRef appends a #/parameters/{name} $ref to the target
+// operation (creating the operation entry when absent), or drops the
+// reference with a scan.dangling-parameter-ref warning when no such shared
+// parameter is registered. The same $ref is never added twice to one
+// operation.
+func (s *Builder) addParameterRef(in paramRefIntent) {
+	if _, ok := s.parameters[in.name]; !ok {
+		if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+			onDiag(grammar.Warnf(in.pos, grammar.CodeDanglingParameterRef,
+				"%s references shared parameter %q, but no #/parameters/%s is registered; dropped",
+				in.label, in.name, in.name))
+		}
+		return
+	}
+
+	op, ok := s.operations[in.op]
+	if !ok {
+		op = new(oaispec.Operation)
+		op.ID = in.op
+		s.operations[in.op] = op
+	}
+
+	ref, err := oaispec.NewRef("#/parameters/" + in.name)
+	if err != nil {
+		return
+	}
+	for _, p := range op.Parameters {
+		if p.Ref.String() == ref.String() {
+			return
+		}
+	}
+	op.Parameters = append(op.Parameters, oaispec.Parameter{Refable: oaispec.Refable{Ref: ref}})
 }
 
 // resolveSamePackageDuplicates detects two distinct annotated models in

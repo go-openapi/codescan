@@ -202,6 +202,22 @@ const (
 	// shadowed declaration is never lost silently. See
 	// .claude/plans/features/shared-parameters-fixtures.md §2.
 	CodeSharedParameterConflict Code = "scan.shared-parameter-conflict"
+
+	// CodeDanglingParameterRef fires when a `swagger:parameters` reference
+	// names a shared parameter that no `swagger:parameters *` declaration
+	// registered (#/parameters/{name} does not exist). The reference is
+	// dropped rather than emitting a dangling $ref. Warning. See
+	// .claude/plans/features/shared-parameters-fixtures.md §1b.
+	CodeDanglingParameterRef Code = "scan.dangling-parameter-ref"
+
+	// CodeDuplicateTarget fires when a `swagger:parameters * opid …` marker
+	// repeats an operation id; the duplicate is dropped. Warning (C1).
+	CodeDuplicateTarget Code = "scan.duplicate-target"
+
+	// CodeDuplicateRef fires when a `swagger:parameters {target} name …`
+	// reference repeats a shared-parameter name; the duplicate is dropped.
+	// Warning (C2).
+	CodeDuplicateRef Code = "scan.duplicate-ref"
 )
 
 // Diagnostic is one observation about a comment block.

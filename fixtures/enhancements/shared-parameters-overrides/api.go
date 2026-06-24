@@ -57,3 +57,11 @@ func ListThings() {}
 //
 //	201: description: Created
 func CreateThing() {}
+
+// danglingRef references a shared parameter that no `swagger:parameters *`
+// declaration registers. The reference is dropped with a
+// scan.dangling-parameter-ref warning rather than emitting a dangling
+// $ref.
+//
+// swagger:parameters listThings NoSuchParam
+func danglingRef() {}

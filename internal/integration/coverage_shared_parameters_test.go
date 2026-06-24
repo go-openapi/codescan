@@ -4,11 +4,13 @@
 package integration_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scantest"
+	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -44,6 +46,104 @@ func TestCoverage_SharedParameters_TopLevel(t *testing.T) {
 	// createPet) are NOT registered at the top level.
 	_, hasLimit := doc.Parameters["limit"]
 	assert.FalseT(t, hasLimit, "inline operation params must not leak into #/parameters")
+}
+
+// paramRefs collects the #/parameters/{name} $ref targets on an operation.
+func paramRefs(op *spec.Operation) []string {
+	var refs []string
+	for _, p := range op.Parameters {
+		if r := p.Ref.String(); r != "" {
+			refs = append(refs, r)
+		}
+	}
+	return refs
+}
+
+// TestCoverage_SharedParameters_Refs exercises P3 (go-swagger#2632): a
+// shared parameter is wired into an operation as a #/parameters/{name}
+// $ref through both reference channels — the `swagger:parameters * opid`
+// definition convenience and the standalone `swagger:parameters opid name`
+// reference marker on a func.
+func TestCoverage_SharedParameters_Refs(t *testing.T) {
+	doc, err := codescan.Run(&codescan.Options{
+		Packages: []string{"./enhancements/shared-parameters/..."},
+		WorkDir:  scantest.FixturesDir(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	require.NotNil(t, doc.Paths)
+
+	pets, ok := doc.Paths.Paths["/pets"]
+	require.TrueT(t, ok, "expected a /pets path")
+
+	// createPet: AuthHeader (`swagger:parameters * createPet`) refs X-API-Key.
+	require.NotNil(t, pets.Post)
+	assert.SliceContainsT(t, paramRefs(pets.Post), "#/parameters/X-API-Key",
+		"createPet should $ref the shared X-API-Key (via `* createPet`)")
+
+	// listPets: standalone `swagger:parameters listPets X-Request-ID` ref.
+	require.NotNil(t, pets.Get)
+	assert.SliceContainsT(t, paramRefs(pets.Get), "#/parameters/X-Request-ID",
+		"listPets should $ref the shared X-Request-ID (standalone reference)")
+	// the inline query parameter `limit` is still present alongside the ref.
+	var hasLimit bool
+	for _, p := range pets.Get.Parameters {
+		if p.Name == "limit" {
+			hasLimit = true
+		}
+	}
+	assert.TrueT(t, hasLimit, "listPets keeps its inline `limit` parameter")
+}
+
+// TestCoverage_SharedParameters_OverridesAndDedup exercises P3 reference
+// edge cases (fixture 5, go-swagger#2632): the shared key/reference is the
+// resolved (overridden) name (C3); duplicate operation-id targets (C1) and
+// duplicate reference names (C2) are dropped with warnings; and a reference
+// to an unregistered shared parameter is dropped with a
+// scan.dangling-parameter-ref warning.
+func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
+	var diags []grammar.Diagnostic
+	doc, err := codescan.Run(&codescan.Options{
+		Packages: []string{"./enhancements/shared-parameters-overrides/..."},
+		WorkDir:  scantest.FixturesDir(),
+		OnDiagnostic: func(d grammar.Diagnostic) {
+			diags = append(diags, d)
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	// C3: the `name:` override is the registered key (X-Correlation-ID, not
+	// the json-tag X-Request-ID), and a reference resolves by that name.
+	_, ok := doc.Parameters["X-Correlation-ID"]
+	require.TrueT(t, ok, "expected #/parameters/X-Correlation-ID (overridden name)")
+	_, hasOld := doc.Parameters["X-Request-ID"]
+	assert.FalseT(t, hasOld, "the json-tag name must not be registered when `name:` overrides it")
+
+	require.NotNil(t, doc.Paths)
+	things := doc.Paths.Paths["/things"]
+	require.NotNil(t, things.Get)
+	listRefs := paramRefs(things.Get)
+	assert.SliceContainsT(t, listRefs, "#/parameters/X-Correlation-ID",
+		"listThings references the shared param by its overridden name")
+	// C2: the duplicated X-Correlation-ID reference yields a single $ref.
+	var n int
+	for _, r := range listRefs {
+		if r == "#/parameters/X-Correlation-ID" {
+			n++
+		}
+	}
+	assert.EqualT(t, 1, n, "duplicate reference name must collapse to one $ref")
+	// dangling: NoSuchParam was dropped, never emitted as a $ref.
+	assert.FalseT(t, slices.Contains(listRefs, "#/parameters/NoSuchParam"), "dangling ref must be dropped")
+
+	codes := map[grammar.Code]bool{}
+	for _, d := range diags {
+		codes[d.Code] = true
+	}
+	assert.TrueT(t, codes[grammar.CodeDuplicateTarget], "expected a duplicate-target warning (C1)")
+	assert.TrueT(t, codes[grammar.CodeDuplicateRef], "expected a duplicate-ref warning (C2)")
+	assert.TrueT(t, codes[grammar.CodeDanglingParameterRef], "expected a dangling-parameter-ref warning")
 }
 
 // TestCoverage_SharedParameters_Conflict exercises the keep-first conflict

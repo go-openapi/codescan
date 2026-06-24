@@ -52,6 +52,17 @@ dispatches per target:
 - **path** (`swagger:parameters /path`) — path-item parameters; not yet
   wired (later build phase).
 
+A `swagger:parameters * opid …` marker also *references* the struct's
+shared parameters into the listed operations; the target ops are exposed
+via `SharedRefOperations()` and the spec builder
+(`applyParameterRefs`) emits the `#/parameters/{name}` $refs once the
+shared map is complete (alongside the standalone reference markers the
+scanner collects into `ScanCtx.ParameterRefs`). A reference to an
+unregistered shared parameter is dropped with a
+`scan.dangling-parameter-ref` warning. Duplicate target / reference tokens
+the grammar drops raise `scan.duplicate-target` (C1) / `scan.duplicate-ref`
+(C2) warnings.
+
 Each target ultimately reaches `buildFromType` → `buildFromStruct`, which
 walks the struct fields (unwrapping pointers, dispatching named types and
 aliases).
