@@ -35,6 +35,7 @@ type Builder struct {
 	discovered  []*scanner.EntityDecl
 	definitions map[string]oaispec.Schema
 	responses   map[string]oaispec.Response
+	parameters  map[string]oaispec.Parameter
 	operations  map[string]*oaispec.Operation
 	// declPos records the source position of each discovered definition, keyed
 	// by its fully-qualified DefKey, so the prune (scan.pruned-unused) and
@@ -58,6 +59,9 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 	if input.Responses == nil {
 		input.Responses = make(map[string]oaispec.Response)
 	}
+	if input.Parameters == nil {
+		input.Parameters = make(map[string]oaispec.Parameter)
+	}
 	if input.Extensions == nil {
 		input.Extensions = make(oaispec.Extensions)
 	}
@@ -69,6 +73,7 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 		operations:  collectOperationsFromInput(input),
 		definitions: input.Definitions,
 		responses:   input.Responses,
+		parameters:  input.Parameters,
 		declPos:     make(map[string]token.Position),
 	}
 }
@@ -418,7 +423,21 @@ func (s *Builder) buildResponses() error {
 	return nil
 }
 
+// sharedParamCandidate is one `swagger:parameters *` registration awaiting
+// merge into the top-level #/parameters map. Candidates are collected from
+// every declaration first, then resolved in a deterministic order so the
+// keep-first conflict winner does not depend on package-load order.
+type sharedParamCandidate struct {
+	name  string
+	param oaispec.Parameter
+	pkg   string
+	pos   token.Position
+	label string
+}
+
 func (s *Builder) buildParameters() error {
+	var sharedCandidates []sharedParamCandidate
+
 	// build parameters dictionary
 	for decl := range s.ctx.Parameters() {
 		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
@@ -428,13 +447,75 @@ func (s *Builder) buildParameters() error {
 			}
 			s.discovered = append(s.discovered, pb.PostDeclarations()...)
 
+			pkg := ""
+			if decl.Pkg != nil {
+				pkg = decl.Pkg.PkgPath
+			}
+			pos := s.ctx.PosOf(decl.Ident.Pos())
+			for name, prm := range pb.SharedParameters() {
+				sharedCandidates = append(sharedCandidates, sharedParamCandidate{
+					name: name, param: prm, pkg: pkg, pos: pos, label: declLabel(decl),
+				})
+			}
+
 			return nil
 		}); err != nil {
 			return err
 		}
 	}
 
+	s.registerSharedParameters(sharedCandidates)
+
 	return nil
+}
+
+// registerSharedParameters merges the collected `swagger:parameters *`
+// registrations into the spec's top-level #/parameters map. Shared
+// parameters are referenced only by short name and are therefore never
+// renamed (unlike definitions): on a duplicate short name the first
+// registration is kept and the later one dropped with a
+// CodeSharedParameterConflict warning (keep-first). InputSpec-supplied
+// entries seed the map before the scan, so they win any collision.
+//
+// Candidates are resolved in a deterministic order — package import path,
+// then source position, then parameter name — so the kept/dropped choice
+// and the emitted diagnostic are stable regardless of package-load order.
+func (s *Builder) registerSharedParameters(candidates []sharedParamCandidate) {
+	if len(candidates) == 0 {
+		return
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		a, b := candidates[i], candidates[j]
+		if a.pkg != b.pkg {
+			return a.pkg < b.pkg
+		}
+		if a.pos.Filename != b.pos.Filename {
+			return a.pos.Filename < b.pos.Filename
+		}
+		if a.pos.Offset != b.pos.Offset {
+			return a.pos.Offset < b.pos.Offset
+		}
+		return a.name < b.name
+	})
+
+	owners := make(map[string]string, len(candidates))
+	for _, c := range candidates {
+		if _, exists := s.parameters[c.name]; exists {
+			if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
+				kept := owners[c.name]
+				if kept == "" {
+					kept = "an overlay (InputSpec) definition"
+				}
+				onDiag(grammar.Warnf(c.pos, grammar.CodeSharedParameterConflict,
+					"shared parameter %q is already registered by %s; this declaration (%s) is dropped (keep-first)",
+					c.name, kept, c.label))
+			}
+			continue
+		}
+		s.parameters[c.name] = c.param
+		owners[c.name] = c.label
+	}
 }
 
 // resolveSamePackageDuplicates detects two distinct annotated models in

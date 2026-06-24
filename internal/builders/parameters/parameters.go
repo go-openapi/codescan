@@ -39,8 +39,14 @@ type Builder struct {
 	// currentOpID is the operation id whose parameter set is being built. Set
 	// per-iteration in Build and read by processParamField to key the deferred
 	// cross-ref anchor capture. The same swagger:parameters struct may apply to
-	// several operations, so the capture runs once per op id.
+	// several operations, so the capture runs once per op id. Empty while
+	// building a shared (`*`) parameter set — there is no operation context.
 	currentOpID string
+
+	// shared accumulates the parameters this struct registers at the spec
+	// top level (`swagger:parameters *`), keyed by resolved parameter name.
+	// nil unless a shared marker was built. Exposed via SharedParameters.
+	shared map[string]oaispec.Parameter
 }
 
 // NewBuilder constructs an initialized [Builder] bound to
@@ -54,12 +60,63 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 }
 
 func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
-	// The swagger:parameters marker names the operations this parameter
-	// struct applies to. The grammar parses the marker's target and args
-	// (grammar.ParametersBlock); only the operation-id target inlines the
-	// fields here. The shared (`*`) and path (`/path`) targets are handled
-	// by the shared-parameters builders, not by inlining.
-	for _, opid := range p.operationIDs() {
+	// A swagger:parameters struct may carry several markers, each parsed by
+	// the grammar into a ParametersBlock with a target (grammar owns the
+	// targeting parse). Dispatch per target:
+	//   - operations: inline the struct's fields into each named operation
+	//     (the historical behaviour).
+	//   - shared (`*`): register the fields at the spec top level
+	//     (#/parameters/{name}); harvested here, merged + conflict-checked by
+	//     the spec builder via SharedParameters().
+	//   - path (`/path`): path-item parameters — handled in a later phase.
+	for _, pb := range p.parametersBlocks() {
+		switch pb.Target {
+		case grammar.ParamTargetOperations:
+			if err := p.buildIntoOperations(pb.OperationIDs(), operations); err != nil {
+				return err
+			}
+		case grammar.ParamTargetShared:
+			if err := p.buildShared(); err != nil {
+				return err
+			}
+		case grammar.ParamTargetPath:
+			// Path-item parameters are applied after paths are built; see the
+			// shared-parameters build plan (P4). Not yet wired.
+		default:
+			// ParametersTarget is a closed set produced by the grammar; every
+			// member is handled above. A new member must add its case.
+		}
+	}
+
+	return nil
+}
+
+// SharedParameters returns the parameters this struct registers at the
+// spec top level (`swagger:parameters *`), keyed by resolved parameter
+// name. Empty unless the struct carried a shared (`*`) marker. The spec
+// builder merges these into the single #/parameters map with keep-first
+// conflict handling. Valid after Build.
+func (p *Builder) SharedParameters() map[string]oaispec.Parameter {
+	return p.shared
+}
+
+// parametersBlocks returns every grammar.ParametersBlock attached to the
+// decl, in source order (a struct may carry several swagger:parameters
+// lines).
+func (p *Builder) parametersBlocks() []*grammar.ParametersBlock {
+	var out []*grammar.ParametersBlock
+	for _, b := range p.ParseBlocks(p.Decl.Comments) {
+		if pb, ok := b.(*grammar.ParametersBlock); ok {
+			out = append(out, pb)
+		}
+	}
+	return out
+}
+
+// buildIntoOperations inlines the struct's fields into each named
+// operation, creating the operation entry when absent.
+func (p *Builder) buildIntoOperations(opids []string, operations map[string]*oaispec.Operation) error {
+	for _, opid := range opids {
 		operation, ok := operations[opid]
 		if !ok {
 			operation = new(oaispec.Operation)
@@ -83,19 +140,27 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 	return nil
 }
 
-// operationIDs returns the operation ids the struct's swagger:parameters
-// marker(s) inline into, read from the grammar block(s) (the targeting
-// parse lives in the grammar, not the scanner). A struct may carry several
-// `swagger:parameters` lines, so every ParametersBlock contributes. Shared
-// (`*`) / path (`/path`) targets yield no inline operation ids.
-func (p *Builder) operationIDs() []string {
-	var ids []string
-	for _, b := range p.ParseBlocks(p.Decl.Comments) {
-		if pb, ok := b.(*grammar.ParametersBlock); ok {
-			ids = append(ids, pb.OperationIDs()...)
-		}
+// buildShared builds the struct's fields as a free-standing parameter set
+// and harvests them, keyed by the resolved parameter name (the overridden
+// name when `name:` / NameFromTags applies — C3), for top-level
+// registration. Reuses the full field-building path by building into a
+// throwaway operation. currentOpID is left empty so no operation-path
+// cross-ref anchor is recorded (there is no operation here).
+func (p *Builder) buildShared() error {
+	p.currentOpID = ""
+	tmp := new(oaispec.Operation)
+	if err := p.buildFromType(p.Decl.ObjType(), tmp, make(map[string]oaispec.Parameter)); err != nil {
+		return err
 	}
-	return ids
+
+	if p.shared == nil {
+		p.shared = make(map[string]oaispec.Parameter, len(tmp.Parameters))
+	}
+	for _, prm := range tmp.Parameters {
+		p.shared[prm.Name] = prm
+	}
+
+	return nil
 }
 
 func (p *Builder) buildFromType(otpe types.Type, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
@@ -559,8 +624,9 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 	}
 
 	// Cross-ref linkage: capture the field's position keyed by (opid, name) for
-	// the spec builder's deferred /paths/.../parameters/{i} anchor pass.
-	if p.Ctx.OriginEnabled() {
+	// the spec builder's deferred /paths/.../parameters/{i} anchor pass. Skipped
+	// for shared (`*`) parameters (empty opID) — they have no operation path.
+	if p.Ctx.OriginEnabled() && p.currentOpID != "" {
 		p.Ctx.RecordParamOrigin(p.currentOpID, name, p.Ctx.PosOf(afld.Pos()))
 	}
 

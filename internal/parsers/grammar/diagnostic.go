@@ -193,6 +193,15 @@ const (
 	// the Go type's source position. The bare-leaf zero-churn case (a globally
 	// unique name lifted to its leaf) is NOT reported — only true renames.
 	CodeRenamedDefinition Code = "scan.renamed-definition"
+
+	// CodeSharedParameterConflict fires when two `swagger:parameters *`
+	// declarations register the same shared parameter short name
+	// (#/parameters/{name}). Shared parameters are referenced only by short
+	// name, so — unlike definitions — they are never renamed: the first
+	// registration is kept, later ones are dropped. Warning, so the
+	// shadowed declaration is never lost silently. See
+	// .claude/plans/features/shared-parameters-fixtures.md §2.
+	CodeSharedParameterConflict Code = "scan.shared-parameter-conflict"
 )
 
 // Diagnostic is one observation about a comment block.

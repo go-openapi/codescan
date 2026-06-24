@@ -32,11 +32,29 @@ diagnostic sink, ParseBlocks cache, MakeRef). See
 
 ## <a id="builder"></a>§builder — the build chain
 
-`Build(operations)` iterates over the declaration's `swagger:parameters
-<opid>` arguments — one struct can attach to many operations — and
-calls `buildFromType` for each. The chain unwraps pointers, dispatches
-named types and aliases, and ultimately reaches `buildFromStruct`
-which walks the struct fields.
+`Build(operations)` iterates the declaration's `swagger:parameters`
+markers (parsed by the grammar into `grammar.ParametersBlock`s) and
+dispatches per target:
+
+- **operations** (`swagger:parameters opid …`) — `buildIntoOperations`
+  inlines the struct's fields into each named operation (one struct can
+  attach to many). The historical behaviour.
+- **shared** (`swagger:parameters *`) — `buildShared` builds the fields as
+  a free-standing set and harvests them into `shared`, keyed by the
+  resolved parameter name (so `name:` / `NameFromTags` overrides are the
+  key — C3). Exposed via `SharedParameters()`; the spec builder
+  (`registerSharedParameters`) merges them into the top-level
+  `#/parameters` map with **keep-first** conflict handling (shared
+  parameters are never renamed — they are referenced only by short name —
+  so a duplicate short name keeps the first and drops the later with a
+  `scan.shared-parameter-conflict` warning; resolution order is
+  package-path then position, so it is load-order independent).
+- **path** (`swagger:parameters /path`) — path-item parameters; not yet
+  wired (later build phase).
+
+Each target ultimately reaches `buildFromType` → `buildFromStruct`, which
+walks the struct fields (unwrapping pointers, dispatching named types and
+aliases).
 
 For each non-embedded exported field, `processParamField` runs the
 following ordered steps:
