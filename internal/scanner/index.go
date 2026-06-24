@@ -84,6 +84,7 @@ type TypeIndex struct {
 	Routes                  []parsers.ParsedPathContent
 	Operations              []parsers.ParsedPathContent
 	Parameters              []*EntityDecl
+	ParameterRefs           []*ParameterRef
 	Responses               []*EntityDecl
 	excludeDeps             bool
 	includeTags             map[string]bool
@@ -227,6 +228,12 @@ func (a *TypeIndex) processFileDecls(pkg *packages.Package, file *ast.File, n no
 		case *ast.BadDecl:
 			continue
 		case *ast.FuncDecl:
+			// A `swagger:parameters` marker on a func is a reference (it
+			// wires shared parameters into an operation / path-item as
+			// $refs), never a definition — definitions live on struct types.
+			if n&parametersNode != 0 {
+				a.collectParameterRef(pkg, file, fd.Doc)
+			}
 			if fd.Body == nil {
 				continue
 			}
@@ -286,6 +293,25 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 			}
 		}
 	}
+}
+
+// collectParameterRef records a standalone `swagger:parameters` reference
+// marker found on a func's doc comment. The marker's argument tokens are
+// not parsed here — the grammar does that when a builder consumes the
+// ParameterRef; the scanner only classifies the comment group as carrying
+// a reference. No-op when doc carries no `swagger:parameters` marker.
+func (a *TypeIndex) collectParameterRef(pkg *packages.Package, file *ast.File, doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+	if _, ok := parsers.ParametersOverride(doc); !ok {
+		return
+	}
+	a.ParameterRefs = append(a.ParameterRefs, &ParameterRef{
+		Comments: doc,
+		File:     file,
+		Pkg:      pkg,
+	})
 }
 
 func (a *TypeIndex) walkImports(pkg *packages.Package) error {

@@ -43,7 +43,7 @@ typed `Block` carrying:
 - the recognised annotation (`swagger:model`, `swagger:route`, …) as
   an `AnnotationKind`;
 - per-Block fields for the annotation's positional arguments (e.g.
-  `RouteBlock.Method`, `ParametersBlock.OperationIDs`);
+  `RouteBlock.Method`, `ParametersBlock.Target` / `.Args`);
 - `Property` entries for every recognised body keyword (`maximum:`,
   `pattern:`, `consumes:`, …) carrying the keyword's lexer-typed
   value or raw body bytes;
@@ -557,7 +557,7 @@ fields:
 |---|---|---|
 | `ModelBlock` | `swagger:model [Name]` | `Name string` |
 | `ResponseBlock` | `swagger:response [Name]` | `Name string` |
-| `ParametersBlock` | `swagger:parameters T1 T2 …` | `OperationIDs []string` |
+| `ParametersBlock` | `swagger:parameters <target> [args…]` | `Target ParametersTarget`, `Path string`, `Args []string`, `Dups []string` (+ `OperationIDs()` accessor) |
 | `NameBlock` | `swagger:name <ident>` | `Name string` |
 | `RouteBlock` | `swagger:route METHOD /path [tags] opID` | `Method, Path string; Tags []string; OpID string` |
 | `InlineOperationBlock` | `swagger:operation METHOD /path [tags] opID` | same as `RouteBlock` |
@@ -884,7 +884,7 @@ Per-annotation argument shapes are classified by
 | `AnnDefaultName` | one `TokenJSONValue` or `TokenRawValue` per `classifyDefaultValue` |
 | `AnnType` | one `TokenTypeRef` for any well-formed token (or fallback `TokenIdentName` when malformed) per `looksLikeTypeRef` |
 | `AnnEnum` | per `classifyEnumArgs` — `TokenIdentName` (name) + `TokenJSONValue` / `TokenCommaListValue` (values), in source order |
-| `AnnParameters` | `TokenIdentName`* (operation IDs) |
+| `AnnParameters` | first token: `TokenWildcard` (`*`), `TokenURLPath` (`/path`), or `TokenIdentName` (operation id); trailing `TokenIdentName`* (operation ids or shared-parameter names) |
 | `AnnAllOf`, `AnnModel`, `AnnResponse`, `AnnStrfmt`, `AnnName` | one `TokenIdentName` (first identifier only — single-word capture) |
 | `AnnAlias`, `AnnIgnore`, `AnnFile`, `AnnMeta`, `AnnUnknown` | trailing fields as `TokenIdentName`* so the parser can diagnose |
 
@@ -897,8 +897,13 @@ emit `CodeMalformedOperation`.
 
 ### Schema-family arg validation
 
-- `AnnParameters` requires at least one IDENT_NAME (operation id)
-  — empty emits `CodeMissingRequiredArg`.
+- `AnnParameters` requires a target token (an operation id, the
+  shared-namespace `*`, or a `/path`) — empty emits
+  `CodeMissingRequiredArg`. The first token classifies the
+  `ParametersBlock.Target` (operations / shared / path); `parseParametersArgs`
+  collects the remaining tokens into `Args` (de-duplicated; dropped
+  duplicates recorded in `Dups`). The definition-vs-reference reading of
+  `Args` is the builder's, since it depends on the host declaration.
 - `AnnName` requires a single IDENT_NAME — empty emits
   `CodeMissingRequiredArg`.
 

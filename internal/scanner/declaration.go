@@ -6,11 +6,27 @@ package scanner
 import (
 	"go/ast"
 	"go/types"
-	"strings"
 
 	"github.com/go-openapi/codescan/internal/parsers"
 	"golang.org/x/tools/go/packages"
 )
+
+// ParameterRef is a standalone `swagger:parameters` marker hosted by a
+// func (or other non-struct declaration) rather than a struct definition.
+// Per the disambiguation rule, such a marker is a *reference*: it wires
+// existing shared parameters into an operation or path-item as `$ref`s —
+// its first argument token is the target (an operation id or a `/path`)
+// and the remaining tokens are shared-parameter names.
+//
+// The scanner only discovers and locates the marker; its target and names
+// are parsed from Comments by the grammar (grammar.ParametersBlock) when
+// the shared-parameters builder consumes it. See
+// .claude/plans/features/shared-parameters-fixtures.md §1b.
+type ParameterRef struct {
+	Comments *ast.CommentGroup
+	File     *ast.File
+	Pkg      *packages.Package
+}
 
 type EntityDecl struct {
 	Comments                *ast.CommentGroup
@@ -108,30 +124,6 @@ func (d *EntityDecl) ResponseNames() (name, goName string) {
 	}
 
 	return response, goName
-}
-
-func (d *EntityDecl) OperationIDs() (result []string) {
-	if d == nil {
-		return nil
-	}
-
-	parameters, ok := parsers.ParametersOverride(d.Comments)
-	if !ok {
-		return nil
-	}
-
-	d.hasParameterAnnotation = true
-
-	for _, parameter := range parameters {
-		for param := range strings.SplitSeq(parameter, " ") {
-			name := strings.TrimSpace(param)
-			if len(name) > 0 {
-				result = append(result, name)
-			}
-		}
-	}
-
-	return result
 }
 
 func (d *EntityDecl) HasModelAnnotation() bool {

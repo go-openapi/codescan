@@ -123,7 +123,7 @@ swagger:parameters getPetById deletePet updatePet
 	b := parseString(t, src)
 	pb, ok := b.(*ParametersBlock)
 	require.True(t, ok)
-	assert.Equal(t, []string{"getPetById", "deletePet", "updatePet"}, pb.OperationIDs)
+	assert.Equal(t, []string{"getPetById", "deletePet", "updatePet"}, pb.OperationIDs())
 }
 
 // TestFixtures_Petstore_RouteBlock_GodocPrefixWithDeprecated covers the

@@ -54,11 +54,12 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 }
 
 func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
-	// check if there is a swagger:parameters tag that is followed by one or more words,
-	// these words are the ids of the operations this parameter struct applies to
-	// once type name is found convert it to a schema, by looking up the schema in the
-	// parameters dictionary that got passed into this parse method
-	for _, opid := range p.Decl.OperationIDs() {
+	// The swagger:parameters marker names the operations this parameter
+	// struct applies to. The grammar parses the marker's target and args
+	// (grammar.ParametersBlock); only the operation-id target inlines the
+	// fields here. The shared (`*`) and path (`/path`) targets are handled
+	// by the shared-parameters builders, not by inlining.
+	for _, opid := range p.operationIDs() {
 		operation, ok := operations[opid]
 		if !ok {
 			operation = new(oaispec.Operation)
@@ -80,6 +81,21 @@ func (p *Builder) Build(operations map[string]*oaispec.Operation) error {
 	}
 
 	return nil
+}
+
+// operationIDs returns the operation ids the struct's swagger:parameters
+// marker(s) inline into, read from the grammar block(s) (the targeting
+// parse lives in the grammar, not the scanner). A struct may carry several
+// `swagger:parameters` lines, so every ParametersBlock contributes. Shared
+// (`*`) / path (`/path`) targets yield no inline operation ids.
+func (p *Builder) operationIDs() []string {
+	var ids []string
+	for _, b := range p.ParseBlocks(p.Decl.Comments) {
+		if pb, ok := b.(*grammar.ParametersBlock); ok {
+			ids = append(ids, pb.OperationIDs()...)
+		}
+	}
+	return ids
 }
 
 func (p *Builder) buildFromType(otpe types.Type, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {

@@ -47,9 +47,18 @@ var (
 	// mid-prose mentions and would truncate descriptions.
 	rxSwaggerAnnotation = regexp.MustCompile(`(?:^|[\s/])swagger:([\p{L}\p{N}\p{Pd}\p{Pc}]+)`)
 
-	rxModelOverride      = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxResponseOverride   = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	rxParametersOverride = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}\p{Zs}]+)(?:\.)?$`)
+	rxModelOverride    = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	rxResponseOverride = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
+	// rxParametersOverride is the scanner's PERMISSIVE classification gate
+	// for `swagger:parameters`: it matches the keyword followed by any
+	// non-empty argument and captures it. The capture is required by the
+	// shared comment matcher (commentMultipleSubMatcher), but its CONTENT
+	// is unused — the argument tokens are parsed and validated by the
+	// grammar (grammar.ParametersBlock), which emits diagnostics for
+	// malformed forms. The scanner does not re-validate arg shapes: a
+	// malformed-but-non-empty argument is classified and passed on so the
+	// grammar can diagnose it, rather than being silently skipped here.
+	rxParametersOverride = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}+(\S.*?)\p{Zs}*$`)
 
 	// rxModelArg / rxResponseArg loosely capture the raw name argument
 	// following a single-name struct marker, regardless of whether it is a

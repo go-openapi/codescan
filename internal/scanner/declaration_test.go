@@ -6,7 +6,6 @@ package scanner
 import (
 	"go/ast"
 	"go/types"
-	"slices"
 	"testing"
 
 	"github.com/go-openapi/testify/v2/assert"
@@ -158,48 +157,9 @@ func TestEntityDecl(t *testing.T) {
 		})
 	})
 
-	t.Run("OperationIDs", func(t *testing.T) {
-		t.Run("nil receiver returns nil", func(t *testing.T) {
-			var decl *EntityDecl
-			assert.Nil(t, decl.OperationIDs())
-		})
-
-		t.Run("type with single parameter annotation", func(t *testing.T) {
-			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
-				"MyFileParams",
-			)
-			require.True(t, ok)
-
-			ids := decl.OperationIDs()
-			require.Len(t, ids, 1)
-			assert.EqualT(t, "myOperation", ids[0])
-		})
-
-		t.Run("type with multiple parameter annotations", func(t *testing.T) {
-			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
-				"OrderBodyParams",
-			)
-			require.True(t, ok)
-
-			ids := decl.OperationIDs()
-			require.Len(t, ids, 2)
-			assert.True(t, slices.Contains(ids, "updateOrder"), "expected ids to contain updateOrder")
-			assert.True(t, slices.Contains(ids, "createOrder"), "expected ids to contain createOrder")
-		})
-
-		t.Run("type without parameter annotation returns nil", func(t *testing.T) {
-			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
-				"SimpleOne",
-			)
-			require.True(t, ok)
-
-			ids := decl.OperationIDs()
-			assert.Nil(t, ids)
-		})
-	})
+	// Operation-id targeting parse moved to the grammar
+	// (grammar.ParametersBlock); see the grammar parser tests. The scanner
+	// no longer parses swagger:parameters arguments.
 
 	t.Run("HasAnnotation caching", func(t *testing.T) {
 		t.Run("HasModelAnnotation caches result", func(t *testing.T) {

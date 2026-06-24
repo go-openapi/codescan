@@ -399,9 +399,9 @@ func (s *parseState) parseSchemaBlock(annIdx int, annTok Token, kind AnnotationK
 	// emitted diagnostics land on the block via finaliseBase.
 	switch kind {
 	case AnnParameters:
-		if len(identArgs(annTok)) == 0 {
+		if len(annTok.Args) == 0 {
 			s.emit(Errorf(annTok.Pos, CodeMissingRequiredArg,
-				"swagger:parameters requires at least one operation id reference"))
+				"swagger:parameters requires a target (an operation id, `*`, or `/path`)"))
 		}
 	case AnnName:
 		if firstIdentArg(annTok) == "" {
@@ -431,7 +431,8 @@ func (s *parseState) parseSchemaBlock(annIdx int, annTok Token, kind AnnotationK
 	case AnnResponse:
 		return &ResponseBlock{baseBlock: base, Name: firstIdentArg(annTok)}
 	case AnnParameters:
-		return &ParametersBlock{baseBlock: base, OperationIDs: identArgs(annTok)}
+		target, path, args, dups := parseParametersArgs(annTok)
+		return &ParametersBlock{baseBlock: base, Target: target, Path: path, Args: args, Dups: dups}
 	case AnnName:
 		return &NameBlock{baseBlock: base, Name: firstIdentArg(annTok)}
 	default:
@@ -668,15 +669,42 @@ func firstIdentArg(annTok Token) string {
 	return ""
 }
 
-// identArgs returns the Text of every IDENT_NAME-typed arg in source order.
-func identArgs(annTok Token) []string {
-	out := make([]string, 0, len(annTok.Args))
-	for _, a := range annTok.Args {
-		if a.Kind == TokenIdentName {
-			out = append(out, a.Text)
+// parseParametersArgs classifies the arguments of a `swagger:parameters`
+// marker into a target (operations / shared `*` / `/path`) plus the
+// remaining argument tokens, de-duplicated. Dropped duplicates are
+// returned separately so the builder can raise a duplicate-target /
+// duplicate-ref warning. The definition-vs-reference reading of the args
+// is the builder's, since it depends on the host declaration.
+func parseParametersArgs(annTok Token) (target ParametersTarget, path string, args, dups []string) {
+	target = ParamTargetOperations
+	rest := annTok.Args
+	if len(rest) > 0 {
+		switch rest[0].Kind {
+		case TokenWildcard:
+			target = ParamTargetShared
+			rest = rest[1:]
+		case TokenURLPath:
+			target = ParamTargetPath
+			path = rest[0].Text
+			rest = rest[1:]
+		default:
+			// First token is an operation id: keep it among the args.
 		}
 	}
-	return out
+
+	seen := make(map[string]struct{}, len(rest))
+	for _, a := range rest {
+		if a.Text == "" {
+			continue
+		}
+		if _, dup := seen[a.Text]; dup {
+			dups = append(dups, a.Text)
+			continue
+		}
+		seen[a.Text] = struct{}{}
+		args = append(args, a.Text)
+	}
+	return target, path, args, dups
 }
 
 // --- Body-token consumption (shared across families) -----------------------

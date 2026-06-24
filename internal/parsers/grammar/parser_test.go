@@ -215,15 +215,66 @@ func TestParser_ParametersBlock_RequiresAtLeastOneArg(t *testing.T) {
 	b := parseString(t, "swagger:parameters listPets getPet")
 	pb, ok := b.(*ParametersBlock)
 	require.True(t, ok)
-	assert.Equal(t, []string{"listPets", "getPet"}, pb.OperationIDs)
+	assert.Equal(t, ParamTargetOperations, pb.Target)
+	assert.Equal(t, []string{"listPets", "getPet"}, pb.OperationIDs())
 	assert.Empty(t, b.Diagnostics())
 
 	bad := parseString(t, "swagger:parameters")
 	pbad, ok := bad.(*ParametersBlock)
 	require.True(t, ok)
-	assert.Empty(t, pbad.OperationIDs)
+	assert.Empty(t, pbad.OperationIDs())
 	require.NotEmpty(t, bad.Diagnostics())
 	assert.Equal(t, CodeMissingRequiredArg, bad.Diagnostics()[0].Code)
+}
+
+func TestParser_ParametersBlock_Targets(t *testing.T) {
+	t.Run("shared register-only", func(t *testing.T) {
+		pb, ok := parseString(t, "swagger:parameters *").(*ParametersBlock)
+		require.True(t, ok)
+		assert.Equal(t, ParamTargetShared, pb.Target)
+		assert.Empty(t, pb.OperationIDs())
+		assert.Empty(t, pb.Args)
+		assert.Empty(t, pb.Diagnostics())
+	})
+
+	t.Run("shared register plus operation ids", func(t *testing.T) {
+		pb, ok := parseString(t, "swagger:parameters * listPets createPet").(*ParametersBlock)
+		require.True(t, ok)
+		assert.Equal(t, ParamTargetShared, pb.Target)
+		assert.Equal(t, []string{"listPets", "createPet"}, pb.Args)
+		assert.Nil(t, pb.OperationIDs()) // not an operations target
+	})
+
+	t.Run("path target", func(t *testing.T) {
+		pb, ok := parseString(t, "swagger:parameters /pets").(*ParametersBlock)
+		require.True(t, ok)
+		assert.Equal(t, ParamTargetPath, pb.Target)
+		assert.Equal(t, "/pets", pb.Path)
+		assert.Empty(t, pb.Args)
+	})
+
+	t.Run("path reference with shared name", func(t *testing.T) {
+		pb, ok := parseString(t, "swagger:parameters /pets X-Request-ID").(*ParametersBlock)
+		require.True(t, ok)
+		assert.Equal(t, ParamTargetPath, pb.Target)
+		assert.Equal(t, "/pets", pb.Path)
+		assert.Equal(t, []string{"X-Request-ID"}, pb.Args)
+	})
+
+	t.Run("operation reference with shared name (dashes preserved)", func(t *testing.T) {
+		pb, ok := parseString(t, "swagger:parameters listPets X-Request-ID").(*ParametersBlock)
+		require.True(t, ok)
+		assert.Equal(t, ParamTargetOperations, pb.Target)
+		assert.Equal(t, []string{"listPets", "X-Request-ID"}, pb.Args)
+	})
+
+	t.Run("duplicate argument dropped + recorded", func(t *testing.T) {
+		dup := "createThing"
+		pb, ok := parseString(t, "swagger:parameters * "+dup+" "+dup).(*ParametersBlock)
+		require.True(t, ok)
+		assert.Equal(t, []string{"createThing"}, pb.Args)
+		assert.Equal(t, []string{"createThing"}, pb.Dups)
+	})
 }
 
 func TestParser_RouteBlock_BasicArgs(t *testing.T) {

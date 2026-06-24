@@ -40,6 +40,7 @@ const (
 	TokenTypeRef        // TYPE_REF
 	TokenHTTPMethod     // HTTP_METHOD
 	TokenURLPath        // URL_PATH
+	TokenWildcard       // WILDCARD — the `*` shared-namespace target (swagger:parameters)
 	TokenNumberValue    // NUMBER_VALUE
 	TokenIntValue       // INT_VALUE
 	TokenBoolValue      // BOOL_VALUE
@@ -85,6 +86,8 @@ func (k TokenKind) String() string {
 		return "HTTP_METHOD"
 	case TokenURLPath:
 		return "URL_PATH"
+	case TokenWildcard:
+		return "WILDCARD"
 	case TokenNumberValue:
 		return "NUMBER_VALUE"
 	case TokenIntValue:

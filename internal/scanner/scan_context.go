@@ -496,6 +496,17 @@ func (s *ScanCtx) Parameters() iter.Seq[*EntityDecl] {
 	return slices.Values(s.app.Parameters)
 }
 
+// ParameterRefs iterates the standalone `swagger:parameters` reference
+// markers discovered on func declarations (the references that wire shared
+// parameters into operations / path-items as $refs). See [ParameterRef].
+func (s *ScanCtx) ParameterRefs() iter.Seq[*ParameterRef] {
+	if s.app == nil {
+		return nil
+	}
+
+	return slices.Values(s.app.ParameterRefs)
+}
+
 func (s *ScanCtx) Models() iter.Seq2[*ast.Ident, *EntityDecl] {
 	if s.app == nil {
 		return nil

@@ -106,6 +106,37 @@ func TestLexer_RouteWithGodocPrefix(t *testing.T) {
 	assert.Equal(t, "listPets", out[0].Args[3].Text)
 }
 
+func TestLexer_ParametersArgs(t *testing.T) {
+	t.Run("wildcard target", func(t *testing.T) {
+		out := lexString(t, "swagger:parameters * listPets")
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 2)
+		assert.Equal(t, TokenWildcard, out[0].Args[0].Kind)
+		assert.Equal(t, "*", out[0].Args[0].Text)
+		assert.Equal(t, TokenIdentName, out[0].Args[1].Kind)
+		assert.Equal(t, "listPets", out[0].Args[1].Text)
+	})
+
+	t.Run("path target with shared name", func(t *testing.T) {
+		out := lexString(t, "swagger:parameters /pets X-Request-ID")
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 2)
+		assert.Equal(t, TokenURLPath, out[0].Args[0].Kind)
+		assert.Equal(t, "/pets", out[0].Args[0].Text)
+		assert.Equal(t, TokenIdentName, out[0].Args[1].Kind)
+		assert.Equal(t, "X-Request-ID", out[0].Args[1].Text)
+	})
+
+	t.Run("wildcard only recognised in first position", func(t *testing.T) {
+		out := lexString(t, "swagger:parameters listPets *")
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 2)
+		assert.Equal(t, TokenIdentName, out[0].Args[0].Kind)
+		assert.Equal(t, TokenIdentName, out[0].Args[1].Kind, "a non-leading * is a plain ident, not a wildcard")
+		assert.Equal(t, "*", out[0].Args[1].Text)
+	})
+}
+
 func TestLexer_RouteOnlyGetsGodocPrefix(t *testing.T) {
 	// Other annotations must NOT accept a leading godoc identifier.
 	out := lexString(t, "GetPets swagger:operation GET /pets pets listPets")

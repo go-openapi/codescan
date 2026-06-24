@@ -308,7 +308,7 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 	case AnnEnum:
 		return classifyEnumAnnotationArgs(rest, pos)
 	case AnnParameters:
-		return classifyIdentList(rest, pos)
+		return classifyParametersArgs(rest, pos)
 	case AnnAllOf, AnnModel, AnnResponse, AnnStrfmt, AnnName:
 		return []Token{firstIdent(rest, pos)}
 	case AnnAlias, AnnIgnore, AnnFile, AnnMeta, AnnUnknown:
@@ -406,6 +406,29 @@ func classifyEnumAnnotationArgs(rest string, pos token.Position) []Token {
 	default:
 		return nil
 	}
+}
+
+// classifyParametersArgs tokenises `swagger:parameters` arguments. The
+// FIRST token may be the shared-namespace wildcard `*` (TokenWildcard) or
+// a `/path` (TokenURLPath); every other token (and any first token that is
+// neither) is an IDENT_NAME — an operation id or a shared-parameter name,
+// disambiguated downstream by the parser/builder. `*` and `/path` are only
+// recognised in first position, so `*blah` / a mid-list `/x` fall through
+// to IDENT_NAME. See README §annotation-args.
+func classifyParametersArgs(rest string, basePos token.Position) []Token {
+	fields := splitFields(rest, basePos)
+	out := make([]Token, 0, len(fields))
+	for i, f := range fields {
+		switch {
+		case i == 0 && f.text == "*":
+			out = append(out, Token{Kind: TokenWildcard, Pos: f.pos, Text: f.text})
+		case i == 0 && looksLikeURLPath(f.text):
+			out = append(out, Token{Kind: TokenURLPath, Pos: f.pos, Text: f.text})
+		default:
+			out = append(out, Token{Kind: TokenIdentName, Pos: f.pos, Text: f.text})
+		}
+	}
+	return out
 }
 
 // classifyIdentList tokenises a whitespace-separated list as IDENT_NAME

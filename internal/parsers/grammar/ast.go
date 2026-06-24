@@ -484,11 +484,57 @@ func (b *NameBlock) AnnotationArg() (string, bool) {
 	return b.Name, true
 }
 
-// ParametersBlock is produced by `swagger:parameters T1 T2 …`.
+// ParametersTarget classifies the first argument token of a
+// `swagger:parameters` marker.
+type ParametersTarget int
+
+const (
+	// ParamTargetOperations: the first token is an operation id. Covers the
+	// historical inline form (`swagger:parameters listPets …`) and the
+	// standalone reference form (`swagger:parameters listPets X-Name …`);
+	// the two are disambiguated by the builder using the host declaration
+	// (struct ⇒ definition/inline, otherwise reference).
+	ParamTargetOperations ParametersTarget = iota
+	// ParamTargetShared: the first token is the `*` shared-namespace marker
+	// (register the fields at `#/parameters/{name}`).
+	ParamTargetShared
+	// ParamTargetPath: the first token is a `/path` (path-item parameters).
+	ParamTargetPath
+)
+
+// ParametersBlock is produced by `swagger:parameters <target> [args…]`.
+// The target is the shared-namespace wildcard `*`, a `/path`, or an
+// operation id (see [ParametersTarget]). Args carries the remaining
+// argument tokens, de-duplicated; the definition-vs-reference reading of
+// those tokens is the builder's, since it depends on whether the marker is
+// attached to a struct.
+//
+// See .claude/plans/features/shared-parameters-fixtures.md §1.
 type ParametersBlock struct {
 	*baseBlock
 
-	OperationIDs []string
+	// Target is the kind of the first argument token.
+	Target ParametersTarget
+	// Path is the `/path` value when Target == ParamTargetPath.
+	Path string
+	// Args are the de-duplicated meaningful argument tokens in source order:
+	//   - ParamTargetOperations: the operation ids (first token included)
+	//   - ParamTargetShared:     the operation ids to reference into
+	//   - ParamTargetPath:       the shared-parameter names to reference
+	Args []string
+	// Dups are argument tokens dropped as exact duplicates of an earlier
+	// one (the basis for a duplicate-target / duplicate-ref warning).
+	Dups []string
+}
+
+// OperationIDs returns the operation ids this block targets for inline
+// application: Args when Target == ParamTargetOperations, else nil. The
+// shared (`*`) and path (`/path`) targets are not operation ids.
+func (b *ParametersBlock) OperationIDs() []string {
+	if b.Target != ParamTargetOperations {
+		return nil
+	}
+	return b.Args
 }
 
 // RouteBlock is produced by `swagger:route METHOD /path [tags] opID`.
