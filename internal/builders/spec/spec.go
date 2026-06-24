@@ -11,6 +11,7 @@ import (
 	"iter"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/operations"
 	"github.com/go-openapi/codescan/internal/builders/parameters"
@@ -129,6 +130,13 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// fields into the path-item; `swagger:parameters /path name` adds a
 	// #/parameters/{name} $ref.
 	s.applyPathItemParameters()
+
+	// Validate shared-namespace references across all paths now that the
+	// #/parameters and #/responses maps are complete. Catches dangling refs
+	// from swagger:operation wholesale-YAML bodies (which unmarshal verbatim)
+	// and acts as a uniform safety net; a dangling ref is dropped, never
+	// emitted.
+	s.validateSharedRefs()
 
 	if err := s.buildMeta(); err != nil {
 		return nil, err
@@ -854,6 +862,107 @@ func containsParamRef(params []oaispec.Parameter, ref oaispec.Ref) bool {
 		}
 	}
 	return false
+}
+
+// validateSharedRefs drops shared-namespace references that resolve to
+// nothing — a #/parameters/{name} or #/responses/{name} $ref whose target
+// is not registered. The main source is a swagger:operation wholesale-YAML
+// body, which unmarshals its parameters/responses (and their $refs)
+// verbatim; this pass validates them against the completed #/parameters and
+// #/responses maps and drops danglers with a warning rather than leaving an
+// invalid reference in the output. Valid refs (and non-shared refs such as
+// #/definitions/…) are left untouched.
+func (s *Builder) validateSharedRefs() {
+	if s.input.Paths == nil {
+		return
+	}
+	onDiag := s.ctx.OnDiagnostic()
+
+	for path, pi := range s.input.Paths.Paths {
+		pi.Parameters = s.keepResolvableParamRefs(path, pi.Parameters, onDiag)
+		for _, op := range pathItemOperations(&pi) {
+			if op == nil {
+				continue
+			}
+			op.Parameters = s.keepResolvableParamRefs(path, op.Parameters, onDiag)
+			s.dropDanglingResponseRefs(path, op.Responses, onDiag)
+		}
+		s.input.Paths.Paths[path] = pi
+	}
+}
+
+// pathItemOperations returns the operation pointers of a path-item (nil
+// where a method is absent).
+func pathItemOperations(pi *oaispec.PathItem) []*oaispec.Operation {
+	return []*oaispec.Operation{pi.Get, pi.Put, pi.Post, pi.Delete, pi.Options, pi.Head, pi.Patch}
+}
+
+// keepResolvableParamRefs returns params with any dangling
+// #/parameters/{name} $ref dropped (and warned). Non-ref and resolvable-ref
+// parameters are preserved in order.
+func (s *Builder) keepResolvableParamRefs(path string, params []oaispec.Parameter, onDiag func(grammar.Diagnostic)) []oaispec.Parameter {
+	kept := params[:0:0]
+	for _, p := range params {
+		if name, ok := sharedRefName(p.Ref, "#/parameters/"); ok {
+			if _, exists := s.parameters[name]; !exists {
+				if onDiag != nil {
+					onDiag(grammar.Warnf(token.Position{}, grammar.CodeDanglingParameterRef,
+						"path %s references #/parameters/%s, which is not registered; dropped", path, name))
+				}
+				continue
+			}
+		}
+		kept = append(kept, p)
+	}
+	return kept
+}
+
+// dropDanglingResponseRefs removes any dangling #/responses/{name} $ref from
+// an operation's responses (default + per-status), warning on each.
+func (s *Builder) dropDanglingResponseRefs(path string, resp *oaispec.Responses, onDiag func(grammar.Diagnostic)) {
+	if resp == nil {
+		return
+	}
+	if resp.Default != nil {
+		if name, dangling := s.danglingResponseRef(*resp.Default); dangling {
+			if onDiag != nil {
+				onDiag(grammar.Warnf(token.Position{}, grammar.CodeDanglingResponseRef,
+					"path %s default response references #/responses/%s, which is not registered; dropped", path, name))
+			}
+			resp.Default = nil
+		}
+	}
+	for code, r := range resp.StatusCodeResponses {
+		if name, dangling := s.danglingResponseRef(r); dangling {
+			if onDiag != nil {
+				onDiag(grammar.Warnf(token.Position{}, grammar.CodeDanglingResponseRef,
+					"path %s response %d references #/responses/%s, which is not registered; dropped", path, code, name))
+			}
+			delete(resp.StatusCodeResponses, code)
+		}
+	}
+}
+
+// danglingResponseRef reports whether r is a #/responses/{name} $ref whose
+// target is not registered, returning the unresolved name.
+func (s *Builder) danglingResponseRef(r oaispec.Response) (string, bool) {
+	name, ok := sharedRefName(r.Ref, "#/responses/")
+	if !ok {
+		return "", false
+	}
+	if _, exists := s.responses[name]; exists {
+		return "", false
+	}
+	return name, true
+}
+
+// sharedRefName returns the {name} suffix of a $ref of the form
+// "{prefix}{name}" (e.g. prefix "#/parameters/"), and whether ref matched.
+func sharedRefName(ref oaispec.Ref, prefix string) (string, bool) {
+	if after, ok := strings.CutPrefix(ref.String(), prefix); ok && after != "" {
+		return after, true
+	}
+	return "", false
 }
 
 // resolveSamePackageDuplicates detects two distinct annotated models in

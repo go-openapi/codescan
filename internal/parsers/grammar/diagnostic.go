@@ -218,6 +218,13 @@ const (
 	// .claude/plans/features/shared-parameters-fixtures.md §1b.
 	CodeDanglingParameterRef Code = "scan.dangling-parameter-ref"
 
+	// CodeDanglingResponseRef fires when an operation references a shared
+	// response (#/responses/{name}) that no `swagger:response` declaration
+	// registered — e.g. a `$ref` in a swagger:operation wholesale-YAML body
+	// pointing at an unknown response. The reference is dropped rather than
+	// emitting a dangling $ref. Warning.
+	CodeDanglingResponseRef Code = "scan.dangling-response-ref"
+
 	// CodeDuplicateTarget fires when a `swagger:parameters * opid …` marker
 	// repeats an operation id; the duplicate is dropped. Warning (C1).
 	CodeDuplicateTarget Code = "scan.duplicate-target"

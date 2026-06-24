@@ -238,6 +238,52 @@ func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 	assert.TrueT(t, codes[grammar.CodeDanglingParameterRef], "expected a dangling-parameter-ref warning")
 }
 
+// TestCoverage_SharedParameters_YAMLRefs exercises P6 (fixture 4,
+// go-swagger#2632): a swagger:operation wholesale-YAML body that references
+// the shared namespace is validated against the completed #/parameters and
+// #/responses maps. A resolving $ref is kept verbatim; a dangling one is
+// dropped with a scan.dangling-{parameter,response}-ref warning rather than
+// emitting an invalid reference.
+func TestCoverage_SharedParameters_YAMLRefs(t *testing.T) {
+	var diags []grammar.Diagnostic
+	doc, err := codescan.Run(&codescan.Options{
+		Packages: []string{"./enhancements/shared-parameters-yaml/..."},
+		WorkDir:  scantest.FixturesDir(),
+		OnDiagnostic: func(d grammar.Diagnostic) {
+			diags = append(diags, d)
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	require.NotNil(t, doc.Paths)
+
+	// opA: both refs resolve and are kept.
+	opA := doc.Paths.Paths["/a"].Get
+	require.NotNil(t, opA)
+	assert.SliceContainsT(t, paramRefs(opA), "#/parameters/X-Request-ID",
+		"opA keeps its resolving #/parameters/X-Request-ID ref")
+	require.NotNil(t, opA.Responses)
+	require.NotNil(t, opA.Responses.Default)
+	assert.EqualT(t, "#/responses/ErrorResponse", opA.Responses.Default.Ref.String())
+
+	// opB: both refs are dangling → dropped.
+	opB := doc.Paths.Paths["/b"].Get
+	require.NotNil(t, opB)
+	assert.FalseT(t, slices.Contains(paramRefs(opB), "#/parameters/DoesNotExist"),
+		"opB dangling parameter ref must be dropped")
+	if opB.Responses != nil && opB.Responses.Default != nil {
+		assert.NotEqualT(t, "#/responses/Missing", opB.Responses.Default.Ref.String(),
+			"opB dangling response ref must be dropped")
+	}
+
+	codes := map[grammar.Code]bool{}
+	for _, d := range diags {
+		codes[d.Code] = true
+	}
+	assert.TrueT(t, codes[grammar.CodeDanglingParameterRef], "expected a dangling-parameter-ref warning")
+	assert.TrueT(t, codes[grammar.CodeDanglingResponseRef], "expected a dangling-response-ref warning")
+}
+
 // TestCoverage_SharedParameters_Conflict exercises the keep-first conflict
 // policy (P2, fixture 3): two `swagger:parameters *` structs in different
 // packages register the same short name. The first wins, the later is
