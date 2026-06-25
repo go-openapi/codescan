@@ -105,6 +105,12 @@ type TypeIndex struct {
 	transparentAliases      bool
 	afterDeclComments       bool
 	onDiagnostic            func(grammar.Diagnostic)
+
+	// enrichedFields guards the Phase-B AfterDeclComments field rewrite
+	// (append Field.Comment onto Field.Doc) so a given field is enriched at
+	// most once even if its struct is visited more than once. This is the only
+	// place AfterDeclComments mutates the shared AST.
+	enrichedFields map[*ast.Field]struct{}
 }
 
 // emit delivers d to the consumer's diagnostic sink when one is wired. No-op
@@ -126,9 +132,10 @@ func (a *TypeIndex) emitHintf(code grammar.Code, format string, args ...any) {
 
 func NewTypeIndex(pkgs []*packages.Package, opts ...TypeIndexOption) (*TypeIndex, error) {
 	ac := &TypeIndex{
-		AllPackages: make(map[string]*packages.Package),
-		Models:      make(map[*ast.Ident]*EntityDecl),
-		ExtraModels: make(map[*ast.Ident]*EntityDecl),
+		AllPackages:    make(map[string]*packages.Package),
+		Models:         make(map[*ast.Ident]*EntityDecl),
+		ExtraModels:    make(map[*ast.Ident]*EntityDecl),
+		enrichedFields: make(map[*ast.Field]struct{}),
 	}
 	for _, apply := range opts {
 		apply(ac)
@@ -289,6 +296,11 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 			// ts.Doc is never mutated, so this is idempotent.
 			if a.afterDeclComments {
 				comments = mergeCommentGroups(comments, afterDeclSource(file, ts))
+				// Phase B: fold each struct field's trailing comment into its Doc
+				// (the field-level inlined form, e.g. `B string // swagger:strfmt
+				// date`). Runs AFTER afterDeclSource so leadingBodyComments still
+				// sees the original field Docs for its exclusion set.
+				a.enrichStructFields(ts)
 			}
 
 			decl := &EntityDecl{
@@ -362,6 +374,30 @@ func leadingBodyComments(file *ast.File, st *ast.StructType) *ast.CommentGroup {
 		return nil
 	}
 	return &ast.CommentGroup{List: collected}
+}
+
+// enrichStructFields folds each struct field's trailing line comment
+// (Field.Comment) into its Field.Doc — the field-level inlined form of
+// AfterDeclComments (`B string // swagger:strfmt date`). This mutates the shared
+// AST (the builders read Field.Doc directly), so the enrichedFields guard
+// ensures each field is rewritten at most once. Positions stay ascending
+// (Doc above < trailing comment), so the grammar parses the merged group
+// unchanged. No-op for non-struct types and fields without a trailing comment.
+func (a *TypeIndex) enrichStructFields(ts *ast.TypeSpec) {
+	st, ok := ts.Type.(*ast.StructType)
+	if !ok || st.Fields == nil {
+		return
+	}
+	for _, f := range st.Fields.List {
+		if f.Comment == nil || len(f.Comment.List) == 0 {
+			continue
+		}
+		if _, done := a.enrichedFields[f]; done {
+			continue
+		}
+		f.Doc = mergeCommentGroups(f.Doc, f.Comment)
+		a.enrichedFields[f] = struct{}{}
+	}
 }
 
 // mergeCommentGroups returns a comment group whose List is above ++ extra in

@@ -33,6 +33,12 @@
       "title": "Widget is a widget. This godoc stays clean — no swagger machinery here.",
       "maxProperties": 5,
       "properties": {
+        "created": {
+          "description": "Created is documented with a clean godoc; the format annotation is\ninlined as a trailing comment (Phase B).",
+          "type": "string",
+          "format": "date",
+          "x-go-name": "Created"
+        },
         "name": {
           "type": "string",
           "x-go-name": "Name"

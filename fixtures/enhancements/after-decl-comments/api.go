@@ -17,6 +17,10 @@ type Widget struct {
 	// maxProperties: 5
 
 	Name string `json:"name"`
+
+	// Created is documented with a clean godoc; the format annotation is
+	// inlined as a trailing comment (Phase B).
+	Created string `json:"created"` // swagger:strfmt date
 }
 
 // Count is a plain count. Clean godoc above; annotation inlined below.

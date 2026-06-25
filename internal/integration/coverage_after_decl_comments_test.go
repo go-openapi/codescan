@@ -48,6 +48,10 @@ func TestCoverage_AfterDeclComments_On(t *testing.T) {
 	require.NotNil(t, widget.MaxProperties)
 	assert.EqualT(t, int64(5), *widget.MaxProperties)
 
+	// field-level inlined trailing comment (Phase B): swagger:strfmt date
+	require.MapContainsT(t, widget.Properties, "created")
+	assert.EqualT(t, "date", widget.Properties["created"].Format)
+
 	// defined type inlined trailing: swagger:model countType
 	require.MapContainsT(t, doc.Definitions, "countType")
 	assert.SliceContainsT(t, doc.Definitions["countType"].Type, "integer")
