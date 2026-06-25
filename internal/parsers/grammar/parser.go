@@ -435,6 +435,12 @@ func (s *parseState) parseSchemaBlock(annIdx int, annTok Token, kind AnnotationK
 		return &ParametersBlock{baseBlock: base, Target: target, Path: path, Args: args, Dups: dups}
 	case AnnName:
 		return &NameBlock{baseBlock: base, Name: firstIdentArg(annTok)}
+	case AnnTitle, AnnDescription:
+		// Override annotations dispatch through the schema parser (so
+		// co-located validation keywords surface as Properties) but carry no
+		// typed block of their own — a ClassifierBlock holds the free-text
+		// arg (AnnotationArg) plus any harvested body keywords.
+		return &ClassifierBlock{baseBlock: base, Args: annTok.Args}
 	default:
 		return &UnboundBlock{baseBlock: base}
 	}
@@ -618,13 +624,6 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 			s.emit(Errorf(annTok.Args[0].Pos, CodeInvalidTypeRef,
 				"swagger:type: %q is not a well-formed type reference", annTok.Args[0].Text))
 		}
-	case AnnTitle, AnnDescription:
-		// No structural validation: a bare swagger:title / swagger:description
-		// is well-formed grammar (the empty value is the deliberate
-		// godoc-suppression affordance, D7). The emptiness *warning*
-		// (scan.empty-override) is raised at the builder consumption point —
-		// sibling classifier blocks are not Walk-ed, so a grammar-stored
-		// diagnostic here would not reach OnDiagnostic. See design doc §2/§4.
 	case AnnAllOf, AnnIgnore, AnnAlias, AnnFile:
 	// Optional / no args.
 	default:

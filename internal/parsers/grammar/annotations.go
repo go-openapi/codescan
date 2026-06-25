@@ -190,7 +190,13 @@ func (a AnnotationKind) family() annotationFamily {
 		// required, etc.). It dispatches through the schema parser so the
 		// body keywords surface as Properties rather than being rejected
 		// as context-invalid under a classifier block. See README §parser-contract.
-		AnnName:
+		AnnName,
+		// swagger:title / swagger:description are field/decl overrides that,
+		// like swagger:name, must coexist with the field's own
+		// validation keywords on the same comment group — so they dispatch
+		// through the schema parser too (familySchema), not the classifier
+		// parser which would reject those co-located keywords.
+		AnnTitle, AnnDescription:
 		return familySchema
 	case AnnRoute, AnnOperation:
 		return familyOperation
@@ -198,8 +204,7 @@ func (a AnnotationKind) family() annotationFamily {
 		return familyMeta
 	case AnnStrfmt, AnnAlias, AnnAllOf, AnnEnum,
 		AnnIgnore, AnnDefaultName, AnnType, AnnFile,
-		AnnAdditionalProperties, AnnPatternProperties,
-		AnnTitle, AnnDescription:
+		AnnAdditionalProperties, AnnPatternProperties:
 		return familyClassifier
 	case AnnUnknown:
 		fallthrough

@@ -59,6 +59,20 @@ func TestCoverage_DescriptionTitleOverride_Schema(t *testing.T) {
 	plain := widget.Properties["plain"]
 	assert.NotEqualT(t, "", plain.Description)
 
+	// Override + inline validation keyword coexist on the same field: the
+	// description override applies AND maximum survives (schema-family dispatch).
+	capacity := widget.Properties["capacity"]
+	assert.EqualT(t, "The maximum capacity, in liters.", capacity.Description)
+	require.NotNil(t, capacity.Maximum)
+	assert.EqualT(t, float64(1000), *capacity.Maximum)
+
+	// Multi-line description override (Option B): the body lines fold into one
+	// description, joined with newlines, terminated by the blank line.
+	notes := widget.Properties["notes"]
+	assert.EqualT(t,
+		"Free-form notes about the widget.\nThey may span several lines, all folded into one description.",
+		notes.Description)
+
 	// Empty override: bare swagger:description suppresses the godoc.
 	suppressed := widget.Properties["suppressed"]
 	assert.EqualT(t, "", suppressed.Description)

@@ -266,6 +266,55 @@ func TestParser_DescriptionOverride_BareIsWellFormed(t *testing.T) {
 	}
 }
 
+func TestParser_DescriptionOverride_MultiLineBody(t *testing.T) {
+	// Option B: lines following swagger:description fold into the description
+	// (blank-line / keyword / annotation / EOF terminated), joined with "\n".
+	b := parseString(t, "swagger:description First line of the description.\nSecond line continues it.")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnDescription, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, "First line of the description.\nSecond line continues it.", arg)
+}
+
+func TestParser_DescriptionOverride_BodyStopsAtBlankAndKeyword(t *testing.T) {
+	// A blank line ends the body; a following keyword is not swallowed.
+	b := parseString(t, "swagger:description The value.\nmaximum: 100")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	arg, _ := cb.AnnotationArg()
+	assert.Equal(t, "The value.", arg, "the maximum: keyword must not fold into the description")
+
+	// Bare head + body-only (no inline) folds the body as the whole value.
+	b2 := parseString(t, "swagger:description\nBody only, no inline head.")
+	arg2, hasArg2 := b2.AnnotationArg()
+	require.True(t, hasArg2)
+	assert.Equal(t, "Body only, no inline head.", arg2)
+}
+
+func TestParser_DescriptionOverride_CoexistsWithKeywords(t *testing.T) {
+	// description/title dispatch through the schema family (like swagger:name),
+	// so a co-located validation keyword surfaces as a Property rather than
+	// being rejected as context-invalid under a classifier block.
+	b := parseString(t, "swagger:description The value.\nmaximum: 100")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnDescription, cb.AnnotationKind())
+	arg, _ := cb.AnnotationArg()
+	assert.Equal(t, "The value.", arg)
+	assert.Empty(t, cb.Diagnostics(), "the co-located keyword must not be rejected")
+
+	var hasMax bool
+	for p := range cb.Properties() {
+		if p.Keyword.Name == KwMaximum {
+			hasMax = true
+			assert.Equal(t, "100", p.Value)
+		}
+	}
+	assert.True(t, hasMax, "maximum: must surface as a Property")
+}
+
 func TestParser_ParametersBlock_RequiresAtLeastOneArg(t *testing.T) {
 	b := parseString(t, "swagger:parameters listPets getPet")
 	pb, ok := b.(*ParametersBlock)

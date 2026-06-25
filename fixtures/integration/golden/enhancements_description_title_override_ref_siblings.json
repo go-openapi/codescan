@@ -18,6 +18,13 @@
       "type": "object",
       "title": "A Public Widget",
       "properties": {
+        "capacity": {
+          "description": "The maximum capacity, in liters.",
+          "type": "integer",
+          "format": "int64",
+          "maximum": 1000,
+          "x-go-name": "Capacity"
+        },
         "gadget": {
           "description": "The attached gadget, described for API consumers.",
           "title": "Gadget Ref",
@@ -33,6 +40,11 @@
           "type": "string",
           "title": "Display Label",
           "x-go-name": "Label"
+        },
+        "notes": {
+          "description": "Free-form notes about the widget.\nThey may span several lines, all folded into one description.",
+          "type": "string",
+          "x-go-name": "Notes"
         },
         "plain": {
           "description": "Plain keeps its godoc description because it carries no override",

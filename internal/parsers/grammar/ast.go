@@ -567,7 +567,11 @@ type MetaBlock struct {
 }
 
 // ClassifierBlock covers single-line classifier annotations:
-// strfmt / allOf / ignore / alias / file / type / default.
+// strfmt / allOf / ignore / alias / file / type / default. It also carries the
+// schema-family override annotations swagger:title / swagger:description, whose
+// free-text arg lives in Args[0] while any co-located validation keywords ride
+// the embedded baseBlock.properties (those dispatch through the schema parser,
+// not the classifier parser — see annotationFamily).
 // The Args slice carries the lexer-tokenised positional arguments.
 type ClassifierBlock struct {
 	*baseBlock

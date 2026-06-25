@@ -37,12 +37,32 @@ type Widget struct {
 	// Plain keeps its godoc description because it carries no override
 	Plain string `json:"plain"`
 
+	// Capacity combines a description override with an inline validation
+	// keyword on the same field: the override applies AND maximum is kept
+	// (override annotations dispatch through the schema family, so co-located
+	// keywords survive).
+	//
+	// swagger:description The maximum capacity, in liters.
+	// maximum: 1000
+	Capacity int64 `json:"capacity"`
+
 	// Suppressed has a godoc that is suppressed by a bare swagger:description:
 	// the empty value is applied (description omitted) and scan.empty-override
 	// is raised.
 	//
 	// swagger:description
 	Suppressed string `json:"suppressed"`
+
+	// Notes carries a multi-line description override (Option B): the lines
+	// following the annotation fold into the description until the blank line,
+	// joined with newlines.
+	//
+	// swagger:description Free-form notes about the widget.
+	// They may span several lines, all folded into one description.
+	//
+	// The blank line above terminates the override body; this paragraph is
+	// ordinary godoc and is discarded (the override won).
+	Notes string `json:"notes"`
 
 	// Gadget is a $ref field carrying title + description overrides. Title and
 	// description are symmetric $ref siblings: they ride the same preservation

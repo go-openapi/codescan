@@ -662,7 +662,14 @@ func accumulateBodies(in []Token) []Token {
 			// stream — they have no role in the swagger annotation
 			// grammar and must not contaminate TITLE / DESC.
 			i++
-		case TokenBlank, tokenText, TokenAnnotation, TokenEOF:
+		case TokenAnnotation:
+			if t.Name == labelDescription {
+				i = collectDescriptionBody(in, i, &out)
+			} else {
+				out = append(out, t)
+				i++
+			}
+		case TokenBlank, tokenText, TokenEOF:
 			out = append(out, t)
 			i++
 		default:
@@ -672,6 +679,44 @@ func accumulateBodies(in []Token) []Token {
 	}
 	out = append(out, Token{Kind: TokenEOF})
 	return out
+}
+
+// collectDescriptionBody folds the contiguous prose lines following a
+// `swagger:description` annotation into its argument (Option B, blank-line
+// terminator): the body runs to the first blank line, keyword, annotation, or
+// EOF — anything that is not a plain prose line ends it (so a following
+// `maximum:` keyword or `swagger:*` annotation is never swallowed). The
+// combined inline-plus-body text becomes the annotation's single raw arg, so
+// AnnotationArg() returns the whole multi-line description and the folded lines
+// never reach the prose (TITLE/DESC) surface. Returns the index past the folded
+// lines. `swagger:title` is single-line and is not handled here.
+func collectDescriptionBody(in []Token, i int, out *[]Token) int {
+	ann := in[i]
+	j := i + 1
+	var body []string
+	for j < len(in) && in[j].Kind == tokenText {
+		body = append(body, strings.TrimSpace(in[j].Text))
+		j++
+	}
+	if len(body) > 0 {
+		ann.Args = []Token{combineDescriptionArg(ann, body)}
+	}
+	*out = append(*out, ann)
+	return j
+}
+
+// combineDescriptionArg joins the inline argument (if any) with the folded body
+// lines using "\n" — the same join the prose Description() accumulator uses —
+// preserving the inline arg's position when present.
+func combineDescriptionArg(ann Token, body []string) Token {
+	pos := ann.Pos
+	var parts []string
+	if len(ann.Args) > 0 && ann.Args[0].Text != "" {
+		parts = append(parts, ann.Args[0].Text)
+		pos = ann.Args[0].Pos
+	}
+	parts = append(parts, body...)
+	return Token{Kind: TokenRawValue, Pos: pos, Text: strings.Join(parts, "\n")}
 }
 
 // collectFencedYAML scans from a `---` opener at index i and emits one
