@@ -107,3 +107,42 @@ func TestCoverage_DescriptionTitleOverride_RefSiblings(t *testing.T) {
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_description_title_override_ref_siblings.json")
 }
+
+// TestCoverage_DescriptionTitleOverride_Responses exercises P3: a
+// swagger:description override on a response declaration and on a response
+// header replaces the godoc; a swagger:title on a response is rejected with
+// scan.context-invalid (OpenAPI 2.0 has no Response/Header title) while the
+// description override still applies.
+func TestCoverage_DescriptionTitleOverride_Responses(t *testing.T) {
+	var diags []grammar.Diagnostic
+	doc, err := codescan.Run(&codescan.Options{
+		Packages: []string{"./enhancements/description-title-override-responses/..."},
+		WorkDir:  scantest.FixturesDir(),
+		OnDiagnostic: func(d grammar.Diagnostic) {
+			diags = append(diags, d)
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	require.MapContainsT(t, doc.Responses, "errorResponse")
+	resp := doc.Responses["errorResponse"]
+
+	// Response description overridden (godoc gone).
+	assert.EqualT(t, "The error payload returned to API consumers.", resp.Description)
+
+	// Header description overridden.
+	require.MapContainsT(t, resp.Headers, "X-Error-Code")
+	assert.EqualT(t, "The machine-readable error code.", resp.Headers["X-Error-Code"].Description)
+
+	// swagger:title on the response is rejected as context-invalid.
+	var sawContextInvalid bool
+	for _, d := range diags {
+		if d.Code == grammar.CodeContextInvalid {
+			sawContextInvalid = true
+		}
+	}
+	assert.TrueT(t, sawContextInvalid, "expected scan.context-invalid for swagger:title on a response")
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_description_title_override_responses.json")
+}

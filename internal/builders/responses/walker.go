@@ -71,8 +71,26 @@ func collectHeaderItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []hea
 // block (the only keyword the response decl level accepts).
 func (r *Builder) applyBlockToDecl(resp *oaispec.Response) {
 	block := r.ParseBlock(r.Decl.Comments)
-	resp.Description = block.Prose()
+	resp.Description = r.overriddenDescription(block.Prose(), r.Decl.Comments)
 	r.applyResponseExamples(block, resp)
+}
+
+// overriddenDescription returns the swagger:description override for cg when
+// present (empty included — godoc suppression, D7), else the godoc-derived
+// fallback. A swagger:title on a response / header target is rejected with a
+// context-invalid diagnostic: OpenAPI 2.0 Response and Header objects have no
+// `title` field. See .claude/plans/features/swagger-description-override-design.md.
+func (r *Builder) overriddenDescription(fallback string, cg *ast.CommentGroup) string {
+	titleOv, descOv := r.HarvestOverrides(cg)
+	if titleOv.Present {
+		r.RecordDiagnostic(grammar.Warnf(titleOv.Pos, grammar.CodeContextInvalid,
+			"swagger:title is not applicable here: OpenAPI 2.0 responses and headers have no title; ignored"))
+	}
+	r.WarnEmptyOverride(grammar.AnnDescription, descOv)
+	if descOv.Present {
+		return descOv.Value
+	}
+	return fallback
 }
 
 // applyResponseExamples parses a response-level `examples:` block — a YAML
@@ -123,7 +141,7 @@ func (r *Builder) applyResponseExamples(block grammar.Block, resp *oaispec.Respo
 func (r *Builder) applyBlockToHeader(afld *ast.Field, header *oaispec.Header) {
 	block := r.ParseBlock(afld.Doc)
 
-	header.Description = block.Prose()
+	header.Description = r.overriddenDescription(block.Prose(), afld.Doc)
 	handlers.DispatchHeaderLevel0(block, header, r.RecordDiagnostic)
 
 	if arrayType, ok := afld.Type.(*ast.ArrayType); ok {

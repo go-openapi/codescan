@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/handlers"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/validations"
@@ -52,47 +53,14 @@ func (s *Builder) recordValidationOrigins(block grammar.Block) {
 	})
 }
 
-// declOverride captures an optional swagger:title / swagger:description
-// override harvested from a decl/field comment group. present=false means the
-// annotation is absent (fall back to the godoc-derived value); present=true
-// with value=="" is an explicit empty override — the deliberate
-// godoc-suppression affordance (D7; the grammar already raised
-// scan.empty-override). See
-// .claude/plans/features/swagger-description-override-design.md.
-type declOverride struct {
-	value   string
-	present bool
-}
-
-// overridesFor scans a comment group's sibling classifier blocks for
-// swagger:title / swagger:description overrides. Last occurrence wins.
-func (s *Builder) overridesFor(cg *ast.CommentGroup) (title, desc declOverride) {
-	for _, b := range s.ParseBlocks(cg) {
-		switch b.AnnotationKind() { //nolint:exhaustive // only the two override kinds are relevant here
-		case grammar.AnnTitle:
-			arg, _ := b.AnnotationArg()
-			title = declOverride{value: arg, present: true}
-			s.warnIfEmptyOverride(b, arg)
-		case grammar.AnnDescription:
-			arg, _ := b.AnnotationArg()
-			desc = declOverride{value: arg, present: true}
-			s.warnIfEmptyOverride(b, arg)
-		}
-	}
+// overridesFor harvests the swagger:title / swagger:description overrides for a
+// comment group and raises scan.empty-override for an empty value. Thin wrapper
+// over the shared common.Builder primitive so the schema sites read cleanly.
+func (s *Builder) overridesFor(cg *ast.CommentGroup) (title, desc common.OverrideValue) {
+	title, desc = s.HarvestOverrides(cg)
+	s.WarnEmptyOverride(grammar.AnnTitle, title)
+	s.WarnEmptyOverride(grammar.AnnDescription, desc)
 	return title, desc
-}
-
-// warnIfEmptyOverride raises scan.empty-override when an override annotation
-// resolves to an empty value. Emitted here (not in the parser) because sibling
-// classifier blocks are not Walk-ed, so a grammar-stored diagnostic would not
-// reach OnDiagnostic. The empty value is still applied — empty is the
-// deliberate godoc-suppression affordance (D7).
-func (s *Builder) warnIfEmptyOverride(b grammar.Block, value string) {
-	if value != "" {
-		return
-	}
-	s.RecordDiagnostic(grammar.Warnf(b.Pos(), grammar.CodeEmptyOverride,
-		"swagger:%s override is empty: the godoc-derived value is suppressed", b.AnnotationKind()))
 }
 
 // applyBlockToDecl is the grammar entry point for a top-level model
@@ -122,11 +90,11 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 	// swagger:title / swagger:description overrides replace the godoc-derived
 	// title / description (enum value docs are still appended below).
 	titleOv, descOv := s.overridesFor(s.Decl.Comments)
-	if titleOv.present {
-		schema.Title = titleOv.value
+	if titleOv.Present {
+		schema.Title = titleOv.Value
 	}
-	if descOv.present {
-		description = descOv.value
+	if descOv.Present {
+		description = descOv.Value
 	}
 	schema.Description = resolvers.AppendEnumDesc(description, schema.Extensions, s.Ctx.SkipEnumDescriptions())
 
@@ -162,12 +130,12 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 	}
 
 	description := block.Prose()
-	if descOv.present {
-		description = descOv.value
+	if descOv.Present {
+		description = descOv.Value
 	}
 	ps.Description = resolvers.AppendEnumDesc(description, ps.Extensions, s.Ctx.SkipEnumDescriptions())
-	if titleOv.present {
-		ps.Title = titleOv.value
+	if titleOv.Present {
+		ps.Title = titleOv.Value
 	}
 
 	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
@@ -216,7 +184,7 @@ func (s *Builder) schemaOpts() handlers.SchemaOptions {
 // See [§ref-override](./README.md#ref-override) — JSON-Schema-draft-4
 // shape, per-keyword landing rules, the DescWithRef toggle, and the
 // description-only edge case.
-func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Schema, name string, titleOv, descOv declOverride) {
+func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Schema, name string, titleOv, descOv common.OverrideValue) {
 	originalRef := ps.Ref
 
 	c := &refOverrideCollector{builder: s, enclosing: enclosing, name: name}
@@ -238,12 +206,12 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	// description would be, dropped when it would be) — no title-specific
 	// compounding rule. Both are absent (present=false) ⇒ godoc behaviour.
 	description := block.Prose()
-	if descOv.present {
-		description = descOv.value
+	if descOv.Present {
+		description = descOv.Value
 	}
 	var title string
-	if titleOv.present {
-		title = titleOv.value
+	if titleOv.Present {
+		title = titleOv.Value
 	}
 
 	if !c.anyCollected() && description == "" && title == "" {

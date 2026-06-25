@@ -140,6 +140,51 @@ func (s *Builder) ParseBlock(cg *ast.CommentGroup) grammar.Block {
 	return s.ParseBlocks(cg)[0]
 }
 
+// OverrideValue is an optional swagger:title / swagger:description override
+// harvested from a comment group. Present=false → annotation absent (fall back
+// to the godoc-derived value); Present=true with Value=="" → explicit empty,
+// the deliberate godoc-suppression affordance (design D7). See
+// .claude/plans/features/swagger-description-override-design.md.
+type OverrideValue struct {
+	Value   string
+	Present bool
+	Pos     token.Position
+}
+
+// HarvestOverrides scans a comment group's sibling classifier blocks for the
+// swagger:title / swagger:description override annotations. Last occurrence
+// wins. This is a pure harvest: the diagnostic policy — the empty-override
+// warning, and the context-invalid rejection of swagger:title where a target
+// has no title (responses / headers) — is left to each consumer, since it
+// differs per builder.
+func (s *Builder) HarvestOverrides(cg *ast.CommentGroup) (title, desc OverrideValue) {
+	for _, b := range s.ParseBlocks(cg) {
+		switch b.AnnotationKind() { //nolint:exhaustive // only the two override kinds are relevant here
+		case grammar.AnnTitle:
+			arg, _ := b.AnnotationArg()
+			title = OverrideValue{Value: arg, Present: true, Pos: b.Pos()}
+		case grammar.AnnDescription:
+			arg, _ := b.AnnotationArg()
+			desc = OverrideValue{Value: arg, Present: true, Pos: b.Pos()}
+		}
+	}
+	return title, desc
+}
+
+// WarnEmptyOverride raises scan.empty-override when an override is present with
+// an empty value. The empty value is still applied by the caller — empty is the
+// deliberate godoc-suppression affordance — but the case is flagged in case the
+// marker was left bare by mistake (design D7). Emitted at the consumption point
+// rather than in the parser: sibling classifier blocks are not Walk-ed, so a
+// grammar-stored diagnostic would not reach OnDiagnostic.
+func (s *Builder) WarnEmptyOverride(kind grammar.AnnotationKind, ov OverrideValue) {
+	if !ov.Present || ov.Value != "" {
+		return
+	}
+	s.RecordDiagnostic(grammar.Warnf(ov.Pos, grammar.CodeEmptyOverride,
+		"swagger:%s override is empty: the godoc-derived value is suppressed", kind))
+}
+
 // AppendPostDecl marks decl for post-processing by the spec
 // orchestrator's discovery loop. Idempotent per-Builder: re-appending
 // a decl whose Ident was already seen is a no-op. Nil and Ident-less

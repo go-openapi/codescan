@@ -1,0 +1,31 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "ErrorBody": {
+      "type": "object",
+      "title": "ErrorBody is the error payload returned in the response body.",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/description-title-override-responses"
+    }
+  },
+  "responses": {
+    "errorResponse": {
+      "description": "The error payload returned to API consumers.",
+      "schema": {
+        "$ref": "#/definitions/ErrorBody"
+      },
+      "headers": {
+        "X-Error-Code": {
+          "type": "string",
+          "description": "The machine-readable error code."
+        }
+      }
+    }
+  }
+}
