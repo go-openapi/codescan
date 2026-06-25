@@ -1,0 +1,108 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "listPets",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Limit",
+            "description": "Limit caps the number of pets returned.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "$ref": "#/parameters/X-Request-ID"
+          }
+        ],
+        "responses": {
+          "default": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "createPet",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          {
+            "$ref": "#/parameters/X-API-Key"
+          }
+        ],
+        "responses": {
+          "default": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is the body model.",
+      "properties": {
+        "name": {
+          "description": "Name of the pet.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/shared-parameters"
+    }
+  },
+  "parameters": {
+    "X-API-Key": {
+      "type": "string",
+      "x-go-name": "APIKey",
+      "description": "APIKey authorises access.",
+      "name": "X-API-Key",
+      "in": "header",
+      "required": true
+    },
+    "X-Request-ID": {
+      "type": "string",
+      "x-go-name": "RequestID",
+      "description": "RequestID correlates a request across services.",
+      "name": "X-Request-ID",
+      "in": "header"
+    }
+  },
+  "responses": {
+    "ErrorResponse": {
+      "description": "ErrorResponse is force-registered at #/responses/ErrorResponse and\nreferenced by both routes' Responses blocks (emitted as a $ref).",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "description": "Code is a machine-readable error code.",
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Code"
+          },
+          "message": {
+            "description": "Message is a human-readable error message.",
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

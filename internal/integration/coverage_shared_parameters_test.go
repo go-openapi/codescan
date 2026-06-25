@@ -93,6 +93,8 @@ func TestCoverage_SharedParameters_Refs(t *testing.T) {
 		}
 	}
 	assert.TrueT(t, hasLimit, "listPets keeps its inline `limit` parameter")
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters.json")
 }
 
 // TestCoverage_SharedParameters_PathItem exercises P4 (fixture 2,
@@ -236,6 +238,8 @@ func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 	assert.TrueT(t, codes[grammar.CodeDuplicateTarget], "expected a duplicate-target warning (C1)")
 	assert.TrueT(t, codes[grammar.CodeDuplicateRef], "expected a duplicate-ref warning (C2)")
 	assert.TrueT(t, codes[grammar.CodeDanglingParameterRef], "expected a dangling-parameter-ref warning")
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_overrides.json")
 }
 
 // TestCoverage_SharedParameters_YAMLRefs exercises P6 (fixture 4,
@@ -282,6 +286,8 @@ func TestCoverage_SharedParameters_YAMLRefs(t *testing.T) {
 	}
 	assert.TrueT(t, codes[grammar.CodeDanglingParameterRef], "expected a dangling-parameter-ref warning")
 	assert.TrueT(t, codes[grammar.CodeDanglingResponseRef], "expected a dangling-response-ref warning")
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_yaml.json")
 }
 
 // TestCoverage_SharedParameters_Conflict exercises the keep-first conflict
@@ -333,6 +339,8 @@ func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	}
 	assert.TrueT(t, codes[grammar.CodeSharedParameterConflict], "expected a scan.shared-parameter-conflict warning")
 	assert.TrueT(t, codes[grammar.CodeSharedResponseConflict], "expected a scan.shared-response-conflict warning")
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_conflict.json")
 }
 
 // runSharedPrune scans Fixture 6 (shared-parameters-prune) under ScanModels,

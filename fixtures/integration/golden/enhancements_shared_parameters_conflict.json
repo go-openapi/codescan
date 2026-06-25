@@ -1,0 +1,74 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/a": {
+      "get": {
+        "tags": [
+          "alpha"
+        ],
+        "operationId": "listA",
+        "responses": {
+          "default": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/b": {
+      "get": {
+        "tags": [
+          "beta"
+        ],
+        "operationId": "listB",
+        "responses": {
+          "default": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Status": {
+      "description": "Status is a model at #/definitions/Status, coexisting with the shared\nparameter #/parameters/Status (cross-namespace non-conflict witness).",
+      "type": "object",
+      "properties": {
+        "state": {
+          "description": "State of the resource.",
+          "type": "string",
+          "x-go-name": "State"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/shared-parameters-conflict/pkga"
+    }
+  },
+  "parameters": {
+    "Status": {
+      "type": "string",
+      "name": "Status",
+      "in": "header"
+    },
+    "X-Token": {
+      "type": "string",
+      "x-go-name": "Token",
+      "name": "X-Token",
+      "in": "header"
+    }
+  },
+  "responses": {
+    "ErrorResponse": {
+      "description": "ErrorResponse force-registers #/responses/ErrorResponse. pkgb declares\nthe same response short name with a different body — pkga wins.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "description": "Code is a machine-readable error code.",
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Code"
+          }
+        }
+      }
+    }
+  }
+}
