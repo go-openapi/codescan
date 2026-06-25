@@ -2,25 +2,48 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
-    "Person": {
+    "Gadget": {
       "type": "object",
-      "title": "Person represents an individual.",
+      "title": "Gadget is a small component.",
       "properties": {
-        "custName": {
-          "description": "CustName mirrors the cust name doc-link convention.",
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
+    },
+    "Ledger": {
+      "type": "object",
+      "title": "Ledger records stock movements.",
+      "properties": {
+        "entries": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Entries"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links/inventory"
+    },
+    "Order": {
+      "type": "object",
+      "title": "Order captures a purchase.",
+      "properties": {
+        "customer_name": {
+          "description": "CustName is the buyer.",
           "type": "string",
           "x-go-name": "CustName"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
     },
-    "Widget": {
-      "description": "More detail references the person again and a widget pointer.",
+    "gizmo": {
+      "description": "More detail mentions a Gadget pointer, a Ledger, and an\nunknown sprocket.",
       "type": "object",
-      "title": "Widget is owned by a person and tracked in a ledger.",
+      "title": "Gizmo is the primary Gadget holder and references Order.customer_name.",
       "properties": {
         "holder": {
-          "description": "Holder references the person who owns this widget.",
+          "description": "Holder points at the Gadget that owns this widget.",
           "type": "string",
           "x-go-name": "Holder"
         },
@@ -29,8 +52,12 @@
           "type": "integer",
           "format": "int64",
           "x-go-name": "Index"
+        },
+        "ledger": {
+          "$ref": "#/definitions/Ledger"
         }
       },
+      "x-go-name": "Widget",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
     }
   }

@@ -85,8 +85,8 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 		return true
 	}
 
-	schema.Title = s.CleanGoDoc(block.PreambleTitle())
-	description := s.CleanGoDoc(block.PreambleDescription())
+	schema.Title = s.CleanGoDocSelf(block.PreambleTitle())
+	description := s.CleanGoDocSelf(block.PreambleDescription())
 	// swagger:title / swagger:description overrides replace the godoc-derived
 	// title / description (enum value docs are still appended below). Overrides
 	// are author-written and never passed through CleanGoDoc.

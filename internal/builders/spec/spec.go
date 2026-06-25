@@ -206,6 +206,15 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 		return defKey
 	})
 
+	// CleanGoDoc idiom recomposition: doc-links resolved at the consumption seam
+	// were encoded as markers carrying a definition key; now that names are final
+	// (post-reduce), substitute each marker for its schema's exposed name. A
+	// no-op when CleanGoDoc is off (no markers were emitted). See
+	// .claude/plans/features/godoc-filter-design.md §3.
+	if s.ctx.CleanGoDoc() {
+		s.substituteGodocMarkers(renames)
+	}
+
 	if s.input.Swagger == "" {
 		s.input.Swagger = "2.0"
 	}

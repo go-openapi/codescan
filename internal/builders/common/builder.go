@@ -190,15 +190,34 @@ func (s *Builder) WarnEmptyOverride(kind grammar.AnnotationKind, ov OverrideValu
 // derived prose, returning text unchanged when the option is off. It MUST be
 // applied only to godoc-derived title / description text — never to author-
 // written swagger:title / swagger:description override values, which are
-// deliberate and harvested through HarvestOverrides.
+// deliberate and harvested through HarvestOverrides. Resolvable doc-links are
+// recomposed (via markers; see godoclink) to the referenced schema's exposed
+// name; the rest are humanized.
 func (s *Builder) CleanGoDoc(text string) string {
 	if !s.Ctx.CleanGoDoc() {
 		return text
 	}
 
-	// P1: resolution-free cleanup only. The Resolver / Self (idiom recomposition)
-	// are wired in a later phase.
-	return godoclink.Clean(text, godoclink.Options{Mangler: s.Ctx.Mangler()})
+	return godoclink.Clean(text, godoclink.Options{
+		Mangler:  s.Ctx.Mangler(),
+		Resolver: s.godocResolver(),
+	})
+}
+
+// CleanGoDocSelf is CleanGoDoc plus leading self-name recomposition: the decl's
+// own godoc-convention leading name ("Widget" in "Widget does things") is
+// recomposed to its exposed definition name. Use it for a declaration's
+// title / description; use CleanGoDoc for field / member prose.
+func (s *Builder) CleanGoDocSelf(text string) string {
+	if !s.Ctx.CleanGoDoc() {
+		return text
+	}
+
+	return godoclink.Clean(text, godoclink.Options{
+		Mangler:  s.Ctx.Mangler(),
+		Resolver: s.godocResolver(),
+		Self:     s.godocSelf(),
+	})
 }
 
 // AppendPostDecl marks decl for post-processing by the spec
