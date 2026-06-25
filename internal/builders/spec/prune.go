@@ -50,6 +50,11 @@ func (s *Builder) pruneUnusedModels() {
 		return
 	}
 
+	// C4: prune unreferenced shared parameters / responses FIRST, so a
+	// definition kept alive only by a now-pruned shared object becomes prunable
+	// in the definition pass below. See .claude/plans/features/shared-parameters-fixtures.md §6b.
+	s.pruneUnusedSharedObjects(onDiag)
+
 	if len(s.input.Definitions) == 0 {
 		return
 	}
@@ -149,6 +154,109 @@ func (s *Builder) rootRefs() []string {
 	}
 
 	return out
+}
+
+// pruneUnusedSharedObjects drops shared parameters (#/parameters/*) and shared
+// responses (#/responses/*) that no operation or path-item references (C4). It
+// runs BEFORE the definition reachability walk so the surviving shared objects
+// (which are reachability roots) seed that walk, and a definition kept alive
+// only by a now-pruned shared object becomes prunable in turn.
+//
+// InputSpec-supplied shared objects are pinned (never pruned), mirroring the
+// definitions rule. Each drop raises a located scan.pruned-unused Hint.
+func (s *Builder) pruneUnusedSharedObjects(onDiag func(grammar.Diagnostic)) {
+	refParams, refResponses := s.collectSharedRefs()
+
+	// Shared parameters.
+	prunedParams := make([]string, 0, len(s.parameters))
+	for name := range s.parameters {
+		if _, pinned := s.pinnedParams[name]; pinned {
+			continue
+		}
+		if _, used := refParams[name]; used {
+			continue
+		}
+		prunedParams = append(prunedParams, name)
+	}
+	sort.Strings(prunedParams)
+	for _, name := range prunedParams {
+		delete(s.parameters, name)
+		if onDiag != nil {
+			onDiag(grammar.Hintf(s.sharedParamPos[name], grammar.CodePrunedUnused,
+				"shared parameter %q pruned: not referenced by any operation or path-item", name))
+		}
+	}
+
+	// Shared responses.
+	prunedResponses := make([]string, 0, len(s.responses))
+	for name := range s.responses {
+		if _, pinned := s.pinnedResponses[name]; pinned {
+			continue
+		}
+		if _, used := refResponses[name]; used {
+			continue
+		}
+		prunedResponses = append(prunedResponses, name)
+	}
+	sort.Strings(prunedResponses)
+	for _, name := range prunedResponses {
+		delete(s.responses, name)
+		s.ctx.DropDeferredOrigins(responseOriginKey(name)) // no orphan provenance
+		if onDiag != nil {
+			onDiag(grammar.Hintf(s.sharedRespPos[name], grammar.CodePrunedUnused,
+				"shared response %q pruned: not referenced by any operation or path-item", name))
+		}
+	}
+}
+
+// collectSharedRefs scans every path-item and operation for references into the
+// shared namespaces, returning the set of shared-parameter names reached by a
+// #/parameters/{name} $ref and the set of shared-response names reached by a
+// #/responses/{name} $ref. It is the read-only "is referenced" mirror of the
+// ref-application passes (applyParameterRefs / applyPathItemParameters / route
+// response binding) and the validateSharedRefs safety net.
+func (s *Builder) collectSharedRefs() (params, responses map[string]struct{}) {
+	params = map[string]struct{}{}
+	responses = map[string]struct{}{}
+	if s.input.Paths == nil {
+		return params, responses
+	}
+
+	markParam := func(ref oaispec.Ref) {
+		if name, ok := sharedRefName(ref, "#/parameters/"); ok {
+			params[name] = struct{}{}
+		}
+	}
+	markResp := func(ref oaispec.Ref) {
+		if name, ok := sharedRefName(ref, "#/responses/"); ok {
+			responses[name] = struct{}{}
+		}
+	}
+
+	for _, pi := range s.input.Paths.Paths {
+		for i := range pi.Parameters {
+			markParam(pi.Parameters[i].Ref)
+		}
+		for _, op := range operationsOf(pi) {
+			if op == nil {
+				continue
+			}
+			for i := range op.Parameters {
+				markParam(op.Parameters[i].Ref)
+			}
+			if op.Responses == nil {
+				continue
+			}
+			if op.Responses.Default != nil {
+				markResp(op.Responses.Default.Ref)
+			}
+			for _, r := range op.Responses.StatusCodeResponses {
+				markResp(r.Ref)
+			}
+		}
+	}
+
+	return params, responses
 }
 
 // collectDefRefs walks sch and every sub-schema, invoking mark for each

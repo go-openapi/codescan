@@ -51,6 +51,17 @@ type Builder struct {
 	// rename (scan.renamed-definition) Hints can be located at the originating
 	// Go type even though the spec node may by then be gone or renamed.
 	declPos map[string]token.Position
+	// sharedParamPos / sharedRespPos record the source position of each scanned
+	// shared parameter / response, keyed by its registered name, so the shared
+	// prune (scan.pruned-unused, C4) can locate its Hint at the originating Go
+	// declaration.
+	sharedParamPos map[string]token.Position
+	sharedRespPos  map[string]token.Position
+	// pinnedParams / pinnedResponses are the shared parameters / responses
+	// supplied via InputSpec (present before the scan). They are pinned: never
+	// pruned, mirroring the definitions rule.
+	pinnedParams    map[string]struct{}
+	pinnedResponses map[string]struct{}
 }
 
 func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *Builder {
@@ -75,15 +86,30 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 		input.Extensions = make(oaispec.Extensions)
 	}
 
+	// Snapshot the InputSpec-supplied shared parameters / responses before the
+	// scan adds any: these are pinned (never pruned by C4).
+	pinnedParams := make(map[string]struct{}, len(input.Parameters))
+	for name := range input.Parameters {
+		pinnedParams[name] = struct{}{}
+	}
+	pinnedResponses := make(map[string]struct{}, len(input.Responses))
+	for name := range input.Responses {
+		pinnedResponses[name] = struct{}{}
+	}
+
 	return &Builder{
-		ctx:         sc,
-		input:       input,
-		scanModels:  scanModels,
-		operations:  collectOperationsFromInput(input),
-		definitions: input.Definitions,
-		responses:   input.Responses,
-		parameters:  input.Parameters,
-		declPos:     make(map[string]token.Position),
+		ctx:             sc,
+		input:           input,
+		scanModels:      scanModels,
+		operations:      collectOperationsFromInput(input),
+		definitions:     input.Definitions,
+		responses:       input.Responses,
+		parameters:      input.Parameters,
+		declPos:         make(map[string]token.Position),
+		sharedParamPos:  make(map[string]token.Position),
+		sharedRespPos:   make(map[string]token.Position),
+		pinnedParams:    pinnedParams,
+		pinnedResponses: pinnedResponses,
 	}
 }
 
@@ -153,6 +179,12 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// model cannot force a spurious collision rename on a used one. See
 	// .claude/plans/prune-unused-models.md.
 	s.pruneUnusedModels()
+
+	// Fire the deferred shared-response provenance anchors buffered during
+	// buildResponses (only when PruneUnusedModels + OnProvenance are both on);
+	// anchors of responses dropped by the prune above were already discarded, so
+	// none dangle. A no-op otherwise.
+	s.ctx.FlushDeferredOrigins()
 
 	// Final stage: shorten the fully-qualified, collision-proof
 	// definition keys produced during discovery back to user-facing
@@ -450,6 +482,12 @@ func (s *Builder) buildResponses() error {
 	// NOT in the set, so a scanned struct still legitimately extends it.
 	scanned := make(map[string]string)
 
+	// Under PruneUnusedModels a shared response may be pruned after the build
+	// (C4). Buffer its provenance anchors (top-level node + headers + inline
+	// body sub-anchors) so a pruned response leaves none dangling; survivors are
+	// flushed verbatim by FlushDeferredOrigins after the prune.
+	deferOrigins := s.ctx.OriginEnabled() && s.ctx.PruneUnusedModels()
+
 	// build responses dictionary
 	for _, decl := range decls {
 		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
@@ -465,11 +503,17 @@ func (s *Builder) buildResponses() error {
 				return nil
 			}
 
+			if deferOrigins && name != "" {
+				s.ctx.BeginDeferredOrigins(responseOriginKey(name))
+				defer s.ctx.EndDeferredOrigins()
+			}
+
 			if err := rb.Build(s.responses); err != nil {
 				return err
 			}
 			s.discovered = append(s.discovered, rb.PostDeclarations()...)
 			scanned[name] = declLabel(decl)
+			s.sharedRespPos[name] = s.ctx.PosOf(decl.Ident.Pos())
 
 			// Cross-ref linkage: anchor the top-level response node to its
 			// swagger:response declaration; headers/body resolve to it.
@@ -485,6 +529,10 @@ func (s *Builder) buildResponses() error {
 
 	return nil
 }
+
+// responseOriginKey is the deferred-provenance buffer key for a shared response
+// (see ScanCtx.BeginDeferredOrigins). Keyed by the registered response name.
+func responseOriginKey(name string) string { return "responses/" + name }
 
 // sharedParamCandidate is one `swagger:parameters *` registration awaiting
 // merge into the top-level #/parameters map. Candidates are collected from
@@ -594,6 +642,7 @@ func (s *Builder) registerSharedParameters(candidates []sharedParamCandidate) {
 		}
 		s.parameters[c.name] = c.param
 		owners[c.name] = c.label
+		s.sharedParamPos[c.name] = c.pos
 	}
 }
 

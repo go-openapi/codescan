@@ -65,6 +65,17 @@ type ScanCtx struct {
 	defOrigins map[string][]Provenance
 	curDefKey  string
 
+	// deferredOrigins buffers provenance anchors for top-level spec nodes that
+	// may be pruned after the build (shared responses under PruneUnusedModels),
+	// keyed by an arbitrary caller-chosen key. Unlike defOrigins these are
+	// flushed verbatim — the nodes are never renamed, only possibly dropped — so
+	// a pruned node's anchors can be discarded (DropDeferredOrigins) before
+	// FlushDeferredOrigins fires the survivors. curDeferredKey marks the node
+	// currently being built (empty outside such a window). Distinct from
+	// defOrigins: a definition build is never nested inside a deferred window.
+	deferredOrigins map[string][]Provenance
+	curDeferredKey  string
+
 	// seenDiags suppresses exact-duplicate diagnostics on the OnDiagnostic
 	// stream over one scan (see EmitDiagnostic).
 	seenDiags map[diagKey]struct{}
@@ -366,6 +377,10 @@ func (s *ScanCtx) RecordOrigin(pointer string, pos token.Position) {
 		s.defOrigins[s.curDefKey] = append(s.defOrigins[s.curDefKey], Provenance{Pointer: pointer, Pos: pos})
 		return
 	}
+	if s.curDeferredKey != "" {
+		s.deferredOrigins[s.curDeferredKey] = append(s.deferredOrigins[s.curDeferredKey], Provenance{Pointer: pointer, Pos: pos})
+		return
+	}
 	cb(Provenance{Pointer: pointer, Pos: pos})
 }
 
@@ -423,6 +438,58 @@ func (s *ScanCtx) FlushDefOrigins(finalName func(defKey string) string) {
 
 	s.defOrigins = nil
 	s.curDefKey = ""
+}
+
+// BeginDeferredOrigins opens a buffering window keyed by key for a top-level
+// spec node that may be pruned after the build (a shared response). Until
+// [EndDeferredOrigins], every [RecordOrigin] call is buffered under key instead
+// of fired, so it can be dropped wholesale ([DropDeferredOrigins]) if the node
+// is pruned, or flushed verbatim ([FlushDeferredOrigins]) if it survives. No-op
+// when no provenance sink is wired. Non-reentrant.
+func (s *ScanCtx) BeginDeferredOrigins(key string) {
+	if s.opts.OnProvenance == nil {
+		return
+	}
+	if s.deferredOrigins == nil {
+		s.deferredOrigins = make(map[string][]Provenance)
+	}
+	s.curDeferredKey = key
+}
+
+// EndDeferredOrigins closes the current deferred buffering window.
+func (s *ScanCtx) EndDeferredOrigins() {
+	s.curDeferredKey = ""
+}
+
+// DropDeferredOrigins discards the buffered anchors for a deferred node that has
+// been pruned, so its provenance is never emitted (no orphan pointer into a node
+// absent from the final document).
+func (s *ScanCtx) DropDeferredOrigins(key string) {
+	delete(s.deferredOrigins, key)
+}
+
+// FlushDeferredOrigins fires every still-buffered deferred anchor verbatim (the
+// nodes are never renamed) in a deterministic order, then clears the buffer.
+func (s *ScanCtx) FlushDeferredOrigins() {
+	cb := s.opts.OnProvenance
+	if cb == nil || len(s.deferredOrigins) == 0 {
+		return
+	}
+
+	keys := make([]string, 0, len(s.deferredOrigins))
+	for k := range s.deferredOrigins {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	for _, key := range keys {
+		for _, rec := range s.deferredOrigins[key] {
+			cb(rec)
+		}
+	}
+
+	s.deferredOrigins = nil
+	s.curDeferredKey = ""
 }
 
 // RecordParamOrigin stashes the source position of one parameter field, keyed

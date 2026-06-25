@@ -1,0 +1,46 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/p": {
+      "get": {
+        "tags": [
+          "prune"
+        ],
+        "operationId": "listP",
+        "parameters": [
+          {
+            "$ref": "#/parameters/X-Used"
+          }
+        ],
+        "responses": {
+          "default": {
+            "$ref": "#/responses/UsedResponse"
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "X-Used": {
+      "type": "string",
+      "x-go-name": "Used",
+      "name": "X-Used",
+      "in": "header"
+    }
+  },
+  "responses": {
+    "UsedResponse": {
+      "description": "UsedResponse is referenced by listP's Responses block → survives.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "OK message.",
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

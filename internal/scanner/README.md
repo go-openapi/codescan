@@ -115,14 +115,29 @@ three emission modes:
 Without `ScanModels` the flag is a no-op (the set is already
 reachable-only) and raises one positionless `scan.pruned-unused` Hint.
 
+**Shared objects pruned first (C4).** Before the definition walk, the
+shared parameters (`#/parameters/*`) and responses (`#/responses/*`) that
+no operation and no path-item references are themselves pruned
+(`spec/prune.go`, `pruneUnusedSharedObjects`; the read-only "is
+referenced" mirror is `collectSharedRefs`). `InputSpec`-supplied shared
+objects are pinned (never pruned), mirroring the definitions rule. Each
+drop raises a located `scan.pruned-unused` Hint. Because this precedes
+the definition walk, a definition kept alive only by a now-pruned shared
+object becomes prunable in turn. A pruned shared response's buffered
+provenance anchors are dropped (`DropDeferredOrigins`) so none dangle —
+shared-response anchors are buffered (`BeginDeferredOrigins`) and flushed
+verbatim after the prune only when `PruneUnusedModels` is set, so the
+non-prune anchor stream is unchanged.
+
 **Reachability.** Roots are the paths (operation body parameters +
-response schemas), the shared `responses` and `parameters`, and every
-definition supplied via `InputSpec`. Overlay definitions are **pinned**:
-never pruned and seeded as roots so their `$ref` targets survive. The
-walk (`spec/prune.go`, `collectDefRefs`) is the read-only mirror of the
-ref-rewriter (`reduce.go`, `rewriteSchemaRefs`) and must cover the same
-container set; a `visited` set handles recursive / cyclic models. A
-model referenced only by another unreferenced model is itself pruned.
+response schemas), the *surviving* shared `responses` and `parameters`,
+and every definition supplied via `InputSpec`. Overlay definitions are
+**pinned**: never pruned and seeded as roots so their `$ref` targets
+survive. The walk (`spec/prune.go`, `collectDefRefs`) is the read-only
+mirror of the ref-rewriter (`reduce.go`, `rewriteSchemaRefs`) and must
+cover the same container set; a `visited` set handles recursive / cyclic
+models. A model referenced only by another unreferenced model is itself
+pruned.
 
 **Ordering — before name reduction.** The prune runs *before*
 `reduceDefinitionNames`, in the fully-qualified `#/definitions/<pkgpath>/

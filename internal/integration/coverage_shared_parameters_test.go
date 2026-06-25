@@ -334,3 +334,76 @@ func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	assert.TrueT(t, codes[grammar.CodeSharedParameterConflict], "expected a scan.shared-parameter-conflict warning")
 	assert.TrueT(t, codes[grammar.CodeSharedResponseConflict], "expected a scan.shared-response-conflict warning")
 }
+
+// runSharedPrune scans Fixture 6 (shared-parameters-prune) under ScanModels,
+// toggling PruneUnusedModels, and collects the scan.pruned-unused Hints.
+func runSharedPrune(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnostic) {
+	t.Helper()
+	var pruned []grammar.Diagnostic
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:          []string{"./enhancements/shared-parameters-prune/..."},
+		WorkDir:           scantest.FixturesDir(),
+		ScanModels:        true,
+		PruneUnusedModels: prune,
+		OnDiagnostic: func(d grammar.Diagnostic) {
+			if d.Code == grammar.CodePrunedUnused {
+				pruned = append(pruned, d)
+			}
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	return doc, pruned
+}
+
+// TestCoverage_SharedParameters_Prune_Off is the control for the prune
+// extension (C4, P7): with ScanModels and no PruneUnusedModels, every shared
+// parameter and response is emitted — including the ones no operation
+// references (X-Unused, UnusedResponse).
+func TestCoverage_SharedParameters_Prune_Off(t *testing.T) {
+	doc, pruned := runSharedPrune(t, false)
+
+	for _, name := range []string{"X-Used", "X-Unused"} {
+		assert.Contains(t, doc.Parameters, name)
+	}
+	for _, name := range []string{"UsedResponse", "UnusedResponse"} {
+		assert.Contains(t, doc.Responses, name)
+	}
+	assert.Empty(t, pruned, "nothing is pruned without the flag")
+}
+
+// TestCoverage_SharedParameters_Prune_On is the core case (C4, P7): ScanModels
+// + PruneUnusedModels drops the shared parameter and response that no operation
+// or path-item references (X-Unused, UnusedResponse) while keeping the
+// referenced pair (X-Used via the standalone reference, UsedResponse via the
+// route's Responses block). Each drop raises one located scan.pruned-unused Hint.
+func TestCoverage_SharedParameters_Prune_On(t *testing.T) {
+	doc, pruned := runSharedPrune(t, true)
+
+	// Referenced shared objects survive.
+	assert.Contains(t, doc.Parameters, "X-Used")
+	assert.Contains(t, doc.Responses, "UsedResponse")
+	assert.Len(t, doc.Parameters, 1, "only the referenced shared parameter survives")
+	assert.Len(t, doc.Responses, 1, "only the referenced shared response survives")
+
+	// Unreferenced shared objects are pruned.
+	assert.NotContains(t, doc.Parameters, "X-Unused")
+	assert.NotContains(t, doc.Responses, "UnusedResponse")
+
+	// The surviving reference still resolves: listP keeps its #/parameters/X-Used
+	// $ref and its default #/responses/UsedResponse.
+	op := doc.Paths.Paths["/p"].Get
+	require.NotNil(t, op)
+	assert.Contains(t, paramRefs(op), "#/parameters/X-Used")
+	require.NotNil(t, op.Responses.Default)
+	assert.EqualT(t, "#/responses/UsedResponse", op.Responses.Default.Ref.String())
+
+	// One located Hint per pruned shared object (severity Hint, sourced line).
+	require.Len(t, pruned, 2, "one Hint per pruned shared object")
+	for _, d := range pruned {
+		assert.Equal(t, grammar.SeverityHint, d.Severity, "a prune is informational")
+		assert.Positive(t, d.Pos.Line, "the Hint is located at the pruned declaration")
+	}
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_prune.json")
+}
