@@ -21,8 +21,8 @@ func (o *Builder) applyBlockToOperation(op *oaispec.Operation) error {
 	block := grammar.NewParser(o.Ctx.FileSet(),
 		grammar.WithSingleLineCommentAsDescription(o.Ctx.SingleLineCommentAsDescription())).Parse(o.path.Remaining)
 
-	op.Summary = block.Title()
-	op.Description = block.Description()
+	op.Summary = o.CleanGoDoc(block.Title())
+	op.Description = o.CleanGoDoc(block.Description())
 
 	for y := range block.YAMLBlocks() {
 		// Parameters already bound to this operation by a

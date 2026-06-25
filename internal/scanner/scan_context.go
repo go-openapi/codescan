@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
+	"github.com/go-openapi/swag/mangling"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -79,6 +80,12 @@ type ScanCtx struct {
 	// seenDiags suppresses exact-duplicate diagnostics on the OnDiagnostic
 	// stream over one scan (see EmitDiagnostic).
 	seenDiags map[diagKey]struct{}
+
+	// mangler is the shared name mangler used for godoc humanization (the
+	// CleanGoDoc option) and reusable by any builder needing swag-style name
+	// transforms. Constructed once per scan; its methods are pool-backed and
+	// safe to call across the (currently sequential) per-decl builds.
+	mangler *mangling.NameMangler
 }
 
 func NewScanCtx(opts *Options) (*ScanCtx, error) {
@@ -115,10 +122,13 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 		return nil, err
 	}
 
+	mangler := mangling.NewNameMangler()
+
 	return &ScanCtx{
-		pkgs: pkgs,
-		app:  app,
-		opts: opts,
+		pkgs:    pkgs,
+		app:     app,
+		opts:    opts,
+		mangler: &mangler,
 	}, nil
 }
 
@@ -224,6 +234,16 @@ func (s *ScanCtx) EmitXGoType() bool {
 
 func (s *ScanCtx) SingleLineCommentAsDescription() bool {
 	return s.opts.SingleLineCommentAsDescription
+}
+
+// CleanGoDoc reports whether godoc-syntax filtering is enabled (Options.CleanGoDoc).
+func (s *ScanCtx) CleanGoDoc() bool {
+	return s.opts.CleanGoDoc
+}
+
+// Mangler returns the scan's shared name mangler (swag-style name transforms).
+func (s *ScanCtx) Mangler() *mangling.NameMangler {
+	return s.mangler
 }
 
 func (s *ScanCtx) DescWithRef() bool {

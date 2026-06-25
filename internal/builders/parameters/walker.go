@@ -75,7 +75,7 @@ func collectParamItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []para
 func (p *Builder) applyBlockToField(afld *ast.Field, param *oaispec.Parameter) error {
 	block := p.ParseBlock(afld.Doc)
 
-	param.Description = block.Prose()
+	param.Description = p.CleanGoDoc(block.Prose())
 	param.Description = resolvers.AppendEnumDesc(param.Description, param.Extensions, p.Ctx.SkipEnumDescriptions())
 
 	if err := handlers.DispatchParamLevel0(block, param, p.RecordDiagnostic); err != nil {

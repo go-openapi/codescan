@@ -19,13 +19,16 @@ import (
 //
 // swspec may have a nil Info field on entry; the helper allocates
 // one before writing the first Info.* value.
-func applyMetaBlock(swspec *spec.Swagger, block grammar.Block) error {
+func applyMetaBlock(swspec *spec.Swagger, block grammar.Block, clean func(string) string) error {
 	if swspec.Info == nil {
 		swspec.Info = new(spec.Info)
 	}
 
-	swspec.Info.Title = stripPackagePrefix(block.Title())
-	swspec.Info.Description = block.Description()
+	// Title / Description are godoc-derived (swagger:meta has no override path),
+	// so they pass through the CleanGoDoc filter; the remaining meta fields are
+	// structured values, not prose, and are left untouched.
+	swspec.Info.Title = clean(stripPackagePrefix(block.Title()))
+	swspec.Info.Description = clean(block.Description())
 
 	for p := range block.Properties() {
 		if p.ItemsDepth != 0 {

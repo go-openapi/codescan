@@ -1,0 +1,37 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Person": {
+      "type": "object",
+      "title": "Person represents an individual.",
+      "properties": {
+        "custName": {
+          "description": "CustName mirrors the [Order.CustName] doc-link convention.",
+          "type": "string",
+          "x-go-name": "CustName"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
+    },
+    "Widget": {
+      "description": "More detail references the [Person] again and a [*Widget] pointer.\n\n[the spec]: https://example.com/spec",
+      "type": "object",
+      "title": "Widget is owned by a [Person] and tracked in a [inventory.Ledger].",
+      "properties": {
+        "holder": {
+          "description": "Holder references the [Person] who owns this widget.",
+          "type": "string",
+          "x-go-name": "Holder"
+        },
+        "index": {
+          "description": "Index is element [0] in the [see notes] list; the [id] stays bare.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Index"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
+    }
+  }
+}

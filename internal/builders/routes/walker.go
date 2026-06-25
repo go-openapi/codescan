@@ -80,8 +80,8 @@ func (r *Builder) applyBlockToRoute(op *oaispec.Operation) error {
 	block := grammar.NewParser(r.Ctx.FileSet(),
 		grammar.WithSingleLineCommentAsDescription(r.Ctx.SingleLineCommentAsDescription())).Parse(r.route.Remaining)
 
-	op.Summary = block.Title()
-	op.Description = block.Description()
+	op.Summary = r.CleanGoDoc(block.Title())
+	op.Description = r.CleanGoDoc(block.Description())
 
 	for prop := range block.Properties() {
 		if prop.ItemsDepth != 0 {

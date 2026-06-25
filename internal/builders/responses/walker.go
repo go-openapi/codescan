@@ -71,7 +71,7 @@ func collectHeaderItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []hea
 // block (the only keyword the response decl level accepts).
 func (r *Builder) applyBlockToDecl(resp *oaispec.Response) {
 	block := r.ParseBlock(r.Decl.Comments)
-	resp.Description = r.overriddenDescription(block.Prose(), r.Decl.Comments)
+	resp.Description = r.overriddenDescription(r.CleanGoDoc(block.Prose()), r.Decl.Comments)
 	r.applyResponseExamples(block, resp)
 }
 
@@ -141,7 +141,7 @@ func (r *Builder) applyResponseExamples(block grammar.Block, resp *oaispec.Respo
 func (r *Builder) applyBlockToHeader(afld *ast.Field, header *oaispec.Header) {
 	block := r.ParseBlock(afld.Doc)
 
-	header.Description = r.overriddenDescription(block.Prose(), afld.Doc)
+	header.Description = r.overriddenDescription(r.CleanGoDoc(block.Prose()), afld.Doc)
 	handlers.DispatchHeaderLevel0(block, header, r.RecordDiagnostic)
 
 	if arrayType, ok := afld.Type.(*ast.ArrayType); ok {

@@ -85,10 +85,11 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 		return true
 	}
 
-	schema.Title = block.PreambleTitle()
-	description := block.PreambleDescription()
+	schema.Title = s.CleanGoDoc(block.PreambleTitle())
+	description := s.CleanGoDoc(block.PreambleDescription())
 	// swagger:title / swagger:description overrides replace the godoc-derived
-	// title / description (enum value docs are still appended below).
+	// title / description (enum value docs are still appended below). Overrides
+	// are author-written and never passed through CleanGoDoc.
 	titleOv, descOv := s.overridesFor(s.Decl.Comments)
 	if titleOv.Present {
 		schema.Title = titleOv.Value
@@ -129,7 +130,7 @@ func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, 
 		return
 	}
 
-	description := block.Prose()
+	description := s.CleanGoDoc(block.Prose())
 	if descOv.Present {
 		description = descOv.Value
 	}
@@ -205,7 +206,7 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	// symmetric $ref sibling that rides description's fate (preserved when
 	// description would be, dropped when it would be) — no title-specific
 	// compounding rule. Both are absent (present=false) ⇒ godoc behaviour.
-	description := block.Prose()
+	description := s.CleanGoDoc(block.Prose())
 	if descOv.Present {
 		description = descOv.Value
 	}

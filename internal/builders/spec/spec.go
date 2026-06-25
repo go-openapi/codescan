@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/godoclink"
 	"github.com/go-openapi/codescan/internal/builders/operations"
 	"github.com/go-openapi/codescan/internal/builders/parameters"
 	"github.com/go-openapi/codescan/internal/builders/responses"
@@ -381,12 +382,24 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	return nil
 }
 
+// cleanGoDoc applies godoc-syntax filtering (Options.CleanGoDoc) to godoc-
+// derived prose, returning text unchanged when the option is off. The spec
+// builder owns its own ScanCtx (it does not embed common.Builder), so it
+// carries a sibling of common.Builder.CleanGoDoc for the swagger:meta site.
+func (s *Builder) cleanGoDoc(text string) string {
+	if !s.ctx.CleanGoDoc() {
+		return text
+	}
+
+	return godoclink.Clean(text, s.ctx.Mangler())
+}
+
 func (s *Builder) buildMeta() error {
 	parser := grammar.NewParser(s.ctx.FileSet(),
 		grammar.WithSingleLineCommentAsDescription(s.ctx.SingleLineCommentAsDescription()))
 	for cg := range s.ctx.Meta() {
 		block := parser.Parse(cg)
-		if err := applyMetaBlock(s.input, block); err != nil {
+		if err := applyMetaBlock(s.input, block, s.cleanGoDoc); err != nil {
 			return err
 		}
 

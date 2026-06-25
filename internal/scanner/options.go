@@ -213,6 +213,24 @@ type Options struct {
 	// position-agnostic. Struct fields and const enums are follow-ups.
 	AfterDeclComments bool
 
+	// CleanGoDoc rewrites godoc-specific syntax that reads as noise when a
+	// title / description is carried from a Go doc comment into the spec.
+	// It applies ONLY to godoc-derived prose — author-written swagger:title /
+	// swagger:description overrides are never touched.
+	//
+	//   - false (default): godoc prose is emitted verbatim (existing
+	//     behaviour; output is byte-identical).
+	//   - true: godoc doc-link brackets are removed and the identifier is
+	//     humanized (`[CustName]` → "cust name"); reference-style link
+	//     definition lines (`[text]: url`) are dropped; and when a doc-link
+	//     resolves to an emitted schema, it is recomposed to the name that
+	//     schema is actually exposed under (so the prose stays true to the
+	//     generated definitions). The first identifier of a title /
+	//     description is restored to sentence case.
+	//
+	// See .claude/plans/features/godoc-filter-design.md.
+	CleanGoDoc bool
+
 	// PruneUnusedModels, when set together with ScanModels, drops every
 	// discovered definition that is not transitively referenced from a path, a
 	// shared response, a shared parameter, or a definition supplied via

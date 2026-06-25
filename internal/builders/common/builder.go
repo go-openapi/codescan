@@ -12,6 +12,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/go-openapi/codescan/internal/builders/godoclink"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
@@ -183,6 +184,19 @@ func (s *Builder) WarnEmptyOverride(kind grammar.AnnotationKind, ov OverrideValu
 	}
 	s.RecordDiagnostic(grammar.Warnf(ov.Pos, grammar.CodeEmptyOverride,
 		"swagger:%s override is empty: the godoc-derived value is suppressed", kind))
+}
+
+// CleanGoDoc applies godoc-syntax filtering (Options.CleanGoDoc) to godoc-
+// derived prose, returning text unchanged when the option is off. It MUST be
+// applied only to godoc-derived title / description text — never to author-
+// written swagger:title / swagger:description override values, which are
+// deliberate and harvested through HarvestOverrides.
+func (s *Builder) CleanGoDoc(text string) string {
+	if !s.Ctx.CleanGoDoc() {
+		return text
+	}
+
+	return godoclink.Clean(text, s.Ctx.Mangler())
 }
 
 // AppendPostDecl marks decl for post-processing by the spec
