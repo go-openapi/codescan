@@ -48,6 +48,15 @@ terminates cleanly on recursive or cyclic models. A model referenced **only by
 another unreferenced model** is itself unreachable, so the whole dead subtree is
 removed, not just its entry point.
 
+Those shared `response` / `parameter` roots are pruned too. A
+[shared parameter or response]({{% relref "/tutorials/sharing-parameters-and-responses" %}})
+that **no operation and no path-item references** is itself dropped (with a
+`scan.pruned-unused` Hint) — and because that happens *before* the definition
+walk reads its roots from the same `#/parameters` / `#/responses` maps, a model
+kept alive only by a now-pruned shared object becomes prunable in turn.
+Shared objects supplied through `InputSpec` are pinned, exactly like
+definitions.
+
 {{% notice style="info" %}}
 Definitions you supply through `InputSpec` are **pinned**: they are never pruned,
 and they seed the reachability roots, so anything they `$ref` survives too. The

@@ -1,0 +1,12 @@
+{
+  "description": "The error payload returned to API consumers.",
+  "schema": {
+    "$ref": "#/definitions/ErrorBody"
+  },
+  "headers": {
+    "X-Error-Code": {
+      "type": "string",
+      "description": "The machine-readable error code."
+    }
+  }
+}
