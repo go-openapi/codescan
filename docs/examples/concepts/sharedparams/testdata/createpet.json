@@ -1,0 +1,25 @@
+{
+  "tags": [
+    "pets"
+  ],
+  "operationId": "createPet",
+  "parameters": [
+    {
+      "x-go-name": "Body",
+      "name": "body",
+      "in": "body",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/Pet"
+      }
+    },
+    {
+      "$ref": "#/parameters/X-API-Key"
+    }
+  ],
+  "responses": {
+    "default": {
+      "$ref": "#/responses/ErrorResponse"
+    }
+  }
+}

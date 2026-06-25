@@ -113,6 +113,8 @@ reads better on a single-line doc comment:
 
 ## What's next
 
+- [Sharing parameters & responses]({{% relref "/tutorials/sharing-parameters-and-responses" %}})
+  — declare a header or error response once and `$ref` it from many operations.
 - [Validations]({{% relref "/tutorials/validations" %}}) — constrain parameter
   and field values.
 - [Model definitions]({{% relref "/tutorials/model-definitions" %}}) — the

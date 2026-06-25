@@ -1,0 +1,17 @@
+{
+  "X-API-Key": {
+    "type": "string",
+    "x-go-name": "APIKey",
+    "description": "APIKey authorises access.",
+    "name": "X-API-Key",
+    "in": "header",
+    "required": true
+  },
+  "X-Request-ID": {
+    "type": "string",
+    "x-go-name": "RequestID",
+    "description": "RequestID correlates a request across services.",
+    "name": "X-Request-ID",
+    "in": "header"
+  }
+}
