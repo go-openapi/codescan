@@ -5,6 +5,7 @@ package integration_test
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -414,4 +415,84 @@ func TestCoverage_SharedParameters_Prune_On(t *testing.T) {
 	}
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_prune.json")
+}
+
+// runSharedPruneCascade scans the shared-parameters-prune-cascade fixture under
+// ScanModels, toggling PruneUnusedModels, and collects the scan.pruned-unused
+// Hints.
+func runSharedPruneCascade(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnostic) {
+	t.Helper()
+	var pruned []grammar.Diagnostic
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:          []string{"./enhancements/shared-parameters-prune-cascade/..."},
+		WorkDir:           scantest.FixturesDir(),
+		ScanModels:        true,
+		PruneUnusedModels: prune,
+		OnDiagnostic: func(d grammar.Diagnostic) {
+			if d.Code == grammar.CodePrunedUnused {
+				pruned = append(pruned, d)
+			}
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	return doc, pruned
+}
+
+// TestCoverage_SharedParameters_PruneCascade_Off is the control: with ScanModels
+// and no prune, every swagger:model is emitted — including Orphan, reachable only
+// through the unreferenced UnusedResponse — and both shared responses are present.
+func TestCoverage_SharedParameters_PruneCascade_Off(t *testing.T) {
+	doc, pruned := runSharedPruneCascade(t, false)
+
+	for _, name := range []string{"Survivor", "Orphan", "Shared"} {
+		assert.Contains(t, doc.Definitions, name)
+	}
+	for _, name := range []string{"UsedResponse", "UnusedResponse"} {
+		assert.Contains(t, doc.Responses, name)
+	}
+	assert.Empty(t, pruned, "nothing is pruned without the flag")
+}
+
+// TestCoverage_SharedParameters_PruneCascade_On witnesses the second step of the
+// prune extension (C4 / P7, §6b): the shared-object prune runs BEFORE the
+// definition reachability walk, so pruning the unreferenced UnusedResponse also
+// prunes Orphan — the definition reachable ONLY through it (the cascade). Shared
+// is kept, because the surviving Survivor still references it: the prune is
+// reachability-correct, not a naive "drop everything the pruned response touched".
+func TestCoverage_SharedParameters_PruneCascade_On(t *testing.T) {
+	doc, pruned := runSharedPruneCascade(t, true)
+
+	// The unreferenced shared response and the definition reached only through
+	// it are both gone.
+	assert.NotContains(t, doc.Responses, "UnusedResponse")
+	assert.NotContains(t, doc.Definitions, "Orphan", "Orphan cascades away with its only keeper")
+
+	// The referenced response, its body model, and the model shared with a
+	// surviving root all stay.
+	assert.Contains(t, doc.Responses, "UsedResponse")
+	assert.Contains(t, doc.Definitions, "Survivor")
+	assert.Contains(t, doc.Definitions, "Shared",
+		"Shared survives: still reachable via the kept Survivor")
+	assert.Len(t, doc.Responses, 1, "only the referenced shared response survives")
+	assert.Len(t, doc.Definitions, 2, "Survivor + Shared; Orphan pruned")
+
+	// Two located Hints: the shared response (pruned first) and the cascaded
+	// definition (pruned by the definition pass that follows).
+	require.Len(t, pruned, 2, "one Hint for the shared response, one for the cascaded definition")
+	var sawResponse, sawDefinition bool
+	for _, d := range pruned {
+		assert.Equal(t, grammar.SeverityHint, d.Severity, "a prune is informational")
+		assert.Positive(t, d.Pos.Line, "the Hint is located at the pruned declaration")
+		switch {
+		case strings.Contains(d.Message, `shared response "UnusedResponse"`):
+			sawResponse = true
+		case strings.Contains(d.Message, "Orphan"):
+			sawDefinition = true
+		}
+	}
+	assert.TrueT(t, sawResponse, "expected a Hint for the pruned shared response")
+	assert.TrueT(t, sawDefinition, "expected a Hint for the cascaded Orphan definition")
+
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_prune_cascade.json")
 }

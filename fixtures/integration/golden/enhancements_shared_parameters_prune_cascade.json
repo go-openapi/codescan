@@ -1,0 +1,54 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/c": {
+      "get": {
+        "tags": [
+          "cascade"
+        ],
+        "operationId": "listC",
+        "responses": {
+          "default": {
+            "$ref": "#/responses/UsedResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Shared": {
+      "description": "Shared is reached from BOTH Survivor (kept) and Orphan (pruned). It must\nsurvive, because the surviving Survivor still references it — the cascade\nprunes only what nothing reachable keeps alive.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Code"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/shared-parameters-prune-cascade"
+    },
+    "Survivor": {
+      "type": "object",
+      "title": "Survivor is reached from UsedResponse's body and survives the prune.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "shared": {
+          "$ref": "#/definitions/Shared"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/shared-parameters-prune-cascade"
+    }
+  },
+  "responses": {
+    "UsedResponse": {
+      "description": "UsedResponse is referenced by listC's Responses block → survives, keeping\nSurvivor (and transitively Shared).",
+      "schema": {
+        "$ref": "#/definitions/Survivor"
+      }
+    }
+  }
+}
