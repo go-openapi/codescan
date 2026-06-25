@@ -1,0 +1,28 @@
+{
+  "description": "More detail mentions a Gadget pointer, a Ledger, and an\nunknown sprocket.",
+  "type": "object",
+  "title": "Gizmo is the primary Gadget holder and references Order.customer_name.",
+  "properties": {
+    "holder": {
+      "description": "Holder points at the Gadget that owns this widget.",
+      "type": "string",
+      "x-go-name": "Holder"
+    },
+    "index": {
+      "description": "Index is element [0] in the [see notes] list; the [id] stays bare.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "Index"
+    },
+    "ledger": {
+      "$ref": "#/definitions/Ledger"
+    },
+    "spec": {
+      "description": "Spec points at Gadget; the reference-definition line below is godoc\nlink plumbing that carries no prose.",
+      "type": "string",
+      "x-go-name": "Spec"
+    }
+  },
+  "x-go-name": "Widget",
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/godoclinks"
+}
