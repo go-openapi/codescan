@@ -760,6 +760,46 @@ consult `skipExt`. All eight schema-internal call sites pass
 `s.skipExtensions` so the recognizer subsystem honours the same
 `SkipExtensions` flag as the rest of the builder.
 
+### `swagger:title` / `swagger:description` overrides
+
+Two override annotations let the author replace the **godoc-derived**
+title / description with curated API-facing text (Q30 close-out: a
+Go doc comment written for Go readers — e.g. `time.Time`'s monotonic-
+clock prose — should not have to leak into the spec).
+
+- **`swagger:title <text>`** — single line; sets the schema/property
+  `title`. Schema-only.
+- **`swagger:description <text>`** — replaces the `description`. May span
+  multiple lines: the prose lines following the annotation fold into the
+  description (joined with `\n`), terminated by the first blank line,
+  keyword, or annotation (Option B). On responses/headers only the
+  description override applies; `swagger:title` there raises
+  `parse.context-invalid` (OpenAPI 2.0 has no Response/Header title).
+
+Semantics:
+
+- **Precedence.** Present ⇒ replaces the godoc value; absent ⇒ godoc is
+  used unchanged (no behaviour change for un-annotated decls).
+- **Empty ⇒ suppress + warn.** A bare `swagger:description` (or a
+  whitespace/blank-only body) applies the empty value — the deliberate
+  godoc-suppression affordance — and raises `scan.empty-override`.
+- **Harvest.** `common.Builder.HarvestOverrides` collects the two
+  annotations from a comment group's sibling blocks; `WarnEmptyOverride`
+  raises the empty warning at the consumption point (sibling classifier
+  blocks are not `Walk`-ed, so a grammar-stored diagnostic would not reach
+  `OnDiagnostic`). The schema builder wraps both in `overridesFor`.
+- **Family.** Unlike the classifier annotations above, `swagger:title` /
+  `swagger:description` dispatch through the **schema** family (like
+  `swagger:name`), so a co-located validation keyword (`maximum:`,
+  `pattern:`, …) on the same field surfaces as a Property and is applied
+  rather than rejected as context-invalid.
+- **`$ref` fields.** title and description are symmetric `$ref` siblings:
+  they ride description's existing preservation rule — kept under
+  `EmitRefSiblings` / a forced `allOf` compound, dropped to a bare `$ref`
+  under the default flags (see [§ref-override](#ref-override)).
+
+See `.claude/plans/features/swagger-description-override-design.md`.
+
 ---
 
 ## <a id="traceability"></a>§traceability — `x-go-*` origin extensions and `EmitXGoType`

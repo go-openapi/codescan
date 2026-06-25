@@ -226,9 +226,11 @@ violated.
 The annotation vocabulary recognised by the classifier is a closed
 set. Unknown annotations beginning with `swagger:` raise a
 classifier error. A handful of annotation tokens (`strfmt`, `name`,
-`enum`, `default`, `alias`, `type`, …) are recognised but produce
-no bit — they are field-level decorations that downstream builders
-parse out of the comment block directly.
+`enum`, `default`, `alias`, `type`, `title`, `description`, …) are
+recognised but produce no bit — they are field/decl-level decorations
+that downstream builders parse out of the comment block directly.
+(`title` / `description` are the godoc title/description overrides; see
+the schema builder's [§user-overrides](../builders/schema/README.md#user-overrides).)
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 
@@ -239,8 +241,8 @@ parse out of the comment block directly.
 - **Recognised-but-unused annotation tokens.** `detectNodes`
   recognises a list of field-level tokens (`strfmt`, `name`,
   `discriminated`, `file`, `enum`, `default`, `alias`, `type`,
-  `allOf`, `ignore`) only to avoid raising the "unknown annotation"
-  error. Promoting them to per-file bits would let downstream
+  `allOf`, `ignore`, `title`, `description`) only to avoid raising the
+  "unknown annotation" error. Promoting them to per-file bits would let downstream
   builders skip whole files that carry no decorations — an
   optimisation, not a correctness change.
 - **`shouldAcceptTag` precedence.** When both `includeTags` and
