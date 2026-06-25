@@ -26,6 +26,8 @@ parameters, responses) consumed by the builder layer.
   struct-annotation exclusivity
 - [§after-decl](#after-decl) — `AfterDeclComments` — reading annotations
   inside / below a declaration
+- [§clean-godoc](#clean-godoc) — `CleanGoDoc` — filtering godoc syntax out
+  of carried-over title / description prose
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -273,6 +275,25 @@ type-based (it resolves a *type* and collects that type's consts via
 semantics today. Supporting it would mean new builder behaviour, which this
 scanner-only feature deliberately avoids. Nested/anonymous inline structs are
 likewise not enriched (only named struct type decls are walked).
+
+## <a id="clean-godoc"></a>§clean-godoc — `CleanGoDoc`
+
+`Options.CleanGoDoc` (opt-in, default false) rewrites godoc-specific syntax that
+reads as bracket noise when a title / description is carried **from godoc** into
+the spec, and recomposes resolvable doc-links to the name the referenced schema
+is **exposed under**. Off ⇒ output is byte-identical.
+
+The scanner side is thin: it holds the flag (`CleanGoDoc()`) and a shared
+`mangling.NameMangler` (`Mangler()`, used for humanization). The transform,
+the consumption-seam wiring, the go/types resolver, and the post-reduce marker
+substitution all live in the **builders** — see
+[`internal/builders/godoclink/README.md`](../builders/godoclink/README.md) for
+the two-phase marker contract and the full mechanics.
+
+Like `swagger:title` / `swagger:description` (overrides) and `AfterDeclComments`,
+this is part of the **clean-godoc cluster**: keep the Go-facing doc clean while
+the API spec carries curated text. Crucially it touches **only godoc-derived
+prose** — author-written overrides (harvested separately) are never filtered.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 
