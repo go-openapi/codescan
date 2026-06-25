@@ -233,6 +233,14 @@ const (
 	// reference repeats a shared-parameter name; the duplicate is dropped.
 	// Warning (C2).
 	CodeDuplicateRef Code = "scan.duplicate-ref"
+
+	// CodeEmptyOverride fires when a `swagger:description` / `swagger:title`
+	// override annotation resolves to an empty value (bare marker, or a
+	// whitespace/blank-only body). The empty value is still applied — empty is
+	// the deliberate godoc-suppression affordance — but the case is flagged in
+	// case it was accidental (a leftover marker). Warning. See
+	// .claude/plans/features/swagger-description-override-design.md (D7).
+	CodeEmptyOverride Code = "scan.empty-override"
 )
 
 // Diagnostic is one observation about a comment block.

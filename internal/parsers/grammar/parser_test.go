@@ -219,6 +219,50 @@ func TestParser_PatternPropertiesBlock_CapturesRawPairList(t *testing.T) {
 	assert.Equal(t, `"^x-": string, "^\d+$": integer`, arg)
 }
 
+func TestAnnotationKind_Title_RoundTrip(t *testing.T) {
+	assert.Equal(t, "title", AnnTitle.String())
+	assert.Equal(t, AnnTitle, AnnotationKindFromName("title"))
+}
+
+func TestAnnotationKind_Description_RoundTrip(t *testing.T) {
+	assert.Equal(t, "description", AnnDescription.String())
+	assert.Equal(t, AnnDescription, AnnotationKindFromName("description"))
+}
+
+func TestParser_TitleOverride_CapturesWholeLine(t *testing.T) {
+	// The whole rest of the line is the title (a sentence with spaces).
+	b := parseString(t, "swagger:title A Foo Widget")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnTitle, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, "A Foo Widget", arg)
+	assert.Empty(t, cb.Diagnostics())
+}
+
+func TestParser_DescriptionOverride_CapturesWholeLine(t *testing.T) {
+	b := parseString(t, "swagger:description A foo widget exposed via the public API.")
+	cb, ok := b.(*ClassifierBlock)
+	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
+	assert.Equal(t, AnnDescription, cb.AnnotationKind())
+	arg, hasArg := cb.AnnotationArg()
+	require.True(t, hasArg)
+	assert.Equal(t, "A foo widget exposed via the public API.", arg)
+	assert.Empty(t, cb.Diagnostics())
+}
+
+func TestParser_DescriptionOverride_EmptyWarns(t *testing.T) {
+	// A bare swagger:description / swagger:title resolves to an empty override.
+	// Empty is applied downstream (deliberate suppression) but flagged here (D7).
+	for _, src := range []string{"swagger:description", "swagger:title", "swagger:description   "} {
+		b := parseString(t, src)
+		require.NotEmptyf(t, b.Diagnostics(), "%q should warn", src)
+		assert.Equalf(t, CodeEmptyOverride, b.Diagnostics()[0].Code, "%q", src)
+		assert.Equalf(t, SeverityWarning, b.Diagnostics()[0].Severity, "%q is a warning, not an error", src)
+	}
+}
+
 func TestParser_ParametersBlock_RequiresAtLeastOneArg(t *testing.T) {
 	b := parseString(t, "swagger:parameters listPets getPet")
 	pb, ok := b.(*ParametersBlock)

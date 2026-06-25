@@ -618,6 +618,16 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 			s.emit(Errorf(annTok.Args[0].Pos, CodeInvalidTypeRef,
 				"swagger:type: %q is not a well-formed type reference", annTok.Args[0].Text))
 		}
+	case AnnTitle, AnnDescription:
+		// A swagger:title / swagger:description override with no value resolves
+		// to an empty string. Empty is still applied downstream (it is the
+		// deliberate godoc-suppression affordance), but flag it here in case the
+		// marker was left bare by mistake. Warning, not an error — see design doc
+		// D7. (Lexer trims the arg, so an empty Args slice ⟺ empty override.)
+		if len(annTok.Args) == 0 || annTok.Args[0].Text == "" {
+			s.emit(Warnf(annTok.Pos, CodeEmptyOverride,
+				"swagger:%s override is empty: the godoc-derived value will be suppressed", kind))
+		}
 	case AnnAllOf, AnnIgnore, AnnAlias, AnnFile:
 	// Optional / no args.
 	default:

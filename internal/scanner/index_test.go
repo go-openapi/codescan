@@ -168,7 +168,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 	})
 
 	t.Run("known non-struct annotations are accepted", func(t *testing.T) {
-		for _, annotation := range []string{"strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type"} {
+		for _, annotation := range []string{"strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type", "title", "description"} {
 			file := &ast.File{
 				Comments: []*ast.CommentGroup{
 					{List: []*ast.Comment{{Text: "// swagger:" + annotation + " something"}}},

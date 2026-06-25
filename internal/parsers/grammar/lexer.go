@@ -241,13 +241,22 @@ func scanGoIdentifier(s string) int {
 // back to a text token so the parser can diagnose. Args are returned
 // pre-classified via classifyAnnotationArgs.
 func lexAnnotation(text string, pos token.Position) Token {
-	rest := text[len(AnnotationPrefix):]
-	rest = strings.TrimRightFunc(stripTrailingDot(rest), unicode.IsSpace)
-	name, after := splitFirstField(rest)
+	rawRest := strings.TrimRightFunc(text[len(AnnotationPrefix):], unicode.IsSpace)
+	// Classify the kind from a dot-stripped view so a bare `swagger:model.`
+	// (and likewise `swagger:description.`) still resolves to its kind.
+	name, _ := splitFirstField(stripTrailingDot(rawRest))
 	if name == "" {
 		return Token{Kind: tokenText, Pos: pos, Text: text}
 	}
 	kind := AnnotationKindFromName(name)
+	// Free-text overrides (swagger:title / swagger:description) keep a trailing
+	// "." — it is sentence content, not punctuation noise. Every other
+	// annotation elides a single trailing dot (e.g. `swagger:model Pet.`).
+	rest := rawRest
+	if kind != AnnTitle && kind != AnnDescription {
+		rest = stripTrailingDot(rawRest)
+	}
+	_, after := splitFirstField(rest)
 	args := classifyAnnotationArgs(kind, after, pos, len(text)-len(after))
 	return Token{Kind: TokenAnnotation, Pos: pos, Name: name, Args: args}
 }
@@ -304,6 +313,12 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 		// The arg is a `"<re>": <spec>, …` pair list that may contain
 		// spaces/colons/commas inside quoted regexes — capture the whole
 		// remainder verbatim; the builder parses the pairs.
+		return []Token{{Kind: TokenRawValue, Pos: pos, Text: strings.TrimSpace(rest)}}
+	case AnnTitle, AnnDescription:
+		// Free-text override: the arg is the whole rest of the line, verbatim
+		// (a title/description sentence with spaces). Captured as one
+		// TokenRawValue so ClassifierBlock.AnnotationArg() returns it intact.
+		// (Multi-line description bodies are folded in a later phase.)
 		return []Token{{Kind: TokenRawValue, Pos: pos, Text: strings.TrimSpace(rest)}}
 	case AnnEnum:
 		return classifyEnumAnnotationArgs(rest, pos)

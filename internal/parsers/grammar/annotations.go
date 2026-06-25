@@ -40,6 +40,16 @@ const (
 	// captured as one raw arg token; the schema builder parses the pairs. See
 	// classifierPatternProperties.
 	AnnPatternProperties
+	// AnnTitle — swagger:title <text>. A schema-level override that replaces
+	// the godoc-derived title on a model / field. Single-line: the arg is the
+	// whole rest of the line. See
+	// .claude/plans/features/swagger-description-override-design.md.
+	AnnTitle
+	// AnnDescription — swagger:description <text> [+ body]. A schema /
+	// response / header override that replaces the godoc-derived description.
+	// The arg is the rest of the head line; under Option B a blank-terminated
+	// body may extend it (P4). See the design doc above.
+	AnnDescription
 )
 
 const (
@@ -60,6 +70,8 @@ const (
 	labelFile                 = "file"
 	labelAdditionalProperties = "additionalProperties"
 	labelPatternProperties    = "patternProperties"
+	labelTitle                = "title"
+	labelDescription          = "description"
 	labelUnknown              = "unknown"
 )
 
@@ -100,6 +112,10 @@ func (a AnnotationKind) String() string {
 		return labelAdditionalProperties
 	case AnnPatternProperties:
 		return labelPatternProperties
+	case AnnTitle:
+		return labelTitle
+	case AnnDescription:
+		return labelDescription
 	case AnnUnknown:
 		fallthrough
 	default:
@@ -145,6 +161,10 @@ func AnnotationKindFromName(name string) AnnotationKind {
 		return AnnAdditionalProperties
 	case labelPatternProperties:
 		return AnnPatternProperties
+	case labelTitle:
+		return AnnTitle
+	case labelDescription:
+		return AnnDescription
 	default:
 		return AnnUnknown
 	}
@@ -178,7 +198,8 @@ func (a AnnotationKind) family() annotationFamily {
 		return familyMeta
 	case AnnStrfmt, AnnAlias, AnnAllOf, AnnEnum,
 		AnnIgnore, AnnDefaultName, AnnType, AnnFile,
-		AnnAdditionalProperties, AnnPatternProperties:
+		AnnAdditionalProperties, AnnPatternProperties,
+		AnnTitle, AnnDescription:
 		return familyClassifier
 	case AnnUnknown:
 		fallthrough
