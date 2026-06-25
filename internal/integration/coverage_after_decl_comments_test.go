@@ -33,6 +33,11 @@ func TestCoverage_AfterDeclComments_Off(t *testing.T) {
 	doc := runAfterDeclComments(t, false)
 	assert.MapNotContainsT(t, doc.Definitions, "widgetModel")
 	assert.MapNotContainsT(t, doc.Definitions, "countType")
+	assert.MapNotContainsT(t, doc.Definitions, "stampType")
+	// Golden pins the FULL inert output: the inside-body / inlined annotations
+	// contribute nothing with the option off (the only discovery is the
+	// location-agnostic route).
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_after_decl_comments_off.json")
 }
 
 // TestCoverage_AfterDeclComments_On exercises Phase A: with the option on, the
