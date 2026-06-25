@@ -27,6 +27,12 @@
       "x-go-name": "Count",
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/after-decl-comments"
     },
+    "stampType": {
+      "type": "string",
+      "title": "Stamp is a string alias. Clean godoc above; annotation inlined trailing.",
+      "x-go-name": "Stamp",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/after-decl-comments"
+    },
     "widgetModel": {
       "description": "Widget is exposed to API consumers.",
       "type": "object",

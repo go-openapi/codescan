@@ -24,6 +24,8 @@ parameters, responses) consumed by the builder layer.
   pure read vs implicit registration
 - [§classifier](#classifier) — `detectNodes` bitmask semantics and
   struct-annotation exclusivity
+- [§after-decl](#after-decl) — `AfterDeclComments` — reading annotations
+  inside / below a declaration
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -231,6 +233,46 @@ recognised but produce no bit — they are field/decl-level decorations
 that downstream builders parse out of the comment block directly.
 (`title` / `description` are the godoc title/description overrides; see
 the schema builder's [§user-overrides](../builders/schema/README.md#user-overrides).)
+
+## <a id="after-decl"></a>§after-decl — `AfterDeclComments`
+
+`Options.AfterDeclComments` (opt-in, default false) lets swagger annotations
+live **inside** a declaration or **inlined** as a trailing comment, so the godoc
+*above* the declaration stays clean and human-facing. It is **solely a scanner
+concern** — the located comments are folded into the comment source the builders
+already consume (`EntityDecl.Comments` and `ast.Field.Doc`), so the grammar and
+builders are untouched. Same annotation grammar, no new syntax.
+
+What the scanner folds, by shape (`index.go`):
+
+| Shape | Folded comment | Into |
+|---|---|---|
+| struct type | leading body comment groups (after `{`, before the first field, excluding any field `.Doc`) — `leadingBodyComments` | a fresh merged `EntityDecl.Comments` (`ts.Doc` untouched) |
+| alias / non-struct type | trailing `TypeSpec.Comment` (`type X = Y // swagger:model …`) | same |
+| struct field | trailing `Field.Comment` (`B string // swagger:strfmt date`) — `enrichStructFields` | the shared `Field.Doc` (the one mutation, see below) |
+
+The clean godoc above still provides the title/description: the merged group is
+`docAbove ++ located`, and because positions stay ascending (doc above < the
+inside/trailing comment below), the grammar reconstructs a blank-line gap and
+parses it without change. Discovery works because `detectNodes` already scans
+every `file.Comments` group (the file bitmask flips), and the merged
+`EntityDecl.Comments` makes the per-decl `HasModelAnnotation` gate pass.
+
+**Idempotency.** Decl-level folding is pure construction — `ts.Doc` is never
+mutated, so re-processing is safe with no guard. Field-level folding is the only
+place the shared AST is mutated (`Field.Doc` is repointed to the merged group),
+guarded by `TypeIndex.enrichedFields` so a field is rewritten at most once.
+
+**Routes / operations** are already position-agnostic
+(`collectRoute/OperationPathAnnotations` scan all `file.Comments`), so a
+`swagger:route` inside a func body is discovered with or without this option.
+
+**Out of scope.** A standalone `const X = … // swagger:enum`: `swagger:enum` is
+type-based (it resolves a *type* and collects that type's consts via
+`FindEnumValues`), so a lone const is not an enum carrier and has no builder
+semantics today. Supporting it would mean new builder behaviour, which this
+scanner-only feature deliberately avoids. Nested/anonymous inline structs are
+likewise not enriched (only named struct type decls are walked).
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 

@@ -56,6 +56,10 @@ func TestCoverage_AfterDeclComments_On(t *testing.T) {
 	require.MapContainsT(t, doc.Definitions, "countType")
 	assert.SliceContainsT(t, doc.Definitions["countType"].Type, "integer")
 
+	// type alias inlined trailing: swagger:model stampType
+	require.MapContainsT(t, doc.Definitions, "stampType")
+	assert.SliceContainsT(t, doc.Definitions["stampType"].Type, "string")
+
 	// route inside the func body is discovered (location-agnostic today).
 	require.NotNil(t, doc.Paths)
 	require.MapContainsT(t, doc.Paths.Paths, "/widgets")

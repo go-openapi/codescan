@@ -26,6 +26,9 @@ type Widget struct {
 // Count is a plain count. Clean godoc above; annotation inlined below.
 type Count int // swagger:model countType
 
+// Stamp is a string alias. Clean godoc above; annotation inlined trailing.
+type Stamp = string // swagger:model stampType
+
 // ListWidgets is an ordinary Go handler with a clean godoc.
 func ListWidgets() {
 	// swagger:route GET /widgets widgets listWidgets
