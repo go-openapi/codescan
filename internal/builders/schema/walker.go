@@ -52,6 +52,49 @@ func (s *Builder) recordValidationOrigins(block grammar.Block) {
 	})
 }
 
+// declOverride captures an optional swagger:title / swagger:description
+// override harvested from a decl/field comment group. present=false means the
+// annotation is absent (fall back to the godoc-derived value); present=true
+// with value=="" is an explicit empty override — the deliberate
+// godoc-suppression affordance (D7; the grammar already raised
+// scan.empty-override). See
+// .claude/plans/features/swagger-description-override-design.md.
+type declOverride struct {
+	value   string
+	present bool
+}
+
+// overridesFor scans a comment group's sibling classifier blocks for
+// swagger:title / swagger:description overrides. Last occurrence wins.
+func (s *Builder) overridesFor(cg *ast.CommentGroup) (title, desc declOverride) {
+	for _, b := range s.ParseBlocks(cg) {
+		switch b.AnnotationKind() { //nolint:exhaustive // only the two override kinds are relevant here
+		case grammar.AnnTitle:
+			arg, _ := b.AnnotationArg()
+			title = declOverride{value: arg, present: true}
+			s.warnIfEmptyOverride(b, arg)
+		case grammar.AnnDescription:
+			arg, _ := b.AnnotationArg()
+			desc = declOverride{value: arg, present: true}
+			s.warnIfEmptyOverride(b, arg)
+		}
+	}
+	return title, desc
+}
+
+// warnIfEmptyOverride raises scan.empty-override when an override annotation
+// resolves to an empty value. Emitted here (not in the parser) because sibling
+// classifier blocks are not Walk-ed, so a grammar-stored diagnostic would not
+// reach OnDiagnostic. The empty value is still applied — empty is the
+// deliberate godoc-suppression affordance (D7).
+func (s *Builder) warnIfEmptyOverride(b grammar.Block, value string) {
+	if value != "" {
+		return
+	}
+	s.RecordDiagnostic(grammar.Warnf(b.Pos(), grammar.CodeEmptyOverride,
+		"swagger:%s override is empty: the godoc-derived value is suppressed", b.AnnotationKind()))
+}
+
 // applyBlockToDecl is the grammar entry point for a top-level model
 // declaration. Parses the doc, short-circuits on swagger:ignore, writes
 // title/description, then dispatches schema-level properties via the
@@ -75,8 +118,17 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 	}
 
 	schema.Title = block.PreambleTitle()
-	schema.Description = block.PreambleDescription()
-	schema.Description = resolvers.AppendEnumDesc(schema.Description, schema.Extensions, s.Ctx.SkipEnumDescriptions())
+	description := block.PreambleDescription()
+	// swagger:title / swagger:description overrides replace the godoc-derived
+	// title / description (enum value docs are still appended below).
+	titleOv, descOv := s.overridesFor(s.Decl.Comments)
+	if titleOv.present {
+		schema.Title = titleOv.value
+	}
+	if descOv.present {
+		description = descOv.value
+	}
+	schema.Description = resolvers.AppendEnumDesc(description, schema.Extensions, s.Ctx.SkipEnumDescriptions())
 
 	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
 	// model deprecated (go-swagger#3138). The grammar block unifies both
@@ -102,14 +154,21 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 // without dropping siblings of the $ref.
 func (s *Builder) applyBlockToField(afld *ast.Field, enclosing *oaispec.Schema, ps *oaispec.Schema, name string) {
 	block := s.ParseBlock(afld.Doc)
+	titleOv, descOv := s.overridesFor(afld.Doc)
 
 	if ps.Ref.String() != "" {
-		s.applyToRefField(block, enclosing, ps, name)
+		s.applyToRefField(block, enclosing, ps, name, titleOv, descOv)
 		return
 	}
 
-	ps.Description = block.Prose()
-	ps.Description = resolvers.AppendEnumDesc(ps.Description, ps.Extensions, s.Ctx.SkipEnumDescriptions())
+	description := block.Prose()
+	if descOv.present {
+		description = descOv.value
+	}
+	ps.Description = resolvers.AppendEnumDesc(description, ps.Extensions, s.Ctx.SkipEnumDescriptions())
+	if titleOv.present {
+		ps.Title = titleOv.value
+	}
 
 	// `deprecated: true` or a godoc-style "Deprecated:" paragraph marks the
 	// field deprecated (go-swagger#3138) — see the model-level note above.
@@ -157,7 +216,7 @@ func (s *Builder) schemaOpts() handlers.SchemaOptions {
 // See [§ref-override](./README.md#ref-override) — JSON-Schema-draft-4
 // shape, per-keyword landing rules, the DescWithRef toggle, and the
 // description-only edge case.
-func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Schema, name string) {
+func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Schema, name string, titleOv, descOv declOverride) {
 	originalRef := ps.Ref
 
 	c := &refOverrideCollector{builder: s, enclosing: enclosing, name: name}
@@ -174,9 +233,20 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 		Diagnostic:  s.RecordDiagnostic,
 	})
 
+	// A swagger:description override replaces the godoc prose; title is a
+	// symmetric $ref sibling that rides description's fate (preserved when
+	// description would be, dropped when it would be) — no title-specific
+	// compounding rule. Both are absent (present=false) ⇒ godoc behaviour.
 	description := block.Prose()
+	if descOv.present {
+		description = descOv.value
+	}
+	var title string
+	if titleOv.present {
+		title = titleOv.value
+	}
 
-	if !c.anyCollected() && description == "" {
+	if !c.anyCollected() && description == "" && title == "" {
 		return // bare {$ref}: nothing to attach
 	}
 
@@ -187,7 +257,7 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	// enclosing schema during the Walk (a parent-side concern, not a $ref
 	// sibling) and is unaffected.
 	if s.Ctx.SkipAllOfCompounding() {
-		s.applyRefSiblingDrop(c, ps, description, name, block.Pos())
+		s.applyRefSiblingDrop(c, ps, description, title, name, block.Pos())
 		return
 	}
 
@@ -198,6 +268,7 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	forcedCompound := c.collectedValidation || c.collectedExternalDoc
 	if s.Ctx.EmitRefSiblings() && !forcedCompound {
 		ps.Description = description
+		ps.Title = title
 		for k, v := range c.override.Extensions {
 			ps.AddExtension(k, v)
 		}
@@ -205,7 +276,7 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	}
 
 	if !c.anyCollected() && !s.Ctx.DescWithRef() {
-		return // description-only, not preserved → bare {$ref}
+		return // description/title-only, not preserved → bare {$ref}
 	}
 
 	// Lift x-* siblings onto the outer compound (see §ref-override).
@@ -221,6 +292,7 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	*ps = oaispec.Schema{
 		VendorExtensible: oaispec.VendorExtensible{Extensions: liftedExtensions},
 		SchemaProps: oaispec.SchemaProps{
+			Title:       title,
 			Description: description,
 			AllOf:       allOf,
 		},
@@ -239,7 +311,7 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 // likewise. Everything else (validations, externalDocs) — and, without
 // EmitRefSiblings, description / extensions too — is dropped, each with
 // one CodeDroppedRefSibling diagnostic so the loss is never silent.
-func (s *Builder) applyRefSiblingDrop(c *refOverrideCollector, ps *oaispec.Schema, description, name string, blockPos token.Position) {
+func (s *Builder) applyRefSiblingDrop(c *refOverrideCollector, ps *oaispec.Schema, description, title, name string, blockPos token.Position) {
 	keepSiblings := s.Ctx.EmitRefSiblings()
 
 	for _, d := range c.collected {
@@ -252,16 +324,26 @@ func (s *Builder) applyRefSiblingDrop(c *refOverrideCollector, ps *oaispec.Schem
 			name, d.keyword))
 	}
 
-	if description == "" {
-		return
+	// description and title are symmetric $ref siblings: kept directly when
+	// EmitRefSiblings is set, otherwise dropped with a diagnostic.
+	for _, sib := range []struct {
+		kw, val string
+		set     func(string)
+	}{
+		{"description", description, func(v string) { ps.Description = v }},
+		{"title", title, func(v string) { ps.Title = v }},
+	} {
+		if sib.val == "" {
+			continue
+		}
+		if keepSiblings {
+			sib.set(sib.val)
+			continue
+		}
+		s.RecordDiagnostic(grammar.Warnf(blockPos, grammar.CodeDroppedRefSibling,
+			"field %q: %s dropped — not representable on a bare $ref (SkipAllOfCompounding)",
+			name, sib.kw))
 	}
-	if keepSiblings {
-		ps.Description = description
-		return
-	}
-	s.RecordDiagnostic(grammar.Warnf(blockPos, grammar.CodeDroppedRefSibling,
-		"field %q: description dropped — not representable on a bare $ref (SkipAllOfCompounding)",
-		name))
 }
 
 // refOverrideCollector accumulates field-level overrides into a

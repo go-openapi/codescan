@@ -252,14 +252,17 @@ func TestParser_DescriptionOverride_CapturesWholeLine(t *testing.T) {
 	assert.Empty(t, cb.Diagnostics())
 }
 
-func TestParser_DescriptionOverride_EmptyWarns(t *testing.T) {
-	// A bare swagger:description / swagger:title resolves to an empty override.
-	// Empty is applied downstream (deliberate suppression) but flagged here (D7).
+func TestParser_DescriptionOverride_BareIsWellFormed(t *testing.T) {
+	// A bare swagger:description / swagger:title is well-formed grammar (no
+	// parse diagnostic): the empty value is the deliberate godoc-suppression
+	// affordance. The emptiness *warning* (scan.empty-override) is the builder
+	// consumption point's job, not the parser's (design D7 / §4).
 	for _, src := range []string{"swagger:description", "swagger:title", "swagger:description   "} {
 		b := parseString(t, src)
-		require.NotEmptyf(t, b.Diagnostics(), "%q should warn", src)
-		assert.Equalf(t, CodeEmptyOverride, b.Diagnostics()[0].Code, "%q", src)
-		assert.Equalf(t, SeverityWarning, b.Diagnostics()[0].Severity, "%q is a warning, not an error", src)
+		assert.Emptyf(t, b.Diagnostics(), "%q is well-formed → no parser diagnostic", src)
+		arg, hasArg := b.AnnotationArg()
+		assert.Falsef(t, hasArg, "%q has no arg", src)
+		assert.Emptyf(t, arg, "%q arg is empty", src)
 	}
 }
 
