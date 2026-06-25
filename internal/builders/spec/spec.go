@@ -391,7 +391,7 @@ func (s *Builder) cleanGoDoc(text string) string {
 		return text
 	}
 
-	return godoclink.Clean(text, s.ctx.Mangler())
+	return godoclink.Clean(text, godoclink.Options{Mangler: s.ctx.Mangler()})
 }
 
 func (s *Builder) buildMeta() error {

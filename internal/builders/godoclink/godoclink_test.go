@@ -60,7 +60,7 @@ func TestClean(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, Clean(tc.in, &m))
+			assert.Equal(t, tc.want, Clean(tc.in, Options{Mangler: &m}))
 		})
 	}
 }
@@ -69,5 +69,5 @@ func TestCleanLeavesInitialismCasing(t *testing.T) {
 	m := mangling.NewNameMangler()
 	// ToHumanNameLower keeps recognized initialisms cased; CleanGoDoc must not
 	// re-case them mid-sentence.
-	assert.Equal(t, "Serves over an HTTP server.", Clean("Serves over an [HTTPServer].", &m))
+	assert.Equal(t, "Serves over an HTTP server.", Clean("Serves over an [HTTPServer].", Options{Mangler: &m}))
 }

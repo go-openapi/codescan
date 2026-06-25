@@ -196,7 +196,9 @@ func (s *Builder) CleanGoDoc(text string) string {
 		return text
 	}
 
-	return godoclink.Clean(text, s.Ctx.Mangler())
+	// P1: resolution-free cleanup only. The Resolver / Self (idiom recomposition)
+	// are wired in a later phase.
+	return godoclink.Clean(text, godoclink.Options{Mangler: s.Ctx.Mangler()})
 }
 
 // AppendPostDecl marks decl for post-processing by the spec
