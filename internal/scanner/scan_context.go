@@ -108,6 +108,7 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 		WithXNullableForPointers(opts.SetXNullableForPointers),
 		WithRefAliases(opts.RefAliases),
 		WithTransparentAliases(opts.TransparentAliases),
+		WithAfterDeclComments(opts.AfterDeclComments),
 		WithOnDiagnostic(opts.OnDiagnostic),
 	)
 	if err != nil {

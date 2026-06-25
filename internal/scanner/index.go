@@ -65,6 +65,15 @@ func WithTransparentAliases(enabled bool) TypeIndexOption {
 	}
 }
 
+// WithAfterDeclComments enables folding a declaration's inside-body leading
+// comment (struct) or trailing comment (alias / non-struct type) into the
+// decl's annotation source. See Options.AfterDeclComments.
+func WithAfterDeclComments(enabled bool) TypeIndexOption {
+	return func(a *TypeIndex) {
+		a.afterDeclComments = enabled
+	}
+}
+
 // WithOnDiagnostic wires the consumer's diagnostic sink so the index can
 // surface scan-environment observations (e.g. a package or route omitted by
 // the caller's own include/exclude rules) as informational Hints. The index
@@ -94,6 +103,7 @@ type TypeIndex struct {
 	setXNullableForPointers bool
 	refAliases              bool
 	transparentAliases      bool
+	afterDeclComments       bool
 	onDiagnostic            func(grammar.Diagnostic)
 }
 
@@ -272,6 +282,14 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 			if comments == nil {
 				comments = gd.Doc // /* doc */  type ( Foo struct{} )
 			}
+			// AfterDeclComments (opt-in): also read the swagger annotations that
+			// live inside the declaration (a struct's leading body comment) or
+			// inlined after it (an alias / non-struct type's trailing comment),
+			// so the godoc above stays clean. Folded into a fresh comment group —
+			// ts.Doc is never mutated, so this is idempotent.
+			if a.afterDeclComments {
+				comments = mergeCommentGroups(comments, afterDeclSource(file, ts))
+			}
 
 			decl := &EntityDecl{
 				Comments: comments,
@@ -292,6 +310,76 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 				a.Responses = append(a.Responses, decl)
 			}
 		}
+	}
+}
+
+// afterDeclSource returns the comment group carrying swagger annotations that
+// lives inside / after a type declaration, when AfterDeclComments is set:
+//   - struct type: the leading comment groups at the top of the body (before the
+//     first field, excluding any field's own Doc), collected in source order;
+//   - alias / non-struct type: the trailing line comment (TypeSpec.Comment),
+//     e.g. `type X = Y // swagger:model apiType`.
+//
+// Returns nil when there is nothing to fold.
+func afterDeclSource(file *ast.File, ts *ast.TypeSpec) *ast.CommentGroup {
+	if st, ok := ts.Type.(*ast.StructType); ok {
+		return leadingBodyComments(file, st)
+	}
+	return ts.Comment
+}
+
+// leadingBodyComments collects every comment group positioned at the top of a
+// struct body — after the opening brace and before the first field — that is not
+// itself a field's Doc, in source order. Excluding field Docs keeps an adjacent
+// `// swagger:allOf` above the first field attached to that field rather than
+// stolen as a type-level annotation. Returns nil when there are none.
+func leadingBodyComments(file *ast.File, st *ast.StructType) *ast.CommentGroup {
+	fields := st.Fields
+	if fields == nil {
+		return nil
+	}
+	limit := fields.Closing // empty struct: up to the closing brace
+	if len(fields.List) > 0 {
+		limit = fields.List[0].Pos()
+	}
+	docs := make(map[*ast.CommentGroup]struct{}, len(fields.List))
+	for _, f := range fields.List {
+		if f.Doc != nil {
+			docs[f.Doc] = struct{}{}
+		}
+	}
+	var collected []*ast.Comment
+	for _, cg := range file.Comments {
+		if cg.Pos() <= fields.Opening || cg.Pos() >= limit {
+			continue
+		}
+		if _, isFieldDoc := docs[cg]; isFieldDoc {
+			continue
+		}
+		collected = append(collected, cg.List...)
+	}
+	if len(collected) == 0 {
+		return nil
+	}
+	return &ast.CommentGroup{List: collected}
+}
+
+// mergeCommentGroups returns a comment group whose List is above ++ extra in
+// source order — above is the doc ABOVE the decl, extra lives inside/below it so
+// positions stay ascending and the grammar reconstructs a clean blank-line gap.
+// Returns the non-nil one when the other is nil (nil only when both are). The
+// input groups are never mutated.
+func mergeCommentGroups(above, extra *ast.CommentGroup) *ast.CommentGroup {
+	switch {
+	case extra == nil || len(extra.List) == 0:
+		return above
+	case above == nil || len(above.List) == 0:
+		return extra
+	default:
+		merged := make([]*ast.Comment, 0, len(above.List)+len(extra.List))
+		merged = append(merged, above.List...)
+		merged = append(merged, extra.List...)
+		return &ast.CommentGroup{List: merged}
 	}
 }
 

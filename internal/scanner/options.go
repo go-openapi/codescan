@@ -199,6 +199,20 @@ type Options struct {
 	// See go-swagger/go-swagger#2626.
 	SingleLineCommentAsDescription bool
 
+	// AfterDeclComments, when set, lets swagger annotations live INSIDE a
+	// declaration (the leading comment of a struct body) or INLINED as a
+	// trailing comment, in addition to the doc comment above the declaration.
+	// The godoc above the declaration then stays clean and human-facing while
+	// the swagger machinery lives out of the published documentation. The
+	// scanner folds the located comments into the comment source the builders
+	// already consume — same annotation grammar, no new syntax. Default false.
+	//
+	// v0.36 scope: type declarations (swagger:model / swagger:parameters /
+	// swagger:response) — struct inside-body leading comments and the trailing
+	// comment of an alias / non-struct type. Routes / operations are already
+	// position-agnostic. Struct fields and const enums are follow-ups.
+	AfterDeclComments bool
+
 	// PruneUnusedModels, when set together with ScanModels, drops every
 	// discovered definition that is not transitively referenced from a path, a
 	// shared response, a shared parameter, or a definition supplied via
