@@ -45,3 +45,13 @@ regenerates and compares on every run (`UPDATE_GOLDEN=1 go test ./...`). Because
 the example is ordinary, test-covered Go, `go test ./docs/examples/...` keeps
 the page honest — if the scanner's output changes, CI fails before the
 documentation can go stale.
+
+## Seeing it rendered
+
+The same golden spec, rendered as live API documentation by Swagger UI — what a
+consumer of the generated document sees. This closes the loop the capstone is
+about: annotated Go → the Swagger 2.0 JSON above → the API docs those
+annotations produce. The widget reads the very same golden file, so the rendered
+view can't drift from the JSON either.
+
+{{< openapi src="examples/basic/testdata/swagger.json" >}}
