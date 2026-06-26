@@ -1,6 +1,6 @@
 ---
 title: Single-line comments as descriptions
-weight: 42
+weight: 20
 description: |
   Route every single-line doc comment to description instead of title/summary
   with the SingleLineCommentAsDescription option.
@@ -51,5 +51,5 @@ two-line comment, or drop the trailing period, when you want a description.
   `info` title/description split this option also governs.
 - [Model definitions]({{% relref "/tutorials/model-definitions" %}}) — the
   title/description convention on a `swagger:model`.
-- [Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions" %}}) —
+- [Vendor extensions]({{% relref "vendor-extensions" %}}) —
   other `Options` knobs that reshape the emitted spec.

@@ -48,13 +48,13 @@ an existing spec via `Options.InputSpec`.
 | `InputSpec` | Overlay: merge discoveries on top of an existing spec. |
 | `BuildTags`, `Include`/`Exclude` | Scope control over what gets scanned. |
 | `RefAliases`, `TransparentAliases` | Alias-handling knobs. |
-| `EmitRefSiblings` | Emit a `$ref`'d field's description and extensions as direct `$ref` siblings instead of an `allOf` wrap — see [Descriptions beside a $ref]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}}). |
-| `SkipAllOfCompounding` | Never wrap a `$ref`'d field in an `allOf`; emit a bare `$ref` and drop the decorations that need a compound — see [Descriptions beside a $ref]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}}). |
+| `EmitRefSiblings` | Emit a `$ref`'d field's description and extensions as direct `$ref` siblings instead of an `allOf` wrap — see [Descriptions beside a $ref]({{% relref "descriptions-beside-a-ref" %}}). |
+| `SkipAllOfCompounding` | Never wrap a `$ref`'d field in an `allOf`; emit a bare `$ref` and drop the decorations that need a compound — see [Descriptions beside a $ref]({{% relref "descriptions-beside-a-ref" %}}). |
 | `DescWithRef` | _Deprecated_ — preserve a description-only `$ref` field via a single-arm `allOf`; prefer `EmitRefSiblings`. |
 | `SkipExtensions` | Suppress `x-go-*` vendor extensions. |
 | `SkipEnumDescriptions` | Keep the `swagger:enum` const→value mapping out of property/parameter descriptions (it still rides `x-go-enum-desc`). |
-| `EmitXGoType` | Stamp `x-go-type` (the fully-qualified Go type) on every definition — see [Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions#stamping-x-go-type" %}}). |
-| `SingleLineCommentAsDescription` | Route single-line comments to `description` instead of `title`/`summary` — see [Single-line comments]({{% relref "/shaping-the-output/single-line-comments" %}}). |
+| `EmitXGoType` | Stamp `x-go-type` (the fully-qualified Go type) on every definition — see [Vendor extensions]({{% relref "vendor-extensions#stamping-x-go-type" %}}). |
+| `SingleLineCommentAsDescription` | Route single-line comments to `description` instead of `title`/`summary` — see [Single-line comments]({{% relref "single-line-comments" %}}). |
 
 See the [godoc][godoc] for the full list.
 

@@ -1,6 +1,6 @@
 ---
 title: Build tags
-weight: 70
+weight: 50
 description: |
   Scan source guarded by Go build constraints by passing build tags to the
   scanner.

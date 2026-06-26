@@ -1,6 +1,6 @@
 ---
 title: Naming from struct tags
-weight: 44
+weight: 20
 description: |
   Derive property, parameter and header names from a struct tag other than
   json (form, xml, …) via NameFromTags.

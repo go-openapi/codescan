@@ -88,7 +88,7 @@ come entirely from the base:
 
 {{< code file="concepts/security/testdata/overlay.json" lang="json" >}}
 
-See [Overlaying a spec]({{% relref "/shaping-the-output/overlaying-a-spec" %}})
+See [Overlaying a spec]({{% relref "overlaying-a-spec" %}})
 for the full `InputSpec` merge semantics.
 
 ## What's next

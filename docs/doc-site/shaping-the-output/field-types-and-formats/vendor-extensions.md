@@ -1,6 +1,6 @@
 ---
 title: Vendor extensions
-weight: 40
+weight: 30
 description: |
   Control the x-go-* vendor extensions codescan emits, or suppress them with
   SkipExtensions.

@@ -29,7 +29,7 @@ automatically — a `time.Time` field, for instance, is published as
 
 A `swagger:model` that nothing else references appears in `definitions` only
 when you scan with `Options.ScanModels` (the `-m` flag). See
-[When the scanner emits a type]({{% relref "/shaping-the-output/type-discovery" %}}).
+[When the scanner emits a type]({{% relref "type-discovery" %}}).
 
 ## swagger:strfmt
 
@@ -160,7 +160,7 @@ alongside the reference:
 
 Nothing is dropped. The description-only case is the exception — it is governed
 by the `DescWithRef` option (see
-[Descriptions beside a $ref]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}})) —
+[Descriptions beside a $ref]({{% relref "descriptions-beside-a-ref" %}})) —
 and a `default`/`example` on a `$ref`'d field is shown in
 [Examples & defaults]({{% relref "/tutorials/examples-and-defaults" %}}).
 
@@ -171,7 +171,7 @@ identity and qualifies the colliding ones with a package segment
 (`billing.Account` / `identity.Account` → `BillingAccount` / `IdentityAccount`),
 deterministically. Pin the names in your public contract with an explicit
 `swagger:model <Name>`, and let auto-resolution handle the rest — see
-[Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts" %}}).
+[Resolving $ref name conflicts]({{% relref "resolving-name-conflicts" %}}).
 {{% /notice %}}
 
 ## What's next

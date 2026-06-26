@@ -8,9 +8,10 @@ description: |
 ---
 
 This section is the **reference compendium**: the precise, exhaustive
-description of the language codescan parses. It is written for people who want
-the full contract — annotation authors looking up an exact rule, and
-contributors porting, extending, or debugging the parser.
+description of the language codescan parses and the options that drive it. It is
+written for people who want the full contract — annotation authors looking up an
+exact rule, library callers looking up an option, and contributors porting,
+extending, or debugging the parser.
 
 If you are learning codescan by example, start with the
 [Tutorials]({{% relref "/tutorials" %}}) instead — they show the same concepts
@@ -18,7 +19,7 @@ as runnable Go with the spec they produce, side by side. The
 [Annotation index]({{% relref "/annotation-index" %}}) cross-references every
 annotation to both its tutorial and its entry here.
 
-## The four documents
+## The reference documents
 
 {{< children type="card" description="true" >}}
 
@@ -28,6 +29,9 @@ annotation to both its tutorial and its entry here.
 - **[Keywords]({{% relref "keywords" %}})** — the per-keyword reference card:
   every `keyword: value` form, its value shape, and the contexts where it is
   legal.
+- **[Options]({{% relref "options" %}})** — every field of `codescan.Options`:
+  its type, default, and effect, cross-linked to the how-to that shows it in
+  action. The library-caller reference.
 - **[Sub-languages]({{% relref "sub-languages" %}})** — the smaller languages
   embedded inside annotation bodies (`Parameters:` / `Responses:` grammars,
   YAML surfaces, prose classification).

@@ -111,7 +111,7 @@ one error envelope, defined once, referenced everywhere.
 
 The shared namespace is referenced **only by short name**, so codescan cannot
 silently rename a collision the way it
-[deconflicts model definitions]({{% relref "/shaping-the-output/resolving-name-conflicts" %}}).
+[deconflicts model definitions]({{% relref "resolving-name-conflicts" %}}).
 Instead it applies a deterministic, observable policy and reports every
 adjustment through `Options.OnDiagnostic` (the scan never fails on these — it
 keeps a valid spec and warns):
@@ -137,7 +137,7 @@ overlay entry seeds the namespace and wins any keep-first conflict.
 
 - [Routes & operations]({{% relref "/tutorials/routes-and-operations" %}}) — the
   per-operation `swagger:parameters` / `swagger:response` basics.
-- [Pruning unused models]({{% relref "/shaping-the-output/pruning-unused-models" %}})
+- [Pruning unused models]({{% relref "pruning-unused-models" %}})
   — shared parameters and responses count as reachability roots when pruning.
 - [Keyword reference]({{% relref "/maintainers/keywords" %}}) — the exhaustive
   `parameters` / `responses` body grammars.

@@ -64,4 +64,4 @@ referenced models. `Options.ExcludeDeps` keeps the scan within your own module,
 leaving out types pulled in from dependencies.
 
 Build constraints get their own guide — see
-[Build tags]({{% relref "/shaping-the-output/build-tags" %}}).
+[Build tags]({{% relref "build-tags" %}}).

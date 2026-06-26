@@ -74,7 +74,7 @@ own package first, then uniquely across the scanned model set, so a value type
 declared in another package resolves to a `$ref` by name. A leaf that matches a
 model in several packages is ambiguous — it is dropped with a
 `validate.ambiguous-type-name` diagnostic. See
-[Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts#referencing-a-model-by-leaf-across-packages" %}}).
+[Resolving $ref name conflicts]({{% relref "resolving-name-conflicts#referencing-a-model-by-leaf-across-packages" %}}).
 {{% /notice %}}
 
 ## Per-field control

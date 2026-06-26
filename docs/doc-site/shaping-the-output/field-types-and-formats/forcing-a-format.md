@@ -1,6 +1,6 @@
 ---
 title: Forcing a conformant format
-weight: 25
+weight: 10
 description: |
   Override a Go-derived format (e.g. the vendor uint64/uint32 formats) with an
   official, JSON-conformant one using a field-level swagger:strfmt.
@@ -30,6 +30,6 @@ a `UUID` type → `{string, format: uuid}`); see
 [Model definitions → swagger:strfmt]({{% relref "/tutorials/model-definitions" %}}).
 The `swagger:type` annotation is the related tool when you want to override the
 whole **type**, not just its format — see
-[Type discovery]({{% relref "/shaping-the-output/type-discovery" %}}) and the
+[Type discovery]({{% relref "type-discovery" %}}) and the
 [`swagger:type` reference]({{% relref "/maintainers/annotations#swaggertype" %}}).
 {{% /notice %}}

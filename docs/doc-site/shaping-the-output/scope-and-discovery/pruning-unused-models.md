@@ -1,6 +1,6 @@
 ---
 title: Pruning unused models
-weight: 16
+weight: 30
 description: |
   Scan a shared library with swagger:model discovery, then keep only the
   definitions actually reachable from your API — the middle ground between
@@ -9,7 +9,7 @@ description: |
 
 `Options.ScanModels` (the `-m` flag) publishes **every** `swagger:model` type it
 finds, whether or not anything references it — see
-[When the scanner emits a type]({{% relref "/shaping-the-output/type-discovery" %}}).
+[When the scanner emits a type]({{% relref "type-discovery" %}}).
 That is exactly what you want when the annotated package *is* the contract. It is
 the wrong default when you point codescan at a large **shared model library** and
 only care about the slice your API actually exposes: the spec fills up with
@@ -40,7 +40,7 @@ through any `$ref` — from one of these **roots**:
 
 - an operation's body parameters and response schemas;
 - a top-level shared `response` or `parameter`;
-- a definition supplied via [`InputSpec`]({{% relref "/shaping-the-output/overlaying-a-spec" %}}).
+- a definition supplied via [`InputSpec`]({{% relref "overlaying-a-spec" %}}).
 
 The walk follows references through every schema shape — properties, `allOf` /
 `anyOf` / `oneOf`, array items, `additionalProperties`, and so on — and
@@ -71,7 +71,7 @@ definition by a compiler-unique identity while it builds, then a final stage
 projects each one back to the shortest unique name — deconflicting cross-package
 collisions along the way (`billing.Account` / `identity.Account` →
 `BillingAccount` / `IdentityAccount`; see
-[Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts" %}})).
+[Resolving $ref name conflicts]({{% relref "resolving-name-conflicts" %}})).
 
 `PruneUnusedModels` runs **before** that name-resolution stage. So when one half
 of a colliding pair is unused, it is pruned *first* — and the collision never
@@ -106,9 +106,9 @@ codescan reports:
 
 ## What's next
 
-- [When the scanner emits a type]({{% relref "/shaping-the-output/type-discovery" %}}) —
+- [When the scanner emits a type]({{% relref "type-discovery" %}}) —
   reachability and `swagger:model`, the rules pruning builds on.
-- [Resolving $ref name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts" %}}) —
+- [Resolving $ref name conflicts]({{% relref "resolving-name-conflicts" %}}) —
   the name-resolution stage pruning runs ahead of.
-- [Overlaying a spec]({{% relref "/shaping-the-output/overlaying-a-spec" %}}) —
+- [Overlaying a spec]({{% relref "overlaying-a-spec" %}}) —
   `InputSpec`, whose definitions are pinned against the prune.

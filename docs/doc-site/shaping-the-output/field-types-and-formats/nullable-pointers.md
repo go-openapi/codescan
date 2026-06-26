@@ -1,6 +1,6 @@
 ---
 title: Nullable pointers
-weight: 30
+weight: 20
 description: |
   Mark pointer-typed fields as nullable with x-nullable, via
   SetXNullableForPointers.

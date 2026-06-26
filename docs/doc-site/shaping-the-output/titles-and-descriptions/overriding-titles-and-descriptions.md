@@ -1,6 +1,6 @@
 ---
 title: Overriding titles & descriptions
-weight: 43
+weight: 10
 description: |
   Replace the godoc-derived title and description with API-facing text using
   swagger:title and swagger:description — on models, fields, $ref'd fields and
@@ -15,7 +15,7 @@ annotation replaces the prose-derived value, leaving the Go comment free to say
 whatever Go developers need.
 
 This is the *explicit* counterpart to
-[Single-line comments]({{% relref "/shaping-the-output/single-line-comments" %}}),
+[Single-line comments]({{% relref "single-line-comments" %}}),
 which controls how a plain comment is *implicitly* routed to `title` vs
 `description`. Each pane below pairs the annotated Go (left) with the exact
 fragment the scanner emits (right), from the test-covered
@@ -69,7 +69,7 @@ codescan raises a `scan.empty-override` warning through `OnDiagnostic`. The
 `title` and `description` are symmetric `$ref` siblings: on a field whose Go
 type is a referenced model, they follow the **same preservation rule a prose
 description does**. Under the default flags they drop to a bare `$ref`; with
-[`EmitRefSiblings`]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}})
+[`EmitRefSiblings`]({{% relref "descriptions-beside-a-ref" %}})
 they ride alongside the `$ref` as direct siblings.
 
 {{< compare left="shaping/overrides/testdata/gadget_bare.json" leftlabel="Default — dropped to a bare $ref"
@@ -95,7 +95,7 @@ response/header it is dropped with `parse.context-invalid`.
 
 ## What's next
 
-- [Single-line comments]({{% relref "/shaping-the-output/single-line-comments" %}})
+- [Single-line comments]({{% relref "single-line-comments" %}})
   — the implicit `title` vs `description` routing this overrides.
-- [Descriptions beside a `$ref`]({{% relref "/shaping-the-output/descriptions-beside-a-ref" %}})
+- [Descriptions beside a `$ref`]({{% relref "descriptions-beside-a-ref" %}})
   — the `EmitRefSiblings` rule that title/description ride.

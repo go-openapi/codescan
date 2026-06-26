@@ -1,6 +1,6 @@
 ---
 title: Keeping annotations out of the godoc
-weight: 41
+weight: 30
 description: |
   Let swagger annotations live inside a struct body or as trailing comments so
   the godoc above each declaration stays clean — the AfterDeclComments opt-in.
@@ -18,7 +18,7 @@ annotations placed **inside a struct body** (its leading comment) or **inlined a
 a trailing comment** on the same line as the declaration. The godoc above stays
 concise and human-facing while the swagger machinery lives out of it — same
 annotation grammar, no new syntax. It is the placement counterpart to
-[overriding titles & descriptions]({{% relref "/shaping-the-output/overriding-titles-and-descriptions" %}}),
+[overriding titles & descriptions]({{% relref "overriding-titles-and-descriptions" %}}),
 which separates the same two concerns at the *text* level.
 
 Each pane below pairs the annotated Go (left) with the exact fragment the scanner
@@ -76,7 +76,7 @@ planned follow-up.
 
 ## What's next
 
-- [Overriding titles & descriptions]({{% relref "/shaping-the-output/overriding-titles-and-descriptions" %}})
+- [Overriding titles & descriptions]({{% relref "overriding-titles-and-descriptions" %}})
   — separate the godoc and the API text at the content level.
-- [Single-line comments]({{% relref "/shaping-the-output/single-line-comments" %}})
+- [Single-line comments]({{% relref "single-line-comments" %}})
   — how a plain comment is routed to `title` vs `description`.

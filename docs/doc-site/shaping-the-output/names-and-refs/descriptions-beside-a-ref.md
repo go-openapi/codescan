@@ -1,6 +1,6 @@
 ---
 title: Descriptions beside a $ref
-weight: 50
+weight: 40
 description: |
   Control how a field's description and extensions are rendered when its type
   resolves to a $ref — wrapped in an allOf, emitted as direct siblings

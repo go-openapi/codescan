@@ -1,6 +1,6 @@
 ---
 title: Resolving $ref name conflicts
-weight: 18
+weight: 10
 description: |
   When two Go types want the same definition name, codescan keeps them distinct
   with deterministic, package-qualified names — and you stay in control of the
@@ -137,9 +137,9 @@ the nested shape only when you prefer it for the over-budget tail.
 
 ## What's next
 
-- [Type discovery]({{% relref "/shaping-the-output/type-discovery" %}}) — which
+- [Type discovery]({{% relref "type-discovery" %}}) — which
   types become definitions in the first place.
-- [Pruning unused models]({{% relref "/shaping-the-output/pruning-unused-models" %}}) —
+- [Pruning unused models]({{% relref "pruning-unused-models" %}}) —
   drops unreferenced models *before* this name stage, so collisions caused only
   by models you do not use never arise.
 - [Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}) —

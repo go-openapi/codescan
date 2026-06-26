@@ -393,7 +393,7 @@ By default the const→value mapping is folded into the property's
 `description` (as above) **and** duplicated in `x-go-enum-desc`. Set the
 scanner option `SkipEnumDescriptions: true` to keep the authored prose as
 the description; the mapping then rides `x-go-enum-desc` only. See
-[Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions" %}}).
+[Vendor extensions]({{% relref "vendor-extensions" %}}).
 
 **Legal keywords.** Schema-context keywords. The `enum:` keyword can
 ALSO be used inline on the type doc to force a value set; when present,

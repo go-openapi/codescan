@@ -56,7 +56,7 @@ your own program (see [Getting started]({{% relref "/getting-started" %}})).
 When document-level metadata (info, security, servers) is more naturally
 hand-authored, you do not have to push it into the code: scan the code for the
 operations and models, and **overlay** the result onto a hand-written base
-document (see [Shaping the output → Overlaying a spec]({{% relref "/shaping-the-output/overlaying-a-spec" %}})).
+document (see [Shaping the output → Overlaying a spec]({{% relref "overlaying-a-spec" %}})).
 
 ## A community toolkit
 

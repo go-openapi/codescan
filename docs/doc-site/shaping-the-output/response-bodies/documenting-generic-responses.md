@@ -1,6 +1,6 @@
 ---
 title: Documenting generic responses
-weight: 22
+weight: 20
 description: |
   Your handlers return one generic envelope with an interface{} payload, but you
   want the spec to describe a concrete type per operation. Doc-only structs that
@@ -40,7 +40,7 @@ carried over from the embed:
             right="shaping/genericenvelopes/testdata/statusenvelope.json" rightlabel="Doc-only — data is concrete" >}}
 
 You restate **one** field, not the whole envelope. Point the route's response at
-the doc-only struct with the [`body:` sub-language]({{% relref "/shaping-the-output/inline-response-bodies" %}}),
+the doc-only struct with the [`body:` sub-language]({{% relref "inline-response-bodies" %}}),
 and specialise the same envelope per operation with a different payload each
 time:
 

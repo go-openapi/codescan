@@ -1,6 +1,6 @@
 ---
 title: Alias rendering
-weight: 60
+weight: 30
 description: |
   Choose how Go type aliases render — dissolved to their target, or exposed as a
   first-class $ref via swagger:model, with RefAliases / TransparentAliases.

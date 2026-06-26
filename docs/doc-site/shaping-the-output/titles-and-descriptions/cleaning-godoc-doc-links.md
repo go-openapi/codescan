@@ -1,6 +1,6 @@
 ---
 title: Cleaning godoc doc-links
-weight: 45
+weight: 40
 description: |
   Strip godoc doc-link brackets from generated descriptions and recompose
   resolvable links to each schema's exposed name — the CleanGoDoc opt-in.
@@ -17,7 +17,7 @@ removed and — when a link resolves to a scanned schema — the span is recompo
 to the name that schema is **exposed under**, so the prose stays true to the
 generated definitions. It applies **only to godoc-derived prose**; an
 author-written
-[`swagger:title` / `swagger:description`]({{% relref "/shaping-the-output/overriding-titles-and-descriptions" %}})
+[`swagger:title` / `swagger:description`]({{% relref "overriding-titles-and-descriptions" %}})
 override is deliberate text and is never touched.
 
 Each pane below pairs the annotated Go (left) with the exact fragment the scanner
@@ -56,7 +56,7 @@ Reading the cleaned pane:
 {{% notice style="info" %}}
 **It recomposes to the *final* exposed name.** The substitution runs after
 codescan resolves definition names, so a link to a model that gets
-[renamed to deconflict a collision]({{% relref "/shaping-the-output/resolving-name-conflicts" %}})
+[renamed to deconflict a collision]({{% relref "resolving-name-conflicts" %}})
 points at the renamed definition, not the original Go identifier.
 {{% /notice %}}
 
@@ -72,7 +72,7 @@ byte-identical to before, so existing specs never shift under you.
 
 ## What's next
 
-- [Overriding titles & descriptions]({{% relref "/shaping-the-output/overriding-titles-and-descriptions" %}})
+- [Overriding titles & descriptions]({{% relref "overriding-titles-and-descriptions" %}})
   — replace the godoc text outright (overrides are never cleaned).
-- [Resolving `$ref` name conflicts]({{% relref "/shaping-the-output/resolving-name-conflicts" %}})
+- [Resolving `$ref` name conflicts]({{% relref "resolving-name-conflicts" %}})
   — the exposed-name resolution that doc-links recompose to.

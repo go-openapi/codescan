@@ -1,6 +1,6 @@
 ---
 title: Overlaying a spec
-weight: 60
+weight: 40
 description: |
   Merge scanned discoveries on top of an existing Swagger document with
   InputSpec.

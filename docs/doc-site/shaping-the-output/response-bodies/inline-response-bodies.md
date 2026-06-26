@@ -1,6 +1,6 @@
 ---
 title: Inline response bodies
-weight: 20
+weight: 10
 description: |
   Declare a route's responses inline with the body: sub-language — a primitive,
   an array, or a model $ref — without writing a swagger:response struct.

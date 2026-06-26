@@ -1,6 +1,6 @@
 ---
 title: When the scanner emits a type
-weight: 15
+weight: 20
 description: |
   codescan never invents definitions — a type appears only when it is reachable
   or registered. Understand reachability and swagger:model so nothing goes
@@ -37,7 +37,7 @@ If a model is missing from your spec, it is almost always **unreachable**: no
 operation/parameter/response/model leads to it. Either reference it, or annotate
 it `swagger:model` and scan with `ScanModels`. For the opposite problem — a
 `ScanModels` scan that pulls in models you do *not* want, like `Standalone` —
-see [Pruning unused models]({{% relref "/shaping-the-output/pruning-unused-models" %}}).
+see [Pruning unused models]({{% relref "pruning-unused-models" %}}).
 {{% /notice %}}
 
 ## Generic and embedded types
