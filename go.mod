@@ -8,7 +8,7 @@ require (
 	github.com/go-openapi/spec v0.22.6
 	github.com/go-openapi/swag/mangling v0.26.1
 	github.com/go-openapi/swag/yamlutils v0.26.1
-	github.com/go-openapi/testify/v2 v2.5.1
+	github.com/go-openapi/testify/v2 v2.6.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/tools v0.47.0
 )
