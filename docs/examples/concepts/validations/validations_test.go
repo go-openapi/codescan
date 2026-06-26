@@ -78,4 +78,6 @@ func TestValidationFragments(t *testing.T) {
 	goldenJSON(t, "param", search.Get.Parameters) // reduced simple-schema surface
 	goldenJSON(t, "header", rate)                 // validated response header
 	goldenJSON(t, "object", attrs)                // object-validation keywords
+
+	goldenJSON(t, "full", doc) // whole spec for the tutorial's live "SwaggerUI" tab
 }

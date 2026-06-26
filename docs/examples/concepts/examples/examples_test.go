@@ -101,4 +101,6 @@ func TestExampleFragments(t *testing.T) {
 	require.Len(t, at.AllOf, 2, "expected a $ref arm and an override arm")
 	assert.IsType(t, map[string]any{}, at.AllOf[1].Example,
 		"object-literal example coerces to a structured value, not a string")
+
+	goldenRaw(t, "full", doc) // whole spec for the tutorial's live "SwaggerUI" tab
 }

@@ -30,7 +30,8 @@ A `swagger:model` field accepts the full JSON-schema validation vocabulary:
   object-level `required` array (`sku`).
 
 {{< example go="concepts/validations/validations.go" goregion="field"
-            json="concepts/validations/testdata/field.json" jsonlabel="#/definitions/Product" >}}
+            json="concepts/validations/testdata/field.json"
+            full="concepts/validations/testdata/full.json" >}}
 
 ## On parameters — the simple-schema surface
 

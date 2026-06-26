@@ -76,6 +76,10 @@ func TestSecurityInCode(t *testing.T) {
 	goldenRaw(t, "route", create.Security)
 	goldenRaw(t, "and", archive.Security)
 	goldenRaw(t, "public", map[string]any{"security": public.Security})
+
+	// Whole-spec golden the tutorial's "SwaggerUI" tab renders live (the
+	// fragments above are focused slices of this same document).
+	goldenRaw(t, "full", doc)
 }
 
 // TestSecurityByOverlay shows the "keep security out of app code" path: the

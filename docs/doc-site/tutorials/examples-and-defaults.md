@@ -23,7 +23,8 @@ For the exact value shapes these keywords accept, see
 type — `Hello, world!` stays a string, `3` becomes a number.
 
 {{< example go="concepts/examples/examples.go" goregion="example"
-            json="concepts/examples/testdata/example.json" jsonlabel="#/definitions/Greeting" >}}
+            json="concepts/examples/testdata/example.json"
+            full="concepts/examples/testdata/full.json" >}}
 
 The value is not limited to scalars. A **JSON literal** is parsed into a
 structured example — a `{ … }` object on a map field, a `[ … ]` array on a slice
