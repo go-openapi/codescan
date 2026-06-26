@@ -26,9 +26,9 @@ operation in one annotation. The body's `responses:` block ties status codes to
 named responses (`$ref` into the spec's `responses`). It lives in a plain
 comment block — no Go declaration required.
 
-{{< examplelive go="concepts/routes/routes.go" goregion="route"
-                json="concepts/routes/testdata/route.json"
-                full="concepts/routes/testdata/full.json" >}}
+{{< example go="concepts/routes/routes.go" goregion="route"
+            json="concepts/routes/testdata/route.json"
+            full="concepts/routes/testdata/full.json" >}}
 
 The body can also carry an indented `Parameters:` block to declare simple
 parameters (path / query / header) inline — no `swagger:parameters` struct
@@ -43,7 +43,8 @@ YAML document after a `---` fence — useful when you want to author the operati
 object directly (here a path parameter and an inline `$ref` response schema).
 
 {{< example go="concepts/routes/routes.go" goregion="operation"
-            json="concepts/routes/testdata/operation.json" jsonlabel="paths[/pets/{id}]" >}}
+            json="concepts/routes/testdata/operation.json"
+            full="concepts/routes/testdata/full.json" >}}
 
 ## swagger:parameters
 

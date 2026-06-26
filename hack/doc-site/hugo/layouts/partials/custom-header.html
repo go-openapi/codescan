@@ -86,34 +86,100 @@
 .examplelive .el-panel.active { display: block; }
 </style>
 <script>
-  // examplelive: wire the right card's Spec | SwaggerUI tabs and lazily render
-  // the openapi widget on first reveal. Swagger UI cannot paint inside a hidden
-  // (display:none) tab panel, so we let the theme render it once the panel is
-  // visible by firing the 'afterprint' event the theme already re-renders on.
-  // Pilot shortcut (see .claude/plans/tabbed-examples.md); a dedicated re-render
-  // entrypoint is the follow-up.
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.examplelive').forEach(function (box) {
-      var tabs = box.querySelectorAll('.el-tab');
-      var panels = box.querySelectorAll('.el-panel');
-      var renderedSwagger = false;
-      tabs.forEach(function (tab) {
-        tab.addEventListener('click', function () {
-          var target = tab.dataset.elTarget;
-          tabs.forEach(function (t) {
-            var on = t === tab;
-            t.classList.toggle('active', on);
-            t.setAttribute('aria-selected', on ? 'true' : 'false');
+  // examplelive: wire the `example` shortcode's right-card Spec | SwaggerUI tabs
+  // (rendered when the shortcode is given a `full=` whole-spec golden) and
+  // lazily render Swagger UI into each one the first time it is revealed.
+  //
+  // Swagger UI cannot paint inside a display:none tab panel (its iframe needs a
+  // laid-out ancestor), so each `.el-openapi` container is rendered on demand.
+  // We render into a per-widget iframe (CSS isolation) with a UNIQUE id derived
+  // from the container, so multiple live examples can coexist on one page —
+  // mirroring the theme's own openapi render but without its single fixed id.
+  // Assets (SwaggerUIBundle, swagger CSS) are loaded by the theme because the
+  // shortcode sets the page's `hasOpenApi` store flag. See
+  // .claude/plans/tabbed-examples.md.
+  (function () {
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+    }
+    function renderOpenapi(container) {
+      if (container.dataset.elRendered) return;
+      var r = window.relearn || {};
+      var cfg = r.themeUseOpenapi;
+      if (!window.SwaggerUIBundle || !window.SwaggerUIStandalonePreset || !cfg) {
+        // assets still loading (deferred scripts) — retry shortly
+        setTimeout(function () { renderOpenapi(container); }, 150);
+        return;
+      }
+      container.dataset.elRendered = '1';
+      var base = r.relBasePath || '';
+      var buster = cfg.assetsBuster || '';
+      var min = r.min || '';
+      var mode = cssVar('OPENAPI-theme') || 'light';
+      var variant = document.documentElement.dataset.rThemeVariant || '';
+      var innerId = container.id + '-ui';
+      var frame = document.createElement('iframe');
+      frame.className = 'sc-openapi-iframe';
+      frame.title = 'Rendered API documentation';
+      frame.style.width = '100%';
+      frame.style.border = '0';
+      frame.srcdoc =
+        '<!doctype html><html class="relearn ' + mode + '-mode" data-r-output-format="html" data-r-theme-variant="' + variant + '">' +
+        '<head><meta charset="utf-8">' +
+        '<link rel="stylesheet" href="' + cfg.css + buster + '">' +
+        '<link rel="stylesheet" href="' + base + '/css/swagger' + min + '.css' + buster + '">' +
+        '<link rel="stylesheet" href="' + base + '/css/format-html' + min + '.css' + buster + '">' +
+        '</head><body><div id="' + innerId + '"></div></body></html>';
+      frame.onload = function () {
+        try {
+          var doc = frame.contentWindow.document;
+          window.SwaggerUIBundle({
+            domNode: doc.getElementById(innerId),
+            url: container.dataset.specUrl,
+            presets: [window.SwaggerUIBundle.presets.apis, window.SwaggerUIStandalonePreset],
+            plugins: [window.SwaggerUIBundle.plugins.DownloadUrl],
+            layout: 'BaseLayout',
+            docExpansion: 'list',
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 2,
+            filter: true,
+            validatorUrl: 'none',
           });
-          panels.forEach(function (p) {
-            p.classList.toggle('active', p.dataset.elPanel === target);
+          var resize = function () {
+            var h = doc.documentElement.getBoundingClientRect().height;
+            if (h) frame.style.height = h + 'px';
+          };
+          new MutationObserver(resize).observe(doc.documentElement, { childList: true, subtree: true });
+          setTimeout(resize, 400);
+          window.addEventListener('resize', resize);
+        } catch (e) {
+          console.error('examplelive: SwaggerUI render failed', e);
+        }
+      };
+      container.appendChild(frame);
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.examplelive').forEach(function (box) {
+        var tabs = box.querySelectorAll('.el-tab');
+        var panels = box.querySelectorAll('.el-panel');
+        tabs.forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            var target = tab.dataset.elTarget;
+            tabs.forEach(function (t) {
+              var on = t === tab;
+              t.classList.toggle('active', on);
+              t.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            panels.forEach(function (p) {
+              p.classList.toggle('active', p.dataset.elPanel === target);
+            });
+            if (target === 'swaggerui') {
+              var c = box.querySelector('.el-openapi');
+              if (c) renderOpenapi(c);
+            }
           });
-          if (target === 'swaggerui' && !renderedSwagger) {
-            renderedSwagger = true;
-            window.dispatchEvent(new Event('afterprint'));
-          }
         });
       });
     });
-  });
+  })();
 </script>
