@@ -25,7 +25,7 @@ func descArg(t *testing.T, out []Token) string {
 	return ""
 }
 
-func hasAnnotation(out []Token, name string) bool {
+func hasAnnotation(out []Token, name string) bool { //nolint:unparam // other values than "model" possible in the future.
 	for _, tk := range out {
 		if tk.Kind == TokenAnnotation && tk.Name == name {
 			return true

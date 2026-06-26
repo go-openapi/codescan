@@ -113,23 +113,6 @@ type TypeIndex struct {
 	enrichedFields map[*ast.Field]struct{}
 }
 
-// emit delivers d to the consumer's diagnostic sink when one is wired. No-op
-// otherwise. The index is built before the ScanCtx exists, so it reports
-// through the raw callback (no dedup), exactly as detectNodes-level and
-// detectDegradedLoad observations do.
-func (a *TypeIndex) emit(d grammar.Diagnostic) {
-	if a.onDiagnostic == nil {
-		return
-	}
-	a.onDiagnostic(d)
-}
-
-// emitHintf delivers an informational Hint with no source position (the index
-// observes whole-package / whole-route omissions, not a single token).
-func (a *TypeIndex) emitHintf(code grammar.Code, format string, args ...any) {
-	a.emit(grammar.Hintf(token.Position{}, code, format, args...))
-}
-
 func NewTypeIndex(pkgs []*packages.Package, opts ...TypeIndexOption) (*TypeIndex, error) {
 	ac := &TypeIndex{
 		AllPackages:    make(map[string]*packages.Package),
@@ -145,6 +128,23 @@ func NewTypeIndex(pkgs []*packages.Package, opts ...TypeIndexOption) (*TypeIndex
 		return nil, err
 	}
 	return ac, nil
+}
+
+// emit delivers d to the consumer's diagnostic sink when one is wired. No-op
+// otherwise. The index is built before the ScanCtx exists, so it reports
+// through the raw callback (no dedup), exactly as detectNodes-level and
+// detectDegradedLoad observations do.
+func (a *TypeIndex) emit(d grammar.Diagnostic) {
+	if a.onDiagnostic == nil {
+		return
+	}
+	a.onDiagnostic(d)
+}
+
+// emitHintf delivers an informational Hint with no source position (the index
+// observes whole-package / whole-route omissions, not a single token).
+func (a *TypeIndex) emitHintf(code grammar.Code, format string, args ...any) {
+	a.emit(grammar.Hintf(token.Position{}, code, format, args...))
 }
 
 func (a *TypeIndex) build(pkgs []*packages.Package) error {
