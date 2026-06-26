@@ -43,14 +43,52 @@ func Lex(lines []Line) []Token {
 func classifyLines(lines []Line) []Token {
 	out := make([]Token, 0, len(lines)+1)
 	inFence := false
+	inLiteralDesc := false
 	for _, line := range lines {
+		if inLiteralDesc {
+			// Inside a `swagger:description |` literal block, every line is
+			// captured verbatim until the next annotation or EOF — no `---`
+			// fence toggling, no blank-line or keyword termination. This MUST
+			// happen here (stage 1) because a lone `---` in the body would
+			// otherwise flip inFence and swallow a following annotation as raw
+			// YAML. See README §literal-description.
+			tok := lexLine(line, false)
+			if tok.Kind != TokenAnnotation {
+				out = append(out, Token{Kind: tokenRawLine, Pos: line.Pos, Text: line.Raw, Raw: line.Raw})
+				continue
+			}
+			// An annotation terminates the block; re-process it normally so a
+			// back-to-back `swagger:description |` re-opens literal mode.
+			inLiteralDesc = false
+			out = append(out, tok)
+			if isLiteralDescMarker(tok) {
+				inLiteralDesc = true
+			}
+			continue
+		}
+
 		tok := lexLine(line, inFence)
 		out = append(out, tok)
 		if tok.Kind == tokenYAMLFence {
 			inFence = !inFence
 		}
+		if !inFence && isLiteralDescMarker(tok) {
+			inLiteralDesc = true
+		}
 	}
 	return out
+}
+
+// isLiteralDescMarker reports whether tok is a `swagger:description |`
+// annotation: a description override whose sole inline argument is the YAML
+// literal block-scalar marker `|`. The marker opts the body into verbatim
+// capture (blank lines and indentation preserved) instead of the default
+// blank-terminated Option B fold.
+func isLiteralDescMarker(tok Token) bool {
+	return tok.Kind == TokenAnnotation &&
+		tok.Name == labelDescription &&
+		len(tok.Args) == 1 &&
+		strings.TrimSpace(tok.Args[0].Text) == "|"
 }
 
 // lexLine classifies one line. Returns one of:
@@ -663,9 +701,12 @@ func accumulateBodies(in []Token) []Token {
 			// grammar and must not contaminate TITLE / DESC.
 			i++
 		case TokenAnnotation:
-			if t.Name == labelDescription {
+			switch {
+			case t.Name == labelDescription && isLiteralDescMarker(t):
+				i = collectDescriptionLiteral(in, i, &out)
+			case t.Name == labelDescription:
 				i = collectDescriptionBody(in, i, &out)
-			} else {
+			default:
 				out = append(out, t)
 				i++
 			}
@@ -701,6 +742,29 @@ func collectDescriptionBody(in []Token, i int, out *[]Token) int {
 	if len(body) > 0 {
 		ann.Args = []Token{combineDescriptionArg(ann, body)}
 	}
+	*out = append(*out, ann)
+	return j
+}
+
+// collectDescriptionLiteral folds the verbatim body of a `swagger:description |`
+// literal block into the annotation's single raw argument. classifyLines' literal
+// mode has already emitted the body as a contiguous run of tokenRawLine (every
+// source line after the marker, until the next annotation or EOF), so the body is
+// preserved exactly — indentation, blank lines, table pipes, and `---` all intact.
+// Trailing blank lines are clipped (bare-`|` semantics) and the `|` marker itself
+// is dropped. Returns the index past the folded body.
+func collectDescriptionLiteral(in []Token, i int, out *[]Token) int {
+	ann := in[i]
+	j := i + 1
+	var body []string
+	for j < len(in) && in[j].Kind == tokenRawLine {
+		body = append(body, in[j].Raw)
+		j++
+	}
+	for len(body) > 0 && strings.TrimSpace(body[len(body)-1]) == "" {
+		body = body[:len(body)-1]
+	}
+	ann.Args = []Token{{Kind: TokenRawValue, Pos: ann.Pos, Text: strings.Join(body, "\n")}}
 	*out = append(*out, ann)
 	return j
 }
