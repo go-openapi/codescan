@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "title": "Account is a read model whose shape is described by interface methods.",
+  "properties": {
+    "CreatedAt": {
+      "description": "CreatedAt is emitted as \"createdAt\" by default; verbatim \"CreatedAt\" with\nthe opt-out set.",
+      "type": "string"
+    },
+    "ID": {
+      "description": "ID is emitted as \"id\" by default; verbatim \"ID\" with the opt-out set.",
+      "type": "string"
+    },
+    "explicit_name": {
+      "description": "\nA swagger:name override is taken verbatim either way — re-mangling would\ncamelCase it to \"explicitName\".",
+      "type": "string",
+      "x-go-name": "OverriddenField"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/interfacenames"
+}
