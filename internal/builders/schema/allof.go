@@ -53,7 +53,16 @@ func (s *Builder) scanEmbeddedFields(
 			continue
 		}
 
-		if !fd.IsAllOfMember {
+		// DefaultAllOfForEmbeds promotes a plain (untagged) embed to allOf
+		// composition, exactly as a `swagger:allOf` tag would. A json-named
+		// embed is a single named property, not a promotion, so it stays inline
+		// (go-swagger#2038); interface embeds are out of scope here.
+		isAllOf := fd.IsAllOfMember
+		if !isAllOf && s.Ctx.DefaultAllOfForEmbeds() && embedNestName(afld, fd) == "" {
+			isAllOf = true
+		}
+
+		if !isAllOf {
 			target, err = s.buildPlainEmbed(fld, afld, fd, isString, omitEmpty, schema, target, nameByJSON)
 			if err != nil {
 				return nil, false, err
@@ -103,10 +112,7 @@ func (s *Builder) buildPlainEmbed(
 		target = schema
 	}
 
-	nestName := resolvers.ExplicitJSONName(afld)
-	if fd.JSONName != "" {
-		nestName = fd.JSONName
-	}
+	nestName := embedNestName(afld, fd)
 	if nestName != "" {
 		err := s.applyFieldCarrier(fieldCarrier{
 			name:      nestName,
@@ -129,6 +135,17 @@ func (s *Builder) buildPlainEmbed(
 	s.embedInherited = saved
 
 	return target, err
+}
+
+// embedNestName returns the explicit name an embed nests under — the json tag
+// name, overridden by `swagger:name` — or "" when the embed promotes its
+// properties (Go field promotion). An embed with a nest name is a single named
+// property, never a promotion or allOf composition (go-swagger#2038).
+func embedNestName(afld *ast.Field, fd fieldDoc) string {
+	if fd.JSONName != "" {
+		return fd.JSONName
+	}
+	return resolvers.ExplicitJSONName(afld)
 }
 
 // buildAllOf builds the schema for one allOf compound member. Peels

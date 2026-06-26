@@ -128,6 +128,12 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     - `SkipAllOfCompounding` — never emit an `allOf` compound; validations/externalDocs
       dropped (description/extensions too, unless `EmitRefSiblings` keeps them as
       siblings), each with a diagnostic. For consumers (e.g. go-swagger) wanting bare refs.
+  - `DefaultAllOfForEmbeds` — opt-in (default false): render a plain
+    (non-`swagger:allOf`) struct embed as allOf composition instead of inlining
+    its properties — a `$ref` allOf member for a model embed, an inline member
+    otherwise, with the embedding struct's own fields in a sibling member.
+    Json-named embeds (go-swagger#2038) and interface embeds are unaffected;
+    `swagger:allOf` already wins. See `internal/builders/schema/README.md#allof`.
   - `SetXNullableForPointers` — emit `x-nullable: true` on pointer fields.
   - `NameFromTags` — ordered list of struct-tag types a field's emitted name is
     derived from (schema properties, parameters, response headers). First listed

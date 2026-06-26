@@ -254,6 +254,12 @@ func (s *ScanCtx) SkipAllOfCompounding() bool {
 	return s.opts.SkipAllOfCompounding
 }
 
+// DefaultAllOfForEmbeds reports whether plain struct embeds should render as
+// allOf composition instead of inlined properties (Options.DefaultAllOfForEmbeds).
+func (s *ScanCtx) DefaultAllOfForEmbeds() bool {
+	return s.opts.DefaultAllOfForEmbeds
+}
+
 func (s *ScanCtx) EmitRefSiblings() bool {
 	return s.opts.EmitRefSiblings
 }

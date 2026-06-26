@@ -428,6 +428,19 @@ classification per embed:
     ordinary field rather than promoting it (go-swagger#2038).
   - no explicit name — properties merge (promote) into the outer schema.
 
+**`DefaultAllOfForEmbeds` (opt-in).** When `Options.DefaultAllOfForEmbeds`
+is set, a plain embed with **no explicit name** is reclassified as an
+allOf member — exactly as if it carried `swagger:allOf` — so it takes the
+`buildAllOf` path ($ref when the embedded type is a model, inline member
+otherwise) and the embedding struct's own fields move into a sibling allOf
+member. The decision lives in `scanEmbeddedFields` (`isAllOf` is forced
+true via `embedNestName(afld, fd) == ""`); a json-named embed keeps its
+nested-property shape (go-swagger#2038), an explicit `swagger:allOf` is
+already in this shape, and interface embeds are out of scope (they compose
+via allOf regardless — see [§embedded](#embedded)). Default off ⇒ output
+unchanged. Pinned by `fixtures/enhancements/default-allof-embeds/` +
+`integration/coverage_default_allof_embeds_test.go`.
+
 The `swagger:allOf` arg, when present, is recorded as
 `x-class: <arg>` on the outer schema (`fd.AllOfClass`). This is the
 discriminator hint downstream go-swagger consumes.

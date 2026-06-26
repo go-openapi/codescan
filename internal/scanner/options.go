@@ -100,6 +100,38 @@ type Options struct {
 	// handle the allOf-compounded shape. See [§ref-override].
 	SkipAllOfCompounding bool
 
+	// DefaultAllOfForEmbeds changes how a plain (non-`swagger:allOf`-tagged)
+	// struct embed renders: into allOf composition instead of inlined
+	// properties.
+	//
+	// By default codescan inlines an embedded struct's properties into the
+	// embedding schema (mirroring Go field promotion), so the "this composes Y"
+	// relationship is lost — every embedding struct emits a flat copy of the
+	// embedded fields. Downstream client generators that want a reusable base
+	// type per embed prefer the composition shape instead.
+	//
+	//   - false (default): plain embeds inline their properties (existing
+	//     behaviour).
+	//   - true: a plain embed is treated as if it carried `swagger:allOf` —
+	//     it becomes an allOf member ($ref to the embedded type's definition
+	//     when that type is a model, otherwise an inline member), and the
+	//     embedding struct's own fields move into a sibling allOf member.
+	//
+	// Scope and precedence:
+	//   - Only STRUCT embeds are affected. Interface embeds already compose via
+	//     allOf and are unchanged.
+	//   - An explicit `swagger:allOf` annotation already produces this shape;
+	//     the flag only makes it the default for untagged embeds.
+	//   - An embed carrying an explicit json tag name (or `swagger:name`) is a
+	//     single named property, not a promotion, so it is left as a nested
+	//     property regardless of this flag (go-swagger#2038).
+	//   - Pointer embeds are peeled; aliased embeds resolve to their unaliased
+	//     type; stdlib specials (`error`, `time.Time`) keep their canonical
+	//     recognizer shape — all via the existing allOf path.
+	//
+	// See [§allof](../builders/schema/README.md#allof).
+	DefaultAllOfForEmbeds bool
+
 	SkipExtensions bool // skip generating x-go-* vendor extensions in the spec
 
 	// NameFromTags is the ordered list of struct-tag types consulted to derive
