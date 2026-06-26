@@ -1,0 +1,12 @@
+{
+  "description": "Option B folds prose up to the first blank line, so only this sentence\nsurvives — the markdown table below never reaches the spec.",
+  "type": "object",
+  "title": "Plain uses an ordinary description annotation.",
+  "properties": {
+    "name": {
+      "type": "string",
+      "x-go-name": "Name"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/markdowndesc"
+}

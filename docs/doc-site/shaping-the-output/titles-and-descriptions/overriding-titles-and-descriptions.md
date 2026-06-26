@@ -49,6 +49,10 @@ the annotation fold into one description (joined with newlines) and the body
 The `notes` field above shows this: its two prose lines fold together, and the
 ordinary godoc paragraph after the blank line is discarded.
 
+To carry a body *past* a blank line — a markdown table, a multi-paragraph
+description — end the annotation line with a `|` literal block marker; see
+[Markdown descriptions]({{% relref "markdown-descriptions" %}}).
+
 ### Keeping a co-located validation keyword
 
 Because the override annotations dispatch through the schema family, a
