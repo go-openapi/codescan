@@ -273,6 +273,13 @@ func (s *ScanCtx) NameFromTags() []string {
 	return s.opts.NameFromTags
 }
 
+// SkipJSONifyInterfaceMethods reports whether the interface-method auto-jsonify
+// mangler is disabled (Options.SkipJSONifyInterfaceMethods). A `swagger:name`
+// override is honored verbatim regardless.
+func (s *ScanCtx) SkipJSONifyInterfaceMethods() bool {
+	return s.opts.SkipJSONifyInterfaceMethods
+}
+
 func (s *ScanCtx) TransparentAliases() bool {
 	return s.opts.TransparentAliases
 }

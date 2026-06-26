@@ -123,6 +123,29 @@ type Options struct {
 	// tag-derived name.
 	NameFromTags []string
 
+	// SkipJSONifyInterfaceMethods opts out of the auto-jsonify mangler applied
+	// to interface-method property names.
+	//
+	// An interface method has no "natural" JSON serialization (Go's
+	// encoding/json cannot marshal embedded interface methods without a custom
+	// marshaler), so codescan invents a default property name by running the
+	// swag/mangling ToJSONName transform on the Go method name
+	// (`CreatedAt` → `createdAt`, `ID` → `id`). This convention will not always
+	// match the author's intent — e.g. an interface already named for its JSON
+	// shape, or a codebase with its own canonical-name discipline.
+	//
+	//   - false (default): interface-method names auto-jsonify (existing
+	//     behaviour).
+	//   - true: the Go method name is emitted verbatim; the mangler is skipped.
+	//
+	// A `swagger:name X` override is taken verbatim regardless of this flag —
+	// it already bypasses the mangler. This flag only changes the fallback used
+	// when no override is present. It does not affect struct-field naming, which
+	// mirrors what encoding/json actually produces.
+	//
+	// See [§interface-naming](../builders/schema/README.md#interface-naming).
+	SkipJSONifyInterfaceMethods bool
+
 	// SkipEnumDescriptions controls whether the per-enum-value const-name
 	// mapping built from `swagger:enum` (e.g. "FIRST TestEnumFirst") is
 	// folded into the property / parameter / header `description`.

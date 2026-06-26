@@ -638,8 +638,16 @@ This asymmetry is intentional, not a quirk:
   serialization mirror.
 
 The "one size fits all" mangler on interfaces will not always be
-what the author wanted — a future global opt-out
-(`skip-jsonify-interfaces` or similar) is on the roadmap.
+what the author wanted, so it can be turned off globally with
+**`Options.SkipJSONifyInterfaceMethods`** (opt-out, default `false`).
+When set, the carrier emits the Go method name verbatim instead of
+calling `s.interfaceJSONName(fld.Name())` — useful for an interface
+already named for its JSON shape, or a codebase with its own
+canonical-name discipline. A `swagger:name X` override still wins
+verbatim regardless (see below); the flag only changes the
+no-override fallback. The on/off contract is pinned by
+`fixtures/enhancements/interface-no-mangle/` +
+`integration/coverage_skip_jsonify_interface_test.go`.
 
 ### `swagger:name X` is verbatim
 

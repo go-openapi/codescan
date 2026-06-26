@@ -135,6 +135,11 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     explicit empty slice ⇒ Go field name. Only the name; encoding/json directives
     (`-`, `,omitempty`, `,string`) always come from the `json` tag. e.g.
     `["form","json"]` for gin (go-swagger#2912/#1391).
+  - `SkipJSONifyInterfaceMethods` — opt out (default false) of the auto-jsonify
+    mangler on interface-method property names (`ID`→`id`, `CreatedAt`→`createdAt`).
+    When true the Go method name is emitted verbatim; `swagger:name` still wins
+    verbatim regardless. Does not affect struct fields. See
+    `internal/builders/schema/README.md#interface-naming`.
   - `SkipExtensions` — suppress `x-go-*` vendor extensions.
   - `OnDiagnostic` — callback sink for all scan-time observations (the only output
     channel; codescan never writes to stdout/stderr).

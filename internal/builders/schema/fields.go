@@ -336,7 +336,13 @@ func (s *Builder) methodCarrier(fld *types.Func, decl *scanner.EntityDecl) (fiel
 
 	name := fd.JSONName
 	if name == "" {
-		name = s.interfaceJSONName(fld.Name())
+		// No swagger:name override: auto-jsonify the Go method name unless the
+		// author opted out, in which case the Go name is emitted verbatim.
+		if s.Ctx.SkipJSONifyInterfaceMethods() {
+			name = fld.Name()
+		} else {
+			name = s.interfaceJSONName(fld.Name())
+		}
 	}
 
 	return fieldCarrier{
