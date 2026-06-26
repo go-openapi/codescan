@@ -57,4 +57,63 @@
   margin-top: 0.25rem;
   font-size: 0.8rem;
 }
+/* examplelive: the right card's Spec | SwaggerUI tabs (tabbed-example pilot). */
+.examplelive .el-right { min-width: 0; }
+.examplelive .el-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.examplelive .el-tab {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.85rem;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+}
+.examplelive .el-tab.active {
+  opacity: 1;
+  border-bottom-color: transparent;
+  background: rgba(127, 127, 127, 0.12);
+}
+.examplelive .el-panel { display: none; }
+.examplelive .el-panel.active { display: block; }
 </style>
+<script>
+  // examplelive: wire the right card's Spec | SwaggerUI tabs and lazily render
+  // the openapi widget on first reveal. Swagger UI cannot paint inside a hidden
+  // (display:none) tab panel, so we let the theme render it once the panel is
+  // visible by firing the 'afterprint' event the theme already re-renders on.
+  // Pilot shortcut (see .claude/plans/tabbed-examples.md); a dedicated re-render
+  // entrypoint is the follow-up.
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.examplelive').forEach(function (box) {
+      var tabs = box.querySelectorAll('.el-tab');
+      var panels = box.querySelectorAll('.el-panel');
+      var renderedSwagger = false;
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var target = tab.dataset.elTarget;
+          tabs.forEach(function (t) {
+            var on = t === tab;
+            t.classList.toggle('active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+          panels.forEach(function (p) {
+            p.classList.toggle('active', p.dataset.elPanel === target);
+          });
+          if (target === 'swaggerui' && !renderedSwagger) {
+            renderedSwagger = true;
+            window.dispatchEvent(new Event('afterprint'));
+          }
+        });
+      });
+    });
+  });
+</script>

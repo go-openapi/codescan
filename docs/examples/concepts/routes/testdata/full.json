@@ -1,0 +1,262 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Lists pets in the store, optionally filtered by tag.",
+        "operationId": "listPets",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Tag",
+            "description": "Tag filters pets by tag.",
+            "name": "tag",
+            "in": "query"
+          },
+          {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32",
+            "x-go-name": "Limit",
+            "description": "Limit caps the number of results.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/petsResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/pets/filter": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Filter pets with cursor pagination.",
+        "operationId": "filterPets",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "After",
+            "description": "After is an opaque cursor carried as a plain string query parameter.",
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "Sort",
+            "description": "Sort is a list of sort keys carried as an array-of-string query parameter.",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "matched pets"
+          }
+        }
+      }
+    },
+    "/pets/import": {
+      "post": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "createPet",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "description": "Body is the pet to create.",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/petsResponse"
+          }
+        }
+      }
+    },
+    "/pets/search": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Searches pets. The operation links out to external documentation.",
+        "externalDocs": {
+          "description": "Search guide",
+          "url": "https://example.com/docs/search"
+        },
+        "operationId": "searchPets",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/petsResponse"
+          }
+        }
+      }
+    },
+    "/pets/{id}": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "summary": "Get a pet by ID.",
+        "operationId": "getPet",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the requested pet",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/pets/{id}/photo": {
+      "post": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "uploadPetPhoto",
+        "parameters": [
+          {
+            "type": "file",
+            "x-go-name": "Photo",
+            "description": "Photo is the image to upload.",
+            "name": "photo",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/petsResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "CatalogEntry": {
+      "description": "CatalogEntry carries externalDocs at the schema level (the link rides the\ndefinition) and on its fields. (On a simple-schema parameter externalDocs is\ndropped with a diagnostic: it is a full-Schema-only keyword.)",
+      "type": "object",
+      "properties": {
+        "sku": {
+          "description": "SKU is the catalog identifier.",
+          "type": "string",
+          "x-go-name": "SKU"
+        },
+        "supplier": {
+          "description": "Supplier is a $ref'd field: its sibling externalDocs lifts onto the\nfield's allOf compound (a bare $ref cannot carry sibling keywords).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Supplier"
+            }
+          ],
+          "x-go-name": "Supplier",
+          "externalDocs": {
+            "description": "Supplier docs",
+            "url": "https://example.com/docs/supplier"
+          }
+        },
+        "vendor": {
+          "description": "Vendor is a plain field: externalDocs attaches directly to the property.",
+          "type": "string",
+          "x-go-name": "Vendor",
+          "externalDocs": {
+            "description": "Vendor field docs",
+            "url": "https://example.com/docs/vendor"
+          }
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/routes",
+      "externalDocs": {
+        "description": "Catalog schema reference",
+        "url": "https://example.com/docs/catalog"
+      }
+    },
+    "Pet": {
+      "type": "object",
+      "title": "Pet is the model the operations below produce and consume.",
+      "properties": {
+        "id": {
+          "description": "ID is the unique identifier.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "description": "Name is the pet's display name.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/routes"
+    },
+    "Supplier": {
+      "type": "object",
+      "title": "Supplier is referenced by CatalogEntry.Supplier.",
+      "properties": {
+        "name": {
+          "description": "Name is the supplier name.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/routes"
+    }
+  },
+  "responses": {
+    "errorResponse": {
+      "description": "ErrorResponse is the default error payload.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "Message is a human-readable error message.",
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    },
+    "petsResponse": {
+      "description": "PetsResponse is the list returned by listPets.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Pet"
+        }
+      }
+    }
+  }
+}
