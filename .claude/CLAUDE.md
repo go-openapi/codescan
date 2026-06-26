@@ -165,6 +165,10 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
 - Uses `golang.org/x/tools/go/packages` for module-aware package loading.
 - Comment annotations follow the go-swagger convention (`swagger:route`, `swagger:operation`,
   `swagger:parameters`, `swagger:response`, `swagger:model`, etc.).
+- `swagger:description |` (YAML literal block-scalar marker) captures a verbatim
+  markdown body — blank lines, indentation, table pipes preserved — until the next
+  line-leading annotation or EOF; reframes go-swagger#3211. Plain `swagger:description`
+  stays blank-terminated. See `internal/parsers/grammar/README.md#literal-description`.
 - The scanner works at the AST / `go/types` level — it never executes or compiles scanned code.
 - Parsers never import builders; they write through the interfaces in `internal/ifaces`.
   When adding a new annotation, extend the relevant builder's `taggers.go` rather than reaching

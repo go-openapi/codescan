@@ -17,6 +17,7 @@ live here.
 - [§prose-classification](#prose-classification) — TITLE / DESC split heuristics
 - [§raw-block-terminators](#raw-block-terminators) — sibling-terminator rule for raw bodies
 - [§yaml-fence-handling](#yaml-fence-handling) — opaque YAML bodies and decorative fences
+- [§literal-description](#literal-description) — `swagger:description \|` verbatim markdown body
 - [§disambiguation](#disambiguation) — value-shape dispatch (default / enum / type-ref)
 - [§parser-contract](#parser-contract) — Block family dispatch, AnnotationKind
 - [§block-shapes](#block-shapes) — typed Block kinds and their fields
@@ -398,6 +399,66 @@ the body and discards the fence markers themselves via
 `swagger:route` does not allow `OPAQUE_YAML` bodies — only
 `swagger:operation` does. The parser flags an OPAQUE_YAML under
 route with `CodeUnexpectedToken`.
+
+---
+
+## <a id="literal-description"></a>§literal-description — `swagger:description |` verbatim markdown body
+
+By default a multi-line `swagger:description` folds its body with the
+**Option B** rule (`collectDescriptionBody`): contiguous prose lines up
+to the first blank line, keyword, or annotation, each `TrimSpace`d. That
+is fine for plain prose but loses markdown — blank lines terminate it and
+indentation / table pipes are stripped.
+
+A YAML **literal block-scalar marker** opts the body into verbatim
+capture. When the annotation line ends with a lone `|`
+(`isLiteralDescMarker`), everything below is taken exactly — blank lines,
+indentation, table pipes, and `---` all preserved — until the next
+annotation or EOF:
+
+```
+// swagger:description |
+// Widgets support **markdown**:
+//
+// | name | purpose |
+// |------|---------|
+//
+// - a bullet
+// swagger:model Widget
+```
+
+The capture is implemented in **two stages**, and stage 1 is load-bearing:
+
+- **Stage 1 (`classifyLines`, `inLiteralDesc`).** On emitting a
+  `swagger:description |` annotation, the line classifier enters literal
+  mode and emits every following line as a verbatim `tokenRawLine` — **no
+  `---` fence toggling, no blank-line or keyword termination**. This must
+  happen here: a lone `---` in the body would otherwise flip the global
+  `inFence` state ([§yaml-fence-handling](#yaml-fence-handling)) and
+  swallow a following annotation as opaque YAML. Literal mode ends when a
+  line classifies as an annotation (re-processed normally, so a following
+  `swagger:model` survives) or at EOF.
+- **Stage 2 (`collectDescriptionLiteral`).** Folds the `tokenRawLine` run
+  into the annotation's single `TokenRawValue` arg: joins with `\n`, drops
+  the `|` marker, clips trailing blank lines (bare-`|` clip), and strips
+  the single godoc `// ` convention space per line. Interior indentation
+  and trailing whitespace (markdown hard breaks) are kept.
+
+Because the body becomes the annotation's `AnnotationArg()`, every
+`swagger:description` consumer (schema model / field description) gets the
+verbatim markdown with no per-builder change.
+
+**Terminator contract.** Only an annotation at the **start of a line**
+ends the block; a `swagger:` token mid-line is prose. The comment-prefix
+strip removes leading indentation *before* the annotation check, so an
+indented line that begins with `swagger:` still terminates — a
+`swagger:`-leading line cannot be hidden inside an indented markdown code
+block. Plain `swagger:description` (no `|`) keeps Option B unchanged.
+
+This reframes go-swagger#3211: markdown is authored explicitly via
+`swagger:description |`, never recovered from ambient godoc prose (the
+preamble path still strips the leading table pipe — see
+[§preprocess-contract](#preprocess-contract)).
 
 ---
 

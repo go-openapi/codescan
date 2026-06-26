@@ -115,6 +115,36 @@ func TestLexer_DescriptionLiteral_KeywordLineIsBody(t *testing.T) {
 	assert.Contains(t, arg, "default: not a keyword here")
 }
 
+// TestLexer_DescriptionLiteral_MidLineSwaggerIsBody: only an annotation at the
+// START of a line terminates the block; a `swagger:` token mid-line is prose.
+func TestLexer_DescriptionLiteral_MidLineSwaggerIsBody(t *testing.T) {
+	src := strings.Join([]string{
+		"swagger:description |",
+		"You can write swagger:model in the middle of a sentence.",
+		"And mention swagger:meta too.",
+		"swagger:model Foo",
+	}, "\n")
+	out := lexString(t, src)
+	arg := descArg(t, out)
+	assert.Equal(t, "You can write swagger:model in the middle of a sentence.\nAnd mention swagger:meta too.", arg)
+	assert.True(t, hasAnnotation(out, labelModel), "the line-leading swagger:model terminates and survives")
+}
+
+// TestLexer_DescriptionLiteral_IndentedSwaggerStillTerminates documents the
+// edge: the comment-prefix strip removes leading indentation before the
+// annotation check, so even an indented line that BEGINS with `swagger:`
+// terminates the block (you cannot hide it by indenting, e.g. in a code block).
+func TestLexer_DescriptionLiteral_IndentedSwaggerStillTerminates(t *testing.T) {
+	src := strings.Join([]string{
+		"swagger:description |",
+		"body line",
+		"    swagger:model Foo",
+	}, "\n")
+	out := lexString(t, src)
+	assert.Equal(t, "body line", descArg(t, out))
+	assert.True(t, hasAnnotation(out, labelModel))
+}
+
 // TestLexer_DescriptionLiteral_TrailingBlankClipped: bare `|` clips trailing
 // blank lines (interior ones are kept, see above).
 func TestLexer_DescriptionLiteral_TrailingBlankClipped(t *testing.T) {
