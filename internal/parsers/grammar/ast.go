@@ -505,7 +505,7 @@ const (
 // Args carries the remaining argument tokens, de-duplicated; the definition-vs-reference reading of
 // those tokens is the builder's, since it depends on whether the marker is attached to a struct.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md §1.
+// §1.
 type ParametersBlock struct {
 	*baseBlock
 

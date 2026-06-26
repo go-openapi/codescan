@@ -281,7 +281,6 @@ type Options struct {
 	//     generated definitions). The first identifier of a title /
 	//     description is restored to sentence case.
 	//
-	// See .claude/plans/features/godoc-filter-design.md.
 	CleanGoDoc bool
 
 	// PruneUnusedModels, when set together with ScanModels, drops every discovered definition that is

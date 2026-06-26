@@ -206,7 +206,7 @@ const (
 	// Shared parameters are referenced only by short name, so — unlike definitions — they are
 	// never renamed: the first registration is kept, later ones are dropped.
 	// Warning, so the shadowed declaration is never lost silently.
-	// See .claude/plans/features/shared-parameters-fixtures.md §2.
+	// §2.
 	CodeSharedParameterConflict Code = "scan.shared-parameter-conflict"
 
 	// CodeSharedResponseConflict fires when two `swagger:response` declarations register the same
@@ -225,7 +225,7 @@ const (
 	//
 	// The reference is dropped rather than emitting a dangling $ref.
 	// Warning.
-	// See .claude/plans/features/shared-parameters-fixtures.md §1b.
+	// §1b.
 	CodeDanglingParameterRef Code = "scan.dangling-parameter-ref"
 
 	// CodeDanglingResponseRef fires when an operation references a shared response
@@ -254,7 +254,7 @@ const (
 	// The empty value is still applied — empty is the deliberate godoc-suppression affordance —
 	// but the case is flagged in case it was accidental (a leftover marker).
 	// Warning.
-	// See .claude/plans/features/swagger-description-override-design.md (D7).
+	// (D7).
 	CodeEmptyOverride Code = "scan.empty-override"
 )
 

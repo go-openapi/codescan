@@ -55,7 +55,7 @@ func (s *Builder) pruneUnusedModels() {
 
 	// C4: prune unreferenced shared parameters / responses FIRST, so a definition kept alive only by a
 	// now-pruned shared object becomes prunable in the definition pass below.
-	// See .claude/plans/features/shared-parameters-fixtures.md §6b.
+	// §6b.
 	s.pruneUnusedSharedObjects(onDiag)
 
 	if len(s.input.Definitions) == 0 {

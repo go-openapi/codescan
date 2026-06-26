@@ -79,7 +79,7 @@ func (s *Builder) Build(opts ...Option) error {
 		// so annotateSchema's x-go-name / x-go-package emission is unchanged.
 		// The reduce stage shortens keys back afterwards.
 		//
-		// See .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+		// §9.1/§12.1.
 		defKey := s.Decl.DefKey()
 
 		schema := s.definitions[defKey] // if not named, empty schema

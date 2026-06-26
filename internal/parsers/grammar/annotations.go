@@ -46,7 +46,6 @@ const (
 	//
 	// A schema-level override that replaces the godoc-derived title on a model / field.
 	// Single-line: the arg is the whole rest of the line.
-	// See .claude/plans/features/swagger-description-override-design.md.
 	AnnTitle
 	// AnnDescription — swagger:description <text> [+ body].
 	//

@@ -16,7 +16,7 @@ import (
 // final user-facing name; a marker whose key is not an emitted definition (pruned / unresolved)
 // collapses to its humanized fallback.
 //
-// See .claude/plans/features/godoc-filter-design.md §3.
+// §3.
 func (s *Builder) substituteGodocMarkers(renames map[string]string) {
 	finalName := func(defKey string) (string, bool) {
 		if n, ok := renames[defKey]; ok {

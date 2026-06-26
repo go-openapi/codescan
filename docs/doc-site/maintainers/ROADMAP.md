@@ -29,8 +29,8 @@ timeline
                     : Name conflict handling & circular $ref, missing validations, ... 
     🔶 v0.36.x (July 2026) : CLI & TUI / faster code scanner
                     : Optimized incremental type scanner
-                    : more tunable knobs, new annotations
-                    : go doc filter, private comments, inner markdown
+                    : ✅ more tunable knobs, new annotations
+                    : ✅ go doc filter, private comments, inner markdown
     ⬜ v0.37.x (August 2026) : playground UI / decouple from `Spec`
                     : Internal model
                     : Discriminator / polymorphism discovery

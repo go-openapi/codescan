@@ -19,7 +19,7 @@ import (
 //
 // Now the local type and mongo's get distinct concat-qualified names, so the local definition's
 // body is a `$ref` to the MONGO definition — a valid cross-type reference, no self-`$ref`.
-// Same family as #2783. See .claude/plans/name-identity-cyclic-ref.md.
+// Same family as #2783..
 func TestCoverage_Bug2637(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./bugs/2637/...")
 

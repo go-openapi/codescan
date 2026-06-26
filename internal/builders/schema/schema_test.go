@@ -34,7 +34,6 @@ const (
 // NOTE: the per-type petstore schema snapshots (Tag / Pet / Order) moved to the full-pipeline
 // integration golden petstore_spec.json, which captures the same models in their reduced form.
 // Builder-unit tests assert properties; they no longer dump whole-spec goldens.
-// See .claude/plans/golden-unit-to-integration.md.
 
 func TestBuilder(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)

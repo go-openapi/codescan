@@ -30,7 +30,7 @@ import (
 // When no definition carries the leaf, short is returned unchanged so absence checks (`_, ok :=
 // models[ResolveTestKey(...)]; assert.False(ok)`) still observe a miss.
 // It fails only on a genuinely ambiguous match, which no current unit fixture produces.
-// See .claude/plans/name-identity-cyclic-ref.md §12.1.
+// §12.1.
 func ResolveTestKey(t *testing.T, defs map[string]oaispec.Schema, short string) string {
 	t.Helper()
 

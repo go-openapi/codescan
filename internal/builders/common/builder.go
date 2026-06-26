@@ -144,7 +144,6 @@ func (s *Builder) ParseBlock(cg *ast.CommentGroup) grammar.Block {
 //
 // Present=false → annotation absent (fall back to the godoc-derived value); Present=true with
 // Value=="" → explicit empty, the deliberate godoc-suppression affordance (design D7).
-// See .claude/plans/features/swagger-description-override-design.md.
 type OverrideValue struct {
 	Value   string
 	Present bool
@@ -280,7 +279,7 @@ func (s *Builder) ResetPostDeclarations() {
 func (s *Builder) MakeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) error {
 	// Emit the fully-qualified identity key (pkgpath/name), not the bare short name: this keeps
 	// distinct Go types from colliding before the spec.Builder's reduce stage shortens names back.
-	// See .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+	// §9.1/§12.1.
 	ref, err := oaispec.NewRef("#/definitions/" + decl.DefKey())
 	if err != nil {
 		return err

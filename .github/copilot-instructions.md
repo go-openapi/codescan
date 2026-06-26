@@ -20,6 +20,7 @@ Root (`codescan` package — public surface):
 | File | Contents |
 |------|----------|
 | `api.go` | `Run(*Options) (*spec.Swagger, error)` entry point; `Options = scanner.Options` |
+| `diagnostics.go` | Re-exports the diagnostic surface for `Options.OnDiagnostic` callers (`Diagnostic`/`Severity`/`Code` aliases + `Severity*` constants) |
 | `doc.go` | Package godoc |
 | `errors.go` | `ErrCodeScan` sentinel error |
 
@@ -27,13 +28,13 @@ Internal tree:
 
 | Package | Role |
 |---------|------|
-| `internal/scanner` | Package loading via `golang.org/x/tools/go/packages`, entity discovery, `ScanCtx`, `TypeIndex`, `Options` |
+| `internal/scanner` | Package loading via `golang.org/x/tools/go/packages`, entity discovery, `ScanCtx`, `TypeIndex`, `Options`; enum-value extraction (`enum_value.go`); `Provenance` / `Options.OnProvenance` cross-ref source side (`provenance.go`) |
 | `internal/scanner/classify` | Classification predicates shared with builders (e.g. `IsAllowedExtension`) |
 | `internal/parsers` | Scanner-level annotation classifiers (`ExtractAnnotation`, `ModelOverride`, …) and route/operation path-annotation parsing |
 | `internal/parsers/grammar` | Annotation grammar parser: preprocessor, lexer, recursive-descent parser, typed `Block` family, `Walker` visitor, diagnostics |
 | `internal/parsers/yaml` | YAML sub-parser used by the grammar's typed-extensions surface and by operation / meta body unmarshal |
-| `internal/parsers/routebody` | Sub-parser for the multi-line body grammar nested under `swagger:route` |
-| `internal/parsers/security` | Inline security-requirement line parser shared by routes and meta |
+| `internal/parsers/routebody` | Sub-parser for the `Parameters:` / `Responses:` body grammar nested under `swagger:route` / `swagger:operation`; emits typed `ParamDecl` / `ResponseDecl` + a `grammar.Block` |
+| `internal/parsers/security` | `Security:` block-body parser (genuine YAML) shared by meta / route / operation; normalises to OpenAPI 2.0 `[]map[string][]string` |
 | `internal/builders/spec` | Top-level orchestrator producing the final `*spec.Swagger` |
 | `internal/builders/schema` | Go type → Swagger schema conversion (largest builder); supports full Schema and SimpleSchema modes |
 | `internal/builders/{operations,parameters,responses,routes}` | Per-annotation builders |
@@ -41,6 +42,7 @@ Internal tree:
 | `internal/builders/handlers` | Reusable Walker callback factories (`Number`, `Integer`, `UniqueBool`, `Extension`, parameter/schema dispatch) |
 | `internal/builders/validations` | Type-aware coercion (`CoerceEnum`, `ParseDefault`) + shape checks (`IsLegalForType`) |
 | `internal/builders/resolvers` | `SwaggerSchemaForType`, identity / assertion helpers, items-chain ifaces adapters |
+| `internal/builders/godoclink` | godoc-syntax cleanup + schema-name recomposition backing `Options.CleanGoDoc` (two-phase markers) |
 | `internal/ifaces` | `SwaggerTypable`, `ValidationBuilder`, `OperationValidationBuilder`, `ValueParser`, `Objecter` — decouples parsers from builders |
 | `internal/scantest` | Test utilities: golden compare, fixture loading, mocks, classification helpers |
 | `internal/integration` | Black-box integration tests against `fixtures/integration/golden/*.json` |
@@ -55,9 +57,16 @@ Fixtures:
 ### Key API
 
 - `Run(*Options) (*spec.Swagger, error)` — scan Go packages and produce a Swagger spec.
-- `Options` — packages, work dir, build tags, include/exclude filters, `ScanModels`, `InputSpec`
-  overlay, plus feature flags (`RefAliases`, `TransparentAliases`, `DescWithRef`,
-  `SetXNullableForPointers`, `SkipExtensions`, `OnDiagnostic`, `Debug`).
+- `Options` — packages, work dir, build tags, include/exclude filters, `ScanModels`,
+  `PruneUnusedModels`, `InputSpec` overlay, plus feature flags grouped by concern:
+  - alias / `$ref` siblings: `RefAliases`, `TransparentAliases`, `DescWithRef` (deprecated),
+    `EmitRefSiblings`, `SkipAllOfCompounding`, `DefaultAllOfForEmbeds`.
+  - naming: `NameFromTags`, `SkipJSONifyInterfaceMethods`, `NameConcatBudget`, `EmitHierarchicalNames`.
+  - descriptions / comments: `SingleLineCommentAsDescription`, `AfterDeclComments`, `CleanGoDoc`.
+  - extensions / output: `SetXNullableForPointers`, `EmitXGoType`, `SkipEnumDescriptions`, `SkipExtensions`.
+  - callbacks: `OnDiagnostic` (sole output channel — codescan never writes to stdout/stderr),
+    `OnProvenance` (cross-ref linker), `Debug` (deprecated no-op).
+  See `.claude/CLAUDE.md` for per-flag semantics.
 
 ### Dependencies
 

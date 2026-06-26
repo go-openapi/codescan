@@ -37,6 +37,8 @@ to builders without direct coupling.
 | `scan_context.go` | `ScanCtx` / `NewScanCtx` — loads Go packages via `golang.org/x/tools/go/packages` |
 | `index.go` | `TypeIndex` — node classification (meta/route/operation/model/parameters/response) |
 | `declaration.go` | `EntityDecl` — wraps a type/value declaration with its enclosing file/package |
+| `enum_value.go` | `enumBasicLitValue` — converts a `const Foo Kind = "bar"` RHS into its runtime value (enum discovery) |
+| `provenance.go` | `Provenance` — ties a spec JSON pointer to the source position of the Go construct that produced it; emitted via `Options.OnProvenance` (cross-ref linker, source side) |
 | `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |
 
 ### `internal/parsers/` — scanner classification + helpers
@@ -60,6 +62,8 @@ for the grammar parser and its satellite helpers.
 |---------|------|
 | `grammar/` | The grammar parser — `NewParser`, `Block`, `Property`, keyword tables |
 | `yaml/` | YAML sub-parser used by grammar's typed-extensions surface and by operation / meta body unmarshal |
+| `routebody/` | Sub-parser for the multi-line body grammar (`Parameters:` / `Responses:`) nested under `swagger:route` / `swagger:operation`; emits typed `ParamDecl` / `ResponseDecl` + a `grammar.Block` dispatched through the shared `handlers` seam |
+| `security/` | Inline `Security:` block-body parser (genuine YAML) shared by `swagger:meta` / `route` / `operation`; normalises to the OpenAPI 2.0 `[]map[string][]string` shape |
 
 ### `internal/builders/` — Swagger object construction
 
@@ -77,6 +81,7 @@ Each sub-package owns one concern; `walker.go` carries the per-block grammar dis
 | `handlers` | Walker callback factories shared across schema/parameters/responses (`Number`, `Integer`, `UniqueBool`, `PatternString`, …) |
 | `resolvers` | `SwaggerSchemaForType`, identity/assertion helpers, items-chain ifaces adapters (`ItemsTypable` / `ItemsValidations`) shared by builders |
 | `validations` | Type-aware coercion / shape-check primitives (`CoerceEnum`, `ParseDefault`, `IsLegalForType`) |
+| `godoclink` | godoc-syntax cleanup + recomposition backing `CleanGoDoc`: drop `[text]: url` ref-def lines, humanize doc-link spans (`[CustName]` → "cust name"), and via two-phase markers recompose a resolved doc-link to the schema's final exposed name |
 
 ### `internal/ifaces/` — cross-package interfaces
 
@@ -146,9 +151,39 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     When true the Go method name is emitted verbatim; `swagger:name` still wins
     verbatim regardless. Does not affect struct fields. See
     `internal/builders/schema/README.md#interface-naming`.
+  - `SingleLineCommentAsDescription` — opt-in (default false): a single-line doc
+    comment always becomes `description`, never `title`/`summary`, regardless of
+    trailing punctuation. Multi-line comments keep the title/description split.
+    go-swagger#2626.
+  - `AfterDeclComments` — opt-in (default false): allow swagger annotations INSIDE
+    a declaration (struct-body leading comment) or INLINED as a trailing comment,
+    keeping the godoc above the decl clean. Scanner-only; same annotation grammar.
+    v0.36 scope: type decls (struct/alias); fields & const enums are follow-ups.
+  - `CleanGoDoc` — opt-in (default false): rewrite godoc-only syntax (doc-link
+    brackets, `[text]: url` ref-def lines) carried into a title/description, and
+    recompose a resolved doc-link to the schema's final exposed name. Touches only
+    godoc-derived prose, never `swagger:title`/`swagger:description` overrides. See
+    the `godoclink` package.
+  - `SkipEnumDescriptions` — opt-in (default false): keep the per-enum-value
+    const-name mapping on the `x-go-enum-desc` extension only, instead of also
+    appending it to the authored description. go-swagger#2922.
+  - `EmitXGoType` — opt-in (default false): stamp `x-go-type` (`<pkg path>.<type>`)
+    on every emitted definition, alongside `x-go-name`/`x-go-package`. Under the
+    `SkipExtensions` umbrella. go-swagger#2924.
+  - `NameConcatBudget` — readability cutoff (default 0.65) for the name-identity
+    reduce stage when deconflicting collisions by concatenating package segments
+    (`b.Test`/`c.Test` → `BTest`/`CTest`). A group whose best concat scores above
+    the budget is a candidate for the hierarchical fallback.
+  - `EmitHierarchicalNames` — opt-in (default false): emit over-budget collision
+    groups as nested container definitions (`#/definitions/<pkg>/<Name>`) instead
+    of long flat concats. Default off because nested pointers only resolve under
+    `ExpandSpec` and confuse definition-enumerating consumers (e.g. go-swagger codegen).
   - `SkipExtensions` — suppress `x-go-*` vendor extensions.
   - `OnDiagnostic` — callback sink for all scan-time observations (the only output
     channel; codescan never writes to stdout/stderr).
+  - `OnProvenance` — callback invoked once per anchor node (type decls, fields,
+    values, route/meta blocks) with its JSON pointer + source position; powers the
+    cross-ref linker (LSP/TUI). Experimental. See `internal/scanner/provenance.go`.
   - `Debug` — deprecated no-op (the legacy stderr debug logger was retired; wire
     `OnDiagnostic` instead).
 

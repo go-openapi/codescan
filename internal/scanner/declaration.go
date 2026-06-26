@@ -20,7 +20,7 @@ import (
 //
 // The scanner only discovers and locates the marker; its target and names are parsed from Comments
 // by the grammar (grammar.ParametersBlock) when the shared-parameters builder consumes it.
-// See .claude/plans/features/shared-parameters-fixtures.md §1b.
+// §1b.
 type ParameterRef struct {
 	Comments *ast.CommentGroup
 	File     *ast.File

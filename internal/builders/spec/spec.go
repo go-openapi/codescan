@@ -181,7 +181,6 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// Runs before name reduction so an unused model cannot force a spurious collision rename on a used
 	// one.
 	//
-	// See .claude/plans/prune-unused-models.md.
 	s.pruneUnusedModels()
 
 	// Fire the deferred shared-response provenance anchors buffered during buildResponses (only when
@@ -193,7 +192,7 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// Final stage: shorten the fully-qualified, collision-proof definition keys produced during
 	// discovery back to user-facing names and re-point every $ref.
 	// Runs last because buildRoutes / buildOperations also emit definition refs.
-	// See .claude/plans/name-identity-cyclic-ref.md §9/§12.
+	// §9/§12.
 	renames := s.reduceDefinitionNames()
 
 	// Definition provenance was buffered under each definition's fully-qualified key while building
@@ -201,7 +200,6 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// and emit it.
 	// Anchors for pruned definitions were already dropped, so none dangle.
 	//
-	// See .claude/plans/prune-unused-models.md.
 	s.ctx.FlushDefOrigins(func(defKey string) string {
 		if final, ok := renames[defKey]; ok {
 			return final
@@ -214,7 +212,7 @@ func (s *Builder) Build() (*oaispec.Swagger, error) {
 	// marker for its schema's exposed name.
 	// A no-op when CleanGoDoc is off (no markers were emitted).
 	//
-	// See .claude/plans/features/godoc-filter-design.md §3.
+	// §3.
 	if s.ctx.CleanGoDoc() {
 		s.substituteGodocMarkers(renames)
 	}
@@ -1059,7 +1057,7 @@ func sharedRefName(ref oaispec.Ref, prefix string) (string, bool) {
 // This is the build-side half of D-4; cross-package same-name collisions are handled later by the
 // reduce stage.
 //
-// See .claude/plans/name-identity-cyclic-ref.md §9.1/§12.1.
+// §9.1/§12.1.
 func (s *Builder) resolveSamePackageDuplicates() {
 	models := make([]*scanner.EntityDecl, 0)
 	for _, d := range s.ctx.Models() {

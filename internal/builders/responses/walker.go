@@ -77,7 +77,6 @@ func (r *Builder) applyBlockToDecl(resp *oaispec.Response) {
 //
 // A swagger:title on a response / header target is rejected with a context-invalid diagnostic:
 // OpenAPI 2.0 Response and Header objects have no `title` field.
-// See .claude/plans/features/swagger-description-override-design.md.
 func (r *Builder) overriddenDescription(fallback string, cg *ast.CommentGroup) string {
 	titleOv, descOv := r.HarvestOverrides(cg)
 	if titleOv.Present {

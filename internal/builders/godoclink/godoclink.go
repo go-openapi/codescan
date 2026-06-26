@@ -29,7 +29,6 @@
 // package *rewrites* the prose whereas that tool *redacts* (length-preserving blanking) for
 // masking.
 //
-// See .claude/plans/features/godoc-filter-design.md.
 package godoclink
 
 import (

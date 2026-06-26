@@ -11,12 +11,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// Public-API smoke suite. Fixture-heavy tests live in internal/integration.
+// Public-API smoke suite.
+// Fixture-heavy tests live in internal/integration.
 
 func TestApplication_DeprecatedDebugOption(t *testing.T) {
-	// Options.Debug is a deprecated no-op (the legacy debug logger was
-	// retired in favour of diagnostics). Verify Run still accepts it without
-	// error and produces a spec.
+	// Options.Debug is a deprecated no-op (the legacy debug logger was retired in favour of
+	// diagnostics).
+	// Verify Run still accepts it without error and produces a spec.
 	_, err := Run(&Options{
 		Packages:   []string{"./goparsing/petstore/..."},
 		WorkDir:    "fixtures",
