@@ -1,0 +1,27 @@
+{
+  "title": "PlainEmbed embeds a model and a non-model plainly, plus an own field.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Base"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "x-go-name": "Note"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "x-go-name": "Color"
+        }
+      }
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/embedallof"
+}

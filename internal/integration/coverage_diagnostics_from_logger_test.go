@@ -13,10 +13,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestDiagnostics_UnsupportedGoType locks the Warning that replaced the legacy
-// stderr "unsupported Go type" log line. A struct field typed complex128 has no
-// Swagger 2.0 representation: its schema is left untyped (the build skips it)
-// and a validate.unsupported-go-type Warning is delivered through OnDiagnostic
+// TestDiagnostics_UnsupportedGoType locks the Warning that replaced the legacy stderr "unsupported
+// Go type" log line.
+//
+// A struct field typed complex128 has no Swagger 2.0 representation: its schema is left untyped
+// (the build skips it) and a validate.unsupported-go-type Warning is delivered through OnDiagnostic
 // (never to stderr).
 func TestDiagnostics_UnsupportedGoType(t *testing.T) {
 	var diags []grammar.Diagnostic
@@ -29,8 +30,8 @@ func TestDiagnostics_UnsupportedGoType(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// The representable field is typed; the unrepresentable one is left untyped
-	// (the builder skipped it after warning rather than guessing a type).
+	// The representable field is typed; the unrepresentable one is left untyped (the builder skipped
+	// it after warning rather than guessing a type).
 	widget, ok := doc.Definitions["Widget"]
 	require.True(t, ok, "Widget must be discovered")
 	require.Contains(t, widget.Properties, "name")
@@ -38,8 +39,9 @@ func TestDiagnostics_UnsupportedGoType(t *testing.T) {
 	require.Contains(t, widget.Properties, "weird")
 	assert.Empty(t, widget.Properties["weird"].Type, "complex128 has no Swagger type")
 
-	// A Warning diagnostic names the offending type. The position falls back to
-	// the declaration (no finer node is threaded into the type dispatch).
+	// A Warning diagnostic names the offending type.
+	//
+	// The position falls back to the declaration (no finer node is threaded into the type dispatch).
 	var found bool
 	for _, d := range diags {
 		if d.Code == grammar.CodeUnsupportedGoType {
@@ -51,10 +53,11 @@ func TestDiagnostics_UnsupportedGoType(t *testing.T) {
 	assert.True(t, found, "a validate.unsupported-go-type Warning must be emitted")
 }
 
-// TestDiagnostics_IgnoredByTag locks the Hint that replaced the legacy debug
-// log line for tag-filtered routes. Excluding the "orders" tag drops the
-// petstore's order routes and surfaces a scan.ignored-by-tag Hint per dropped
-// route through OnDiagnostic.
+// TestDiagnostics_IgnoredByTag locks the Hint that replaced the legacy debug log line for
+// tag-filtered routes.
+//
+// Excluding the "orders" tag drops the petstore's order routes and surfaces a scan.ignored-by-tag
+// Hint per dropped route through OnDiagnostic.
 func TestDiagnostics_IgnoredByTag(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{

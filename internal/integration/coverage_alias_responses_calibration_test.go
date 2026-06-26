@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// Calibration coverage for the responses builder's alias-handling
-// contract. The three tests below scan the calibration fixture
-// under all three alias modes (Default, RefAliases,
-// TransparentAliases) and pin both inline assertions and goldens.
+// Calibration coverage for the responses builder's alias-handling contract.
+// The three tests below scan the calibration fixture under all three alias modes (Default,
+// RefAliases, TransparentAliases) and pin both inline assertions and goldens.
 //
 // The fixture deliberately includes:
 //
@@ -26,8 +25,7 @@ import (
 //   - a non-body (header) field typed as an unannotated alias of a
 //     named primitive (SimpleSchema target — always inline).
 //
-// See [§alias-handling](../builders/responses/README.md#alias-handling)
-// for the contract.
+// See [§alias-handling](../builders/responses/README.md#alias-handling) for the contract.
 
 func TestCoverage_AliasResponsesCalibration_Default(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
@@ -38,11 +36,11 @@ func TestCoverage_AliasResponsesCalibration_Default(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Top-level `swagger:response` alias — neither the alias nor
-	// its unexported backing struct surface as model definitions.
-	// The aliasedTopResponse still gets a valid body schema (the
-	// canonical Envelope) — earlier states crashed in Default with
-	// "anonymous types are currently not supported" or attached an
+	// Top-level `swagger:response` alias — neither the alias nor its unexported backing struct
+	// surface as model definitions.
+	//
+	// The aliasedTopResponse still gets a valid body schema (the canonical Envelope) — earlier
+	// states crashed in Default with "anonymous types are currently not supported" or attached an
 	// empty schema; both gone.
 	assert.NotContains(t, doc.Definitions, "AliasedTopResponse",
 		"top-level swagger:response alias must not produce a definition")
@@ -90,10 +88,9 @@ func TestCoverage_AliasResponsesCalibration_Ref(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Behaviour at use sites is mode-agnostic: the annotation gate
-	// fires the same way under RefAliases as under Default. The
-	// mode only affects the alias decl's OWN definition shape, not
-	// the field $ref target.
+	// Behaviour at use sites is mode-agnostic: the annotation gate fires the same way under RefAliases
+	// as under Default.
+	// The mode only affects the alias decl's OWN definition shape, not the field $ref target.
 	assert.NotContains(t, doc.Definitions, "AliasedTopResponse")
 	assert.NotContains(t, doc.Definitions, "internalResponse")
 	assert.NotContains(t, doc.Definitions, "EnvelopeAlias")
@@ -128,10 +125,9 @@ func TestCoverage_AliasResponsesCalibration_Transparent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// TransparentAliases supersedes the annotation gate at use
-	// sites (every body alias dissolves to its unaliased target),
-	// but `swagger:model` still forces decl-level registration —
-	// annotated aliases keep their definition entry.
+	// TransparentAliases supersedes the annotation gate at use sites (every body alias dissolves to
+	// its unaliased target), but `swagger:model` still forces decl-level registration — annotated
+	// aliases keep their definition entry.
 	assert.NotContains(t, doc.Definitions, "AliasedTopResponse")
 	assert.NotContains(t, doc.Definitions, "internalResponse")
 	assert.NotContains(t, doc.Definitions, "EnvelopeAlias")

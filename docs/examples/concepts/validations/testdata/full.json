@@ -1,0 +1,142 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/products/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "operationId": "searchProducts",
+        "parameters": [
+          {
+            "maxLength": 50,
+            "minLength": 3,
+            "type": "string",
+            "x-go-name": "Q",
+            "description": "Q is the search text.",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32",
+            "x-go-name": "Limit",
+            "description": "Limit caps the number of results.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "csv",
+            "x-go-name": "Sort",
+            "description": "Sort lists the sort fields.",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/productList"
+          },
+          "429": {
+            "$ref": "#/responses/rateLimited"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Attributes": {
+      "description": "Attributes is a free-form object constrained by the object-validation\nkeywords: it must carry between 1 and 10 properties, and any property whose\nname matches the regex is permitted. Object validations constrain the map of\n(additional) properties rather than named struct fields.",
+      "type": "object",
+      "maxProperties": 10,
+      "minProperties": 1,
+      "additionalProperties": {},
+      "patternProperties": {
+        "^x-": {}
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/validations"
+    },
+    "Product": {
+      "type": "object",
+      "title": "Product is a model whose fields carry the full JSON-schema validation surface.",
+      "required": [
+        "sku"
+      ],
+      "properties": {
+        "grade": {
+          "description": "Grade is a quality band.",
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C"
+          ],
+          "x-go-name": "Grade"
+        },
+        "name": {
+          "description": "Name is the display name.",
+          "type": "string",
+          "maxLength": 120,
+          "minLength": 1,
+          "x-go-name": "Name"
+        },
+        "price": {
+          "description": "Price is the price in cents.",
+          "type": "integer",
+          "format": "int64",
+          "maximum": 1000000,
+          "minimum": 1,
+          "multipleOf": 1,
+          "x-go-name": "Price"
+        },
+        "sku": {
+          "description": "SKU is the stock code.",
+          "type": "string",
+          "pattern": "^[A-Z]{3}-[0-9]{4}$",
+          "x-go-name": "SKU"
+        },
+        "tags": {
+          "description": "Tags label the product.",
+          "type": "array",
+          "maxItems": 10,
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Tags"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/validations"
+    }
+  },
+  "responses": {
+    "productList": {
+      "description": "ProductList is the 200 response body for searchProducts.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Product"
+        }
+      }
+    },
+    "rateLimited": {
+      "description": "RateLimited is a response carrying a validated header (a simple schema).",
+      "headers": {
+        "X-Rate-Remaining": {
+          "minimum": 0,
+          "type": "integer",
+          "format": "int32",
+          "description": "XRateRemaining is the remaining request budget."
+        }
+      }
+    }
+  }
+}

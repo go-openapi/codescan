@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_SingleLineCommentAsDescription locks the answer to go-swagger
-// issue #2626: the opt-in SingleLineCommentAsDescription option routes a
-// one-line doc comment to the model `description` (never `title`), while a
-// multi-line comment keeps the existing title/description split.
+// TestCoverage_SingleLineCommentAsDescription locks the answer to go-swagger issue #2626: the
+// opt-in SingleLineCommentAsDescription option routes a one-line doc comment to the model
+// `description` (never `title`), while a multi-line comment keeps the existing title/description
+// split.
 func TestCoverage_SingleLineCommentAsDescription(t *testing.T) {
 	pkgs := []string{"./enhancements/single-line-description/..."}
 
@@ -38,8 +38,8 @@ func TestCoverage_SingleLineCommentAsDescription(t *testing.T) {
 	assert.Empty(t, widgetOn.Title, "single-line comment no longer a title (go-swagger#2626)")
 	assert.Equal(t, "Widget is a one-line model comment ending in a period.", widgetOn.Description)
 
-	// Multi-line comments are unaffected by the option: the title/description
-	// split is preserved in both modes.
+	// Multi-line comments are unaffected by the option: the title/description split is preserved in
+	// both modes.
 	gadgetDef := def.Definitions["Gadget"]
 	gadgetOn := on.Definitions["Gadget"]
 	assert.Equal(t, "Gadget is the title line.", gadgetDef.Title)

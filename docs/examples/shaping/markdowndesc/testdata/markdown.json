@@ -1,0 +1,13 @@
+{
+  "description": "The body is captured **verbatim** — pipes, blank lines and all:\n\n| name | purpose |\n|------|---------|\n| foo  | bars    |\n\n- point one\n- point two",
+  "type": "object",
+  "title": "Markdown opts into a verbatim body with the literal block marker.",
+  "properties": {
+    "name": {
+      "description": "The name must be:\n\n  1. unique\n  2. lowercase",
+      "type": "string",
+      "x-go-name": "Name"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/markdowndesc"
+}

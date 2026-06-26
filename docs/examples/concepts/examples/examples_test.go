@@ -79,6 +79,15 @@ func TestExampleFragments(t *testing.T) {
 	goldenJSON(t, doc, "complexexample", "Profile") // structured (object/array) example values
 	goldenJSON(t, doc, "refstructured", "Place")    // JSON-object example coerced on a $ref'd field
 
+	pet, ok := doc.Responses["petResponse"]
+	require.True(t, ok, "petResponse response missing")
+	goldenRaw(t, "responseexamplesbymime", pet) // response examples keyed by media type
+
+	// The struct-based swagger:response carries a per-media-type examples map.
+	require.NotNil(t, pet.Examples, "petResponse must carry an examples map")
+	assert.Equal(t, map[string]any{"name": "Fluffy"}, pet.Examples["application/json"])
+	assert.Equal(t, "<pet><name>Fluffy</name></pet>", pet.Examples["application/xml"])
+
 	// Type coercion: a numeric default on an int field is a JSON number, a
 	// boolean default a JSON bool — not strings.
 	port := doc.Definitions["Settings"].Properties["port"]
@@ -92,4 +101,6 @@ func TestExampleFragments(t *testing.T) {
 	require.Len(t, at.AllOf, 2, "expected a $ref arm and an override arm")
 	assert.IsType(t, map[string]any{}, at.AllOf[1].Example,
 		"object-literal example coerces to a structured value, not a string")
+
+	goldenRaw(t, "full", doc) // whole spec for the tutorial's live "SwaggerUI" tab
 }

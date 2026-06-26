@@ -20,12 +20,12 @@ const (
 	paramID = "id"
 )
 
-// TestParseResponses_OptionVariants captures (SkipExtensions,
-// DescWithRef) option permutations on the classification responses
-// corpus into separately-named goldens. Same response set as
-// TestParseResponses; the matrix verifies $ref'd-field shape under
-// each option pair. See parameters/TestParamsParser_OptionVariants
-// for the full matrix rationale.
+// TestParseResponses_OptionVariants captures (SkipExtensions, DescWithRef) option permutations on
+// the classification responses corpus into separately-named goldens.
+//
+// Same response set as TestParseResponses; the matrix verifies $ref'd-field shape under each option
+// pair.
+// See parameters/TestParamsParser_OptionVariants for the full matrix rationale.
 func TestParseResponses_OptionVariants(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -64,9 +64,8 @@ func TestParseResponses_OptionVariants(t *testing.T) {
 				require.NoError(t, prs.Build(responses))
 			}
 
-			// The someResponse schema carries the $ref'd "pet" field plus
-			// x-go-name'd scalar fields; these are the surfaces the option
-			// matrix permutes, so assert their shape directly per-option.
+			// The someResponse schema carries the $ref'd "pet" field plus x-go-name'd scalar fields; these
+			// are the surfaces the option matrix permutes, so assert their shape directly per-option.
 			some, ok := responses["someResponse"]
 			require.TrueT(t, ok)
 			require.NotNil(t, some.Schema)
@@ -77,8 +76,8 @@ func TestParseResponses_OptionVariants(t *testing.T) {
 			pet, ok := itprop.Properties["pet"]
 			require.TrueT(t, ok)
 			if tc.descRef {
-				// DescWithRef: the bare $ref is wrapped in a single-arm allOf
-				// so a description can sit alongside the reference.
+				// DescWithRef: the bare $ref is wrapped in a single-arm allOf so a description can sit
+				// alongside the reference.
 				assert.Empty(t, pet.Ref.String())
 				require.Len(t, pet.AllOf, 1)
 				assert.EqualT(t, petRef, pet.AllOf[0].Ref.String())
@@ -392,9 +391,9 @@ func TestParseResponses_TransparentAliases(t *testing.T) {
 	assert.TrueT(t, payload.Type.Contains("object"))
 	assert.Empty(t, payload.Ref.String())
 	assert.Equal(t, "Payload", payload.Extensions["x-go-name"])
-	// The inlined struct lives in a different source file than the response
-	// decl; its fields must still be promoted (go-swagger#2417 — same
-	// cross-source-file root cause as the cross-package embed).
+	// The inlined struct lives in a different source file than the response decl; its fields must
+	// still be promoted (go-swagger#2417 — same cross-source-file root cause as the cross-package
+	// embed).
 	assert.Contains(t, payload.Properties, "id")
 	assert.Contains(t, payload.Properties, "name")
 }
@@ -428,8 +427,8 @@ func TestParseResponses_Issue2011(t *testing.T) {
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	// go-swagger#2011: an in:body field typed `interface{}` yields an
-	// open (empty) schema — no type, no $ref — rather than erroring.
+	// go-swagger#2011: an in:body field typed `interface{}` yields an open (empty) schema — no type,
+	// no $ref — rather than erroring.
 	assert.Empty(t, resp.Schema.Type)
 	assert.Empty(t, resp.Schema.Ref.String())
 	assert.Empty(t, resp.Schema.Properties)
@@ -449,8 +448,8 @@ func TestParseResponses_Issue2145(t *testing.T) {
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	// go-swagger#2145: a map[...]Product body becomes an object schema
-	// whose additionalProperties is a $ref to the (post-declared) Product.
+	// go-swagger#2145: a map[...]Product body becomes an object schema whose additionalProperties is a
+	// $ref to the (post-declared) Product.
 	assert.TrueT(t, resp.Schema.Type.Contains("object"))
 	require.NotNil(t, resp.Schema.AdditionalProperties)
 	require.NotNil(t, resp.Schema.AdditionalProperties.Schema)
@@ -482,8 +481,8 @@ func TestGo118ParseResponses_Issue2011(t *testing.T) {
 	require.Empty(t, resp.Headers)
 	require.NotNil(t, resp.Schema)
 
-	// go-swagger#2011 (go1.18 generics corpus): an in:body `interface{}`
-	// field yields an open (empty) schema, same as the non-generic corpus.
+	// go-swagger#2011 (go1.18 generics corpus): an in:body `interface{}` field yields an open (empty)
+	// schema, same as the non-generic corpus.
 	assert.Empty(t, resp.Schema.Type)
 	assert.Empty(t, resp.Schema.Ref.String())
 	assert.Empty(t, resp.Schema.Properties)

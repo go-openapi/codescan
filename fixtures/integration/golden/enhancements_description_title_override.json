@@ -1,0 +1,60 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Gadget": {
+      "type": "object",
+      "title": "Gadget is a plain referenced model.",
+      "properties": {
+        "serial": {
+          "type": "string",
+          "x-go-name": "Serial"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/description-title-override"
+    },
+    "Widget": {
+      "description": "A widget exposed via the public API.",
+      "type": "object",
+      "title": "A Public Widget",
+      "properties": {
+        "capacity": {
+          "description": "The maximum capacity, in liters.",
+          "type": "integer",
+          "format": "int64",
+          "maximum": 1000,
+          "x-go-name": "Capacity"
+        },
+        "gadget": {
+          "$ref": "#/definitions/Gadget"
+        },
+        "id": {
+          "description": "The unique widget identifier.",
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "label": {
+          "description": "Human-readable label shown to API consumers.",
+          "type": "string",
+          "title": "Display Label",
+          "x-go-name": "Label"
+        },
+        "notes": {
+          "description": "Free-form notes about the widget.\nThey may span several lines, all folded into one description.",
+          "type": "string",
+          "x-go-name": "Notes"
+        },
+        "plain": {
+          "description": "Plain keeps its godoc description because it carries no override",
+          "type": "string",
+          "x-go-name": "Plain"
+        },
+        "suppressed": {
+          "type": "string",
+          "x-go-name": "Suppressed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/description-title-override"
+    }
+  }
+}

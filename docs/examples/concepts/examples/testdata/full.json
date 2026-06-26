@@ -1,0 +1,214 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/ntp": {
+      "get": {
+        "tags": [
+          "ntp"
+        ],
+        "operationId": "listNTP",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ntpServers"
+          }
+        }
+      }
+    },
+    "/pets": {
+      "get": {
+        "tags": [
+          "pets"
+        ],
+        "operationId": "listPets",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/petResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Coordinates": {
+      "description": "Coordinates is a defined struct, so a field typed Coordinates renders as a\n$ref.",
+      "type": "object",
+      "properties": {
+        "lat": {
+          "description": "Lat is the latitude.",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Lat"
+        },
+        "lng": {
+          "description": "Lng is the longitude.",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Lng"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Currency": {
+      "description": "Currency is a named (defined) string type, so it earns its own definition and\na field typed Currency renders as a $ref. A $ref cannot carry sibling\nkeywords, so an example or default on such a field rides the override arm of\nan allOf compound — the value still reaches the spec.",
+      "type": "string",
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Greeting": {
+      "type": "object",
+      "title": "Greeting carries an example value for documentation.",
+      "properties": {
+        "count": {
+          "description": "Count is how many times to repeat it.",
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "Count",
+          "example": 3
+        },
+        "message": {
+          "description": "Message is the greeting text.",
+          "type": "string",
+          "x-go-name": "Message",
+          "example": "Hello, world!"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Pet": {
+      "type": "object",
+      "title": "Pet is the response payload.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Place": {
+      "description": "Place shows a JSON-object example on a $ref'd field. Because the field is a\n$ref, the example rides the override arm of the allOf — and a JSON object (or\narray) literal is coerced into a structured value there, exactly as it is on a\nplain field. A bare scalar would instead stay a string, since the referenced\ntype is not known on the override arm.",
+      "type": "object",
+      "properties": {
+        "at": {
+          "description": "At is the location.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Coordinates"
+            },
+            {
+              "example": {
+                "lat": 48.85,
+                "lng": 2.35
+              }
+            }
+          ],
+          "x-go-name": "At"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Price": {
+      "type": "object",
+      "title": "Price shows example + default on a defined-type field.",
+      "properties": {
+        "unit": {
+          "description": "Unit is the ISO currency code.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Currency"
+            },
+            {
+              "default": "USD",
+              "example": "EUR"
+            }
+          ],
+          "x-go-name": "Unit"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Profile": {
+      "description": "Profile carries structured (non-scalar) example values. A JSON object literal\non a map field and a JSON array literal on a slice field are parsed into\nstructured examples — a bare comma-separated list would instead be kept\nverbatim as a string.",
+      "type": "object",
+      "properties": {
+        "labels": {
+          "description": "Labels is a set of key/value labels.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "Labels",
+          "example": {
+            "env": "prod",
+            "tier": "gold"
+          }
+        },
+        "roles": {
+          "description": "Roles is the list of assigned roles.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Roles",
+          "example": [
+            "admin",
+            "auditor"
+          ]
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    },
+    "Settings": {
+      "type": "object",
+      "title": "Settings carries default values applied when a field is omitted.",
+      "properties": {
+        "mode": {
+          "description": "Mode is the run mode.",
+          "type": "string",
+          "default": "auto",
+          "x-go-name": "Mode"
+        },
+        "port": {
+          "description": "Port is the listen port.",
+          "type": "integer",
+          "format": "int32",
+          "default": 8080,
+          "x-go-name": "Port"
+        },
+        "verbose": {
+          "description": "Verbose toggles verbose logging.",
+          "type": "boolean",
+          "default": false,
+          "x-go-name": "Verbose"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/examples"
+    }
+  },
+  "responses": {
+    "ntpServers": {
+      "description": "NTPServers is a top-level array response carrying an example. The example\nlands on the response body schema rather than being dropped.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "example": [
+          "10.0.0.1",
+          "10.0.0.2"
+        ]
+      }
+    },
+    "petResponse": {
+      "description": "PetResponse returns a pet, with one example payload per media type.\n\nThe plural `examples:` keyword on a struct swagger:response is a YAML map\nkeyed by media type, populating the OpenAPI response `examples` object.",
+      "schema": {
+        "$ref": "#/definitions/Pet"
+      },
+      "examples": {
+        "application/json": {
+          "name": "Fluffy"
+        },
+        "application/xml": "\u003cpet\u003e\u003cname\u003eFluffy\u003c/name\u003e\u003c/pet\u003e"
+      }
+    }
+  }
+}

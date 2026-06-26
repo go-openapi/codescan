@@ -12,14 +12,14 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1609 locks the resolution to go-swagger issue #1609 ("vendor
-// extension x-example"): x-* vendor extensions are emitted on both parameters and
-// response headers when declared via an Extensions: block (mirroring
-// swagger:meta's InfoExtensions / Extensions). Both round-trip into the marshaled
-// spec.
+// TestCoverage_Bug1609 locks the resolution to go-swagger issue #1609 ("vendor extension
+// x-example"): x-* vendor extensions are emitted on both parameters and response headers when
+// declared via an Extensions: block (mirroring swagger:meta's InfoExtensions / Extensions).
 //
-// 📖 Need doc: a bare `// x-example: …` line is swallowed as the description; the
-// supported form is an Extensions: block on the parameter / header.
+// Both round-trip into the marshaled spec.
+//
+// 📖 Need doc: a bare `// x-example: …` line is swallowed as the description; the supported
+// form is an Extensions: block on the parameter / header.
 func TestCoverage_Bug1609(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1609/..."},

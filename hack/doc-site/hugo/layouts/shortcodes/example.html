@@ -5,7 +5,7 @@
   code-block partial, so neither can drift from real scanner output.
 
   The grid collapses to stacked panes on narrow screens (see the
-  .example-grid rule in themes/codescan-assets/css).
+  .example-grid rule in custom-header.html).
 
   Parameters:
     go        (required) Go source path relative to docs/examples.
@@ -20,10 +20,18 @@
     jsonlang  Chroma lexer for the right pane. Default "json".
     jsonlabel Caption above the right pane. Default "Generated spec".
 
-    nolink    "true" to suppress the "Full source" links on both panes.
+    full      Optional whole-spec golden (path relative to docs/examples). When
+              set, the RIGHT pane becomes a tabbed card — "Spec" (the fragment
+              above, default) and "SwaggerUI" (this whole spec rendered live).
+              A script in custom-header.html lazily renders Swagger UI on first
+              reveal. Only valid for whole Swagger 2.0 documents; each live
+              example renders independently (unique container id).
+
+    nolink    "true" to suppress the "Full source" links on the panes.
 */ -}}
 {{- $nolink := eq (.Get "nolink") "true" -}}
-<div class="example-grid">
+{{- $full := .Get "full" -}}
+<div class="example-grid{{ with $full }} examplelive{{ end }}">
   <div class="example-pane">
     <div class="example-label">{{ .Get "golabel" | default "Annotated Go" }}</div>
     {{- partial "code-block.html" (dict
@@ -35,15 +43,39 @@
           "position" .Position
     ) -}}
   </div>
-  <div class="example-pane">
-    <div class="example-label">{{ .Get "jsonlabel" | default "Generated spec" }}</div>
-    {{- partial "code-block.html" (dict
-          "file" (.Get "json")
-          "lang" (.Get "jsonlang" | default "json")
-          "region" (.Get "jsonregion")
-          "lines" (.Get "jsonlines")
-          "nolink" $nolink
-          "position" .Position
-    ) -}}
+  <div class="example-pane{{ with $full }} el-right{{ end }}">
+    {{- if $full -}}
+      {{- $id := substr (md5 (printf "%s-%s-%s-%s" (.Get "go") (.Get "goregion") (.Get "json") $full)) 0 10 -}}
+      {{- $rsc := resources.Get (printf "examples/%s" $full) -}}
+      {{- if not $rsc }}{{ errorf "example at %s: full spec %q not found under assets/examples" .Position $full }}{{ end -}}
+      {{- .Page.Store.Set "hasOpenApi" true -}}
+      <div class="el-tabs" role="tablist">
+        <button type="button" class="el-tab active" data-el-target="spec" role="tab" aria-selected="true">Spec</button>
+        <button type="button" class="el-tab" data-el-target="swaggerui" role="tab" aria-selected="false">SwaggerUI</button>
+      </div>
+      <div class="el-panel active" data-el-panel="spec">
+        {{- partial "code-block.html" (dict
+              "file" (.Get "json")
+              "lang" (.Get "jsonlang" | default "json")
+              "region" (.Get "jsonregion")
+              "lines" (.Get "jsonlines")
+              "nolink" $nolink
+              "position" .Position
+        ) -}}
+      </div>
+      <div class="el-panel" data-el-panel="swaggerui">
+        <div class="el-openapi" id="el-openapi-{{ $id }}" data-spec-url="{{ $rsc.RelPermalink }}"></div>
+      </div>
+    {{- else -}}
+      <div class="example-label">{{ .Get "jsonlabel" | default "Generated spec" }}</div>
+      {{- partial "code-block.html" (dict
+            "file" (.Get "json")
+            "lang" (.Get "jsonlang" | default "json")
+            "region" (.Get "jsonregion")
+            "lines" (.Get "jsonlines")
+            "nolink" $nolink
+            "position" .Position
+      ) -}}
+    {{- end -}}
   </div>
 </div>

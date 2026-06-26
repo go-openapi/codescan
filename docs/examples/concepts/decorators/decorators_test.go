@@ -73,4 +73,6 @@ func TestDecoratorFragments(t *testing.T) {
 	goldenJSON(t, "readonly", token)          // read only: true → readOnly on the property
 	goldenJSON(t, "deprecated", ping)         // deprecated: true on the operation
 	goldenJSON(t, "deprecated_model", gadget) // model/field deprecation → x-deprecated
+
+	goldenJSON(t, "full", doc) // whole spec for the tutorial's live "SwaggerUI" tab
 }

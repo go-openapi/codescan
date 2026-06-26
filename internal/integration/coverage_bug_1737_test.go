@@ -12,13 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1737 locks the answer to go-swagger issue #1737 ("bson.ObjectId
-// in swagger:response generates $ref"): a field whose type resolves to a $ref
-// (an external named type such as bson.ObjectId) cannot carry a sibling
-// description in Swagger 2.0, so by default the field-level description is
-// dropped — a $ref node has no room for it. The `DescWithRef` option is the
-// supported answer: it wraps the field in `allOf: [{$ref}]` so the description
-// survives alongside the reference.
+// TestCoverage_Bug1737 locks the answer to go-swagger issue #1737 ("bson.ObjectId in
+// swagger:response generates $ref"): a field whose type resolves to a $ref (an external named type
+// such as bson.ObjectId) cannot carry a sibling description in Swagger 2.0, so by default the
+// field-level description is dropped — a $ref node has no room for it.
+//
+// The `DescWithRef` option is the supported answer: it wraps the field in `allOf: [{$ref}]` so the
+// description survives alongside the reference.
 func TestCoverage_Bug1737(t *testing.T) {
 	t.Run("default drops the description (bare $ref)", func(t *testing.T) {
 		doc, err := codescan.Run(&codescan.Options{

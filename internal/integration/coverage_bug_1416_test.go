@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1416 locks the fix for go-swagger issue #1416 ("parameters do
-// not get properly linked to operations"): the reporter saw a spurious top-level
-// $ref emitted alongside the schema on a body parameter (malformed). The body
-// param is now clean — {in: body, schema: {$ref}}, no top-level $ref — and links
-// to the operation.
+// TestCoverage_Bug1416 locks the fix for go-swagger issue #1416 ("parameters do not get properly
+// linked to operations"): the reporter saw a spurious top-level $ref emitted alongside the schema
+// on a body parameter (malformed).
+//
+// The body param is now clean — {in: body, schema: {$ref}}, no top-level $ref — and links to
+// the operation.
 func TestCoverage_Bug1416(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1416/..."},

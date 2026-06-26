@@ -1,0 +1,57 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/widgets": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Lists the widgets.",
+        "operationId": "listWidgets",
+        "responses": {
+          "200": {
+            "description": "Widget is a widget. This godoc stays clean — no swagger machinery here.",
+            "schema": {
+              "$ref": "#/definitions/widgetModel"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "countType": {
+      "type": "integer",
+      "format": "int64",
+      "title": "Count is a plain count. Clean godoc above; annotation inlined below.",
+      "x-go-name": "Count",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/after-decl-comments"
+    },
+    "stampType": {
+      "type": "string",
+      "title": "Stamp is a string alias. Clean godoc above; annotation inlined trailing.",
+      "x-go-name": "Stamp",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/after-decl-comments"
+    },
+    "widgetModel": {
+      "description": "Widget is exposed to API consumers.",
+      "type": "object",
+      "title": "Widget is a widget. This godoc stays clean — no swagger machinery here.",
+      "maxProperties": 5,
+      "properties": {
+        "created": {
+          "description": "Created is documented with a clean godoc; the format annotation is\ninlined as a trailing comment (Phase B).",
+          "type": "string",
+          "format": "date",
+          "x-go-name": "Created"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-name": "Widget",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/after-decl-comments"
+    }
+  }
+}

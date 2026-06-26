@@ -15,11 +15,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_NameKeywordUniversal verifies the fix for quirk G2
-// (doc-site-quirks.md): the `name:` keyword now renames a field at every
-// site — swagger:model properties and interface methods included — not just
-// swagger:parameters / swagger:response fields. The legacy swagger:name
-// annotation is still honoured, and `name:` takes precedence over it.
+// TestQuirk_NameKeywordUniversal verifies the fix for quirk G2 (doc-site-quirks.md): the `name:`
+// keyword now renames a field at every site — swagger:model properties and interface methods
+// included — not just swagger:parameters / swagger:response fields.
+//
+// The legacy swagger:name annotation is still honoured, and `name:` takes precedence over it.
 //
 // Precedence: name: keyword > swagger:name > json tag > Go field name.
 func TestQuirk_NameKeywordUniversal(t *testing.T) {
@@ -75,8 +75,8 @@ func TestQuirk_NameKeywordUniversal(t *testing.T) {
 	assert.True(t, region, "swagger:name was dropped on the param field; Go name retained")
 	assert.NotContains(t, paramNames(op.Parameters), "region_code", "swagger:name must not rename a param")
 
-	// G2 diagnostics: swagger:name in a param / response-header context is
-	// inert and now draws a CodeContextInvalid warning pointing at `name:`.
+	// G2 diagnostics: swagger:name in a param / response-header context is inert and now draws a
+	// CodeContextInvalid warning pointing at `name:`.
 	var paramWarn, headerWarn bool
 	for _, d := range diags {
 		if d.Code != grammar.CodeContextInvalid || !strings.Contains(d.Message, "swagger:name") {

@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "title": "PlainEmbed embeds a model and a non-model plainly, plus an own field.",
+  "properties": {
+    "color": {
+      "type": "string",
+      "x-go-name": "Color"
+    },
+    "id": {
+      "type": "integer",
+      "format": "int64",
+      "x-go-name": "ID"
+    },
+    "name": {
+      "type": "string",
+      "x-go-name": "Name"
+    },
+    "note": {
+      "type": "string",
+      "x-go-name": "Note"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/embedallof"
+}

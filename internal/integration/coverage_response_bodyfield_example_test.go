@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ResponseBodyFieldExample locks example: on a swagger:response
-// struct Body field — the body-field keywords land on the body schema rather
-// than the discarded header (go-swagger#3013, #2942 family).
+// TestCoverage_ResponseBodyFieldExample locks example: on a swagger:response struct Body field —
+// the body-field keywords land on the body schema rather than the discarded header
+// (go-swagger#3013, #2942 family).
 func TestCoverage_ResponseBodyFieldExample(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/response-bodyfield-example/..."},

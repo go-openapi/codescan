@@ -12,11 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug301 locks the resolution to go-swagger issue #301
-// ("swagger:model huh?"): a swagger:model is emitted with its full title /
-// description split and field validations. The reporter's "model not appearing"
-// was the -m (ScanModels) requirement — an unreferenced model only shows up
-// under -m, which is asserted here as the documented behaviour.
+// TestCoverage_Bug301 locks the resolution to go-swagger issue #301 ("swagger:model huh?"): a
+// swagger:model is emitted with its full title / description split and field validations.
+//
+// The reporter's "model not appearing" was the -m (ScanModels) requirement — an unreferenced
+// model only shows up under -m, which is asserted here as the documented behaviour.
 func TestCoverage_Bug301(t *testing.T) {
 	withModels, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/301/..."},

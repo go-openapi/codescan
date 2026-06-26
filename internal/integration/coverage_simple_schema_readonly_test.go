@@ -14,20 +14,19 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_SimpleSchemaReadOnlyGate pins the schema builder's
-// SimpleSchema-mode gate on the full-Schema-only `readOnly:`
-// keyword. When the schema builder is invoked via WithSimpleSchema
-// and walks an anonymous struct that carries a `readOnly: true`
-// sub-field annotation, the Bool handler emits a
-// CodeUnsupportedInSimpleSchema diagnostic naming `readOnly` and
-// skips the write.
+// TestCoverage_SimpleSchemaReadOnlyGate pins the schema builder's SimpleSchema-mode gate on the
+// full-Schema-only `readOnly:` keyword.
+//
+// When the schema builder is invoked via WithSimpleSchema and walks an anonymous struct that
+// carries a `readOnly: true` sub-field annotation, the Bool handler emits a
+// CodeUnsupportedInSimpleSchema diagnostic naming `readOnly` and skips the write.
 //
 // The exit validator does NOT additionally reset the parameter here.
-// The struct-walking dance writes through a throwaway scratch schema
-// (paramTypable.Schema() returns nil for non-body), so the
-// parameter's SimpleSchema stays at Type="" — the validator's "any"
-// branch accepts that. The observable signal is the gate diagnostic
-// itself.
+// The struct-walking dance writes through a throwaway scratch schema (paramTypable.Schema() returns
+// nil for non-body), so the parameter's SimpleSchema stays at Type="" — the validator's "any"
+// branch accepts that.
+//
+// The observable signal is the gate diagnostic itself.
 func TestCoverage_SimpleSchemaReadOnlyGate(t *testing.T) {
 	var got []grammar.Diagnostic
 	_, err := codescan.Run(&codescan.Options{

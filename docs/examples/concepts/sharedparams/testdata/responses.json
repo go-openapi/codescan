@@ -1,0 +1,21 @@
+{
+  "ErrorResponse": {
+    "description": "ErrorResponse is the common error envelope returned by every operation.",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "description": "Code is a machine-readable error code.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Code"
+        },
+        "message": {
+          "description": "Message is a human-readable error message.",
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      }
+    }
+  }
+}

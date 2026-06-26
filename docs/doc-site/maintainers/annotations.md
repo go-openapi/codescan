@@ -393,7 +393,7 @@ By default the const→value mapping is folded into the property's
 `description` (as above) **and** duplicated in `x-go-enum-desc`. Set the
 scanner option `SkipEnumDescriptions: true` to keep the authored prose as
 the description; the mapping then rides `x-go-enum-desc` only. See
-[Vendor extensions]({{% relref "/shaping-the-output/vendor-extensions" %}}).
+[Vendor extensions]({{% relref "vendor-extensions" %}}).
 
 **Legal keywords.** Schema-context keywords. The `enum:` keyword can
 ALSO be used inline on the type doc to force a value set; when present,
@@ -682,6 +682,22 @@ packages** and matched to operations by operation ID — so a shared
 parameter set can live in its own package, as long as that package is in
 the scan set.
 
+**Shared & path-item targets.** The first argument need not be an
+operation ID. A `*` wildcard or a `/path` switches the annotation to the
+spec-level **shared namespace**:
+
+- `swagger:parameters *` registers the struct's fields at the spec top
+  level (`#/parameters/{name}`) for reuse; `swagger:parameters * <opid>…`
+  also `$ref`s them into the listed operations.
+- `swagger:parameters /path` inlines the fields into that **exact**
+  path-item (OAS2 has no path hierarchy).
+- A standalone `swagger:parameters <opid> <name>…` (or `/path <name>…`)
+  marker on a **function** `$ref`s an already-registered shared parameter
+  into that operation / path-item.
+
+See [Sharing parameters & responses]({{% relref "/tutorials/sharing-parameters-and-responses" %}})
+for the walkthrough and the keep-first / dangling-ref diagnostics.
+
 **Sample.**
 
 ```go
@@ -755,7 +771,10 @@ intentional, not a missing type.
 **Where it goes.** On a struct declaration.
 
 **Argument shape.** Optional IDENT — the published response name.
-Default: the Go type's name.
+Default: the Go type's name. A `*` wildcard (`swagger:response *`) is a
+synonym for the bare form that explicitly marks the response as a
+**shared** one, registered at `#/responses/{name}` for operations to
+`$ref` by name — see [Sharing parameters & responses]({{% relref "/tutorials/sharing-parameters-and-responses" %}}).
 
 **Sample.**
 

@@ -35,7 +35,8 @@ A route with no `Security:` keyword inherits the document-wide default
 and `write` scopes, overriding the default:
 
 {{< example go="concepts/security/routes.go" goregion="routes" golabel="swagger:route"
-            json="concepts/security/testdata/route.json" jsonlabel="security on createReport" >}}
+            json="concepts/security/testdata/route.json"
+            full="concepts/security/testdata/full.json" >}}
 
 A `Security:` block is plain **YAML** — a sequence of requirement objects.
 Scopes are a flow list (`[read, write]`) or a block list; an empty list
@@ -88,7 +89,7 @@ come entirely from the base:
 
 {{< code file="concepts/security/testdata/overlay.json" lang="json" >}}
 
-See [Overlaying a spec]({{% relref "/shaping-the-output/overlaying-a-spec" %}})
+See [Overlaying a spec]({{% relref "overlaying-a-spec" %}})
 for the full `InputSpec` merge semantics.
 
 ## What's next

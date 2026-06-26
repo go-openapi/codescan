@@ -12,14 +12,14 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1079 documents the resolution to go-swagger issue #1079 ("don't
-// generate schemas for models without swagger:model"): under -m, codescan emits
-// the annotated model plus the types it transitively references — but NOT
-// unreferenced non-annotated types. So no "junk schemas" appear; a referenced
-// type must still be emitted to keep the $ref resolvable.
+// TestCoverage_Bug1079 documents the resolution to go-swagger issue #1079 ("don't generate schemas
+// for models without swagger:model"): under -m, codescan emits the annotated model plus the types
+// it transitively references — but NOT unreferenced non-annotated types.
 //
-// 📖 Need doc: clarify -m semantics (annotated models + referenced types, not
-// every struct in the package).
+// So no "junk schemas" appear; a referenced type must still be emitted to keep the $ref resolvable.
+//
+// 📖 Need doc: clarify -m semantics (annotated models + referenced types, not every struct in the
+// package).
 func TestCoverage_Bug1079(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1079/..."},

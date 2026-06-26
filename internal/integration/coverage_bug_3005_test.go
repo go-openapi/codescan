@@ -12,12 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3005 locks the resolution of go-swagger issue #3005
-// ("additionalProperties are lost when generating spec from code"): a model
-// with named properties AND free-form values. The json:"-" map the reporter
-// used is muted; the type-level `swagger:additionalProperties number` marker
-// supplies the additionalProperties value schema. field1 stays a named
-// property alongside it.
+// TestCoverage_Bug3005 locks the resolution of go-swagger issue #3005 ("additionalProperties are
+// lost when generating spec from code"): a model with named properties AND free-form values.
+//
+// The json:"-" map the reporter used is muted; the type-level `swagger:additionalProperties number`
+// marker supplies the additionalProperties value schema. field1 stays a named property alongside
+// it.
 func TestCoverage_Bug3005(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/3005/..."},

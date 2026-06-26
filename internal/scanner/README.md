@@ -24,6 +24,10 @@ parameters, responses) consumed by the builder layer.
   pure read vs implicit registration
 - [§classifier](#classifier) — `detectNodes` bitmask semantics and
   struct-annotation exclusivity
+- [§after-decl](#after-decl) — `AfterDeclComments` — reading annotations
+  inside / below a declaration
+- [§clean-godoc](#clean-godoc) — `CleanGoDoc` — filtering godoc syntax out
+  of carried-over title / description prose
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -115,14 +119,29 @@ three emission modes:
 Without `ScanModels` the flag is a no-op (the set is already
 reachable-only) and raises one positionless `scan.pruned-unused` Hint.
 
+**Shared objects pruned first (C4).** Before the definition walk, the
+shared parameters (`#/parameters/*`) and responses (`#/responses/*`) that
+no operation and no path-item references are themselves pruned
+(`spec/prune.go`, `pruneUnusedSharedObjects`; the read-only "is
+referenced" mirror is `collectSharedRefs`). `InputSpec`-supplied shared
+objects are pinned (never pruned), mirroring the definitions rule. Each
+drop raises a located `scan.pruned-unused` Hint. Because this precedes
+the definition walk, a definition kept alive only by a now-pruned shared
+object becomes prunable in turn. A pruned shared response's buffered
+provenance anchors are dropped (`DropDeferredOrigins`) so none dangle —
+shared-response anchors are buffered (`BeginDeferredOrigins`) and flushed
+verbatim after the prune only when `PruneUnusedModels` is set, so the
+non-prune anchor stream is unchanged.
+
 **Reachability.** Roots are the paths (operation body parameters +
-response schemas), the shared `responses` and `parameters`, and every
-definition supplied via `InputSpec`. Overlay definitions are **pinned**:
-never pruned and seeded as roots so their `$ref` targets survive. The
-walk (`spec/prune.go`, `collectDefRefs`) is the read-only mirror of the
-ref-rewriter (`reduce.go`, `rewriteSchemaRefs`) and must cover the same
-container set; a `visited` set handles recursive / cyclic models. A
-model referenced only by another unreferenced model is itself pruned.
+response schemas), the *surviving* shared `responses` and `parameters`,
+and every definition supplied via `InputSpec`. Overlay definitions are
+**pinned**: never pruned and seeded as roots so their `$ref` targets
+survive. The walk (`spec/prune.go`, `collectDefRefs`) is the read-only
+mirror of the ref-rewriter (`reduce.go`, `rewriteSchemaRefs`) and must
+cover the same container set; a `visited` set handles recursive / cyclic
+models. A model referenced only by another unreferenced model is itself
+pruned.
 
 **Ordering — before name reduction.** The prune runs *before*
 `reduceDefinitionNames`, in the fully-qualified `#/definitions/<pkgpath>/
@@ -211,9 +230,70 @@ violated.
 The annotation vocabulary recognised by the classifier is a closed
 set. Unknown annotations beginning with `swagger:` raise a
 classifier error. A handful of annotation tokens (`strfmt`, `name`,
-`enum`, `default`, `alias`, `type`, …) are recognised but produce
-no bit — they are field-level decorations that downstream builders
-parse out of the comment block directly.
+`enum`, `default`, `alias`, `type`, `title`, `description`, …) are
+recognised but produce no bit — they are field/decl-level decorations
+that downstream builders parse out of the comment block directly.
+(`title` / `description` are the godoc title/description overrides; see
+the schema builder's [§user-overrides](../builders/schema/README.md#user-overrides).)
+
+## <a id="after-decl"></a>§after-decl — `AfterDeclComments`
+
+`Options.AfterDeclComments` (opt-in, default false) lets swagger annotations
+live **inside** a declaration or **inlined** as a trailing comment, so the godoc
+*above* the declaration stays clean and human-facing. It is **solely a scanner
+concern** — the located comments are folded into the comment source the builders
+already consume (`EntityDecl.Comments` and `ast.Field.Doc`), so the grammar and
+builders are untouched. Same annotation grammar, no new syntax.
+
+What the scanner folds, by shape (`index.go`):
+
+| Shape | Folded comment | Into |
+|---|---|---|
+| struct type | leading body comment groups (after `{`, before the first field, excluding any field `.Doc`) — `leadingBodyComments` | a fresh merged `EntityDecl.Comments` (`ts.Doc` untouched) |
+| alias / non-struct type | trailing `TypeSpec.Comment` (`type X = Y // swagger:model …`) | same |
+| struct field | trailing `Field.Comment` (`B string // swagger:strfmt date`) — `enrichStructFields` | the shared `Field.Doc` (the one mutation, see below) |
+
+The clean godoc above still provides the title/description: the merged group is
+`docAbove ++ located`, and because positions stay ascending (doc above < the
+inside/trailing comment below), the grammar reconstructs a blank-line gap and
+parses it without change. Discovery works because `detectNodes` already scans
+every `file.Comments` group (the file bitmask flips), and the merged
+`EntityDecl.Comments` makes the per-decl `HasModelAnnotation` gate pass.
+
+**Idempotency.** Decl-level folding is pure construction — `ts.Doc` is never
+mutated, so re-processing is safe with no guard. Field-level folding is the only
+place the shared AST is mutated (`Field.Doc` is repointed to the merged group),
+guarded by `TypeIndex.enrichedFields` so a field is rewritten at most once.
+
+**Routes / operations** are already position-agnostic
+(`collectRoute/OperationPathAnnotations` scan all `file.Comments`), so a
+`swagger:route` inside a func body is discovered with or without this option.
+
+**Out of scope.** A standalone `const X = … // swagger:enum`: `swagger:enum` is
+type-based (it resolves a *type* and collects that type's consts via
+`FindEnumValues`), so a lone const is not an enum carrier and has no builder
+semantics today. Supporting it would mean new builder behaviour, which this
+scanner-only feature deliberately avoids. Nested/anonymous inline structs are
+likewise not enriched (only named struct type decls are walked).
+
+## <a id="clean-godoc"></a>§clean-godoc — `CleanGoDoc`
+
+`Options.CleanGoDoc` (opt-in, default false) rewrites godoc-specific syntax that
+reads as bracket noise when a title / description is carried **from godoc** into
+the spec, and recomposes resolvable doc-links to the name the referenced schema
+is **exposed under**. Off ⇒ output is byte-identical.
+
+The scanner side is thin: it holds the flag (`CleanGoDoc()`) and a shared
+`mangling.NameMangler` (`Mangler()`, used for humanization). The transform,
+the consumption-seam wiring, the go/types resolver, and the post-reduce marker
+substitution all live in the **builders** — see
+[`internal/builders/godoclink/README.md`](../builders/godoclink/README.md) for
+the two-phase marker contract and the full mechanics.
+
+Like `swagger:title` / `swagger:description` (overrides) and `AfterDeclComments`,
+this is part of the **clean-godoc cluster**: keep the Go-facing doc clean while
+the API spec carries curated text. Crucially it touches **only godoc-derived
+prose** — author-written overrides (harvested separately) are never filtered.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 
@@ -224,8 +304,8 @@ parse out of the comment block directly.
 - **Recognised-but-unused annotation tokens.** `detectNodes`
   recognises a list of field-level tokens (`strfmt`, `name`,
   `discriminated`, `file`, `enum`, `default`, `alias`, `type`,
-  `allOf`, `ignore`) only to avoid raising the "unknown annotation"
-  error. Promoting them to per-file bits would let downstream
+  `allOf`, `ignore`, `title`, `description`) only to avoid raising the
+  "unknown annotation" error. Promoting them to per-file bits would let downstream
   builders skip whole files that carry no decorations — an
   optimisation, not a correctness change.
 - **`shouldAcceptTag` precedence.** When both `includeTags` and

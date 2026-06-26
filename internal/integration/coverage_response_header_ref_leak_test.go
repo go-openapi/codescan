@@ -14,13 +14,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ResponseHeaderRefLeak pins the Q2 fix on the
-// response side: when a header field's Go type resolves through the
-// schema builder's makeRef path (e.g. typed as a named struct),
+// TestCoverage_ResponseHeaderRefLeak pins the Q2 fix on the response side: when a header field's Go
+// type resolves through the schema builder's makeRef path (e.g. typed as a named struct),
 // `responseTypable.SetRef` no-ops instead of writing `response.Schema.Ref`.
-// The body-schema leak that used to land in the pre-fix emission
-// is gone; the SimpleSchema exit validator catches the attempt via
-// the probe's HasRef and emits CodeUnsupportedInSimpleSchema.
+//
+// The body-schema leak that used to land in the pre-fix emission is gone; the SimpleSchema exit
+// validator catches the attempt via the probe's HasRef and emits CodeUnsupportedInSimpleSchema.
 //
 // Two variants pinned:
 //

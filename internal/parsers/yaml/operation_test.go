@@ -11,10 +11,11 @@ import (
 	oaispec "github.com/go-openapi/spec"
 )
 
-// TestUnmarshalBody_RoundTrip checks the YAML → JSON →
-// UnmarshalJSON pipeline used by the swagger:operation grammar bridge.
-// The raw body here matches what grammar's TokenOpaqueYaml emits for
-// a `---` fenced block (contents only, no fences, no `//` markers).
+// TestUnmarshalBody_RoundTrip checks the YAML → JSON → UnmarshalJSON pipeline used by the
+// swagger:operation grammar bridge.
+//
+// The raw body here matches what grammar's TokenOpaqueYaml emits for a `---` fenced block (contents
+// only, no fences, no `//` markers).
 func TestUnmarshalBody_RoundTrip(t *testing.T) {
 	body := `parameters:
   - name: limit
@@ -52,16 +53,15 @@ func TestUnmarshalBody_InvalidYAML(t *testing.T) {
 }
 
 func TestUnmarshalBody_EmptyBody(t *testing.T) {
-	// Empty body short-circuits before unmarshal — caller's target
-	// stays untouched.
+	// Empty body short-circuits before unmarshal — caller's target stays untouched.
 	op := new(oaispec.Operation)
 	if err := yaml.UnmarshalBody("", op.UnmarshalJSON); err != nil {
 		t.Errorf("empty body should not error: %v", err)
 	}
 }
 
-// TestUnmarshalBody_TabIndent verifies the dedent step
-// handles tab-indented godoc-style bodies (the go119 fixture style).
+// TestUnmarshalBody_TabIndent verifies the dedent step handles tab-indented godoc-style bodies (the
+// go119 fixture style).
 func TestUnmarshalBody_TabIndent(t *testing.T) {
 	body := "\tparameters:\n\t  - name: limit\n\t    in: query\n\t    type: integer\n"
 	op := new(oaispec.Operation)
@@ -73,10 +73,11 @@ func TestUnmarshalBody_TabIndent(t *testing.T) {
 	}
 }
 
-// TestUnmarshalListBody_Tags checks the sequence-shaped pipeline used
-// by the meta `Tags:` bridge: a YAML list of tag objects (with a
-// nested externalDocs mapping and a vendor extension) round-trips into
-// []spec.Tag. Tab-indented like a real godoc comment body.
+// TestUnmarshalListBody_Tags checks the sequence-shaped pipeline used by the meta `Tags:` bridge: a
+// YAML list of tag objects (with a nested externalDocs mapping and a vendor extension) round-trips
+// into []spec.Tag.
+//
+// Tab-indented like a real godoc comment body.
 func TestUnmarshalListBody_Tags(t *testing.T) {
 	body := "\t- name: pet\n" +
 		"\t  description: Everything about your Pets\n" +

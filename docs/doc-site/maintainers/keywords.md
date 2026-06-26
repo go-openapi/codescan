@@ -36,7 +36,7 @@ formal productions should read [grammar.md]({{% relref "grammar" %}}).
 - [Schema decorators](#schema-decorators) — `default`, `example`, `enum`, `required`, `readOnly`, `discriminator`, `deprecated`
 - [Parameter location](#parameter-location) — `in`
 - [Meta single-line keywords](#meta-single-line-keywords) — `schemes`, `version`, `host`, `basePath`, `license`, `contact`
-- [Body keywords](#body-keywords) — `consumes`, `produces`, `security`, `securityDefinitions`, `responses`, `parameters`, `extensions`, `infoExtensions`, `tos`, `externalDocs`, `tags`
+- [Body keywords](#body-keywords) — `consumes`, `produces`, `security`, `securityDefinitions`, `responses`, `parameters`, `examples`, `extensions`, `infoExtensions`, `tos`, `externalDocs`, `tags`
 
 ---
 
@@ -141,6 +141,7 @@ them. Detailed entries follow this table.
 | `securityDefinitions` | `security definitions`, `security-definitions` | raw-block (YAML map) | meta |
 | `responses` | — | raw-block (response sub-language) | route, operation |
 | `parameters` | — | raw-block (parameter chunk sub-language) | route, operation |
+| `examples` | — | raw-block (YAML map keyed by mime type) | response |
 | `extensions` | — | raw-block (YAML map of `x-*` entries) | meta, route, operation, schema, param, header |
 | `infoExtensions` | `info extensions`, `info-extensions` | raw-block (YAML map of `x-*` entries) | meta |
 | `tos` | `terms of service`, `terms-of-service`, `termsOfService` | raw-block (prose paragraph) | meta |
@@ -416,7 +417,9 @@ type PageParam int
 
 An example value for the schema, surfaced in tooling. Same raw-value
 shape as `default`. Maps to `schema.example` (or `parameter.example`
-for SimpleSchema parameters).
+for SimpleSchema parameters). This is the **singular**, schema-scoped
+keyword; for the **plural** response-scoped [`examples`](#examples) (a
+map keyed by mime type) see the Body keywords section.
 
 ### `enum`
 
@@ -708,6 +711,32 @@ Responses:
   200: body:User the requested user
   404: description: not found
   default: response:genericError
+```
+
+### `examples`
+
+Response-level examples on a `swagger:response` struct — a YAML map
+whose first-level keys are **mime types** and whose values are the
+example payloads, populating the OAS2 `Response.examples` field. Note
+the OAS2 keyword split: the **plural** `examples` is the *response*
+keyword (this one); the **singular** [`example`](#example) is the
+schema / param / header / items decorator. The `swagger:operation` YAML
+body carries `examples` natively (it is unmarshalled straight into the
+spec types); this keyword is the struct-`swagger:response` counterpart.
+
+```go
+// swagger:response widgetResponse
+//
+// examples:
+//
+//	application/json:
+//	  name: alice
+//	  count: 3
+//	application/xml: "<widget><name>alice</name></widget>"
+type WidgetResponse struct {
+	// in: body
+	Body Widget `json:"body"`
+}
 ```
 
 ### `parameters`

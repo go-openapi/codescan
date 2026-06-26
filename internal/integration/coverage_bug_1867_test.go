@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1867 locks go-swagger issue #1867 ("PATCH operation"): PATCH
-// works through BOTH swagger:route (with a body parameter) and swagger:operation
-// — the reporter found swagger:operation silently failed and swagger:route could
-// not specify the JSON body.
+// TestCoverage_Bug1867 locks go-swagger issue #1867 ("PATCH operation"): PATCH works through BOTH
+// swagger:route (with a body parameter) and swagger:operation — the reporter found
+// swagger:operation silently failed and swagger:route could not specify the JSON body.
 func TestCoverage_Bug1867(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1867/..."},

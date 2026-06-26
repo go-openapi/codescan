@@ -13,13 +13,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestBuilder_guard_RecoversPanicWithLocatedDiagnostic locks the §8.1
-// behaviour (go-swagger#2886): a panic in a per-declaration build step is
-// recovered, surfaced as a located scan.internal-panic diagnostic naming the
-// offending source (file:line + what), and converted into an aborting error
-// wrapping ErrInternalPanic — never a raw Go stack trace. A non-panicking
-// step is transparent. The spec.Builder build loops wrap every per-decl step
-// in this guard.
+// TestBuilder_guard_RecoversPanicWithLocatedDiagnostic locks the §8.1 behaviour (go-swagger#2886):
+// a panic in a per-declaration build step is recovered, surfaced as a located scan.internal-panic
+// diagnostic naming the offending source (file:line + what), and converted into an aborting error
+// wrapping ErrInternalPanic — never a raw Go stack trace.
+//
+// A non-panicking step is transparent.
+// The spec.Builder build loops wrap every per-decl step in this guard.
 func TestBuilder_guard_RecoversPanicWithLocatedDiagnostic(t *testing.T) {
 	var diags []grammar.Diagnostic
 	ctx, err := scanner.NewScanCtx(&scanner.Options{

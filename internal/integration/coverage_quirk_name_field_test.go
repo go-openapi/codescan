@@ -12,13 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_NameOnField verifies the fix for quirk F5 (doc-site-quirks.md):
-// swagger:name on a struct field now overrides the emitted property name, just
-// as it already did on interface methods. Previously the override was scanned
-// but silently dropped — the property kept its Go field name or json-tag name.
+// TestQuirk_NameOnField verifies the fix for quirk F5 (doc-site-quirks.md): swagger:name on a
+// struct field now overrides the emitted property name, just as it already did on interface
+// methods.
 //
-// The Go field name is still recorded as x-go-name when it differs from the
-// emitted JSON name, so the override does not lose traceability.
+// Previously the override was scanned but silently dropped — the property kept its Go field name
+// or json-tag name.
+//
+// The Go field name is still recorded as x-go-name when it differs from the emitted JSON name, so
+// the override does not lose traceability.
 func TestQuirk_NameOnField(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./quirks/name-on-field/..."},

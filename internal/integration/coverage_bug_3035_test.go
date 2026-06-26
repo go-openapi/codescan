@@ -12,22 +12,22 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3035 locks the fix for go-swagger issue #3035 ("Example
-// spec for swagger:response does not produce example output"). A
-// swagger:response whose body is an anonymous inline struct used to emit
-// only the response description with no schema, dropping the field-level
-// Example/Required and property descriptions entirely.
+// TestCoverage_Bug3035 locks the fix for go-swagger issue #3035 ("Example spec for swagger:response
+// does not produce example output").
 //
-// The fix produces a full object schema. This test asserts the schema and,
-// crucially, the per-field example — the subject of the issue.
+// A swagger:response whose body is an anonymous inline struct used to emit only the response
+// description with no schema, dropping the field-level Example/Required and property descriptions
+// entirely.
 //
-// Known, intentional delta vs the reporter's hand-written expected YAML:
-// the body field's leading prose ("The error message") is NOT propagated
-// to the schema-level description. No code path in codescan surfaces a body
-// field's prose as the schema description (verified against all response
-// goldens), and an added blank line after that prose does not change it.
-// We lock the current behaviour; surfacing it would be a separate
-// enhancement.
+// The fix produces a full object schema.
+// This test asserts the schema and, crucially, the per-field example — the subject of the issue.
+//
+// Known, intentional delta vs the reporter's hand-written expected YAML: the body field's leading
+// prose ("The error message") is NOT propagated to the schema-level description.
+// No code path in codescan surfaces a body field's prose as the schema description (verified
+// against all response goldens), and an added blank line after that prose does not change it.
+//
+// We lock the current behaviour; surfacing it would be a separate enhancement.
 func TestCoverage_Bug3035(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/3035/..."},

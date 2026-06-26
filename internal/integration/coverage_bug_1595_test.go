@@ -12,16 +12,16 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1595 locks the fix for go-swagger issue #1595
-// ("multi-line/block instead of single-line comments").
+// TestCoverage_Bug1595 locks the fix for go-swagger issue #1595 ("multi-line/block instead of
+// single-line comments").
 //
-// A swagger:operation written in a /* */ block comment (a legal Go doc comment)
-// used to fail the whole scan with a YAML parse error ("did not find expected
-// alphabetic or numeric character"): the path-annotation parser reshaped the
-// block comment line-by-line and let the closing */ leak into the YAML body,
-// where it reads as a YAML alias indicator. Both the flush-left block style and
-// the idiomatic `*`-decorated style must parse like their // equivalent — the
-// path with a 200 response — without erroring.
+// A swagger:operation written in a /* */ block comment (a legal Go doc comment) used to fail the
+// whole scan with a YAML parse error ("did not find expected alphabetic or numeric character"): the
+// path-annotation parser reshaped the block comment line-by-line and let the closing */ leak into
+// the YAML body, where it reads as a YAML alias indicator.
+//
+// Both the flush-left block style and the idiomatic `*`-decorated style must parse like their //
+// equivalent — the path with a 200 response — without erroring.
 func TestCoverage_Bug1595(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1595/..."},

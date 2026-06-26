@@ -23,7 +23,8 @@ For the exact value shapes these keywords accept, see
 type — `Hello, world!` stays a string, `3` becomes a number.
 
 {{< example go="concepts/examples/examples.go" goregion="example"
-            json="concepts/examples/testdata/example.json" jsonlabel="#/definitions/Greeting" >}}
+            json="concepts/examples/testdata/example.json"
+            full="concepts/examples/testdata/full.json" >}}
 
 The value is not limited to scalars. A **JSON literal** is parsed into a
 structured example — a `{ … }` object on a map field, a `[ … ]` array on a slice
@@ -85,8 +86,11 @@ body schema:
 
 ## Response examples by media type
 
-A `swagger:operation` YAML body can give a response an `examples:` map keyed by
-media type — these populate the OpenAPI response `examples` object:
+A response can carry an `examples:` map keyed by media type — these populate the
+OpenAPI response `examples` object, one example payload per content type. Both
+annotation styles support it.
+
+In a `swagger:operation` YAML body, `examples:` sits under the response code:
 
 ```go
 // swagger:operation GET /status status getStatus
@@ -100,13 +104,18 @@ media type — these populate the OpenAPI response `examples` object:
 //         hello: world
 ```
 
-This per-media-type form is available in the `swagger:operation` YAML body; the
-struct-based `swagger:response` does not yet emit per-media-type examples.
+On a struct-based `swagger:response`, the same `examples:` block lives in the
+declaration comment (the plural `examples:` is the response keyword; the
+singular `example:` above is the schema decorator) and produces the same
+response `examples` object:
 
-Because the example lives on the operation's response, **one shared model can
-carry a different example per response code and per operation** — a `200` and a
-`404` that both return the same error model each show their own illustrative
-payload, with no need for a distinct struct per case.
+{{< example go="concepts/examples/examples.go" goregion="responseexamplesbymime"
+            json="concepts/examples/testdata/responseexamplesbymime.json" jsonlabel="responses[petResponse]" >}}
+
+Because the example lives on the response, **one shared model can carry a
+different example per response code and per operation** — a `200` and a `404`
+that both return the same error model each show their own illustrative payload,
+with no need for a distinct struct per case.
 
 ## What's next
 

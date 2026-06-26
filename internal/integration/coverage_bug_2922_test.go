@@ -14,11 +14,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2922 covers go-swagger issue #2922 ("enum description:
-// superfluous name&values"): the enum const-name mapping (e.g. "FIRST
-// TestEnumFirst") was unconditionally appended to the property description AND
-// duplicated in x-go-enum-desc — the reporter finds the description pollution
-// superfluous.
+// TestCoverage_Bug2922 covers go-swagger issue #2922 ("enum description: superfluous name&values"):
+// the enum const-name mapping (e.g. "FIRST TestEnumFirst") was unconditionally appended to the
+// property description AND duplicated in x-go-enum-desc — the reporter finds the description
+// pollution superfluous.
 //
 // Fix (decided with the maintainer): the Options knob SkipEnumDescriptions.
 //   - default (false): mapping appended to the description AND exposed via
@@ -26,14 +25,15 @@ import (
 //   - true: the description is left as the authored prose; the mapping rides
 //     x-go-enum-desc only.
 //
-// Response headers are the third OAS2 SimpleSchema target. They now carry
-// x-go-enum-desc like the other two: go-openapi/spec >= v0.22.6 emits the
-// embedded VendorExtensible from Header.MarshalJSON (go-openapi/spec#277),
-// where earlier versions dropped it. Headers never folded the mapping into
-// their description, so SkipEnumDescriptions does not change them — the
-// extension is present in both modes and the description stays the authored
-// prose. A latent double-nesting bug (enum: [[FIRST, SECOND]]) in
-// responseTypable.WithEnum was fixed alongside, so the values emit correctly.
+// Response headers are the third OAS2 SimpleSchema target.
+// They now carry x-go-enum-desc like the other two: go-openapi/spec >= v0.22.6 emits the embedded
+// VendorExtensible from Header.MarshalJSON (go-openapi/spec#277), where earlier versions dropped
+// it.
+//
+// Headers never folded the mapping into their description, so SkipEnumDescriptions does not change
+// them — the extension is present in both modes and the description stays the authored prose.
+// A latent double-nesting bug (enum: [[FIRST, SECOND]]) in responseTypable.WithEnum was fixed
+// alongside, so the values emit correctly.
 func TestCoverage_Bug2922(t *testing.T) {
 	const enumMapping = "FIRST TestEnumFirst"
 
@@ -58,8 +58,8 @@ func TestCoverage_Bug2922(t *testing.T) {
 			"default behaviour: the const mapping is folded into the parameter description")
 		assert.Contains(t, param.Extensions, "x-go-enum-desc")
 
-		// Response header (in: header): flat enum, prose description, and the
-		// const mapping rides x-go-enum-desc (spec >= v0.22.6 marshals it).
+		// Response header (in: header): flat enum, prose description, and the const mapping rides
+		// x-go-enum-desc (spec >= v0.22.6 marshals it).
 		assertEnumHeader(t, doc)
 
 		scantest.CompareOrDumpJSON(t, doc, "bugs_2922_schema.json")
@@ -93,17 +93,16 @@ func TestCoverage_Bug2922(t *testing.T) {
 		assert.True(t, ok, "the mapping must still ride x-go-enum-desc on the parameter")
 		assert.True(t, strings.Contains(paramEnumDesc, enumMapping))
 
-		// Response header (in: header): identical to default mode — the knob
-		// does not touch headers (they never folded into the description), so
-		// x-go-enum-desc is present here too.
+		// Response header (in: header): identical to default mode — the knob does not touch headers
+		// (they never folded into the description), so x-go-enum-desc is present here too.
 		assertEnumHeader(t, doc)
 
 		scantest.CompareOrDumpJSON(t, doc, "bugs_2922_skip_enum_desc_schema.json")
 	})
 }
 
-// queryParam returns the named in=query parameter of the GET /enum/test
-// operation, failing the test if it's absent.
+// queryParam returns the named in=query parameter of the GET /enum/test operation, failing the test
+// if it's absent.
 func queryParam(t *testing.T, doc *spec.Swagger, name string) spec.Parameter {
 	t.Helper()
 	op := doc.Paths.Paths["/enum/test"].Get
@@ -117,12 +116,12 @@ func queryParam(t *testing.T, doc *spec.Swagger, name string) spec.Parameter {
 	return spec.Parameter{}
 }
 
-// assertEnumHeader checks the X-Test-Enum header of the enumHeaderResponse
-// swagger:response: the enum values are a flat list (not double-nested), the
-// description is the authored prose, and the const mapping rides along on
-// x-go-enum-desc (spec >= v0.22.6 marshals header vendor extensions). The
-// behaviour is identical regardless of SkipEnumDescriptions, because headers
-// never fold the mapping into the description.
+// assertEnumHeader checks the X-Test-Enum header of the enumHeaderResponse swagger:response: the
+// enum values are a flat list (not double-nested), the description is the authored prose, and the
+// const mapping rides along on x-go-enum-desc (spec >= v0.22.6 marshals header vendor extensions).
+//
+// The behaviour is identical regardless of SkipEnumDescriptions, because headers never fold the
+// mapping into the description.
 func assertEnumHeader(t *testing.T, doc *spec.Swagger) {
 	t.Helper()
 	resp, ok := doc.Responses["enumHeaderResponse"]

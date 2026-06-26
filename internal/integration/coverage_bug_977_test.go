@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug977 locks go-swagger issue #977 ("aliased string type as map
-// key"): a map keyed by a named string type (type Role string) renders as
-// {type:object, additionalProperties:<value>} — its underlying string kind makes
-// it a valid object-key.
+// TestCoverage_Bug977 locks go-swagger issue #977 ("aliased string type as map key"): a map keyed
+// by a named string type (type Role string) renders as {type:object, additionalProperties:<value>}
+// — its underlying string kind makes it a valid object-key.
 func TestCoverage_Bug977(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/977/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
 	require.NoError(t, err)

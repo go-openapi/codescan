@@ -58,7 +58,7 @@ doc.Info.Version = buildVersion // e.g. injected via -ldflags "-X main.buildVers
 
 Alternatively, overlay a base document that already carries the version with
 `Options.InputSpec` (see
-[Overlaying a spec]({{% relref "/shaping-the-output/overlaying-a-spec" %}})).
+[Overlaying a spec]({{% relref "overlaying-a-spec" %}})).
 
 ## What's next
 

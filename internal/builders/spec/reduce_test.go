@@ -9,9 +9,10 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 )
 
-// TestConcatScore locks the production readability score (reduce.go) that the
-// name-identity concat budget is checked against. The exploration harness in
-// concat_score_test.go (disabled) re-challenges it; this test pins the
+// TestConcatScore locks the production readability score (reduce.go) that the name-identity concat
+// budget is checked against.
+//
+// The exploration harness in concat_score_test.go (disabled) re-challenges it; this test pins the
 // contract K3's hierarchical fallback will rely on.
 func TestConcatScore(t *testing.T) {
 	t.Run("empty is perfectly readable", func(t *testing.T) {
@@ -40,9 +41,8 @@ func TestConcatScore(t *testing.T) {
 	})
 }
 
-// TestResolveHierarchicalGroup locks the nested-path resolution logic the
-// integration fixture doesn't reach: depth-deepening on a shared parent, and
-// the taken-vs-shareable root distinction.
+// TestResolveHierarchicalGroup locks the nested-path resolution logic the integration fixture
+// doesn't reach: depth-deepening on a shared parent, and the taken-vs-shareable root distinction.
 func TestResolveHierarchicalGroup(t *testing.T) {
 	none := func() map[string]struct{} { return map[string]struct{}{} }
 
@@ -74,8 +74,8 @@ func TestResolveHierarchicalGroup(t *testing.T) {
 	})
 }
 
-// TestConcatScoreVersusDefaultBudget shows the default budget cleanly separates
-// the common short concats (accepted) from the long ones (Stage-3 candidates).
+// TestConcatScoreVersusDefaultBudget shows the default budget cleanly separates the common short
+// concats (accepted) from the long ones (Stage-3 candidates).
 func TestConcatScoreVersusDefaultBudget(t *testing.T) {
 	accepted := concatScore("BWidget", []string{"b", "widget"})
 	assert.Less(t, accepted, defaultNameConcatBudget,

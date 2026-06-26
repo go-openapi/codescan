@@ -55,8 +55,9 @@ func MustBeAType(tpe types.TypeAndValue) {
 	panic(fmt.Errorf("declaration is not a type: %v: %w", tpe, ErrInternal))
 }
 
-// IsFieldStringable check if the field type is a scalar. If the field type is
-// *ast.StarExpr and is pointer type, check if it refers to a scalar.
+// IsFieldStringable check if the field type is a scalar.
+//
+// If the field type is *ast.StarExpr and is pointer type, check if it refers to a scalar.
 // Otherwise, the ",string" directive doesn't apply.
 func IsFieldStringable(tpe ast.Expr) bool {
 	if ident, ok := tpe.(*ast.Ident); ok {
@@ -93,15 +94,16 @@ func IsTextMarshaler(tpe types.Type) bool {
 	return types.Implements(tpe, asInterface)
 }
 
-// IsJSONMapKey reports whether a Go map with this key type marshals to a JSON
-// object under encoding/json — i.e. whether the map is representable as
-// {type: object, additionalProperties: V}.
+// IsJSONMapKey reports whether a Go map with this key type marshals to a JSON object under
+// encoding/json — i.e. whether the map is representable as {type: object, additionalProperties:
+// V}.
 //
-// The rule mirrors encoding/json's newMapEncoder: the key kind is string or any
-// integer / unsigned-integer kind (int, int8…int64, uint, uint8…uint64,
-// uintptr — all stringified), or the key implements encoding.TextMarshaler.
-// Everything else (float, bool, struct without TextMarshaler, interface, func)
-// makes json.Marshal fail; json.Marshaler is never consulted for keys.
+// The rule mirrors encoding/json's newMapEncoder: the key kind is string or any integer /
+// unsigned-integer kind (int, int8…int64, uint, uint8…uint64, uintptr — all stringified), or
+// the key implements encoding.TextMarshaler.
+//
+// Everything else (float, bool, struct without TextMarshaler, interface, func) makes json.Marshal
+// fail; json.Marshaler is never consulted for keys.
 func IsJSONMapKey(key types.Type) bool {
 	if b, ok := key.Underlying().(*types.Basic); ok && b.Info()&(types.IsString|types.IsInteger) != 0 {
 		return true

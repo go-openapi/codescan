@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2520 locks go-swagger issue #2520 ("generate spec fails with
-// unsupported type 'invalid type'"): a struct with a custom MarshalJSON and only
-// unexported fields no longer aborts the scan — it emits an (empty) object and a
-// $ref from the using field. codescan works at the type level and cannot infer
-// the custom-marshaled wire shape; declaring it requires swagger:type /
+// TestCoverage_Bug2520 locks go-swagger issue #2520 ("generate spec fails with unsupported type
+// 'invalid type'"): a struct with a custom MarshalJSON and only unexported fields no longer aborts
+// the scan — it emits an (empty) object and a $ref from the using field. codescan works at the
+// type level and cannot infer the custom-marshaled wire shape; declaring it requires swagger:type /
 // swagger:strfmt on the wrapper type.
 func TestCoverage_Bug2520(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{

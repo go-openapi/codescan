@@ -17,8 +17,8 @@ func TestParse(t *testing.T) {
 	})
 
 	// go-swagger#2479: an explicit empty sequence is the OAS 2.0 opt-out idiom.
-	// It must be distinguishable from an absent block (nil) so the spec marshals
-	// `"security": []` rather than omitting the key.
+	// It must be distinguishable from an absent block (nil) so the spec marshals `"security": []`
+	// rather than omitting the key.
 	t.Run("explicit empty list opts out (non-nil empty)", func(t *testing.T) {
 		got := Parse("[]")
 		require.NotNil(t, got, "`[]` must yield a non-nil empty list, not nil")
@@ -54,8 +54,7 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("sequence item: block-style scope list", func(t *testing.T) {
-		// the other idiomatic YAML scope form — was silently broken before the
-		// YAML-decode rewrite.
+		// the other idiomatic YAML scope form — was silently broken before the YAML-decode rewrite.
 		got := Parse("- oauth:\n    - read\n    - write")
 		require.Len(t, got, 1)
 		assert.Equal(t, []string{"read", "write"}, got[0]["oauth"])
@@ -68,8 +67,8 @@ func TestParse(t *testing.T) {
 		assert.Equal(t, []string{"read"}, got[1]["oauth"])
 	})
 
-	// go-swagger#2294: two keys under ONE sequence item mean AND — a single
-	// requirement object carrying both schemes.
+	// go-swagger#2294: two keys under ONE sequence item mean AND — a single requirement object
+	// carrying both schemes.
 	t.Run("AND form: two keys in one sequence item", func(t *testing.T) {
 		got := Parse("- x_client_id: []\n  access_token: []")
 		require.Len(t, got, 1, "AND is a single requirement, not two")

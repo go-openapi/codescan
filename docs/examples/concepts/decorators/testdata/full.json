@@ -1,0 +1,75 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/legacy/ping": {
+      "get": {
+        "tags": [
+          "legacy"
+        ],
+        "summary": "Ping is the legacy health check.",
+        "operationId": "ping",
+        "deprecated": true,
+        "responses": {
+          "200": {
+            "$ref": "#/responses/pingResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Gadget": {
+      "description": "Deprecated: superseded by the v2 widget API.",
+      "type": "object",
+      "title": "Gadget is a deprecated model. OpenAPI 2.0 has no native `deprecated` on a\nschema, so codescan emits `x-deprecated: true` — here triggered by the\ngodoc-style \"Deprecated:\" paragraph, which is recognised on its own without a\nseparate annotation. (The explicit `deprecated: true` annotation, shown on the\noperation above, has the same effect on a model or field.)",
+      "properties": {
+        "name": {
+          "description": "Name is the current display name.",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "serialNo": {
+          "description": "SerialNo is the legacy identifier.\n\nDeprecated: use the v2 identifier instead.",
+          "type": "string",
+          "x-deprecated": true,
+          "x-go-name": "SerialNo"
+        }
+      },
+      "x-deprecated": true,
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/decorators"
+    },
+    "Token": {
+      "type": "object",
+      "title": "Token is issued by the server.",
+      "properties": {
+        "id": {
+          "description": "ID is assigned by the server and cannot be set by clients.",
+          "type": "string",
+          "x-go-name": "ID",
+          "readOnly": true
+        },
+        "value": {
+          "description": "Value is the token value.",
+          "type": "string",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/decorators"
+    }
+  },
+  "responses": {
+    "pingResponse": {
+      "description": "PingResponse is the body returned by ping.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "description": "OK is true when healthy.",
+            "type": "boolean",
+            "x-go-name": "OK"
+          }
+        }
+      }
+    }
+  }
+}

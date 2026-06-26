@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2396 asserts the EXPECTED resolution of go-swagger issue #2396
-// ("model enum recognition and handling spaces"). Currently RED.
+// TestCoverage_Bug2396 asserts the EXPECTED resolution of go-swagger issue #2396 ("model enum
+// recognition and handling spaces").
 //
-// The bracketed `enum: [a, b, c]` form must produce the same enum as the
-// unbracketed `enum: a, b, c` form — the surrounding `[`/`]` are delimiters and
-// must be stripped. The scanner currently glues them onto the first/last value
-// (["[issues", "pulls", "projects]"]). The unbracketed form (which already trims
-// correctly) is the green guard rail.
+// Currently RED.
+//
+// The bracketed `enum: [a, b, c]` form must produce the same enum as the unbracketed `enum: a, b,
+// c` form — the surrounding `[`/`]` are delimiters and must be stripped.
+// The scanner currently glues them onto the first/last value (["[issues", "pulls", "projects]"]).
+// The unbracketed form (which already trims correctly) is the green guard rail.
 func TestCoverage_Bug2396(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2396/..."},

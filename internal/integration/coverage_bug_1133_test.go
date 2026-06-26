@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1133 locks the fix for go-swagger issues #1133 and #1174 ("scan
-// models chokes on unsupported type"): an unsupported (function) type in the
-// scanned package — even one used by a non-annotated struct — no longer halts the
-// whole scan. It is warned and skipped; the annotated model is still emitted.
+// TestCoverage_Bug1133 locks the fix for go-swagger issues #1133 and #1174 ("scan models chokes on
+// unsupported type"): an unsupported (function) type in the scanned package — even one used by a
+// non-annotated struct — no longer halts the whole scan.
+//
+// It is warned and skipped; the annotated model is still emitted.
 func TestCoverage_Bug1133(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1133/..."},

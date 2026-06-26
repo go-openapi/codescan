@@ -49,8 +49,8 @@ func TestPointerPath(t *testing.T) {
 	})
 
 	t.Run("deprecated anchors on operations/routes but NOT schema", func(t *testing.T) {
-		// Lexically legal on a schema (so the lexer accepts it), but renders no
-		// schema node in OAS2 — must not be anchored there.
+		// Lexically legal on a schema (so the lexer accepts it), but renders no schema node in OAS2 —
+		// must not be anchored there.
 		require.Contains(t, kw(t, KwDeprecated).Contexts, CtxSchema)
 		_, ok := PointerPath(kw(t, KwDeprecated), CtxSchema)
 		assert.False(t, ok, "deprecated must not anchor in a schema")
@@ -68,8 +68,7 @@ func TestPointerPath(t *testing.T) {
 	})
 
 	t.Run("context gate: a keyword not legal in ctx does not anchor", func(t *testing.T) {
-		// version is meta-only; it must not anchor in a schema even though it has
-		// a pointer path.
+		// version is meta-only; it must not anchor in a schema even though it has a pointer path.
 		_, ok := PointerPath(kw(t, KwVersion), CtxSchema)
 		assert.False(t, ok)
 	})

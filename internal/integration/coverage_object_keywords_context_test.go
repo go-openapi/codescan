@@ -13,9 +13,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ObjectKeywordsContext locks the context gating of the
-// object validation keywords (minProperties / maxProperties /
-// patternProperties):
+// TestCoverage_ObjectKeywordsContext locks the context gating of the object validation keywords
+// (minProperties / maxProperties / patternProperties):
 //
 //   - kept on an object-typed model;
 //   - stripped + CodeShapeMismatch on a non-object (scalar) model;
@@ -56,8 +55,8 @@ func TestCoverage_ObjectKeywordsContext(t *testing.T) {
 	require.Len(t, op.Parameters, 1)
 	assert.Equal(t, "string", op.Parameters[0].Type)
 
-	// Diagnostics: 3 shape-mismatch (scalar model) + 3 unsupported-in-
-	// simple-schema (query param), one per object keyword each.
+	// Diagnostics: 3 shape-mismatch (scalar model) + 3 unsupported-in- simple-schema (query param),
+	// one per object keyword each.
 	var shape, simple int
 	for _, d := range diags {
 		switch d.Code {

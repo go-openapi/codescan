@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1665 locks the resolution to go-swagger issue #1665 ("can't
-// combine a same annotation across multiple lines"): multiple swagger:parameters
-// lines on one type are all honored — the shared param binds to operations listed
-// across every line.
+// TestCoverage_Bug1665 locks the resolution to go-swagger issue #1665 ("can't combine a same
+// annotation across multiple lines"): multiple swagger:parameters lines on one type are all honored
+// — the shared param binds to operations listed across every line.
 func TestCoverage_Bug1665(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1665/..."},

@@ -1,0 +1,26 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Account": {
+      "type": "object",
+      "title": "Account is a no-mangle witness interface.",
+      "properties": {
+        "CreatedAt": {
+          "description": "Default path, no override. The mangler produces \"createdAt\"; with the\nopt-out the verbatim \"CreatedAt\" is emitted.",
+          "type": "string"
+        },
+        "ID": {
+          "description": "Default path, no override. The mangler produces \"id\"; with the opt-out\nthe verbatim \"ID\" is emitted.",
+          "type": "string"
+        },
+        "explicit_name": {
+          "description": "\nA swagger:name override is taken verbatim whether or not the mangler is\nskipped — re-mangling would camelCase this to \"explicitName\".",
+          "type": "string",
+          "x-go-name": "OverriddenField"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/interface-no-mangle"
+    }
+  }
+}

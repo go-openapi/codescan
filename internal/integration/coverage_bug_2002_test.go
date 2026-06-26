@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2002 locks go-swagger issue #2002 ("generate spec fails with
-// invalid type error"): a swagger:response body field whose type lives in
-// another package resolves to a $ref definition. The reporter's "unsupported
-// type 'invalid type'" came from the old GO111MODULE=off go/loader; the
+// TestCoverage_Bug2002 locks go-swagger issue #2002 ("generate spec fails with invalid type
+// error"): a swagger:response body field whose type lives in another package resolves to a $ref
+// definition.
+//
+// The reporter's "unsupported type 'invalid type'" came from the old GO111MODULE=off go/loader; the
 // module-aware go/packages loader resolves the cross-package type.
 func TestCoverage_Bug2002(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{

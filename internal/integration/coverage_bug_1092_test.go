@@ -13,10 +13,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1092 locks go-swagger issue #1092 ("mapping values are not
-// allowed in this context"): a swagger:meta block with colon-bearing prose
-// (host:port, ratios, URLs) parses cleanly — the prose stays in the description
-// and the real Version field is read; no YAML "mapping values" error.
+// TestCoverage_Bug1092 locks go-swagger issue #1092 ("mapping values are not allowed in this
+// context"): a swagger:meta block with colon-bearing prose (host:port, ratios, URLs) parses cleanly
+// — the prose stays in the description and the real Version field is read; no YAML "mapping
+// values" error.
 func TestCoverage_Bug1092(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1092/..."}, WorkDir: scantest.FixturesDir(),

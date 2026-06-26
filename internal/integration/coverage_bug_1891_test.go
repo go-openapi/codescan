@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1891 locks go-swagger issue #1891 ("group type"): a model
-// declared inside a grouped `type ( ... )` block, plus a swagger:route declared
-// inside a function body, are both discovered and produce a valid spec.
+// TestCoverage_Bug1891 locks go-swagger issue #1891 ("group type"): a model declared inside a
+// grouped `type ( ... )` block, plus a swagger:route declared inside a function body, are both
+// discovered and produce a valid spec.
 func TestCoverage_Bug1891(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1891/..."},

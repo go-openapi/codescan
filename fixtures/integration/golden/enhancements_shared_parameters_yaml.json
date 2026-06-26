@@ -1,0 +1,51 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/a": {
+      "get": {
+        "summary": "resolving refs",
+        "operationId": "opA",
+        "parameters": [
+          {
+            "$ref": "#/parameters/X-Request-ID"
+          }
+        ],
+        "responses": {
+          "default": {
+            "$ref": "#/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/b": {
+      "get": {
+        "summary": "dangling refs",
+        "operationId": "opB",
+        "responses": {}
+      }
+    }
+  },
+  "parameters": {
+    "X-Request-ID": {
+      "type": "string",
+      "x-go-name": "RequestID",
+      "name": "X-Request-ID",
+      "in": "header"
+    }
+  },
+  "responses": {
+    "ErrorResponse": {
+      "description": "ErrorResponse registers #/responses/ErrorResponse.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "Message is a human-readable error message.",
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    }
+  }
+}

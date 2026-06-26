@@ -13,11 +13,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3138 verifies the fix for go-swagger issue #3138 ("How To
-// mark a field as deprecated?"). OAS2 spec.Schema has no native `deprecated`
-// field, so model- and field-level deprecation is emitted as the
-// `x-deprecated: true` vendor extension. Two triggers are supported on both
-// models and fields, unified by grammar.Block.IsDeprecated():
+// TestCoverage_Bug3138 verifies the fix for go-swagger issue #3138 ("How To mark a field as
+// deprecated?").
+//
+// OAS2 spec.Schema has no native `deprecated` field, so model- and field-level deprecation is
+// emitted as the `x-deprecated: true` vendor extension.
+// Two triggers are supported on both models and fields, unified by grammar.Block.IsDeprecated():
 //
 //   - the explicit `deprecated: true` annotation (consumed as a keyword), and
 //   - a godoc-style "Deprecated:" paragraph, which stays in the description
@@ -45,14 +46,14 @@ func TestCoverage_Bug3138(t *testing.T) {
 
 	widget := doc.Definitions["Widget"]
 
-	// Field, explicit `deprecated: true`: x-deprecated set, annotation
-	// consumed (not left in the description).
+	// Field, explicit `deprecated: true`: x-deprecated set, annotation consumed (not left in the
+	// description).
 	oldName := widget.Properties["oldName"]
 	assert.Equal(t, true, oldName.Extensions["x-deprecated"])
 	assert.Equal(t, "The legacy name.", oldName.Description)
 
-	// Field, godoc "Deprecated:" paragraph: x-deprecated set AND the reason
-	// text is preserved in the description (no spurious diagnostic).
+	// Field, godoc "Deprecated:" paragraph: x-deprecated set AND the reason text is preserved in the
+	// description (no spurious diagnostic).
 	legacyID := widget.Properties["legacyID"]
 	assert.Equal(t, true, legacyID.Extensions["x-deprecated"])
 	assert.Contains(t, legacyID.Description, "Deprecated: use Name instead.",

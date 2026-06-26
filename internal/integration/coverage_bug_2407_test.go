@@ -12,9 +12,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2407 locks go-swagger issue #2407 ("how add example to yml"):
-// an `example: [1, 2, 3]` on an array-typed body response is emitted on the
-// response schema (previously absent).
+// TestCoverage_Bug2407 locks go-swagger issue #2407 ("how add example to yml"): an `example: [1, 2,
+// 3]` on an array-typed body response is emitted on the response schema (previously absent).
 func TestCoverage_Bug2407(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2407/..."},

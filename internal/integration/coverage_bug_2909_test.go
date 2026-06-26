@@ -13,12 +13,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2909 verifies the fix for go-swagger issue #2909: a route
-// path with an inline regex segment ({id:[0-9]+}) was silently dropped because
-// rxPath's alphabet lacks `[`/`]`. The fix strips the regex constraint to the
-// RFC 6570 URI Template Level-1 form ({id}) before matching, so the route is
-// emitted as /items/{id}, and warns that the constraint was dropped (OpenAPI
-// 2.0 path templating cannot express it).
+// TestCoverage_Bug2909 verifies the fix for go-swagger issue #2909: a route path with an inline
+// regex segment ({id:[0-9]+}) was silently dropped because rxPath's alphabet lacks `[`/`]`.
+//
+// The fix strips the regex constraint to the RFC 6570 URI Template Level-1 form ({id}) before
+// matching, so the route is emitted as /items/{id}, and warns that the constraint was dropped
+// (OpenAPI 2.0 path templating cannot express it).
 func TestCoverage_Bug2909(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{

@@ -168,7 +168,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 	})
 
 	t.Run("known non-struct annotations are accepted", func(t *testing.T) {
-		for _, annotation := range []string{"strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type"} {
+		for _, annotation := range []string{"strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type", "title", "description"} {
 			file := &ast.File{
 				Comments: []*ast.CommentGroup{
 					{List: []*ast.Comment{{Text: "// swagger:" + annotation + " something"}}},
@@ -320,9 +320,8 @@ func TestNewTypeIndex_ExcludeDeps(t *testing.T) {
 	require.NotNil(t, sctx)
 	require.NotNil(t, sctx.app)
 
-	// With ExcludeDeps, imports should NOT be walked:
-	// the AllPackages map should only contain the explicitly-loaded packages,
-	// NOT transitive dependencies like strfmt.
+	// With ExcludeDeps, imports should NOT be walked: the AllPackages map should only contain the
+	// explicitly-loaded packages, NOT transitive dependencies like strfmt.
 	_, hasStrfmt := sctx.app.AllPackages["github.com/go-openapi/strfmt"]
 	assert.False(t, hasStrfmt, "strfmt should not be indexed when ExcludeDeps is true")
 }
@@ -460,9 +459,9 @@ func TestCollectOperationPathAnnotations_TagFiltering(t *testing.T) {
 
 func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 	t.Run("struct annotation conflict propagates error through build chain", func(t *testing.T) {
-		// The invalid_model_param fixture has swagger:model and swagger:parameters
-		// on the same struct, which triggers a struct conflict error in detectNodes,
-		// propagated through processFile → processPackage → build → NewTypeIndex → NewScanCtx.
+		// The invalid_model_param fixture has swagger:model and swagger:parameters on the same struct,
+		// which triggers a struct conflict error in detectNodes, propagated through processFile →
+		// processPackage → build → NewTypeIndex → NewScanCtx.
 		_, err := NewScanCtx(&Options{
 			Packages: []string{"./goparsing/invalid_model_param"},
 			WorkDir:  "../../fixtures",
@@ -499,8 +498,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 	})
 
 	t.Run("duplicate package is de-duplicated", func(t *testing.T) {
-		// Load the same package twice — the second occurrence should be
-		// skipped (line 109 in build).
+		// Load the same package twice — the second occurrence should be skipped (line 109 in build).
 		sctx, err := NewScanCtx(&Options{
 			Packages: []string{
 				"./goparsing/petstore/enums",
@@ -514,8 +512,8 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 
 	t.Run("walkImports error propagation", func(t *testing.T) {
 		// Load a valid package alongside an invalid one that shares imports.
-		// The invalid_model_param package is a main package; loading it should
-		// trigger the conflict error even if other packages are fine.
+		// The invalid_model_param package is a main package; loading it should trigger the conflict error
+		// even if other packages are fine.
 		_, err := NewScanCtx(&Options{
 			Packages: []string{
 				"./goparsing/petstore/enums",

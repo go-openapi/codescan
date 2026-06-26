@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2064 locks go-swagger issue #2064 ("add example to string
-// parameter in request body"): the example and default of a body parameter are
-// emitted (they were previously missing). They are carried on the parameter
-// object alongside the body schema.
+// TestCoverage_Bug2064 locks go-swagger issue #2064 ("add example to string parameter in request
+// body"): the example and default of a body parameter are emitted (they were previously missing).
+//
+// They are carried on the parameter object alongside the body schema.
 func TestCoverage_Bug2064(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2064/..."},

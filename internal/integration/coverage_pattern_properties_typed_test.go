@@ -13,9 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_PatternProperties_Typed locks the typed swagger:patternProperties
-// marker (Phase 2c): quoted-regex → typed value (primitive / $ref) pairs,
-// RE2-hygiene checking, and the lowest-priority precedence rule.
+// TestCoverage_PatternProperties_Typed locks the typed swagger:patternProperties marker (Phase 2c):
+// quoted-regex → typed value (primitive / $ref) pairs, RE2-hygiene checking, and the
+// lowest-priority precedence rule.
 func TestCoverage_PatternProperties_Typed(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{

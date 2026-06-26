@@ -15,15 +15,14 @@ import (
 )
 
 // CompareOrDumpJSON marshals got to stable JSON and either writes it to
-// <repo>/fixtures/integration/golden/<name> (when UPDATE_GOLDEN=1) or
-// asserts that it JSON-equals the stored golden.
+// <repo>/fixtures/integration/golden/<name> (when UPDATE_GOLDEN=1) or asserts that it JSON-equals
+// the stored golden.
 //
-// This is the regression-testing harness used to detect any behavior change
-// in the go-openapi/spec objects produced by the scanner, compared against
-// a captured baseline.
+// This is the regression-testing harness used to detect any behavior change in the go-openapi/spec
+// objects produced by the scanner, compared against a captured baseline.
 //
-// Golden files are named by content (fixture bundle + object kind + entity),
-// not by test name, so they survive test reshuffling.
+// Golden files are named by content (fixture bundle + object kind + entity), not by test name, so
+// they survive test reshuffling.
 func CompareOrDumpJSON(t *testing.T, got any, name string) {
 	t.Helper()
 

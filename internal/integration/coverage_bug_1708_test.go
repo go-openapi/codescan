@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1708 locks the fix for go-swagger issue #1708 ("response
-// annotation missing property type", follow-up of #619): a body response whose
-// fields are pointers to other models no longer errors with "missing property
-// type" — the fields resolve to $refs in an object schema.
+// TestCoverage_Bug1708 locks the fix for go-swagger issue #1708 ("response annotation missing
+// property type", follow-up of #619): a body response whose fields are pointers to other models no
+// longer errors with "missing property type" — the fields resolve to $refs in an object schema.
 func TestCoverage_Bug1708(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1708/..."},

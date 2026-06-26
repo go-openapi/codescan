@@ -50,8 +50,7 @@ func TestBlock_IsDeprecated(t *testing.T) {
 			b := parseString(t, tc.src)
 			assert.Equal(t, tc.want, b.IsDeprecated())
 
-			// A godoc "Deprecated:" paragraph must never be mistaken for a
-			// malformed bool keyword.
+			// A godoc "Deprecated:" paragraph must never be mistaken for a malformed bool keyword.
 			for _, d := range b.Diagnostics() {
 				assert.NotEqual(t, CodeInvalidBoolean, d.Code,
 					"unexpected invalid-boolean diagnostic: %s", d)

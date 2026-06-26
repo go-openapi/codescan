@@ -13,9 +13,8 @@ import (
 )
 
 // TestCoverage_Bug1402 locks go-swagger issue #1402 ("additionalProperties breaks
-// map[string]interface{}"): the field renders as {type:object,
-// additionalProperties:{}} — an OPEN value schema (any), not one wrongly
-// constrained to object.
+// map[string]interface{}"): the field renders as {type:object, additionalProperties:{}} — an OPEN
+// value schema (any), not one wrongly constrained to object.
 func TestCoverage_Bug1402(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1402/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,

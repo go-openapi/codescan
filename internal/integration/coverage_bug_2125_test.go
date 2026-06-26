@@ -13,10 +13,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2125 locks go-swagger issue #2125 ("parsing meta info comments
-// can parse fields wrong"): markdown content in a swagger:meta block (headings,
-// prose mentioning "Api-Version") is kept in the info description and does NOT
-// derail field parsing — the real `Version:` field is read correctly.
+// TestCoverage_Bug2125 locks go-swagger issue #2125 ("parsing meta info comments can parse fields
+// wrong"): markdown content in a swagger:meta block (headings, prose mentioning "Api-Version") is
+// kept in the info description and does NOT derail field parsing — the real `Version:` field is
+// read correctly.
 func TestCoverage_Bug2125(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2125/..."}, WorkDir: scantest.FixturesDir(),

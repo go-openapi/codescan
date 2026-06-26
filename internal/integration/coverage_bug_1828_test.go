@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1828 locks go-swagger issue #1828 ("route responses tag
-// description"): the inline `NNN: description:<text>` form inside a
-// swagger:route Responses block must produce a valid response with that
-// description. The legacy engine emitted an invalid `$ref: '#/responses/'`
-// (empty name); grammar2 parses the inline description correctly.
+// TestCoverage_Bug1828 locks go-swagger issue #1828 ("route responses tag description"): the inline
+// `NNN: description:<text>` form inside a swagger:route Responses block must produce a valid
+// response with that description.
+//
+// The legacy engine emitted an invalid `$ref: '#/responses/'` (empty name); grammar2 parses the
+// inline description correctly.
 func TestCoverage_Bug1828(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1828/..."},

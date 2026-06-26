@@ -14,11 +14,11 @@ import (
 	oaispec "github.com/go-openapi/spec"
 )
 
-// TestCoverage_Bug2837 locks the fix for go-swagger issue #2837 ("Responses
-// defined in routes break with go 1.19 formatting"): gofmt rewrites a route's
-// `+ name:` parameter bullet to `- name:`, which used to break parsing. Both
-// the authored `+` form and the gofmt-canonical `-` form now parse to the same
-// parameter.
+// TestCoverage_Bug2837 locks the fix for go-swagger issue #2837 ("Responses defined in routes break
+// with go 1.19 formatting"): gofmt rewrites a route's `+ name:` parameter bullet to `- name:`,
+// which used to break parsing.
+//
+// Both the authored `+` form and the gofmt-canonical `-` form now parse to the same parameter.
 func TestCoverage_Bug2837(t *testing.T) {
 	scan := func(pkg string) *oaispec.Swagger {
 		doc, err := codescan.Run(&codescan.Options{Packages: []string{pkg}, WorkDir: scantest.FixturesDir()})

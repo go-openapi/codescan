@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_RefExampleCoercion verifies the fix for quirk G3
-// (doc-site-quirks.md): a JSON-literal example: / default: on a field
-// whose type is a $ref is coerced into a structured value on the allOf
-// override arm — matching the direct-field path — instead of riding the
-// arm as a raw string.
+// TestQuirk_RefExampleCoercion verifies the fix for quirk G3 (doc-site-quirks.md): a JSON-literal
+// example: / default: on a field whose type is a $ref is coerced into a structured value on the
+// allOf override arm — matching the direct-field path — instead of riding the arm as a raw
+// string.
 func TestQuirk_RefExampleCoercion(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./quirks/ref-example-coercion/..."},
@@ -55,8 +54,7 @@ func TestQuirk_RefExampleCoercion(t *testing.T) {
 		map[string]any{"value": "b"},
 	}, armExample("tags"))
 
-	// a non-JSON scalar is left as a plain string (referenced type
-	// unknown on the override arm).
+	// a non-JSON scalar is left as a plain string (referenced type unknown on the override arm).
 	assert.Equal(t, "plain-scalar", armExample("plain"))
 
 	scantest.CompareOrDumpJSON(t, doc, "quirk_ref_example_coercion.json")

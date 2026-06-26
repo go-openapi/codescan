@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2907 locks the fix for go-swagger issue #2907 ("Go-Swagger
-// not generating properties in yaml file"): a response whose body is a slice
-// of a cross-package model (`Body []data.Movie`) used to emit `items: {}` —
-// the model's properties were lost. The cross-package model is now resolved,
-// so the response schema is an array of `$ref` to the emitted definition.
+// TestCoverage_Bug2907 locks the fix for go-swagger issue #2907 ("Go-Swagger not generating
+// properties in yaml file"): a response whose body is a slice of a cross-package model (`Body
+// []data.Movie`) used to emit `items: {}` — the model's properties were lost.
+//
+// The cross-package model is now resolved, so the response schema is an array of `$ref` to the
+// emitted definition.
 func TestCoverage_Bug2907(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2907/..."},

@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2038 asserts the EXPECTED resolution of go-swagger issue #2038
-// ("swagger ignore json tags for embedded structures"). It is currently RED.
+// TestCoverage_Bug2038 asserts the EXPECTED resolution of go-swagger issue #2038 ("swagger ignore
+// json tags for embedded structures").
 //
-// Go's encoding/json treats an embedded struct WITH an explicit json tag as a
-// regular named field: the embedded value NESTS under the tag rather than being
-// promoted. codescan currently ignores the tag and flattens both forms, so the
-// generated spec for Tagged does not match the actual JSON. The untagged form
-// (correct promotion) is the green guard rail.
+// It is currently RED.
+//
+// Go's encoding/json treats an embedded struct WITH an explicit json tag as a regular named field:
+// the embedded value NESTS under the tag rather than being promoted. codescan currently ignores the
+// tag and flattens both forms, so the generated spec for Tagged does not match the actual JSON.
+// The untagged form (correct promotion) is the green guard rail.
 func TestCoverage_Bug2038(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2038/..."},
@@ -44,17 +45,17 @@ func TestCoverage_Bug2038(t *testing.T) {
 	assert.Equal(t, "#/definitions/Inner", inner.Ref.String(),
 		"the nested embed should reference the embedded type")
 
-	// `json:"-"` on an embed squashes it: Go drops it entirely, so neither the
-	// embed nor its fields appear (not promoted, not nested).
+	// `json:"-"` on an embed squashes it: Go drops it entirely, so neither the embed nor its fields
+	// appear (not promoted, not nested).
 	squashed := doc.Definitions["Squashed"].Properties
 	assert.Contains(t, squashed, "outer_field")
 	assert.NotContains(t, squashed, "inner_field", "a squashed embed promotes nothing")
 	assert.NotContains(t, squashed, "inner", "a squashed embed nests nothing")
 	assert.Len(t, squashed, 1)
 
-	// swagger:allOf on a json-tagged embed: the explicit composition annotation
-	// wins over the tag — the embed becomes an allOf $ref member, NOT a nested
-	// property. (Nesting fires only for plain, non-allOf embeds.)
+	// swagger:allOf on a json-tagged embed: the explicit composition annotation wins over the tag —
+	// the embed becomes an allOf $ref member, NOT a nested property. (Nesting fires only for plain,
+	// non-allOf embeds.)
 	taggedAllOf := doc.Definitions["TaggedAllOf"]
 	assert.NotContains(t, taggedAllOf.Properties, "inner",
 		"swagger:allOf diverts the embed away from the json-tag nesting path")

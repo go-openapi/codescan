@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2687 covers go-swagger issue #2687 ("Ignore kubebuilder
-// annotations"): tool directive markers (`// +kubebuilder:...`, `// +genclient`,
-// `// +k8s:...`) used to leak into the generated model and property
-// descriptions. This was also the residual flagged by #3007.
+// TestCoverage_Bug2687 covers go-swagger issue #2687 ("Ignore kubebuilder annotations"): tool
+// directive markers (`// +kubebuilder:...`, `// +genclient`, `// +k8s:...`) used to leak into the
+// generated model and property descriptions.
 //
-// FIXED (fix/go-swagger-2687): the lexer classifies `// +marker`-style lines as
-// directives (alongside Go `//go:`/`//nolint:` directives) and drops them from
-// the prose surface, so the descriptions stay clean.
+// This was also the residual flagged by #3007.
+//
+// FIXED (fix/go-swagger-2687): the lexer classifies `// +marker`-style lines as directives
+// (alongside Go `//go:`/`//nolint:` directives) and drops them from the prose surface, so the
+// descriptions stay clean.
 func TestCoverage_Bug2687(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2687/..."},
@@ -37,7 +38,7 @@ func TestCoverage_Bug2687(t *testing.T) {
 	assert.NotContains(t, app.Description, "+genclient")
 	assert.NotContains(t, app.Properties["name"].Description, "+kubebuilder")
 
-	// The +kubebuilder:validation:Required marker is dropped, but the
-	// genuine `required: true` keyword on the same field is still honoured.
+	// The +kubebuilder:validation:Required marker is dropped, but the genuine `required: true` keyword
+	// on the same field is still honoured.
 	assert.Contains(t, app.Required, "name")
 }

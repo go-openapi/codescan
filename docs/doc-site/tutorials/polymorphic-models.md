@@ -41,7 +41,7 @@ now given meaning by the base's discriminator.
 
 If the subtypes are missing from your spec, they are **unreachable**: a subtype
 appears only when something references it or you scan with `ScanModels` (the
-`-m` flag), the same [reachability rule]({{% relref "/shaping-the-output/type-discovery" %}})
+`-m` flag), the same [reachability rule]({{% relref "type-discovery" %}})
 as any model — codescan does not auto-discover subtypes from the base alone.
 
 {{% notice style="info" %}}

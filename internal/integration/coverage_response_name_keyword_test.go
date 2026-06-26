@@ -12,12 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ResponseNameKeyword locks the `name:` keyword on a
-// swagger:response struct field: it renames the response header (the
-// Headers map key), overriding the json-tag / Go-field derivation, and —
-// being a structural keyword — is stripped from the header description
-// rather than leaking into it as prose. Mirrors the parameter-side
-// TestCoverage_ParamNameKeyword.
+// TestCoverage_ResponseNameKeyword locks the `name:` keyword on a swagger:response struct field: it
+// renames the response header (the Headers map key), overriding the json-tag / Go-field derivation,
+// and — being a structural keyword — is stripped from the header description rather than
+// leaking into it as prose.
+//
+// Mirrors the parameter-side TestCoverage_ParamNameKeyword.
 func TestCoverage_ResponseNameKeyword(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/response-name-keyword/..."},

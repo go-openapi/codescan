@@ -14,11 +14,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1852 locks go-swagger issue #1852 ("Schema error for delete
-// operation"): a 204 response with no description comment must still carry the
-// OAS2-required `description` key. The legacy engine omitted it entirely, so
-// editor.swagger.io rejected the spec ("missingProperty: description"); codescan
-// now always emits the key (empty string when no doc comment is present).
+// TestCoverage_Bug1852 locks go-swagger issue #1852 ("Schema error for delete operation"): a 204
+// response with no description comment must still carry the OAS2-required `description` key.
+//
+// The legacy engine omitted it entirely, so editor.swagger.io rejected the spec ("missingProperty:
+// description"); codescan now always emits the key (empty string when no doc comment is present).
 func TestCoverage_Bug1852(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1852/..."},
@@ -29,8 +29,8 @@ func TestCoverage_Bug1852(t *testing.T) {
 	resp, ok := doc.Responses["noContentResponse"]
 	require.True(t, ok)
 
-	// The description key must be emitted even though the response type has no
-	// doc comment (presence is what OAS2 validation requires).
+	// The description key must be emitted even though the response type has no doc comment (presence
+	// is what OAS2 validation requires).
 	b, err := json.Marshal(resp)
 	require.NoError(t, err)
 	assert.True(t, strings.Contains(string(b), `"description"`),

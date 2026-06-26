@@ -42,8 +42,10 @@ func parseGoSource(t *testing.T, src string) Block {
 	return nil
 }
 
-// lexString preprocesses a comment block (without leading // markers) and
-// runs the full Lex pipeline. Each input line becomes one Line entry.
+// lexString preprocesses a comment block (without leading // markers) and runs the full Lex
+// pipeline.
+//
+// Each input line becomes one Line entry.
 func lexString(t *testing.T, src string) []Token {
 	t.Helper()
 	const likelyLines = 5
@@ -104,6 +106,37 @@ func TestLexer_RouteWithGodocPrefix(t *testing.T) {
 	assert.Equal(t, "pets", out[0].Args[2].Text)
 	assert.Equal(t, TokenIdentName, out[0].Args[3].Kind)
 	assert.Equal(t, "listPets", out[0].Args[3].Text)
+}
+
+func TestLexer_ParametersArgs(t *testing.T) {
+	t.Run("wildcard target", func(t *testing.T) {
+		out := lexString(t, "swagger:parameters * listPets")
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 2)
+		assert.Equal(t, TokenWildcard, out[0].Args[0].Kind)
+		assert.Equal(t, "*", out[0].Args[0].Text)
+		assert.Equal(t, TokenIdentName, out[0].Args[1].Kind)
+		assert.Equal(t, "listPets", out[0].Args[1].Text)
+	})
+
+	t.Run("path target with shared name", func(t *testing.T) {
+		out := lexString(t, "swagger:parameters /pets X-Request-ID")
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 2)
+		assert.Equal(t, TokenURLPath, out[0].Args[0].Kind)
+		assert.Equal(t, "/pets", out[0].Args[0].Text)
+		assert.Equal(t, TokenIdentName, out[0].Args[1].Kind)
+		assert.Equal(t, "X-Request-ID", out[0].Args[1].Text)
+	})
+
+	t.Run("wildcard only recognised in first position", func(t *testing.T) {
+		out := lexString(t, "swagger:parameters listPets *")
+		require.NotEmpty(t, out)
+		require.Len(t, out[0].Args, 2)
+		assert.Equal(t, TokenIdentName, out[0].Args[0].Kind)
+		assert.Equal(t, TokenIdentName, out[0].Args[1].Kind, "a non-leading * is a plain ident, not a wildcard")
+		assert.Equal(t, "*", out[0].Args[1].Text)
+	})
 }
 
 func TestLexer_RouteOnlyGetsGodocPrefix(t *testing.T) {
@@ -263,12 +296,10 @@ func TestLexer_TitleDescriptionSplit_BlankLineHeuristic(t *testing.T) {
 }
 
 func TestLexer_UnboundBlockClassifiesTitle(t *testing.T) {
-	// UnboundBlocks (no swagger annotation) still get title/desc
-	// classification — v1's helpers.CollectScannerTitleDescription
-	// applied the same heuristics regardless of annotation presence,
-	// and downstream consumers (e.g. the schema builder when a
-	// non-annotated interface is referenced via $ref) rely on
-	// PreambleTitle being populated.
+	// UnboundBlocks (no swagger annotation) still get title/desc classification — v1's
+	// helpers.CollectScannerTitleDescription applied the same heuristics regardless of annotation
+	// presence, and downstream consumers (e.g. the schema builder when a non-annotated interface is
+	// referenced via $ref) rely on PreambleTitle being populated.
 	out := lexString(t, "Name of the user.\nrequired: true")
 	titles := collectKind(out, TokenTitle)
 	require.NotEmpty(t, titles, "first prose line ending in punct should be TITLE")
@@ -291,12 +322,13 @@ func TestLexer_DefaultAnnotation_RawFallback(t *testing.T) {
 	assert.Equal(t, TokenRawValue, out[0].Args[0].Kind)
 }
 
-// TestLexer_TypeAnnotation_WellFormed pins the relaxed swagger:type lexing
-// (F3): the grammar no longer owns a closed type vocabulary. Any well-formed
-// token — a canonical name, a Go-builtin spelling, a []-prefixed array, a
-// dot-qualified or arbitrary identifier (a scanned-type reference) — lexes as
-// TYPE_REF; semantic validity is resolved by the builder. Only a structurally
-// malformed token falls back to IDENT_NAME for the parser to flag.
+// TestLexer_TypeAnnotation_WellFormed pins the relaxed swagger:type lexing (F3): the grammar no
+// longer owns a closed type vocabulary.
+//
+// Any well-formed token — a canonical name, a Go-builtin spelling, a []-prefixed array, a
+// dot-qualified or arbitrary identifier (a scanned-type reference) — lexes as TYPE_REF; semantic
+// validity is resolved by the builder.
+// Only a structurally malformed token falls back to IDENT_NAME for the parser to flag.
 func TestLexer_TypeAnnotation_WellFormed(t *testing.T) {
 	for _, arg := range []string{"string", "integer", "int64", "[]string", "[][]int64", "Custom", "pkg.Type", "inline"} {
 		out := lexString(t, "swagger:type "+arg)
@@ -391,9 +423,8 @@ func TestLexer_TrailingWhitespaceOnKeywordLine(t *testing.T) {
 }
 
 func TestLexer_TrailingNonASCIIWhitespace(t *testing.T) {
-	// U+00A0 NO-BREAK SPACE, U+2028 LINE SEPARATOR — TrimRightFunc with
-	// unicode.IsSpace must strip them; TrimRight on " \t" alone would
-	// leave them attached.
+	// U+00A0 NO-BREAK SPACE, U+2028 LINE SEPARATOR — TrimRightFunc with unicode.IsSpace must strip
+	// them; TrimRight on " \t" alone would leave them attached.
 	out := lexString(t, "swagger:strfmt uuid  ")
 	require.NotEmpty(t, out)
 	assert.Equal(t, TokenAnnotation, out[0].Kind)
@@ -438,16 +469,15 @@ func TestLexer_GoDirectivesDroppedFromProse(t *testing.T) {
 		assert.False(t, isGoDirective(raw), "did not expect %q to be a directive", raw)
 	}
 
-	// `swagger:model Pet` matches the directive shape per isGoDirective
-	// in isolation — the swagger annotation check runs first in
-	// lexLine, so this never reaches the directive filter at runtime.
+	// `swagger:model Pet` matches the directive shape per isGoDirective in isolation — the swagger
+	// annotation check runs first in lexLine, so this never reaches the directive filter at runtime.
 	assert.True(t, isGoDirective("swagger:model"),
 		"swagger annotations match the directive shape — lexLine special-cases them upstream")
 }
 
 func TestLexer_DirectiveDoesNotPolluteTitle(t *testing.T) {
-	// Source: a docstring with an embedded //nolint directive. The
-	// title/description surface must not include the directive.
+	// Source: a docstring with an embedded //nolint directive.
+	// The title/description surface must not include the directive.
 	src := strings.Join([]string{
 		"A pet in the store.",
 		"",
@@ -462,9 +492,8 @@ func TestLexer_DirectiveDoesNotPolluteTitle(t *testing.T) {
 		"A pet in the store.",
 		"",
 		"With a longer description.",
-		// Simulate the post-`//` content of `//nolint:revive`.
-		// preprocessText feeds it as Raw verbatim via our lexString helper:
-		// trimContentPrefix strips the leading `/` chars only on Text.
+		// Simulate the post-`//` content of `//nolint:revive`. preprocessText feeds it as Raw verbatim
+		// via our lexString helper: trimContentPrefix strips the leading `/` chars only on Text.
 		"swagger:model Pet",
 	}, "\n")
 	out := lexString(t, srcWithDirective)
@@ -475,9 +504,8 @@ func TestLexer_DirectiveDoesNotPolluteTitle(t *testing.T) {
 	assert.Equal(t, len(cleanTitles), len(titles))
 	assert.Equal(t, len(cleanDescs), len(descs))
 
-	// Direct directive presence test via the public Parse() path: a
-	// CommentGroup with a //nolint line interleaved into a docstring
-	// must not surface "nolint:" anywhere in Title / Description.
+	// Direct directive presence test via the public Parse() path: a CommentGroup with a //nolint line
+	// interleaved into a docstring must not surface "nolint:" anywhere in Title / Description.
 	srcGo := `package fake
 
 // A pet in the store.
@@ -547,8 +575,8 @@ func TestLexer_DirectiveMarkerPredicate(t *testing.T) {
 }
 
 func TestLexer_DirectiveMarkersDroppedFromProse(t *testing.T) {
-	// go-swagger#2687 / #3007: Kubernetes marker comments must not leak into
-	// the model title/description.
+	// go-swagger#2687 / #3007: Kubernetes marker comments must not leak into the model
+	// title/description.
 	src := `package fake
 
 // MyType description
@@ -570,8 +598,9 @@ type MyType struct{}
 	assert.NotContains(t, prose, "+k8s")
 }
 
-// Note: the #3100 boundary — the inline swagger:route `+name:` parameter
-// separator must NOT be stripped despite matching the marker shape — is locked
-// end-to-end by TestCoverage_Bug3100 in the integration suite. The filter runs
-// at Stage 3 (prose), after accumulateBodies has folded the route body into its
+// Note: the #3100 boundary — the inline swagger:route `+name:` parameter separator must NOT be
+// stripped despite matching the marker shape — is locked end-to-end by TestCoverage_Bug3100 in
+// the integration suite.
+//
+// The filter runs at Stage 3 (prose), after accumulateBodies has folded the route body into its
 // keyword token, so the separator never reaches the marker check.

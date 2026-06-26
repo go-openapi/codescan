@@ -104,4 +104,8 @@ func TestRouteFragments(t *testing.T) {
 	goldenJSON(t, "externaldocs_schema", catalog)          // externalDocs on a full schema
 	goldenJSON(t, "bodyparam", create.Post.Parameters)     // in: body request parameter
 	goldenJSON(t, "paramtype", filter.Get.Parameters)      // swagger:type override on a parameter field
+
+	// The whole-spec golden the tutorial's "SwaggerUI" tab renders live (the
+	// per-pane goldens above are focused fragments of this same document).
+	goldenJSON(t, "full", doc)
 }

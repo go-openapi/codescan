@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2160 locks go-swagger issue #2160 ("example of array of structs
-// is 0 valued"): an array-of-structs field accepts an inline JSON-array example
-// and emits it as an array of objects (not zero-valued). (The multi-line
-// YAML-list example syntax is kept as a raw string — the example-coercion gap
-// tracked in forthcoming-features §2.1.)
+// TestCoverage_Bug2160 locks go-swagger issue #2160 ("example of array of structs is 0 valued"): an
+// array-of-structs field accepts an inline JSON-array example and emits it as an array of objects
+// (not zero-valued). (The multi-line YAML-list example syntax is kept as a raw string — the
+// example-coercion gap tracked in forthcoming-features §2.1.)
 func TestCoverage_Bug2160(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2160/..."},

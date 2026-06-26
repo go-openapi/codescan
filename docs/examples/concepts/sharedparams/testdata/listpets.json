@@ -1,0 +1,16 @@
+{
+  "tags": [
+    "pets"
+  ],
+  "operationId": "listPets",
+  "parameters": [
+    {
+      "$ref": "#/parameters/X-Request-ID"
+    }
+  ],
+  "responses": {
+    "default": {
+      "$ref": "#/responses/ErrorResponse"
+    }
+  }
+}

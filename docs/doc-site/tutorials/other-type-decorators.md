@@ -20,7 +20,8 @@ For the value shapes and legal contexts of each, see the
 sets it, clients must not.
 
 {{< example go="concepts/decorators/decorators.go" goregion="readonly"
-            json="concepts/decorators/testdata/readonly.json" jsonlabel="#/definitions/Token" >}}
+            json="concepts/decorators/testdata/readonly.json"
+            full="concepts/decorators/testdata/full.json" >}}
 
 This is the idiomatic way to model server-set fields (an `id`, a `createdAt`)
 that appear in responses but should not be supplied on create — one model,

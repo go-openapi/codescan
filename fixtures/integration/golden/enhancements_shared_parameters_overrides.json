@@ -1,0 +1,55 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/things": {
+      "get": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "listThings",
+        "parameters": [
+          {
+            "$ref": "#/parameters/X-Correlation-ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "things"
+        ],
+        "operationId": "createThing",
+        "parameters": [
+          {
+            "$ref": "#/parameters/X-API-Key"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "X-API-Key": {
+      "type": "string",
+      "x-go-name": "APIKey",
+      "description": "APIKey authorises access.",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "X-Correlation-ID": {
+      "type": "string",
+      "x-go-name": "RequestID",
+      "description": "RequestID correlates a request across services.",
+      "name": "X-Correlation-ID",
+      "in": "header"
+    }
+  }
+}

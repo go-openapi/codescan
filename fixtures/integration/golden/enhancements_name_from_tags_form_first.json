@@ -1,0 +1,85 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/items": {
+      "get": {
+        "tags": [
+          "items"
+        ],
+        "summary": "List items.",
+        "operationId": "listItems",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "SortKey",
+            "description": "SortKey selects the sort column.",
+            "name": "sort_key",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "PageSize",
+            "description": "PageSize bounds the page length.",
+            "name": "page_size",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/listResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Filter": {
+      "type": "object",
+      "title": "Filter is a model whose fields carry differing json: and form: names.",
+      "properties": {
+        "label": {
+          "description": "Label has only a json tag — same name under every setting.",
+          "type": "string",
+          "x-go-name": "Label"
+        },
+        "page_size": {
+          "description": "PageSize keeps its json omitempty directive whichever tag names it.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "PageSize"
+        },
+        "sort_key": {
+          "description": "SortKey is named \"sortKey\" by default, \"sort_key\" under form-first.",
+          "type": "string",
+          "x-go-name": "SortKey"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/name-from-tags"
+    }
+  },
+  "responses": {
+    "listResponse": {
+      "description": "ListResponse carries response headers with differing json: and form: names.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Items is the page of matching filters.",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Filter"
+            },
+            "x-go-name": "Items"
+          }
+        }
+      },
+      "headers": {
+        "x_request_id": {
+          "type": "string",
+          "description": "RequestID is a correlation header."
+        }
+      }
+    }
+  }
+}

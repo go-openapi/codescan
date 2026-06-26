@@ -13,12 +13,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ParamNameKeyword locks the `name:` keyword on a
-// swagger:parameters struct field: it renames the JSON parameter name,
-// overriding the json-tag / Go-field derivation, and — being a structural
-// keyword — is stripped from the parameter description rather than leaking
-// into it as prose (it previously had no handler and fell through to
-// Block.Prose()).
+// TestCoverage_ParamNameKeyword locks the `name:` keyword on a swagger:parameters struct field: it
+// renames the JSON parameter name, overriding the json-tag / Go-field derivation, and — being a
+// structural keyword — is stripped from the parameter description rather than leaking into it as
+// prose (it previously had no handler and fell through to Block.Prose()).
 func TestCoverage_ParamNameKeyword(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/param-name-keyword/..."},

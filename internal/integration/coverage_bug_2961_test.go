@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2961 locks the fix for go-swagger issue #2961 ("Improper
-// parsing of uint enums"): an `enum:` on a uint / uint64 field used to be
-// emitted as strings (["1","2","3"]). The values are now coerced to numbers
-// against the integer schema type.
+// TestCoverage_Bug2961 locks the fix for go-swagger issue #2961 ("Improper parsing of uint enums"):
+// an `enum:` on a uint / uint64 field used to be emitted as strings (["1","2","3"]).
+//
+// The values are now coerced to numbers against the integer schema type.
 func TestCoverage_Bug2961(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2961/..."},

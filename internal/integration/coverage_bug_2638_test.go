@@ -12,9 +12,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2638 locks the fix for go-swagger issue #2638: a field group
-// with multiple names on one line (`R, G, B, A uint8`) emits one property per
-// name, not a single mislabeled property.
+// TestCoverage_Bug2638 locks the fix for go-swagger issue #2638: a field group with multiple names
+// on one line (`R, G, B, A uint8`) emits one property per name, not a single mislabeled property.
 func TestCoverage_Bug2638(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2638/..."},
@@ -34,9 +33,9 @@ func TestCoverage_Bug2638(t *testing.T) {
 		assert.NotContains(t, ps.Extensions, "x-go-name", "property %q must not carry a stray x-go-name", name)
 	}
 
-	// Mixed: the multi-name group keeps each member; the json rename is dropped
-	// (a single rename cannot name X/Y/Z) while omitempty still applied during
-	// parsing. Single-name fields are unaffected.
+	// Mixed: the multi-name group keeps each member; the json rename is dropped (a single rename
+	// cannot name X/Y/Z) while omitempty still applied during parsing.
+	// Single-name fields are unaffected.
 	mixed := doc.Definitions["Mixed"].Properties
 	require.Len(t, mixed, 4, "X, Y, Z each emit, plus Label")
 	for _, name := range []string{"X", "Y", "Z", "Label"} {

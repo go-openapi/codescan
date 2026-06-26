@@ -12,12 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug958 locks the fix for go-swagger issue #958 ("how to
-// specify sample values in user structs"). A field-level `default:` /
-// `example:` was carried for a plain builtin field but dropped when the
-// field used a named (defined) type. The fix carries both for defined-type
-// fields too; since a $ref cannot carry sibling keywords, they ride the
-// override arm of an allOf compound.
+// TestCoverage_Bug958 locks the fix for go-swagger issue #958 ("how to specify sample values in
+// user structs").
+//
+// A field-level `default:` / `example:` was carried for a plain builtin field but dropped when the
+// field used a named (defined) type.
+// The fix carries both for defined-type fields too; since a $ref cannot carry sibling keywords,
+// they ride the override arm of an allOf compound.
 func TestCoverage_Bug958(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/958/..."},
@@ -35,8 +36,7 @@ func TestCoverage_Bug958(t *testing.T) {
 	assert.Equal(t, "samplesample", pv.Default)
 	assert.Equal(t, "examplevalue", pv.Example)
 
-	// Defined-type field: the regression. $ref + override arm carrying
-	// both default and example.
+	// Defined-type field: the regression. $ref + override arm carrying both default and example.
 	defined := doc.Definitions["DefinedStruct"]
 	require.Contains(t, defined.Properties, "value")
 	dv := defined.Properties["value"]

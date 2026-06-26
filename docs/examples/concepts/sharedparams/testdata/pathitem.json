@@ -1,0 +1,23 @@
+{
+  "get": {
+    "tags": [
+      "pets"
+    ],
+    "operationId": "getPet",
+    "responses": {
+      "default": {
+        "$ref": "#/responses/ErrorResponse"
+      }
+    }
+  },
+  "parameters": [
+    {
+      "type": "string",
+      "x-go-name": "Tenant",
+      "description": "Tenant scopes the request to a customer.",
+      "name": "X-Tenant",
+      "in": "header",
+      "required": true
+    }
+  ]
+}

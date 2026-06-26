@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1934 locks go-swagger issue #1934 ("model declared in function
-// not picked up"): a swagger:model and a swagger:parameters declared on types
-// INSIDE a function body are both discovered — the model resolves as the route's
-// response body $ref, and the params type contributes the query parameter.
+// TestCoverage_Bug1934 locks go-swagger issue #1934 ("model declared in function not picked up"): a
+// swagger:model and a swagger:parameters declared on types INSIDE a function body are both
+// discovered — the model resolves as the route's response body $ref, and the params type
+// contributes the query parameter.
 func TestCoverage_Bug1934(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1934/..."},

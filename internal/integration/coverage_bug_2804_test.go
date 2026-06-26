@@ -14,9 +14,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2804 verifies the fix for go-swagger issue #2804: a
-// map[string][]string field used to crash (parameters) or silently corrupt the
-// output (response headers) — a Go map has no OAS2 SimpleSchema representation.
+// TestCoverage_Bug2804 verifies the fix for go-swagger issue #2804: a map[string][]string field
+// used to crash (parameters) or silently corrupt the output (response headers) — a Go map has no
+// OAS2 SimpleSchema representation.
+//
 // The same guard now covers both SimpleSchema targets:
 //
 //   - a map swagger:parameters field (in=query) used to panic with a nil-ptr
@@ -24,10 +25,12 @@ import (
 //   - a map response header field (in=header) used to write `object` onto the
 //     response *body* schema and leave the header untyped.
 //
-// Fixed behaviour: each unrepresentable map field is guarded — the scan emits a
-// located diagnostic (validate.unsupported-in-simple-schema) and skips the
-// field instead of panicking or corrupting the output. This is also a concrete
-// witness for the §8.1 scanner panic-recovery feature (forthcoming-features.md).
+// Fixed behaviour: each unrepresentable map field is guarded — the scan emits a located
+// diagnostic (validate.unsupported-in-simple-schema) and skips the field instead of panicking or
+// corrupting the output.
+//
+// This is also a concrete witness for the §8.1 scanner panic-recovery feature
+// (forthcoming-features.md).
 func TestCoverage_Bug2804(t *testing.T) {
 	var diagnostics []grammar.Diagnostic
 
@@ -54,8 +57,8 @@ func TestCoverage_Bug2804(t *testing.T) {
 			"the unrepresentable map param must be skipped, not emitted")
 	}
 
-	// The map response-header field is skipped, and the response body schema
-	// was NOT corrupted by the map (the bug wrote `object` onto resp.Schema).
+	// The map response-header field is skipped, and the response body schema was NOT corrupted by the
+	// map (the bug wrote `object` onto resp.Schema).
 	resp := op.Responses.StatusCodeResponses[200]
 	assert.NotContains(t, resp.Headers, "X-Filters",
 		"the unrepresentable map header must be skipped, not emitted")

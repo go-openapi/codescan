@@ -27,7 +27,9 @@ const (
 	paramFooSlice = "foo_slice"
 	paramBarSlice = "bar_slice"
 
-	// paramNameKey / paramTypeKey mirror swagger:route param tag keys defined in parsers/route_params.go.
+	// paramNameKey / paramTypeKey mirror swagger:route param tag keys defined in
+	// parsers/route_params.go.
+	//
 	// Duplicated here because the production constants are unexported and these swagger tag names are
 	// part of a stable external contract.
 	paramNameKey = "name"
@@ -92,11 +94,11 @@ func TestScanFileParam(t *testing.T) {
 	assert.FalseT(t, fileParam.Required)
 }
 
-// TestParamsParser_OptionVariants exercises the (SkipExtensions,
-// DescWithRef) option permutations on the classification operations
-// corpus. The same set of parameter names as TestParamsParser is
-// built per combination, asserting the $ref'd-field shape on each
-// option pair:
+// TestParamsParser_OptionVariants exercises the (SkipExtensions, DescWithRef) option permutations
+// on the classification operations corpus.
+//
+// The same set of parameter names as TestParamsParser is built per combination, asserting the
+// $ref'd-field shape on each option pair:
 //
 //   - Default (false/false): description-only $ref'd fields render
 //     as a bare $ref (matches v1 strict); scanner-derived x-go-name
@@ -105,9 +107,9 @@ func TestScanFileParam(t *testing.T) {
 //     single-arm allOf preserving the description.
 //   - SkipExtensions=true: scanner-derived x-go-name is suppressed.
 //
-// The witness field is the nested `pet` property of the array-item
-// schema produced for someOperation's body `items` parameter, which
-// carries both a description and an x-go-name on top of its $ref.
+// The witness field is the nested `pet` property of the array-item schema produced for
+// someOperation's body `items` parameter, which carries both a description and an x-go-name on top
+// of its $ref.
 func TestParamsParser_OptionVariants(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -144,9 +146,8 @@ func TestParamsParser_OptionVariants(t *testing.T) {
 				require.NoError(t, prs.Build(operations))
 			}
 
-			// Locate someOperation's body `items` parameter and dig
-			// down to the array-item `pet` property, which is the
-			// field whose rendering diverges by option.
+			// Locate someOperation's body `items` parameter and dig down to the array-item `pet` property,
+			// which is the field whose rendering diverges by option.
 			op, ok := operations["someOperation"]
 			require.TrueT(t, ok)
 			var itemsParam *oaispec.Parameter
@@ -169,8 +170,8 @@ func TestParamsParser_OptionVariants(t *testing.T) {
 			const petRef = "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
 
 			if tc.descRef {
-				// description-only $ref renders as a single-arm allOf
-				// preserving the description; the bare $ref is empty.
+				// description-only $ref renders as a single-arm allOf preserving the description; the bare $ref
+				// is empty.
 				assert.Empty(t, pet.Ref.String())
 				require.Len(t, pet.AllOf, 1)
 				assert.EqualT(t, petRef, pet.AllOf[0].Ref.String())
@@ -181,8 +182,7 @@ func TestParamsParser_OptionVariants(t *testing.T) {
 				assert.Empty(t, pet.AllOf)
 			}
 
-			// x-go-name is scanner-derived: present by default,
-			// suppressed under SkipExtensions.
+			// x-go-name is scanner-derived: present by default, suppressed under SkipExtensions.
 			require.NotNil(t, idParam)
 			if tc.skipExt {
 				assert.NotContains(t, idParam.Extensions, "x-go-name")

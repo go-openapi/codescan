@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2245 locks go-swagger issue #2245 ("swagger:response that
-// produces application/xml"): a `produces: [application/xml]` in the
-// swagger:operation YAML body sets the operation's produced media type.
+// TestCoverage_Bug2245 locks go-swagger issue #2245 ("swagger:response that produces
+// application/xml"): a `produces: [application/xml]` in the swagger:operation YAML body sets the
+// operation's produced media type.
 func TestCoverage_Bug2245(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2245/..."},

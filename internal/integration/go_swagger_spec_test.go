@@ -13,10 +13,11 @@ import (
 )
 
 // These tests are the migration canary ported from go-swagger's
-// cmd/swagger/commands/generate/spec_test.go. They exercise the same api.go
-// fixture with the three Options variants go-swagger tests, and compare
-// against go-swagger's pre-existing golden JSON files. If these pass, codescan
-// still produces the specs go-swagger has depended on for years.
+// cmd/swagger/commands/generate/spec_test.go.
+// They exercise the same api.go fixture with the three Options variants go-swagger tests, and
+// compare against go-swagger's pre-existing golden JSON files.
+//
+// If these pass, codescan still produces the specs go-swagger has depended on for years.
 
 func TestGoSwagger_GenerateJSONSpec(t *testing.T) {
 	opts := codescan.Options{

@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2409 locks go-swagger issue #2409 ("annotate structures with
-// extensions"): a TYPE-level Extensions block emits its x-* extensions at the
-// definition level. (The reporter's specific x-go-type IMPORT semantics is a
-// separate design question — poison-queue #2924 — but the extension mechanism
-// itself works for any x-* key.)
+// TestCoverage_Bug2409 locks go-swagger issue #2409 ("annotate structures with extensions"): a
+// TYPE-level Extensions block emits its x-* extensions at the definition level. (The reporter's
+// specific x-go-type IMPORT semantics is a separate design question — poison-queue #2924 — but
+// the extension mechanism itself works for any x-* key.)
 func TestCoverage_Bug2409(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2409/..."},

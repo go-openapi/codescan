@@ -13,16 +13,16 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1499 locks the fix for go-swagger issue #1499 ("not possible
-// to override parameter schema type").
+// TestCoverage_Bug1499 locks the fix for go-swagger issue #1499 ("not possible to override
+// parameter schema type").
 //
-// A `swagger:type` override on a swagger:parameters field whose Go type is a
-// struct must make the parameter that simple type (here `string`). The schema
-// (model) builder already honours this (#2419/#2184), but the PARAMETERS builder
-// used to ignore it — the param came out typeless, which is invalid Swagger 2.0.
+// A `swagger:type` override on a swagger:parameters field whose Go type is a struct must make the
+// parameter that simple type (here `string`).
+// The schema (model) builder already honours this (#2419/#2184), but the PARAMETERS builder used to
+// ignore it — the param came out typeless, which is invalid Swagger 2.0.
 //
-// The `[]`-prefixed form collapses a Go struct slice to a simple
-// array-of-scalar query parameter, mirroring the schema builder's array layers.
+// The `[]`-prefixed form collapses a Go struct slice to a simple array-of-scalar query parameter,
+// mirroring the schema builder's array layers.
 func TestCoverage_Bug1499(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1499/..."},

@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3007 locks the fix for go-swagger issue #3007
-// ("[Bug]generate spec error"): a non-swagger kubebuilder marker
-// (`+kubebuilder:default:=false`) used to abort the scan with
-// `strconv.ParseBool parsing "=false"`. The scan now succeeds.
+// TestCoverage_Bug3007 locks the fix for go-swagger issue #3007 ("[Bug]generate spec error"): a
+// non-swagger kubebuilder marker (`+kubebuilder:default:=false`) used to abort the scan with
+// `strconv.ParseBool parsing "=false"`.
 //
-// The residual (the marker leaking into the field description) is now closed
-// alongside go-swagger#2687: the lexer drops `+marker`-style directive lines
-// from prose, so the description is clean.
+// The scan now succeeds.
+//
+// The residual (the marker leaking into the field description) is now closed alongside
+// go-swagger#2687: the lexer drops `+marker`-style directive lines from prose, so the description
+// is clean.
 func TestCoverage_Bug3007(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/3007/..."},

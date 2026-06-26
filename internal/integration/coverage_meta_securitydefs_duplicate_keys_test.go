@@ -12,8 +12,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_MetaSecurityDefsDuplicateKeys — locks the post-Q28
-// behaviour of the swagger:meta SecurityDefinitions raw block.
+// TestCoverage_MetaSecurityDefsDuplicateKeys — locks the post-Q28 behaviour of the swagger:meta
+// SecurityDefinitions raw block.
 //
 // Two independent wires meet here:
 //
@@ -30,8 +30,8 @@ import (
 //     `api_key` block here has `type:` twice on purpose so the
 //     dedupe layer is exercised in the captured spec.
 //
-// Diagnostic emission on duplicates is deferred to the yaml-library
-// swap (see the forthcoming-features roadmap).
+// Diagnostic emission on duplicates is deferred to the yaml-library swap (see the
+// forthcoming-features roadmap).
 func TestCoverage_MetaSecurityDefsDuplicateKeys(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/meta-securitydefs-duplicate-keys/..."},

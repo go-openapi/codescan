@@ -13,10 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_AdditionalProperties_Field locks the field-level
-// additionalProperties: keyword (Phase 2b): override a map element schema,
-// true / typed / model-reference values, the allOf-sibling form on a
-// referenced-model field, and the lowest-priority contradiction.
+// TestCoverage_AdditionalProperties_Field locks the field-level additionalProperties: keyword
+// (Phase 2b): override a map element schema, true / typed / model-reference values, the
+// allOf-sibling form on a referenced-model field, and the lowest-priority contradiction.
 func TestCoverage_AdditionalProperties_Field(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -50,7 +49,8 @@ func TestCoverage_AdditionalProperties_Field(t *testing.T) {
 	require.NotNil(t, ref.Schema)
 	assert.Equal(t, "#/definitions/Inner", ref.Schema.Ref.String())
 
-	// referenced-model field closed via an allOf sibling: {allOf:[{$ref},{additionalProperties:false}]}.
+	// referenced-model field closed via an allOf sibling:
+	// {allOf:[{$ref},{additionalProperties:false}]}.
 	closed := props["closedInner"]
 	require.Len(t, closed.AllOf, 2)
 	assert.Equal(t, "#/definitions/Inner", closed.AllOf[0].Ref.String())

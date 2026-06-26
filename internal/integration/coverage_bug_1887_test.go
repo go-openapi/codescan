@@ -12,9 +12,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1887 locks go-swagger issue #1887 ("file type support"): the
-// `swagger:file` marker on a formData parameter field emits the Swagger 2.0
-// `type: file` parameter.
+// TestCoverage_Bug1887 locks go-swagger issue #1887 ("file type support"): the `swagger:file`
+// marker on a formData parameter field emits the Swagger 2.0 `type: file` parameter.
 func TestCoverage_Bug1887(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1887/..."},

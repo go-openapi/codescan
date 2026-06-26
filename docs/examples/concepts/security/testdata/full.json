@@ -1,0 +1,99 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "The swagger:meta block declares the security schemes once and sets the\ndocument-wide default requirement.",
+    "title": "Reports API.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/reports": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "operationId": "listReports",
+        "responses": {
+          "200": {
+            "description": "the reports"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "operationId": "createReport",
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "read",
+              "write"
+            ]
+          }
+        ]
+      }
+    },
+    "/reports/archive": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "operationId": "archiveReport",
+        "responses": {
+          "200": {
+            "description": "archived"
+          }
+        },
+        "security": [
+          {
+            "api_key": [],
+            "oauth2": [
+              "write"
+            ]
+          }
+        ]
+      }
+    },
+    "/reports/public": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "operationId": "publicReport",
+        "responses": {
+          "200": {
+            "description": "the public reports"
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "oauth2": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://example.com/auth",
+      "tokenUrl": "https://example.com/token",
+      "scopes": {
+        "read": "read reports",
+        "write": "write reports"
+      }
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ]
+}

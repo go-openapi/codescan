@@ -22,9 +22,9 @@ func TestParseEmpty(t *testing.T) {
 }
 
 func TestParseFlatMap(t *testing.T) {
-	// Note: go.yaml.in/yaml/v3 returns map[string]any for
-	// string-keyed maps and auto-types scalars (unquoted "1.0"
-	// becomes float64). Quote the value to keep it as a string.
+	// Note: go.yaml.in/yaml/v3 returns map[string]any for string-keyed maps and auto-types scalars
+	// (unquoted "1.0" becomes float64).
+	// Quote the value to keep it as a string.
 	body := "name: Foo\nversion: \"1.0\"\n"
 	v, err := yaml.Parse(body)
 	if err != nil {
@@ -44,8 +44,8 @@ func TestParseFlatMap(t *testing.T) {
 
 func TestParseNestedStructure(t *testing.T) {
 	// Representative of an operation body's responses mapping.
-	// Numeric keys like `200` arrive as int keys; the outer map
-	// becomes map[any]any because not all keys are strings.
+	// Numeric keys like `200` arrive as int keys; the outer map becomes map[any]any because not all
+	// keys are strings.
 	body := "responses:\n  200:\n    description: ok\n  404:\n    description: not found\n"
 	v, err := yaml.Parse(body)
 	if err != nil {
@@ -55,8 +55,8 @@ func TestParseNestedStructure(t *testing.T) {
 	if !ok {
 		t.Fatalf("want top-level map[string]any, got %T", v)
 	}
-	// The responses map has integer keys (200, 404), so the
-	// YAML library returns map[any]any (keys include non-strings).
+	// The responses map has integer keys (200, 404), so the YAML library returns map[any]any (keys
+	// include non-strings).
 	resp, ok := top["responses"].(map[any]any)
 	if !ok {
 		t.Fatalf("responses: want map[any]any (int keys), got %T", top["responses"])
@@ -134,9 +134,8 @@ func TestTypedExtensionsFlatScalars(t *testing.T) {
 }
 
 func TestTypedExtensionsNestedYAML(t *testing.T) {
-	// The case the schema builder's prior applyExtensionsRawBlock
-	// existed for: nested map / list values must arrive as typed
-	// map[string]any and []any, not yaml.v3's map[any]any.
+	// The case the schema builder's prior applyExtensionsRawBlock existed for: nested map / list
+	// values must arrive as typed map[string]any and []any, not yaml.v3's map[any]any.
 	body := "x-config:\n  enabled: true\n  threshold: 0.5\n  tags: [a, b, c]\n"
 	m, err := yaml.TypedExtensions(body)
 	if err != nil {

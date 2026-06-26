@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2875 locks the fix for go-swagger issue #2875 ("AllOf member
-// does not generate an external $ref object"): an embedded struct annotated
-// `swagger:allOf` used to inline the embedded type's properties; it now emits
-// a proper `allOf: [{$ref: …}]` to the embedded model's definition.
+// TestCoverage_Bug2875 locks the fix for go-swagger issue #2875 ("AllOf member does not generate an
+// external $ref object"): an embedded struct annotated `swagger:allOf` used to inline the embedded
+// type's properties; it now emits a proper `allOf: [{$ref: …}]` to the embedded model's
+// definition.
 func TestCoverage_Bug2875(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2875/..."},

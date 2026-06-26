@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3013 verifies the fix for go-swagger issue #3013: an
-// `example:` on a swagger:response whose body is a top-level array type now
-// lands on the response body schema (it was previously dropped — the response
-// decl comment only contributed the description).
+// TestCoverage_Bug3013 verifies the fix for go-swagger issue #3013: an `example:` on a
+// swagger:response whose body is a top-level array type now lands on the response body schema (it
+// was previously dropped — the response decl comment only contributed the description).
 func TestCoverage_Bug3013(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/3013/..."},

@@ -12,8 +12,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2403 locks the resolution of go-swagger issue #2403
-// ("go swagger security auth0").
+// TestCoverage_Bug2403 locks the resolution of go-swagger issue #2403 ("go swagger security
+// auth0").
 //
 // A global `Security:` requirement in swagger:meta written as a YAML sequence
 // (`- auth0: []`) must parse into a requirement naming `auth0` with empty scopes.

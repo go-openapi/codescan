@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1279 locks the answer to go-swagger issue #1279 ("add path
-// parameters to swagger:route without using structs"): an inline `Parameters:`
-// block inside the swagger:route comment declares parameters directly — no
-// wrapper swagger:parameters struct required.
+// TestCoverage_Bug1279 locks the answer to go-swagger issue #1279 ("add path parameters to
+// swagger:route without using structs"): an inline `Parameters:` block inside the swagger:route
+// comment declares parameters directly — no wrapper swagger:parameters struct required.
 //
 // 📖 Need doc: document the inline Parameters: block in swagger:route.
 func TestCoverage_Bug1279(t *testing.T) {

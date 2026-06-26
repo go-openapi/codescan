@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2296 locks go-swagger issue #2296 ("panic, embedded meet
-// anonymous"): embedding a struct that itself has an anonymous-struct field no
-// longer panics during schema build; the promoted anonymous-struct property is
-// emitted as a nested object.
+// TestCoverage_Bug2296 locks go-swagger issue #2296 ("panic, embedded meet anonymous"): embedding a
+// struct that itself has an anonymous-struct field no longer panics during schema build; the
+// promoted anonymous-struct property is emitted as a nested object.
 func TestCoverage_Bug2296(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2296/..."},

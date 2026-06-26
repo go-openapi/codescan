@@ -1,0 +1,5 @@
+{
+  "description": "The attached gadget, described for API consumers.",
+  "title": "Gadget Ref",
+  "$ref": "#/definitions/Gadget"
+}

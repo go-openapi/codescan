@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1992 documents the answer to go-swagger issue #1992 ("hide
-// parts of composition for a struct"): codescan emits one schema per Go type, so
-// per-operation field hiding is out of scope, but the OAS2 idiom for
-// server-assigned fields — `read only: true` → `readOnly: true` — is supported
-// and is the recommended mechanism.
+// TestCoverage_Bug1992 documents the answer to go-swagger issue #1992 ("hide parts of composition
+// for a struct"): codescan emits one schema per Go type, so per-operation field hiding is out of
+// scope, but the OAS2 idiom for server-assigned fields — `read only: true` → `readOnly: true`
+// — is supported and is the recommended mechanism.
 func TestCoverage_Bug1992(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1992/..."},

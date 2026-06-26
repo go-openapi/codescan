@@ -35,19 +35,6 @@ func TestSchemaValueExtractors(t *testing.T) {
 		"swagger:model      ",
 	}
 
-	parameters := []string{
-		"// swagger:parameters ",
-		"* swagger:parameters ",
-		"* swagger:parameters ",
-		" swagger:parameters ",
-		"swagger:parameters ",
-		"// swagger:parameters    ",
-		"* swagger:parameters     ",
-		"* swagger:parameters    ",
-		" swagger:parameters     ",
-		"swagger:parameters      ",
-	}
-
 	const numValid = 4 + 3 // +3 extra space
 	validParams := make([]string, 0, numValid)
 	validParams = append(validParams,
@@ -66,7 +53,49 @@ func TestSchemaValueExtractors(t *testing.T) {
 	}
 
 	verifySwaggerOneArgSwaggerTag(t, rxModelOverride, models, append(validParams, "", "  ", " "), invalidParams)
-	verifySwaggerMultiArgSwaggerTag(t, rxParametersOverride, parameters, validParams, invalidParams)
+}
+
+// TestParametersClassificationGate verifies that rxParametersOverride is a PERMISSIVE presence
+// gate: it matches `swagger:parameters` plus any non-empty argument and captures it verbatim,
+// leaving shape validation to the grammar.
+//
+// Forms the strict model matcher rejects (a leading `*`, a `/path`, malformed idents) are accepted
+// here so the grammar can parse and diagnose them.
+// A bare keyword with no argument is not classified.
+func TestParametersClassificationGate(t *testing.T) {
+	prefixes := []string{
+		"// swagger:parameters ",
+		"swagger:parameters ",
+		"* swagger:parameters    ",
+	}
+	accepted := []string{
+		"listPets",              // operation id
+		"listPets createPet",    // multiple operation ids
+		"*",                     // shared-namespace target
+		"* listPets",            // shared register + op id
+		"/pets",                 // path target
+		"/pets X-Request-ID",    // path reference
+		"listPets X-Request-ID", // operation reference
+		"*blah",                 // malformed — accepted; the grammar's concern
+		"1-2-3",                 // malformed — accepted; the grammar's concern
+	}
+	for _, pref := range prefixes {
+		for _, arg := range accepted {
+			line := pref + arg
+			m := rxParametersOverride.FindStringSubmatch(line)
+			if !assert.Len(t, m, 2) {
+				t.Logf("expected %q to be classified", line)
+				continue
+			}
+			assert.EqualT(t, strings.TrimSpace(arg), m[1])
+		}
+	}
+
+	// A bare keyword with no argument is not classified (the grammar's missing-target diagnostic fires
+	// only once a node is classified).
+	for _, line := range []string{"swagger:parameters", "swagger:parameters ", "// swagger:parameters   "} {
+		assert.Empty(t, rxParametersOverride.FindStringSubmatch(line), "bare keyword must not classify")
+	}
 }
 
 func verifySwaggerOneArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefixes, validParams, invalidParams []string) {
@@ -79,39 +108,6 @@ func verifySwaggerOneArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefixe
 			if assert.Len(t, matches, 2) {
 				assert.EqualT(t, strings.TrimSpace(param), matches[1])
 			}
-		}
-	}
-
-	for _, pref := range prefixes {
-		for _, param := range invalidParams {
-			line := pref + param
-			matches := matcher.FindStringSubmatch(line)
-			assert.Empty(t, matches)
-		}
-	}
-}
-
-func verifySwaggerMultiArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefixes, validParams, invalidParams []string) {
-	t.Helper()
-
-	actualParams := make([]string, 0, len(validParams))
-	vp := make([]string, 0, len(validParams)+1)
-
-	for i := range validParams {
-		vp = vp[:0]
-		for j := range i + 1 {
-			vp = append(vp, validParams[j]) // G602 (false positive from gosec now fixed): j is bounded by i+1 which is bounded by len(validParams)
-		}
-
-		actualParams = append(actualParams, strings.Join(vp, " "))
-	}
-
-	for _, pref := range prefixes {
-		for _, param := range actualParams {
-			line := pref + param
-			matches := matcher.FindStringSubmatch(line)
-			assert.Len(t, matches, 2)
-			assert.EqualT(t, strings.TrimSpace(param), matches[1])
 		}
 	}
 

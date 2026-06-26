@@ -13,14 +13,17 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2251 asserts the EXPECTED resolution of go-swagger issue #2251
-// ("map with non-string keys"). Currently RED for integer-kind keys.
+// TestCoverage_Bug2251 asserts the EXPECTED resolution of go-swagger issue #2251 ("map with
+// non-string keys").
 //
-// encoding/json marshals integer-kind map keys (map[int]V, map[int64]V) as JSON
-// string keys, so they are representable as {type:object, additionalProperties:V}
-// — but buildFromMap only emits additionalProperties for string / TextMarshaler
-// keys and silently drops the rest. The string-key form is the green guard rail.
-// (Part of the additionalProperties work on this branch; see forthcoming §18.)
+// Currently RED for integer-kind keys.
+//
+// encoding/json marshals integer-kind map keys (map[int]V, map[int64]V) as JSON string keys, so
+// they are representable as {type:object, additionalProperties:V} — but buildFromMap only emits
+// additionalProperties for string / TextMarshaler keys and silently drops the rest.
+//
+// The string-key form is the green guard rail. (Part of the additionalProperties work on this
+// branch; see forthcoming §18.)
 func TestCoverage_Bug2251(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -46,8 +49,8 @@ func TestCoverage_Bug2251(t *testing.T) {
 	assert.True(t, hasAP("intKey"), "map[int]V must emit additionalProperties (go-swagger#2251)")
 	assert.True(t, hasAP("i64Key"), "map[int64]V must emit additionalProperties (go-swagger#2251)")
 
-	// Fail-loud half (§18): a json-illegal key (float) emits no additionalProperties
-	// AND raises a CodeUnsupportedType diagnostic instead of dropping silently.
+	// Fail-loud half (§18): a json-illegal key (float) emits no additionalProperties AND raises a
+	// CodeUnsupportedType diagnostic instead of dropping silently.
 	assert.False(t, hasAP("badKey"), "map[float64]V is not json-representable; no additionalProperties")
 
 	var unsupported []grammar.Diagnostic

@@ -12,13 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2899 locks the fix for go-swagger issue #2899 ("Example not
-// being added to schema for body string params"): an `example:` on an inline
-// body parameter of primitive type is now carried onto the parameter's schema.
+// TestCoverage_Bug2899 locks the fix for go-swagger issue #2899 ("Example not being added to schema
+// for body string params"): an `example:` on an inline body parameter of primitive type is now
+// carried onto the parameter's schema.
 //
-// The quoted source example (`example: "123456"`) emits the quote-stripped
-// value `123456`: surrounding quotes are delimiters (quirk F8, fixed alongside
-// go-swagger#2547).
+// The quoted source example (`example: "123456"`) emits the quote-stripped value `123456`:
+// surrounding quotes are delimiters (quirk F8, fixed alongside go-swagger#2547).
 func TestCoverage_Bug2899(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2899/..."},

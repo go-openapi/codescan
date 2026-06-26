@@ -128,7 +128,24 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     - `SkipAllOfCompounding` — never emit an `allOf` compound; validations/externalDocs
       dropped (description/extensions too, unless `EmitRefSiblings` keeps them as
       siblings), each with a diagnostic. For consumers (e.g. go-swagger) wanting bare refs.
+  - `DefaultAllOfForEmbeds` — opt-in (default false): render a plain
+    (non-`swagger:allOf`) struct embed as allOf composition instead of inlining
+    its properties — a `$ref` allOf member for a model embed, an inline member
+    otherwise, with the embedding struct's own fields in a sibling member.
+    Json-named embeds (go-swagger#2038) and interface embeds are unaffected;
+    `swagger:allOf` already wins. See `internal/builders/schema/README.md#allof`.
   - `SetXNullableForPointers` — emit `x-nullable: true` on pointer fields.
+  - `NameFromTags` — ordered list of struct-tag types a field's emitted name is
+    derived from (schema properties, parameters, response headers). First listed
+    tag that supplies a usable name wins. nil/unset ⇒ `["json"]` (historic);
+    explicit empty slice ⇒ Go field name. Only the name; encoding/json directives
+    (`-`, `,omitempty`, `,string`) always come from the `json` tag. e.g.
+    `["form","json"]` for gin (go-swagger#2912/#1391).
+  - `SkipJSONifyInterfaceMethods` — opt out (default false) of the auto-jsonify
+    mangler on interface-method property names (`ID`→`id`, `CreatedAt`→`createdAt`).
+    When true the Go method name is emitted verbatim; `swagger:name` still wins
+    verbatim regardless. Does not affect struct fields. See
+    `internal/builders/schema/README.md#interface-naming`.
   - `SkipExtensions` — suppress `x-go-*` vendor extensions.
   - `OnDiagnostic` — callback sink for all scan-time observations (the only output
     channel; codescan never writes to stdout/stderr).
@@ -148,6 +165,10 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
 - Uses `golang.org/x/tools/go/packages` for module-aware package loading.
 - Comment annotations follow the go-swagger convention (`swagger:route`, `swagger:operation`,
   `swagger:parameters`, `swagger:response`, `swagger:model`, etc.).
+- `swagger:description |` (YAML literal block-scalar marker) captures a verbatim
+  markdown body — blank lines, indentation, table pipes preserved — until the next
+  line-leading annotation or EOF; reframes go-swagger#3211. Plain `swagger:description`
+  stays blank-terminated. See `internal/parsers/grammar/README.md#literal-description`.
 - The scanner works at the AST / `go/types` level — it never executes or compiles scanned code.
 - Parsers never import builders; they write through the interfaces in `internal/ifaces`.
   When adding a new annotation, extend the relevant builder's `taggers.go` rather than reaching

@@ -12,14 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2020 locks go-swagger issue #2020 ("parameters not detected
-// with multiple structs in one statement"): two swagger:parameters structs
-// declared in a single grouped `type ( ... )` block are each detected and bound
-// to their operation by id.
+// TestCoverage_Bug2020 locks go-swagger issue #2020 ("parameters not detected with multiple structs
+// in one statement"): two swagger:parameters structs declared in a single grouped `type ( ... )`
+// block are each detected and bound to their operation by id.
 //
-// (The reporter's exotic anonymous-inline-body field marked `swagger:name -`
-// remains mis-handled — it is dropped to a query param — but that narrow edge is
-// independent of the grouped-declaration detection this locks.)
+// (The reporter's exotic anonymous-inline-body field marked `swagger:name -` remains mis-handled
+// — it is dropped to a query param — but that narrow edge is independent of the
+// grouped-declaration detection this locks.)
 func TestCoverage_Bug2020(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2020/..."},

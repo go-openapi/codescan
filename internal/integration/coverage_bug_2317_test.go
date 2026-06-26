@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2317 locks go-swagger issue #2317 ("x-nullable on a pointer has
-// no effect"): an `x-nullable: true` Extensions block on a pointer field is
-// applied — the field becomes allOf[$ref] carrying x-nullable.
+// TestCoverage_Bug2317 locks go-swagger issue #2317 ("x-nullable on a pointer has no effect"): an
+// `x-nullable: true` Extensions block on a pointer field is applied — the field becomes
+// allOf[$ref] carrying x-nullable.
 func TestCoverage_Bug2317(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2317/..."},

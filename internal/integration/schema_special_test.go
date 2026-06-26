@@ -88,9 +88,9 @@ func TestSpecialSchemas(t *testing.T) {
 	})
 
 	t.Run("tagged int-keyed map renders additionalProperties", func(t *testing.T) {
-		// map[int]struct{}: encoding/json stringifies integer keys, so this is
-		// representable as {type: object, additionalProperties: {…}}
-		// (go-swagger#2251, §18). It was previously dropped to an empty schema.
+		// map[int]struct{}: encoding/json stringifies integer keys, so this is representable as {type:
+		// object, additionalProperties: {…}} (go-swagger#2251, §18).
+		// It was previously dropped to an empty schema.
 		idx, ok := sp.Definitions["index_map"]
 		require.TrueT(t, ok)
 		require.TrueT(t, idx.Type.Contains("object"))
@@ -118,8 +118,8 @@ func TestSpecialSchemas(t *testing.T) {
 		// NOTE: codescan does not really support generic types.
 		// This test just makes sure generic definitions don't crash the scanner.
 		//
-		// The general approach of the scanner is to make an empty schema out of anything
-		// it doesn't understand.
+		// The general approach of the scanner is to make an empty schema out of anything it doesn't
+		// understand.
 
 		// generic_constraint
 		t.Run("generic type constraint should render like an interface", func(t *testing.T) {
@@ -189,11 +189,12 @@ func TestSpecialSchemas(t *testing.T) {
 		})
 	})
 
-	// Strip stdlib-dependent definitions whose shape drifts across Go
-	// versions (e.g. reflect.Type grew iterator methods in Go 1.26). The
-	// sub-tests above already pin the scanner behaviour (the fields resolve
-	// to a $ref with x-go-package: reflect); the snapshot only needs to
-	// cover the stable, fixture-local parts of the spec.
+	// Strip stdlib-dependent definitions whose shape drifts across Go versions (e.g. reflect.Type grew
+	// iterator methods in Go 1.26).
+	//
+	// The sub-tests above already pin the scanner behaviour (the fields resolve to a $ref with
+	// x-go-package: reflect); the snapshot only needs to cover the stable, fixture-local parts of the
+	// spec.
 	for name, def := range sp.Definitions {
 		if pkg, ok := def.Extensions.GetString("x-go-package"); ok && pkg == "reflect" {
 			delete(sp.Definitions, name)
@@ -405,8 +406,8 @@ func testSpecialTypesWhatNot(t *testing.T, sp *oaispec.Swagger, props map[string
 							require.NotNil(t, itemsSchema)
 
 							require.TrueT(t, itemsSchema.Type.Contains("integer"))
-							// [5]byte is not recognized an array of bytes, but of uint8
-							// (internally this is the same for go)
+							// [5]byte is not recognized an array of bytes, but of uint8 (internally this is the same for
+							// go)
 							require.EqualT(t, "uint8", itemsSchema.Format)
 						})
 					case "J", "K":

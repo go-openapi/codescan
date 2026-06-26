@@ -15,10 +15,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_PrimitiveResponse locks the primitive response-body matrix:
-// tagged primitive (body:integer), array-of-primitive (body:[]string), the
-// swagger:response array-body workaround, and a model-ref control that must
-// still resolve to a $ref.
+// TestCoverage_PrimitiveResponse locks the primitive response-body matrix: tagged primitive
+// (body:integer), array-of-primitive (body:[]string), the swagger:response array-body workaround,
+// and a model-ref control that must still resolve to a $ref.
 func TestCoverage_PrimitiveResponse(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -60,8 +59,8 @@ func TestCoverage_PrimitiveResponse(t *testing.T) {
 	assert.Equal(t, "#/definitions/Thing", thing.Schema.Ref.String())
 	assert.Empty(t, thing.Schema.Type)
 
-	// 200: arrayBodyResponse → $ref to the named response, which itself
-	// carries an array-of-primitive body schema.
+	// 200: arrayBodyResponse → $ref to the named response, which itself carries an
+	// array-of-primitive body schema.
 	named := resp200("/named")
 	assert.Equal(t, "#/responses/arrayBodyResponse", named.Ref.String())
 	nr, ok := doc.Responses["arrayBodyResponse"]
@@ -72,9 +71,8 @@ func TestCoverage_PrimitiveResponse(t *testing.T) {
 	require.NotNil(t, nr.Schema.Items.Schema)
 	assert.Equal(t, []string{"string"}, []string(nr.Schema.Items.Schema.Type))
 
-	// Bare/untagged primitive (`200: string`) is NOT supported: the token
-	// is read as a response name, the response is dropped, and a diagnostic
-	// points the author at the unambiguous `body:` form.
+	// Bare/untagged primitive (`200: string`) is NOT supported: the token is read as a response name,
+	// the response is dropped, and a diagnostic points the author at the unambiguous `body:` form.
 	bare := doc.Paths.Paths["/bare"].Get
 	require.NotNil(t, bare)
 	if bare.Responses != nil {
@@ -89,8 +87,8 @@ func TestCoverage_PrimitiveResponse(t *testing.T) {
 	}
 	assert.True(t, hinted, "expected a diagnostic pointing at `body:string`")
 
-	// Reserved type keyword after body: (`body:file`) is not a valid response
-	// body type: dropped with a diagnostic. array/object/null behave the same.
+	// Reserved type keyword after body: (`body:file`) is not a valid response body type: dropped with
+	// a diagnostic. array/object/null behave the same.
 	reserved := doc.Paths.Paths["/reserved"].Get
 	require.NotNil(t, reserved)
 	if reserved.Responses != nil {

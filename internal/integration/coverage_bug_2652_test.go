@@ -12,16 +12,17 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2652 locks the fix for go-swagger issue #2652 ("how to add
-// complex example for a swagger:model"): an `example:` on a field whose type is
-// a named model (rendered as a $ref) used to be dropped. It is now preserved on
-// the override arm of an allOf compound (the #3125 shape), so the $ref and the
-// example coexist.
+// TestCoverage_Bug2652 locks the fix for go-swagger issue #2652 ("how to add complex example for a
+// swagger:model"): an `example:` on a field whose type is a named model (rendered as a $ref) used
+// to be dropped.
 //
-// A complex JSON example on a $ref'd field is coerced into a structured
-// object on the override arm — matching the direct-field path (quirk G3,
-// fixed). Previously it was carried as a raw string ("{...}") because the
-// override arm has no type to coerce against.
+// It is now preserved on the override arm of an allOf compound (the #3125 shape), so the $ref and
+// the example coexist.
+//
+// A complex JSON example on a $ref'd field is coerced into a structured object on the override arm
+// — matching the direct-field path (quirk G3, fixed).
+// Previously it was carried as a raw string ("{...}") because the override arm has no type to
+// coerce against.
 func TestCoverage_Bug2652(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2652/..."},

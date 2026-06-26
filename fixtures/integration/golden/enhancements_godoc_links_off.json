@@ -1,0 +1,64 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Gadget": {
+      "type": "object",
+      "title": "Gadget is a small component.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
+    },
+    "Ledger": {
+      "type": "object",
+      "title": "Ledger records stock movements.",
+      "properties": {
+        "entries": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Entries"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links/inventory"
+    },
+    "Order": {
+      "type": "object",
+      "title": "Order captures a purchase.",
+      "properties": {
+        "customer_name": {
+          "description": "CustName is the buyer.",
+          "type": "string",
+          "x-go-name": "CustName"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
+    },
+    "gizmo": {
+      "description": "More detail mentions a [*Gadget] pointer, a [inventory.Ledger], and an\nunknown [Sprocket].\n\n[the spec]: https://example.com/spec",
+      "type": "object",
+      "title": "Widget is the primary [Gadget] holder and references [Order.CustName].",
+      "properties": {
+        "holder": {
+          "description": "Holder points at the [Gadget] that owns this widget.",
+          "type": "string",
+          "x-go-name": "Holder"
+        },
+        "index": {
+          "description": "Index is element [0] in the [see notes] list; the [id] stays bare.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Index"
+        },
+        "ledger": {
+          "$ref": "#/definitions/Ledger"
+        }
+      },
+      "x-go-name": "Widget",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links"
+    }
+  }
+}

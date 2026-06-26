@@ -12,13 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2417 covers go-swagger issue #2417 ("embedding of aliased
-// type"). Embedding an anonymous defined-type whose underlying struct lives in
-// a *different* package than the type itself (a.AnotherPackageAlias, underlying
-// color.Color) used to promote no fields — the definition came out a bare empty
-// object — because field-AST resolution searched only the embedding decl's
-// source file. The field-promotion path now falls back to the field's own
-// source file (ScanCtx.FileForPos), so the fields are promoted.
+// TestCoverage_Bug2417 covers go-swagger issue #2417 ("embedding of aliased type").
+//
+// Embedding an anonymous defined-type whose underlying struct lives in a *different* package than
+// the type itself (a.AnotherPackageAlias, underlying color.Color) used to promote no fields — the
+// definition came out a bare empty object — because field-AST resolution searched only the
+// embedding decl's source file.
+//
+// The field-promotion path now falls back to the field's own source file (ScanCtx.FileForPos), so
+// the fields are promoted.
 //
 // The other three matrix cells were already correct and are asserted here as
 // guard rails against regression:
@@ -43,9 +45,8 @@ func TestCoverage_Bug2417(t *testing.T) {
 	assert.Equal(t, "#/definitions/AnotherPackageAlias", named.Ref.String(),
 		"a named cross-package alias field is referenced")
 
-	// The #2417 defect: embedding an alias-of-cross-package-type promotes
-	// nothing. Expected behaviour is that "hue" is promoted, like every other
-	// embed form above.
+	// The #2417 defect: embedding an alias-of-cross-package-type promotes nothing.
+	// Expected behaviour is that "hue" is promoted, like every other embed form above.
 	assert.Contains(t, doc.Definitions["CrossAliasEmbed"].Properties, "hue",
 		"embedding an alias whose underlying type is in another package must "+
 			"promote its fields (go-swagger#2417)")

@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2799 locks the fix for go-swagger issue #2799 ("swagger
-// generator should keep the format of the API description"): a markdown bullet
-// list in the description used to lose its leading `-` (silent strip). The
-// grammar2 parser preserves it (forthcoming-features §4.2), so the meta
-// description round-trips the list verbatim.
+// TestCoverage_Bug2799 locks the fix for go-swagger issue #2799 ("swagger generator should keep the
+// format of the API description"): a markdown bullet list in the description used to lose its
+// leading `-` (silent strip).
 //
-// (Distinct from #3211, which is about markdown *table* rows losing their
-// leading pipe — still open.)
+// The grammar2 parser preserves it (forthcoming-features §4.2), so the meta description
+// round-trips the list verbatim.
+//
+// (Distinct from #3211, which is about markdown *table* rows losing their leading pipe — still
+// open.)
 func TestCoverage_Bug2799(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2799/..."},

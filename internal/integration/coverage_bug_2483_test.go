@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2483 locks the fix for go-swagger issue #2483 ("generation
-// from code not working with allOf"): a model embedding a swagger:allOf base
-// plus a plain inline struct used to duplicate the allOf arms (the $ref and the
-// inline object each appeared twice), which tripped a "circular ancestry"
-// validation error. The arms are now emitted exactly once.
+// TestCoverage_Bug2483 locks the fix for go-swagger issue #2483 ("generation from code not working
+// with allOf"): a model embedding a swagger:allOf base plus a plain inline struct used to duplicate
+// the allOf arms (the $ref and the inline object each appeared twice), which tripped a "circular
+// ancestry" validation error.
+//
+// The arms are now emitted exactly once.
 func TestCoverage_Bug2483(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2483/..."},

@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2294 locks the resolution of go-swagger issue #2294
-// ("more than one security header using AND logic").
+// TestCoverage_Bug2294 locks the resolution of go-swagger issue #2294 ("more than one security
+// header using AND logic").
 //
-// Two schemes combined in ONE security requirement (a sequence item with two
-// mapping keys) means AND — both must be satisfied — and must produce a single
-// requirement object with both keys. Before the fix the scanner split it into
-// two separate requirements (OR logic). The fix lives in the meta-Security
-// parser (internal/parsers/security), the same parser as #2403/#2479.
+// Two schemes combined in ONE security requirement (a sequence item with two mapping keys) means
+// AND — both must be satisfied — and must produce a single requirement object with both keys.
+// Before the fix the scanner split it into two separate requirements (OR logic).
+//
+// The fix lives in the meta-Security parser (internal/parsers/security), the same parser as
+// #2403/#2479.
 func TestCoverage_Bug2294(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2294/..."},

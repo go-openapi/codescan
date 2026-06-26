@@ -61,13 +61,12 @@ func TestDispatchRouteKeywordDeprecated(t *testing.T) {
 	}
 }
 
-// TestRawBlockAbsorbsSubContextKeywords verifies the grammar-level
-// behaviour that lets a Parameters or Responses body contain lines
-// whose first word reads as a keyword from a sub-context
-// (Param / Schema / Items): they're absorbed as body text rather
-// than terminating the multi-line block. Without this, `default:`,
-// `in:`, `required:`, `max:` inside a Parameters body would
-// prematurely stop the collection and produce a malformed spec.
+// TestRawBlockAbsorbsSubContextKeywords verifies the grammar-level behaviour that lets a Parameters
+// or Responses body contain lines whose first word reads as a keyword from a sub-context (Param /
+// Schema / Items): they're absorbed as body text rather than terminating the multi-line block.
+//
+// Without this, `default:`, `in:`, `required:`, `max:` inside a Parameters body would prematurely
+// stop the collection and produce a malformed spec.
 func TestRawBlockAbsorbsSubContextKeywords(t *testing.T) {
 	body := `Parameters:
 + name:     someNumber
@@ -94,10 +93,9 @@ func TestRawBlockAbsorbsSubContextKeywords(t *testing.T) {
 		t.Fatalf("parameters property not found")
 	}
 
-	// Body must retain every source line, absorbed verbatim. We don't
-	// pin the exact whitespace — the lexer is free to keep or
-	// normalise inter-token spacing — but every value must survive
-	// the absorption.
+	// Body must retain every source line, absorbed verbatim.
+	// We don't pin the exact whitespace — the lexer is free to keep or normalise inter-token spacing
+	// — but every value must survive the absorption.
 	for _, expected := range []string{
 		"someNumber",
 		"path",

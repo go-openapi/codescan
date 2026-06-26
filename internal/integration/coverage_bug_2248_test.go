@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2248 locks go-swagger issue #2248 ("time.Duration in response's
-// header"): a response header typed time.Duration resolves to {type:integer,
-// format:int64} — it carries a type, so the spec is valid (the reporter saw
-// "headers.<name>.type in body is required").
+// TestCoverage_Bug2248 locks go-swagger issue #2248 ("time.Duration in response's header"): a
+// response header typed time.Duration resolves to {type:integer, format:int64} — it carries a
+// type, so the spec is valid (the reporter saw "headers.<name>.type in body is required").
 func TestCoverage_Bug2248(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2248/..."},

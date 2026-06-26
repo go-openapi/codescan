@@ -12,15 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_MetaTOSSchemesTerminator pins the sibling-terminator
-// rule for `Terms Of Service:` → `Schemes:` (Q26).
+// TestCoverage_MetaTOSSchemesTerminator pins the sibling-terminator rule for `Terms Of Service:`
+// → `Schemes:` (Q26).
 //
-// Q26's original observation (Schemes absorbed into TOS body) no
-// longer reproduces on master — the fix landed during Stream M's
-// merge sequence, point of resolution not isolated. This test serves
-// as a regression-detector: if a future lexer change re-breaks the
-// terminator-family overlap for asRawBlock siblings in the meta
-// scope, this turns red.
+// Q26's original observation (Schemes absorbed into TOS body) no longer reproduces on master —
+// the fix landed during Stream M's merge sequence, point of resolution not isolated.
+// This test serves as a regression-detector: if a future lexer change re-breaks the
+// terminator-family overlap for asRawBlock siblings in the meta scope, this turns red.
 //
 // Expected shape:
 //

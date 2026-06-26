@@ -27,8 +27,8 @@ import (
 //     `in:` (Q1 implicit-header default) → same diagnostic;
 //     field surfaces as a regular header.
 //
-// Diagnostic capture asserts CodeUnsupportedInSimpleSchema fires
-// for variants (2) and (3) but not for (1).
+// Diagnostic capture asserts CodeUnsupportedInSimpleSchema fires for variants (2) and (3) but not
+// for (1).
 func TestCoverage_ResponseFileTypes(t *testing.T) {
 	var got []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -63,8 +63,8 @@ func TestCoverage_ResponseFileTypes(t *testing.T) {
 	require.Contains(t, implicitMisuse.Headers, "X-Implicit")
 	assert.Equal(t, "string", implicitMisuse.Headers["X-Implicit"].Type)
 
-	// Diagnostic captures: (2) and (3) each emit one
-	// CodeUnsupportedInSimpleSchema warning naming `swagger:file`.
+	// Diagnostic captures: (2) and (3) each emit one CodeUnsupportedInSimpleSchema warning naming
+	// `swagger:file`.
 	var seenExplicit, seenImplicit bool
 	for _, d := range got {
 		if d.Code != grammar.CodeUnsupportedInSimpleSchema {

@@ -16,8 +16,8 @@ func TestStripBlockContinuation(t *testing.T) {
 	}
 }
 
-// TestNormalizeBullet covers the markdown-bullet → canonical `- ` rewrite that
-// makes `* item` / `+ item` lists identifiable like `- item` (go-swagger#1726).
+// TestNormalizeBullet covers the markdown-bullet → canonical `- ` rewrite that makes `* item` /
+// `+ item` lists identifiable like `- item` (go-swagger#1726).
 func TestNormalizeBullet(t *testing.T) {
 	cases := []struct {
 		name string
@@ -41,9 +41,9 @@ func TestNormalizeBullet(t *testing.T) {
 	}
 }
 
-// TestTrimContentPrefixBullets locks the end-to-end content-prefix behaviour:
-// leading godoc decoration is shed and a markdown bullet is normalised, while
-// the YAML fence and prose are preserved.
+// TestTrimContentPrefixBullets locks the end-to-end content-prefix behaviour: leading godoc
+// decoration is shed and a markdown bullet is normalised, while the YAML fence and prose are
+// preserved.
 func TestTrimContentPrefixBullets(t *testing.T) {
 	cases := []struct {
 		name string

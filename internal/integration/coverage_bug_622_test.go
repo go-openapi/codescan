@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug622 locks go-swagger issue #622 ("response example objects"): an
-// `example:` on a response body field is emitted on the response schema. (The
-// reporter's `exampleValue:` was non-standard; `example:` is the keyword.)
+// TestCoverage_Bug622 locks go-swagger issue #622 ("response example objects"): an `example:` on a
+// response body field is emitted on the response schema. (The reporter's `exampleValue:` was
+// non-standard; `example:` is the keyword.)
 func TestCoverage_Bug622(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/622/..."}, WorkDir: scantest.FixturesDir()})
 	require.NoError(t, err)

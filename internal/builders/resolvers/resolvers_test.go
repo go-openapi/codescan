@@ -42,8 +42,8 @@ func TestAddExtension(t *testing.T) {
 	assert.Nil(t, ve.Extensions[key3])
 }
 
-// typableCapture builds a MockSwaggerTypable whose Typed() records
-// the (swaggerType, format) pair it receives.
+// typableCapture builds a MockSwaggerTypable whose Typed() records the (swaggerType, format) pair
+// it receives.
 func typableCapture() (*mocks.MockSwaggerTypable, *[2]string) {
 	got := new([2]string)
 	m := &mocks.MockSwaggerTypable{
@@ -135,8 +135,8 @@ func TestUnsupportedBuiltin(t *testing.T) {
 	})
 
 	t.Run("universe-scope object returns false", func(t *testing.T) {
-		// Pkg()==nil objects (predeclared error, any, etc.) never
-		// represent unsafe.Pointer and must therefore not match.
+		// Pkg()==nil objects (predeclared error, any, etc.) never represent unsafe.Pointer and must
+		// therefore not match.
 		tn := types.NewTypeName(token.NoPos, nil, "error", nil)
 		m := &mocks.MockObjecter{ObjFunc: func() *types.TypeName { return tn }}
 		assert.FalseT(t, UnsupportedBuiltin(m))
@@ -220,7 +220,10 @@ func TestIsFieldStringable(t *testing.T) {
 	})
 }
 
-func TestParseJSONTag(t *testing.T) {
+func TestParseFieldTag(t *testing.T) {
+	// jsonTags is the default NameFromTags — name derived from the json tag.
+	jsonTags := []string{"json"}
+
 	ident := func(name string) *ast.Field {
 		return &ast.Field{
 			Names: []*ast.Ident{ast.NewIdent(name)},
@@ -238,7 +241,7 @@ func TestParseJSONTag(t *testing.T) {
 
 	t.Run("no tag uses goName", func(t *testing.T) {
 		f := ident("Foo")
-		name, ignore, isString, omitEmpty, err := ParseJSONTag(f, "Foo")
+		name, ignore, isString, omitEmpty, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.FalseT(t, ignore)
@@ -248,7 +251,7 @@ func TestParseJSONTag(t *testing.T) {
 
 	t.Run("empty goName falls back to first AST name", func(t *testing.T) {
 		f := ident("Foo")
-		name, _, _, _, err := ParseJSONTag(f, "")
+		name, _, _, _, err := ParseFieldTag(f, "", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 	})
@@ -256,7 +259,7 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("json tag renames", func(t *testing.T) {
 		f := ident("Foo")
 		f.Tag = &ast.BasicLit{Value: "`json:\"foo,omitempty\"`"}
-		name, ignore, isString, omitEmpty, err := ParseJSONTag(f, "Foo")
+		name, ignore, isString, omitEmpty, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "foo", name)
 		assert.FalseT(t, ignore)
@@ -267,7 +270,7 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("json:\"-\" marks ignored", func(t *testing.T) {
 		f := ident("Foo")
 		f.Tag = &ast.BasicLit{Value: "`json:\"-\"`"}
-		name, ignore, _, _, err := ParseJSONTag(f, "Foo")
+		name, ignore, _, _, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.TrueT(t, ignore)
@@ -276,7 +279,7 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("json:\",string\" on scalar sets isString", func(t *testing.T) {
 		f := ident("Foo")
 		f.Tag = &ast.BasicLit{Value: "`json:\",string\"`"}
-		name, _, isString, _, err := ParseJSONTag(f, "Foo")
+		name, _, isString, _, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.TrueT(t, isString)
@@ -284,11 +287,10 @@ func TestParseJSONTag(t *testing.T) {
 
 	t.Run("whitespace-only tag value falls through", func(t *testing.T) {
 		f := ident("Foo")
-		// Backticks wrap a single space — TrimSpace of `" "` != empty (outer check
-		// passes), but Unquote yields " " which does TrimSpace to empty — hits
-		// the final fallthrough.
+		// Backticks wrap a single space — TrimSpace of `" "` != empty (outer check passes), but Unquote
+		// yields " " which does TrimSpace to empty — hits the final fallthrough.
 		f.Tag = &ast.BasicLit{Value: "` `"}
-		name, ignore, isString, omitEmpty, err := ParseJSONTag(f, "Foo")
+		name, ignore, isString, omitEmpty, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "Foo", name)
 		assert.FalseT(t, ignore)
@@ -298,18 +300,19 @@ func TestParseJSONTag(t *testing.T) {
 
 	t.Run("malformed tag returns Unquote error", func(t *testing.T) {
 		f := ident("Foo")
-		// Unquote requires surrounding backticks/quotes. Bare word is invalid.
+		// Unquote requires surrounding backticks/quotes.
+		// Bare word is invalid.
 		f.Tag = &ast.BasicLit{Value: "not-a-quoted-tag"}
-		_, _, _, _, err := ParseJSONTag(f, "Foo")
+		_, _, _, _, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.Error(t, err)
 	})
 
 	t.Run("multi-name group keeps each goName (go-swagger#2638)", func(t *testing.T) {
-		// `R, G, B, A uint8` — go/types yields one var per name sharing the
-		// same AST field; each member must keep its own name.
+		// `R, G, B, A uint8` — go/types yields one var per name sharing the same AST field; each member
+		// must keep its own name.
 		f := multi("R", "G", "B", "A")
 		for _, n := range []string{"R", "G", "B", "A"} {
-			name, _, _, _, err := ParseJSONTag(f, n)
+			name, _, _, _, err := ParseFieldTag(f, n, jsonTags)
 			require.NoError(t, err)
 			assert.EqualT(t, n, name)
 		}
@@ -318,7 +321,7 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("rename ignored on multi-name group, options still apply", func(t *testing.T) {
 		f := multi("R", "G")
 		f.Tag = &ast.BasicLit{Value: "`json:\"renamed,omitempty\"`"}
-		name, ignore, _, omitEmpty, err := ParseJSONTag(f, "G")
+		name, ignore, _, omitEmpty, err := ParseFieldTag(f, "G", jsonTags)
 		require.NoError(t, err)
 		assert.EqualT(t, "G", name, "a single rename cannot name N members")
 		assert.FalseT(t, ignore)
@@ -328,9 +331,82 @@ func TestParseJSONTag(t *testing.T) {
 	t.Run("json:\"-\" on multi-name group ignores all members", func(t *testing.T) {
 		f := multi("R", "G")
 		f.Tag = &ast.BasicLit{Value: "`json:\"-\"`"}
-		_, ignore, _, _, err := ParseJSONTag(f, "R")
+		_, ignore, _, _, err := ParseFieldTag(f, "R", jsonTags)
 		require.NoError(t, err)
 		assert.TrueT(t, ignore)
+	})
+
+	// NameFromTags — the name is sourced from the first tag type that yields a usable name;
+	// encoding/json directives always come from the json tag.
+
+	t.Run("form tag names the field (go-swagger#2912)", func(t *testing.T) {
+		f := ident("SortKey")
+		f.Tag = &ast.BasicLit{Value: "`form:\"sort_key\"`"}
+		name, _, _, _, err := ParseFieldTag(f, "SortKey", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.EqualT(t, "sort_key", name, "form: wins when it is first in the list")
+	})
+
+	t.Run("first usable tag in the list wins", func(t *testing.T) {
+		f := ident("X")
+		f.Tag = &ast.BasicLit{Value: "`json:\"x\" form:\"y\"`"}
+		name, _, _, _, err := ParseFieldTag(f, "X", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.EqualT(t, "y", name, "form precedes json in the list")
+	})
+
+	t.Run("falls through a present-but-nameless tag", func(t *testing.T) {
+		f := ident("X")
+		// form is present but supplies no name (options only) — fall through to json.
+		f.Tag = &ast.BasicLit{Value: "`json:\"x\" form:\",omitempty\"`"}
+		name, _, _, _, err := ParseFieldTag(f, "X", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.EqualT(t, "x", name)
+	})
+
+	t.Run("no listed tag present falls back to goName", func(t *testing.T) {
+		f := ident("Foo")
+		f.Tag = &ast.BasicLit{Value: "`xml:\"foo\"`"}
+		name, _, _, _, err := ParseFieldTag(f, "Foo", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.EqualT(t, "Foo", name)
+	})
+
+	t.Run("empty nameTags ignores tags for naming, directives still apply", func(t *testing.T) {
+		f := ident("Foo")
+		f.Tag = &ast.BasicLit{Value: "`json:\"foo,omitempty\"`"}
+		name, ignore, _, omitEmpty, err := ParseFieldTag(f, "Foo", []string{})
+		require.NoError(t, err)
+		assert.EqualT(t, "Foo", name, "no tag consulted for the name")
+		assert.FalseT(t, ignore)
+		assert.TrueT(t, omitEmpty, "omitempty still read from the json tag")
+	})
+
+	t.Run("json:\"-\" still excludes regardless of nameTags", func(t *testing.T) {
+		f := ident("Secret")
+		f.Tag = &ast.BasicLit{Value: "`json:\"-\" form:\"secret\"`"}
+		_, ignore, _, _, err := ParseFieldTag(f, "Secret", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.TrueT(t, ignore, "the json `-` directive is independent of name selection")
+	})
+
+	t.Run("directives read from json even when name comes from form", func(t *testing.T) {
+		f := ident("Count")
+		f.Tag = &ast.BasicLit{Value: "`json:\",omitempty,string\" form:\"count\"`"}
+		name, ignore, isString, omitEmpty, err := ParseFieldTag(f, "Count", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.EqualT(t, "count", name)
+		assert.FalseT(t, ignore)
+		assert.TrueT(t, isString)
+		assert.TrueT(t, omitEmpty)
+	})
+
+	t.Run("form name dropped on multi-name group", func(t *testing.T) {
+		f := multi("R", "G")
+		f.Tag = &ast.BasicLit{Value: "`form:\"renamed\"`"}
+		name, _, _, _, err := ParseFieldTag(f, "G", []string{"form", "json"})
+		require.NoError(t, err)
+		assert.EqualT(t, "G", name, "a single rename cannot name N members, whatever the tag type")
 	})
 }
 
@@ -355,8 +431,8 @@ func TestMustNotBeABuiltinType(t *testing.T) {
 }
 
 func TestInternalError_Error(t *testing.T) {
-	// Exercises the internalError.Error method that satisfies the `error`
-	// interface used in fmt.Errorf("...%w", ErrInternal).
+	// Exercises the internalError.Error method that satisfies the `error` interface used in
+	// fmt.Errorf("...%w", ErrInternal).
 	assert.EqualT(t, string(ErrInternal), ErrInternal.Error())
 }
 

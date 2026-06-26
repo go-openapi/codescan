@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1587 locks the fix for go-swagger issue #1587 ("import detection
-// fails if package path does not match package name"): a field referencing a type
-// from a package whose import-path tail (josev2) differs from its package name
-// (jose) used to fail with "no import found for jose". go/packages resolves it by
-// the real package name, so the $ref and its definition are emitted.
+// TestCoverage_Bug1587 locks the fix for go-swagger issue #1587 ("import detection fails if package
+// path does not match package name"): a field referencing a type from a package whose import-path
+// tail (josev2) differs from its package name (jose) used to fail with "no import found for jose".
+// go/packages resolves it by the real package name, so the $ref and its definition are emitted.
 func TestCoverage_Bug1587(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1587/..."},

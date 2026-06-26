@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2013 locks go-swagger issue #2013 ("panic: index out of range"
-// in SetEnum during buildEmbedded): an enum on a promoted (embedded) field is
-// parsed without panicking and the enum values are carried onto the composed
-// model.
+// TestCoverage_Bug2013 locks go-swagger issue #2013 ("panic: index out of range" in SetEnum during
+// buildEmbedded): an enum on a promoted (embedded) field is parsed without panicking and the enum
+// values are carried onto the composed model.
 func TestCoverage_Bug2013(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2013/..."},

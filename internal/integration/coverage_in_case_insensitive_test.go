@@ -12,11 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_InCaseInsensitive witnesses Q29 — the `in:` value
-// must be normalised case-insensitively so go-swagger-generated
-// `in: Body` lands at the body location, not silently degrading to
-// the `query` default (parameters) or producing an invalidIn
-// diagnostic (responses).
+// TestCoverage_InCaseInsensitive witnesses Q29 — the `in:` value must be normalised
+// case-insensitively so go-swagger-generated `in: Body` lands at the body location, not silently
+// degrading to the `query` default (parameters) or producing an invalidIn diagnostic (responses).
 //
 // Pre-fix shape (silent miscategorisation):
 //

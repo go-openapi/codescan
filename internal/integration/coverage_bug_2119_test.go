@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2119 locks the answer to go-swagger issue #2119 ("add flag to
-// skip generation of x-go-name"): the `SkipExtensions` option suppresses the
-// scanner-derived x-go-name / x-go-package vendor extensions (which clash across
-// same-named types).
+// TestCoverage_Bug2119 locks the answer to go-swagger issue #2119 ("add flag to skip generation of
+// x-go-name"): the `SkipExtensions` option suppresses the scanner-derived x-go-name / x-go-package
+// vendor extensions (which clash across same-named types).
 func TestCoverage_Bug2119(t *testing.T) {
 	// Default: x-go-name / x-go-package are present.
 	on, err := codescan.Run(&codescan.Options{

@@ -12,21 +12,21 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2637 locks the fix for go-swagger issue #2637: a local type
-// defined from a same-named type in another package
-// (`type CreateDomainRequest mongo.CreateDomainRequest`) used to collide on the
-// short key and emit a definition whose body was a `$ref` TO ITSELF — invalid
-// OAS that hangs downstream codegen. Now the local type and mongo's get distinct
-// concat-qualified names, so the local definition's body is a `$ref` to the
-// MONGO definition — a valid cross-type reference, no self-`$ref`. Same family
-// as #2783. See .claude/plans/name-identity-cyclic-ref.md.
+// TestCoverage_Bug2637 locks the fix for go-swagger issue #2637: a local type defined from a
+// same-named type in another package (`type CreateDomainRequest mongo.CreateDomainRequest`) used to
+// collide on the short key and emit a definition whose body was a `$ref` TO ITSELF — invalid OAS
+// that hangs downstream codegen.
+//
+// Now the local type and mongo's get distinct concat-qualified names, so the local definition's
+// body is a `$ref` to the MONGO definition — a valid cross-type reference, no self-`$ref`.
+// Same family as #2783. See .claude/plans/name-identity-cyclic-ref.md.
 func TestCoverage_Bug2637(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./bugs/2637/...")
 
 	require.Len(t, doc.Definitions, 2, "the local and the mongo CreateDomainRequest are distinct")
 
-	// The local defined type (package bug2637, dir "2637") qualifies to
-	// X2637CreateDomainRequest; the mongo one to MongoCreateDomainRequest.
+	// The local defined type (package bug2637, dir "2637") qualifies to X2637CreateDomainRequest; the
+	// mongo one to MongoCreateDomainRequest.
 	local, ok := doc.Definitions["X2637CreateDomainRequest"]
 	require.True(t, ok, "the local defined type keeps its own (qualified) definition")
 	require.Contains(t, doc.Definitions, "MongoCreateDomainRequest")

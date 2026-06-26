@@ -1,0 +1,99 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Base": {
+      "type": "object",
+      "title": "Base is a reusable base model.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-allof-embeds"
+    },
+    "NamedEmbed": {
+      "description": "NamedEmbed embeds Base under an explicit json name; it nests as a single\nproperty and is unaffected by the flag.",
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/Base"
+        },
+        "extra": {
+          "type": "string",
+          "x-go-name": "Extra"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-allof-embeds"
+    },
+    "PlainEmbed": {
+      "title": "PlainEmbed embeds a model and a non-model plainly, plus an own field.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "type": "string",
+              "x-go-name": "Note"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "color": {
+              "type": "string",
+              "x-go-name": "Color"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-allof-embeds"
+    },
+    "PointerEmbed": {
+      "title": "PointerEmbed embeds a model through a pointer.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tag": {
+              "type": "string",
+              "x-go-name": "Tag"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-allof-embeds"
+    },
+    "TaggedEmbed": {
+      "description": "TaggedEmbed composes Base through an explicit allOf tag; the flag does not\nchange its shape.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "x-go-name": "Field"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-allof-embeds"
+    }
+  }
+}
