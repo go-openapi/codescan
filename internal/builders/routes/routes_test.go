@@ -18,11 +18,10 @@ const epsilon = 1e-9
 
 func TestRoutesParser(t *testing.T) {
 	sctx := scantest.LoadClassificationPkgsCtx(t)
-	// M6.5-C requires ref resolution to succeed (Q22 strictness):
-	// untagged response names must be present in either the responses
-	// map or the definitions map, otherwise the dangling ref is
-	// diagnosed and dropped. Seed the responses map with the names
-	// the classification fixture's routes reference inline.
+	// M6.5-C requires ref resolution to succeed (Q22 strictness): untagged response names must be
+	// present in either the responses map or the definitions map, otherwise the dangling ref is
+	// diagnosed and dropped.
+	// Seed the responses map with the names the classification fixture's routes reference inline.
 	responses := map[string]oaispec.Response{
 		"genericError":    {},
 		"someResponse":    {},
@@ -287,12 +286,13 @@ func validateRoutesParameters(t *testing.T, ops oaispec.Paths) {
 	assert.InDelta(t, def, p.Default, epsilon)
 	assert.Nil(t, p.Schema)
 
-	// someQuery — array param. M6.5-C type-gates SimpleSchema
-	// validations: minLength/maxLength apply only to string-typed
-	// schemas (the OAS v2 contract). The legacy routes parser
-	// mis-applied them to arrays; M6.5-C drops them with a
-	// CodeShapeMismatch diagnostic instead. Use `minItems`/`maxItems`
-	// to constrain array length.
+	// someQuery — array param.
+	// M6.5-C type-gates SimpleSchema validations: minLength/maxLength apply only to string-typed
+	// schemas (the OAS v2 contract).
+	//
+	// The legacy routes parser mis-applied them to arrays; M6.5-C drops them with a CodeShapeMismatch
+	// diagnostic instead.
+	// Use `minItems`/`maxItems` to constrain array length.
 	p = po.Post.Parameters[1]
 	assert.EqualT(t, "someQuery", p.Name)
 	assert.EqualT(t, "some query values", p.Description)
@@ -315,7 +315,8 @@ func validateRoutesParameters(t *testing.T, ops oaispec.Paths) {
 	assert.TrueT(t, someBoolean)
 	assert.Nil(t, p.Schema)
 
-	// Testing that "min", "max", "minLength" and "maxLength" constraints will only be considered if the right type is provided
+	// Testing that "min", "max", "minLength" and "maxLength" constraints will only be considered if
+	// the right type is provided.
 	p = po.Post.Parameters[3]
 	assert.EqualT(t, "constraintsOnInvalidType", p.Name)
 	assert.EqualT(t, "test constraints on invalid types", p.Description)

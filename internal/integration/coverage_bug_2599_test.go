@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2599 locks the resolution to go-swagger issue #2599 ("custom
-// type on model fields"): a field-level `// swagger:type string` override makes
-// a custom Go type (here UUID, an array under the hood) render as a bare string
-// in the spec, without needing a strfmt type. Same mechanism answers #2404/#2419.
+// TestCoverage_Bug2599 locks the resolution to go-swagger issue #2599 ("custom type on model
+// fields"): a field-level `// swagger:type string` override makes a custom Go type (here UUID, an
+// array under the hood) render as a bare string in the spec, without needing a strfmt type.
+//
+// Same mechanism answers #2404/#2419.
 func TestCoverage_Bug2599(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2599/..."},

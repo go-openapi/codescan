@@ -18,8 +18,8 @@ var (
 	go118ClassificationCtx *scanner.ScanCtx //nolint:gochecknoglobals // test package cache shared across test functions
 )
 
-// FixturesDir returns the absolute path to the repo-level fixtures/ directory,
-// so tests can run from any package depth without fragile relative paths.
+// FixturesDir returns the absolute path to the repo-level fixtures/ directory, so tests can run
+// from any package depth without fragile relative paths.
 func FixturesDir() string {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {

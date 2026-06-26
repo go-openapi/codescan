@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2232 locks go-swagger issue #2232 ("tags with spaces"): a
-// multi-word tag is expressed via the swagger:operation YAML body `tags:` list.
-// (The swagger:route line cannot carry spaced tags — its tags are
-// space-delimited tokens — so the YAML form is the supported route to it.)
+// TestCoverage_Bug2232 locks go-swagger issue #2232 ("tags with spaces"): a multi-word tag is
+// expressed via the swagger:operation YAML body `tags:` list. (The swagger:route line cannot carry
+// spaced tags — its tags are space-delimited tokens — so the YAML form is the supported route
+// to it.)
 func TestCoverage_Bug2232(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2232/..."},

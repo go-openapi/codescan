@@ -12,13 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2592 locks the in-scope answer to go-swagger issue #2592
-// ("wrap/compose a response from two types"): `// swagger:allOf` on the embedded
-// components of a body type composes them into an `allOf` schema. A named
-// Combined{User,Token} yields allOf:[{$ref:User},{$ref:Token}]; an inline body
-// with the same embeds yields that allOf directly on the response schema.
-// (Embedding in the response WRAPPER instead turns the field into a header — the
-// embeds must live in the body.)
+// TestCoverage_Bug2592 locks the in-scope answer to go-swagger issue #2592 ("wrap/compose a
+// response from two types"): `// swagger:allOf` on the embedded components of a body type composes
+// them into an `allOf` schema.
+//
+// A named Combined{User,Token} yields allOf:[{$ref:User},{$ref:Token}]; an inline body with the
+// same embeds yields that allOf directly on the response schema. (Embedding in the response WRAPPER
+// instead turns the field into a header — the embeds must live in the body.)
 func TestCoverage_Bug2592(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2592/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,

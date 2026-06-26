@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1955 locks go-swagger issue #1955: a swagger:operation can use
-// a swagger:parameters struct defined in a DIFFERENT package — they are matched
-// by operation id across all scanned packages (the swagger:operation analog of
-// #1742).
+// TestCoverage_Bug1955 locks go-swagger issue #1955: a swagger:operation can use a
+// swagger:parameters struct defined in a DIFFERENT package — they are matched by operation id
+// across all scanned packages (the swagger:operation analog of #1742).
 func TestCoverage_Bug1955(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1955/..."},

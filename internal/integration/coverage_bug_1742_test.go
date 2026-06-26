@@ -12,15 +12,14 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1742 locks go-swagger issue #1742 ("Parameters"): a
-// swagger:parameters struct may live in a DIFFERENT package from the
-// swagger:route that references it — as long as both packages are scanned, the
-// parameter is bound to the operation by its operation id.
+// TestCoverage_Bug1742 locks go-swagger issue #1742 ("Parameters"): a swagger:parameters struct may
+// live in a DIFFERENT package from the swagger:route that references it — as long as both
+// packages are scanned, the parameter is bound to the operation by its operation id.
 //
-// This fixture also stands as the regression witness for go-swagger #1735: the
-// legacy `scan/route_params.go` engine panicked ("assignment to entry in nil
-// map") while parsing a route's params. That engine is gone; grammar2 scans a
-// route-with-params (here, cross-package) without panicking.
+// This fixture also stands as the regression witness for go-swagger #1735: the legacy
+// `scan/route_params.go` engine panicked ("assignment to entry in nil map") while parsing a route's
+// params.
+// That engine is gone; grammar2 scans a route-with-params (here, cross-package) without panicking.
 func TestCoverage_Bug1742(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1742/..."},

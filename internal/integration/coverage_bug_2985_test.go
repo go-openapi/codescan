@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2985 verifies the fix for go-swagger issue #2985:
-// minProperties / maxProperties (the reporter's "minAttributes/maxAttributes")
-// are now grammar keywords (mirroring minItems / maxItems), so on an object
-// swagger:model they emit property-count validation instead of leaking into
-// the model description.
+// TestCoverage_Bug2985 verifies the fix for go-swagger issue #2985: minProperties / maxProperties
+// (the reporter's "minAttributes/maxAttributes") are now grammar keywords (mirroring minItems /
+// maxItems), so on an object swagger:model they emit property-count validation instead of leaking
+// into the model description.
 func TestCoverage_Bug2985(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2985/..."},

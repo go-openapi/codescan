@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3100 locks the fix for go-swagger issue #3100
-// ("`in: formData` in `swagger:route` annotation translates to nothing").
-// A parameter declared with `in: formData` inside an inline swagger:route
-// annotation must round-trip its `in` field verbatim; the scanner used to
-// only recognise `form` and dropped `in` entirely from the spec.
+// TestCoverage_Bug3100 locks the fix for go-swagger issue #3100 ("`in: formData` in `swagger:route`
+// annotation translates to nothing").
+//
+// A parameter declared with `in: formData` inside an inline swagger:route annotation must
+// round-trip its `in` field verbatim; the scanner used to only recognise `form` and dropped `in`
+// entirely from the spec.
 func TestCoverage_Bug3100(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/3100/..."},

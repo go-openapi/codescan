@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug613 locks go-swagger issue #613 ("generating spec of external
-// structs"): a referenced struct (here via a []*Ulimit field) is implicitly
-// converted into its own definition and referenced by $ref — no unhelpful error.
+// TestCoverage_Bug613 locks go-swagger issue #613 ("generating spec of external structs"): a
+// referenced struct (here via a []*Ulimit field) is implicitly converted into its own definition
+// and referenced by $ref — no unhelpful error.
 func TestCoverage_Bug613(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/613/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
 	require.NoError(t, err)

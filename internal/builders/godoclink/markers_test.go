@@ -10,8 +10,8 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 )
 
-// fakeResolver maps a doc-link reference to a Resolution from a fixed table —
-// standing in for the real go/types resolver (wired in a later phase).
+// fakeResolver maps a doc-link reference to a Resolution from a fixed table — standing in for the
+// real go/types resolver (wired in a later phase).
 func fakeResolver(table map[string]Resolution) Resolver {
 	return func(ref string) (Resolution, bool) {
 		r, ok := table[ref]
@@ -53,8 +53,8 @@ func TestClean_LeadingSelfNameMarker(t *testing.T) {
 
 func TestClean_NoSelfMarkerWithoutResolver(t *testing.T) {
 	m := mangling.NewNameMangler()
-	// With no Resolver, the leading self-name is left verbatim (its exposed name
-	// is unknowable) and links are humanized — the P1 / live behaviour.
+	// With no Resolver, the leading self-name is left verbatim (its exposed name is unknowable) and
+	// links are humanized — the P1 / live behaviour.
 	out := Clean("Widget is owned by a [Person].",
 		Options{Mangler: &m, Self: &SelfRef{Name: "Widget", DefKey: "x/Widget"}})
 
@@ -76,8 +76,8 @@ func TestSubstituteMarkers_RoundTrip(t *testing.T) {
 			Self:     &SelfRef{Name: "Widget", DefKey: "x/Widget"},
 		})
 
-	// final names: Widget renamed (gizmo), Person/Order kept exposed lowercase,
-	// Gone pruned (not an emitted definition) → falls back to its humanized leaf.
+	// final names: Widget renamed (gizmo), Person/Order kept exposed lowercase, Gone pruned (not an
+	// emitted definition) → falls back to its humanized leaf.
 	final := map[string]string{
 		"x/Widget": "gizmo",
 		"x/Person": "person",
@@ -89,8 +89,8 @@ func TestSubstituteMarkers_RoundTrip(t *testing.T) {
 	})
 
 	assert.False(t, HasMarkers(got))
-	// self-name titleized to the renamed exposed name; field chain joined; pruned
-	// key collapsed to fallback.
+	// self-name titleized to the renamed exposed name; field chain joined; pruned key collapsed to
+	// fallback.
 	assert.Equal(t, "Gizmo owns a person, a order.customer_name and a gone thing.", got)
 }
 

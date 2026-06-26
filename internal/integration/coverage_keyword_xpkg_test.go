@@ -13,11 +13,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestKeywordCrossPackageLeaf locks cross-package leaf resolution for the
-// type-name keyword sites. A bare type name that is NOT in the annotating
-// type's own package resolves by leaf against the discovered model set:
-// uniquely -> the model's definition; ambiguously -> diagnostic + drop. This
-// matches the leaf resolution the name-identity engine gave routes/responses.
+// TestKeywordCrossPackageLeaf locks cross-package leaf resolution for the type-name keyword sites.
+//
+// A bare type name that is NOT in the annotating type's own package resolves by leaf against the
+// discovered model set: uniquely -> the model's definition; ambiguously -> diagnostic + drop.
+// This matches the leaf resolution the name-identity engine gave routes/responses.
 func TestKeywordCrossPackageLeaf(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{

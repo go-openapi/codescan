@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2441 locks go-swagger issue #2441 ("file upload how to describe
-// in annotations"): a raw (non-multipart) binary body is described with a string
-// field marked `swagger:strfmt binary` → format binary. (OpenAPI 2.0 `type: file`
-// is formData-only; a raw body uses `{type: string, format: binary}`.)
+// TestCoverage_Bug2441 locks go-swagger issue #2441 ("file upload how to describe in annotations"):
+// a raw (non-multipart) binary body is described with a string field marked `swagger:strfmt binary`
+// → format binary. (OpenAPI 2.0 `type: file` is formData-only; a raw body uses `{type: string,
+// format: binary}`.)
 func TestCoverage_Bug2441(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2441/..."},

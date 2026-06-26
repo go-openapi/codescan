@@ -12,12 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1713 locks the answer to go-swagger issue #1713 ("how to label
-// the example Response & Request"): response `examples:` keyed by mime type are
-// supported in the swagger:operation YAML body.
+// TestCoverage_Bug1713 locks the answer to go-swagger issue #1713 ("how to label the example
+// Response & Request"): response `examples:` keyed by mime type are supported in the
+// swagger:operation YAML body.
 //
-// (The struct-based swagger:response example-by-mime form is the separate
-// forthcoming feature §10 / #2871.)
+// (The struct-based swagger:response example-by-mime form is the separate forthcoming feature §10
+// / #2871.)
 func TestCoverage_Bug1713(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1713/..."},

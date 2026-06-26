@@ -14,8 +14,7 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ResponseImplicitHeader exercises the four Q1 variants
-// on the response side:
+// TestCoverage_ResponseImplicitHeader exercises the four Q1 variants on the response side:
 //
 //  1. EmptyResponse — empty struct under swagger:response →
 //     description-only response, no Headers map, no Schema.
@@ -28,9 +27,8 @@ import (
 //     CodeInvalidAnnotation warning and defaults to header anyway
 //     (diagnosed but not silently ignored).
 //
-// The full document is golden-captured so the shape of each
-// response — Headers map presence, Schema presence, primitive types
-// — locks down side-by-side.
+// The full document is golden-captured so the shape of each response — Headers map presence,
+// Schema presence, primitive types — locks down side-by-side.
 func TestCoverage_ResponseImplicitHeader(t *testing.T) {
 	var got []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -89,7 +87,7 @@ func TestCoverage_ResponseImplicitHeader(t *testing.T) {
 	}
 	assert.True(t, seenInvalid, "expected a CodeInvalidAnnotation diagnostic naming `in: cookie` on field Cookie")
 
-	// Golden of the full doc — shape-level pin (Headers maps,
-	// Schema presence, primitive types per response).
+	// Golden of the full doc — shape-level pin (Headers maps, Schema presence, primitive types per
+	// response).
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_response_implicit_header.json")
 }

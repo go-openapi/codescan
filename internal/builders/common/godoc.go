@@ -13,17 +13,19 @@ import (
 	"github.com/go-openapi/codescan/internal/scanner"
 )
 
-// godocResolver builds the doc-link resolver for the declaration currently being
-// built. It maps a doc-link reference — the bracket content with any leading `*`
-// stripped, e.g. "Order.CustName" or "inventory.Ledger" — to the referenced
-// schema's fully-qualified definition key plus an exposed field-chain suffix.
+// godocResolver builds the doc-link resolver for the declaration currently being built.
 //
-// A reference resolves only when its leading segment(s) name a scanned model
-// (same-package, or via a file import for a `pkg.Type` qualifier); a member
-// segment then resolves to its exposed property name. References that name a
-// non-model (a func registered as an operation, an unknown identifier, a
-// non-struct field path) return ok=false, so the caller humanizes the leaf
-// instead. Returns nil when there is no usable decl context.
+// It maps a doc-link reference — the bracket content with any leading `*` stripped, e.g.
+// "Order.CustName" or "inventory.Ledger" — to the referenced schema's fully-qualified definition
+// key plus an exposed field-chain suffix.
+//
+// A reference resolves only when its leading segment(s) name a scanned model (same-package, or via
+// a file import for a `pkg.Type` qualifier); a member segment then resolves to its exposed property
+// name.
+//
+// References that name a non-model (a func registered as an operation, an unknown identifier, a
+// non-struct field path) return ok=false, so the caller humanizes the leaf instead.
+// Returns nil when there is no usable decl context.
 func (s *Builder) godocResolver() godoclink.Resolver {
 	decl := s.Decl
 	if decl == nil || decl.File == nil {
@@ -58,9 +60,10 @@ func (s *Builder) godocResolver() godoclink.Resolver {
 	}
 }
 
-// godocSelf describes the declaration being built so godoclink can recompose its
-// leading godoc-convention self-name to its own exposed name. Nil when there is
-// no usable decl.
+// godocSelf describes the declaration being built so godoclink can recompose its leading
+// godoc-convention self-name to its own exposed name.
+//
+// Nil when there is no usable decl.
 func (s *Builder) godocSelf() *godoclink.SelfRef {
 	decl := s.Decl
 	if decl == nil || decl.Ident == nil || decl.Obj() == nil || decl.Obj().Pkg() == nil {
@@ -71,11 +74,12 @@ func (s *Builder) godocSelf() *godoclink.SelfRef {
 	return &godoclink.SelfRef{Name: goName, DefKey: decl.DefKey()}
 }
 
-// resolveFieldChain maps a member chain on decl's struct to its exposed property
-// suffix (e.g. [".customer_name"]). An empty chain is the bare-type case
-// (suffix ""). Only a single member level is resolved in this phase; deeper
-// chains, non-struct targets, ignored / un-named fields return ok=false so the
-// caller humanizes the leaf.
+// resolveFieldChain maps a member chain on decl's struct to its exposed property suffix (e.g.
+// [".customer_name"]).
+//
+// An empty chain is the bare-type case (suffix "").
+// Only a single member level is resolved in this phase; deeper chains, non-struct targets, ignored
+// / un-named fields return ok=false so the caller humanizes the leaf.
 func (s *Builder) resolveFieldChain(decl *scanner.EntityDecl, fields []string) (string, bool) {
 	if len(fields) == 0 {
 		return "", true
@@ -115,8 +119,9 @@ func structAST(decl *scanner.EntityDecl) (*ast.StructType, bool) {
 	return st, ok
 }
 
-// fileImports maps each usable import's local name to its package path for the
-// file enclosing decl, so a `pkg.Type` doc-link can resolve `pkg` to a path.
+// fileImports maps each usable import's local name to its package path for the file enclosing decl,
+// so a `pkg.Type` doc-link can resolve `pkg` to a path.
+//
 // Blank, dot and unresolvable imports are skipped.
 func fileImports(decl *scanner.EntityDecl) map[string]string {
 	out := make(map[string]string)

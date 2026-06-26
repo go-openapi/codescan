@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1958 locks go-swagger issue #1958 ("Ability to skip embedded
-// tags"): a vendor extension in the swagger:operation YAML body is preserved in
-// full — including nested keys that share a name with a known keyword (here,
-// `responses:` inside x-amazon-apigateway-integration), which must NOT be
-// confused with the operation's own responses.
+// TestCoverage_Bug1958 locks go-swagger issue #1958 ("Ability to skip embedded tags"): a vendor
+// extension in the swagger:operation YAML body is preserved in full — including nested keys that
+// share a name with a known keyword (here, `responses:` inside x-amazon-apigateway-integration),
+// which must NOT be confused with the operation's own responses.
 func TestCoverage_Bug1958(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1958/..."},

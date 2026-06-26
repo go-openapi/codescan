@@ -12,15 +12,16 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2761 documents the resolution to go-swagger issue #2761
-// ("allOf in response doesn't use $ref"): a response body with an embedded
-// `swagger:allOf` member emits a proper `allOf: [{$ref}, …]` — provided the
-// embedded base is a swagger:model (a definition to reference). The reporter
-// embedded a swagger:*response* (which has no definition), so its fields were
-// inlined; using a swagger:model yields the $ref, as locked here.
+// TestCoverage_Bug2761 documents the resolution to go-swagger issue #2761 ("allOf in response
+// doesn't use $ref"): a response body with an embedded `swagger:allOf` member emits a proper
+// `allOf: [{$ref}, …]` — provided the embedded base is a swagger:model (a definition to
+// reference).
 //
-// 📖 Need doc: an allOf $ref requires the embedded base to be a swagger:model,
-// not a swagger:response.
+// The reporter embedded a swagger:*response* (which has no definition), so its fields were inlined;
+// using a swagger:model yields the $ref, as locked here.
+//
+// 📖 Need doc: an allOf $ref requires the embedded base to be a swagger:model, not a
+// swagger:response.
 func TestCoverage_Bug2761(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2761/..."},

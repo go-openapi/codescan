@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2871 locks the reasonable answer to go-swagger issue #2871: the
-// literal "dynamic examples" framing is out of scope, but distinct per-operation,
-// per-response examples (by mime type) ARE supported — multiple operations may
-// reuse one example-bearing model while each response code carries its own
-// example, different from the model's.
+// TestCoverage_Bug2871 locks the reasonable answer to go-swagger issue #2871: the literal "dynamic
+// examples" framing is out of scope, but distinct per-operation, per-response examples (by mime
+// type) ARE supported — multiple operations may reuse one example-bearing model while each
+// response code carries its own example, different from the model's.
 func TestCoverage_Bug2871(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2871/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,

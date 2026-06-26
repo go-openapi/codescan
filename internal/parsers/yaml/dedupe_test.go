@@ -9,10 +9,9 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// The dedupe layer is exercised end-to-end via Parse / ParseInto /
-// TypedExtensions tests (yaml_test.go); these tests pin the helper's
-// behaviour directly so future edits can't regress edge cases without
-// turning red here too.
+// The dedupe layer is exercised end-to-end via Parse / ParseInto / TypedExtensions tests
+// (yaml_test.go); these tests pin the helper's behaviour directly so future edits can't regress
+// edge cases without turning red here too.
 
 func TestDedupeFlatMappingLastWins(t *testing.T) {
 	body := []byte("type: apiKey\nname: KEY\ntype: oauth2\n")
@@ -32,9 +31,8 @@ func TestDedupeFlatMappingLastWins(t *testing.T) {
 }
 
 func TestDedupeNestedMapping(t *testing.T) {
-	// Q28 repro shape — duplicate type/in inside a nested
-	// SecurityDefinitions entry, plus a duplicate top-level scheme
-	// name so we exercise both depths.
+	// Q28 repro shape — duplicate type/in inside a nested SecurityDefinitions entry, plus a
+	// duplicate top-level scheme name so we exercise both depths.
 	body := []byte(`SecurityDefinitions:
   api_key:
     type: apiKey
@@ -130,8 +128,8 @@ func TestDedupeDeeplyNested(t *testing.T) {
 }
 
 func TestDedupeNoDuplicatesIsIdempotent(t *testing.T) {
-	// A mapping without dups should pass through unchanged — the
-	// fast path in dedupePairs returns the original slice.
+	// A mapping without dups should pass through unchanged — the fast path in dedupePairs returns
+	// the original slice.
 	body := []byte("alpha: 1\nbeta: 2\ngamma: 3\n")
 	var got map[string]any
 	if err := decodeYAMLBody(body, &got); err != nil {
@@ -165,8 +163,8 @@ func TestDedupeScalarOnlyBody(t *testing.T) {
 }
 
 func TestDedupeIntoTypedStruct(t *testing.T) {
-	// ParseInto-style target — the dedupe must precede the struct
-	// decode so yaml.v3's strict check doesn't fire on the duplicate.
+	// ParseInto-style target — the dedupe must precede the struct decode so yaml.v3's strict check
+	// doesn't fire on the duplicate.
 	type sec struct {
 		Type string `yaml:"type"`
 		Name string `yaml:"name"`
@@ -183,10 +181,9 @@ func TestDedupeIntoTypedStruct(t *testing.T) {
 }
 
 func TestDedupeDistinctKindsNotMerged(t *testing.T) {
-	// (Kind, Value) is the dedupe key — a string "1" and an int 1
-	// have different scalar styles but the same Value+Kind in YAML,
-	// so they DO collapse. Document the choice: this mirrors
-	// yaml.v3's own uniqueKeys comparison (decode.go:775).
+	// (Kind, Value) is the dedupe key — a string "1" and an int 1 have different scalar styles but
+	// the same Value+Kind in YAML, so they DO collapse.
+	// Document the choice: this mirrors yaml.v3's own uniqueKeys comparison (decode.go:775).
 	body := []byte(`"1": quoted
 1: unquoted
 `)
@@ -194,9 +191,8 @@ func TestDedupeDistinctKindsNotMerged(t *testing.T) {
 	if err := decodeYAMLBody(body, &got); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	// Both keys land in the same scalar-kind bucket; last-wins
-	// keeps the second entry. The surviving key may be quoted or
-	// unquoted depending on the yaml lib's round-trip; assert on
+	// Both keys land in the same scalar-kind bucket; last-wins keeps the second entry.
+	// The surviving key may be quoted or unquoted depending on the yaml lib's round-trip; assert on
 	// the value.
 	if len(got) != 1 {
 		t.Errorf("want 1 surviving key (kind+value collapse), got %d: %v", len(got), got)

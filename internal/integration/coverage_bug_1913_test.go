@@ -12,14 +12,14 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1913 locks go-swagger issue #1913 ("sub-types not generated
-// from go discriminated type"): an interface model with `discriminator: true`
-// emits a base definition carrying `discriminator`, and the struct subtypes
-// that embed it via `swagger:allOf` emit `allOf: [{$ref base}, {own props}]`.
+// TestCoverage_Bug1913 locks go-swagger issue #1913 ("sub-types not generated from go discriminated
+// type"): an interface model with `discriminator: true` emits a base definition carrying
+// `discriminator`, and the struct subtypes that embed it via `swagger:allOf` emit `allOf: [{$ref
+// base}, {own props}]`.
 //
-// (The reporter's residual concern — subtypes require -m, which over-generates
-// — is tracked as forthcoming-features §12 (prune under -m) and §15
-// (auto-discover discriminator subtypes of a referenced base).)
+// (The reporter's residual concern — subtypes require -m, which over-generates — is tracked as
+// forthcoming-features §12 (prune under -m) and §15 (auto-discover discriminator subtypes of a
+// referenced base).)
 func TestCoverage_Bug1913(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1913/..."},

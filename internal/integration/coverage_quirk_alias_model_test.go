@@ -12,14 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_AliasModelNoHang is the F9 regression lock (doc-site-quirks.md). A
-// swagger:model-annotated Go type alias (type Price = Money, both
-// swagger:model) once sent the scanner into an infinite loop when the alias
-// was built — under the default (expand) and RefAliases modes;
-// TransparentAliases dissolved the alias before the looping path. The hang is
-// gone on the current base; this test keeps it gone across all three alias
-// modes. A regression would resurface as a test timeout (CI runs with
-// -timeout), not an assertion failure — that is the point of the lock.
+// TestQuirk_AliasModelNoHang is the F9 regression lock (doc-site-quirks.md).
+//
+// A swagger:model-annotated Go type alias (type Price = Money, both swagger:model) once sent the
+// scanner into an infinite loop when the alias was built — under the default (expand) and
+// RefAliases modes; TransparentAliases dissolved the alias before the looping path.
+// The hang is gone on the current base; this test keeps it gone across all three alias modes.
+//
+// A regression would resurface as a test timeout (CI runs with -timeout), not an assertion failure
+// — that is the point of the lock.
 func TestQuirk_AliasModelNoHang(t *testing.T) {
 	cases := []struct {
 		name       string

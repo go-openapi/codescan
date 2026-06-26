@@ -13,10 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ExternalDocsObjects locks externalDocs on non-meta objects:
-// emitted on swagger:route + swagger:operation operations and on a
-// swagger:model schema, and rejected (with a diagnostic) on a simple-schema
-// query parameter.
+// TestCoverage_ExternalDocsObjects locks externalDocs on non-meta objects: emitted on swagger:route
+// + swagger:operation operations and on a swagger:model schema, and rejected (with a diagnostic) on
+// a simple-schema query parameter.
 func TestCoverage_ExternalDocsObjects(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -55,8 +54,8 @@ func TestCoverage_ExternalDocsObjects(t *testing.T) {
 	require.NotNil(t, name.ExternalDocs)
 	assert.Equal(t, "https://name.example.org", name.ExternalDocs.URL)
 
-	// $ref'd field: the sibling externalDocs lifts onto the allOf
-	// compound (sibling of the $ref), not into the override schema.
+	// $ref'd field: the sibling externalDocs lifts onto the allOf compound (sibling of the $ref), not
+	// into the override schema.
 	ref := model.Properties["ref"]
 	require.Len(t, ref.AllOf, 1)
 	assert.Equal(t, "#/definitions/Nested", ref.AllOf[0].Ref.String())

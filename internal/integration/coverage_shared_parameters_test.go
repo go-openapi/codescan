@@ -16,12 +16,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_SharedParameters_TopLevel exercises P2 of the
-// shared-parameters feature (go-swagger#2632): a `swagger:parameters *`
-// struct registers its fields at the spec top level (#/parameters/{name}),
-// keyed by the resolved parameter name. Register-only: the entries appear
-// in the top-level map regardless of whether any operation references them
-// yet (the $ref wiring is a later phase).
+// TestCoverage_SharedParameters_TopLevel exercises P2 of the shared-parameters feature
+// (go-swagger#2632): a `swagger:parameters *` struct registers its fields at the spec top level
+// (#/parameters/{name}), keyed by the resolved parameter name.
+//
+// Register-only: the entries appear in the top-level map regardless of whether any operation
+// references them yet (the $ref wiring is a later phase).
 func TestCoverage_SharedParameters_TopLevel(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters/..."},
@@ -30,8 +30,8 @@ func TestCoverage_SharedParameters_TopLevel(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// CommonHeaders (swagger:parameters *) → #/parameters/X-Request-ID
-	// AuthHeader   (swagger:parameters * createPet) → #/parameters/X-API-Key
+	// CommonHeaders (swagger:parameters *) → #/parameters/X-Request-ID AuthHeader
+	// (swagger:parameters * createPet) → #/parameters/X-API-Key.
 	reqID, ok := doc.Parameters["X-Request-ID"]
 	require.TrueT(t, ok, "expected #/parameters/X-Request-ID")
 	assert.EqualT(t, "header", reqID.In)
@@ -43,8 +43,8 @@ func TestCoverage_SharedParameters_TopLevel(t *testing.T) {
 	assert.EqualT(t, "header", apiKey.In)
 	assert.TrueT(t, apiKey.Required)
 
-	// The operation-id targets (ListPetsParams → listPets, CreatePetParams →
-	// createPet) are NOT registered at the top level.
+	// The operation-id targets (ListPetsParams → listPets, CreatePetParams → createPet) are NOT
+	// registered at the top level.
 	_, hasLimit := doc.Parameters["limit"]
 	assert.FalseT(t, hasLimit, "inline operation params must not leak into #/parameters")
 }
@@ -60,11 +60,10 @@ func paramRefs(op *spec.Operation) []string {
 	return refs
 }
 
-// TestCoverage_SharedParameters_Refs exercises P3 (go-swagger#2632): a
-// shared parameter is wired into an operation as a #/parameters/{name}
-// $ref through both reference channels — the `swagger:parameters * opid`
-// definition convenience and the standalone `swagger:parameters opid name`
-// reference marker on a func.
+// TestCoverage_SharedParameters_Refs exercises P3 (go-swagger#2632): a shared parameter is wired
+// into an operation as a #/parameters/{name} $ref through both reference channels — the
+// `swagger:parameters * opid` definition convenience and the standalone `swagger:parameters opid
+// name` reference marker on a func.
 func TestCoverage_SharedParameters_Refs(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters/..."},
@@ -98,12 +97,12 @@ func TestCoverage_SharedParameters_Refs(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters.json")
 }
 
-// TestCoverage_SharedParameters_PathItem exercises P4 (fixture 2,
-// go-swagger#2632): `swagger:parameters /path` inlines a struct's fields
-// into the path-item; `swagger:parameters /path name` adds a
-// #/parameters/{name} $ref to it. Application is exact-path (no hierarchy),
-// and path-item parameters co-exist with operation-level ones (the
-// operation one wins at resolution — co-presence, not removal).
+// TestCoverage_SharedParameters_PathItem exercises P4 (fixture 2, go-swagger#2632):
+// `swagger:parameters /path` inlines a struct's fields into the path-item; `swagger:parameters
+// /path name` adds a #/parameters/{name} $ref to it.
+//
+// Application is exact-path (no hierarchy), and path-item parameters co-exist with operation-level
+// ones (the operation one wins at resolution — co-presence, not removal).
 func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters-pathitem/..."},
@@ -116,8 +115,8 @@ func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 	pets, ok := doc.Paths.Paths["/pets"]
 	require.TrueT(t, ok, "expected a /pets path")
 
-	// Path-item parameters: inline X-API-Key (from the /pets struct) + a
-	// $ref to the shared X-Request-ID (from the /pets reference marker).
+	// Path-item parameters: inline X-API-Key (from the /pets struct) + a $ref to the shared
+	// X-Request-ID (from the /pets reference marker).
 	var inlineAPIKey *spec.Parameter
 	var refReqID bool
 	for i := range pets.Parameters {
@@ -133,8 +132,8 @@ func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 	assert.TrueT(t, inlineAPIKey.Required, "path-item X-API-Key is required:true")
 	assert.TrueT(t, refReqID, "expected a #/parameters/X-Request-ID $ref on the /pets path-item")
 
-	// Co-presence override: listPets carries its OWN X-API-Key (required:false)
-	// at the operation level; the path-item's required:true one is untouched.
+	// Co-presence override: listPets carries its OWN X-API-Key (required:false) at the operation
+	// level; the path-item's required:true one is untouched.
 	require.NotNil(t, pets.Get)
 	var opAPIKey *spec.Parameter
 	for i := range pets.Get.Parameters {
@@ -145,8 +144,7 @@ func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 	require.NotNil(t, opAPIKey, "listPets has its own X-API-Key (operation-level override)")
 	assert.FalseT(t, opAPIKey.Required, "operation-level X-API-Key is required:false")
 
-	// Exact path, no hierarchy: /pets/{id} must NOT inherit the /pets
-	// path-item parameters.
+	// Exact path, no hierarchy: /pets/{id} must NOT inherit the /pets path-item parameters.
 	petByID, ok := doc.Paths.Paths["/pets/{id}"]
 	require.TrueT(t, ok, "expected a /pets/{id} path")
 	for _, p := range petByID.Parameters {
@@ -154,18 +152,19 @@ func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 			"/pets/{id} must not inherit /pets path-item parameters (no hierarchy)")
 	}
 
-	// Full-spec snapshot: the path-item parameters array, the #/parameters
-	// $ref target, and the co-present operation override are the most novel
-	// output of the feature — pin them in a golden for review.
+	// Full-spec snapshot: the path-item parameters array, the #/parameters $ref target, and the
+	// co-present operation override are the most novel output of the feature — pin them in a golden
+	// for review.
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_pathitem.json")
 }
 
-// TestCoverage_SharedResponses exercises P5 (go-swagger#2632): a
-// `swagger:response *` struct registers a shared response at #/responses/
-// (the `*` is a synonym for the bare/named form, keyed by the type name),
-// and operations that name it in their Responses block resolve to a
-// $ref: #/responses/{name}. Before P5 the `*` failed the name regex and the
-// response was silently dropped, leaving the route ref dangling.
+// TestCoverage_SharedResponses exercises P5 (go-swagger#2632): a `swagger:response *` struct
+// registers a shared response at #/responses/ (the `*` is a synonym for the bare/named form, keyed
+// by the type name), and operations that name it in their Responses block resolve to a $ref:
+// #/responses/{name}.
+//
+// Before P5 the `*` failed the name regex and the response was silently dropped, leaving the route
+// ref dangling.
 func TestCoverage_SharedResponses(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters/..."},
@@ -178,8 +177,7 @@ func TestCoverage_SharedResponses(t *testing.T) {
 	_, ok := doc.Responses["ErrorResponse"]
 	require.TrueT(t, ok, "expected #/responses/ErrorResponse from swagger:response *")
 
-	// Both routes' `default: ErrorResponse` now resolve to a $ref (previously
-	// dropped as dangling).
+	// Both routes' `default: ErrorResponse` now resolve to a $ref (previously dropped as dangling).
 	require.NotNil(t, doc.Paths)
 	pets := doc.Paths.Paths["/pets"]
 	for _, op := range []*spec.Operation{pets.Get, pets.Post} {
@@ -190,12 +188,11 @@ func TestCoverage_SharedResponses(t *testing.T) {
 	}
 }
 
-// TestCoverage_SharedParameters_OverridesAndDedup exercises P3 reference
-// edge cases (fixture 5, go-swagger#2632): the shared key/reference is the
-// resolved (overridden) name (C3); duplicate operation-id targets (C1) and
-// duplicate reference names (C2) are dropped with warnings; and a reference
-// to an unregistered shared parameter is dropped with a
-// scan.dangling-parameter-ref warning.
+// TestCoverage_SharedParameters_OverridesAndDedup exercises P3 reference edge cases (fixture 5,
+// go-swagger#2632): the shared key/reference is the resolved (overridden) name (C3); duplicate
+// operation-id targets (C1) and duplicate reference names (C2) are dropped with warnings; and a
+// reference to an unregistered shared parameter is dropped with a scan.dangling-parameter-ref
+// warning.
 func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -208,8 +205,8 @@ func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// C3: the `name:` override is the registered key (X-Correlation-ID, not
-	// the json-tag X-Request-ID), and a reference resolves by that name.
+	// C3: the `name:` override is the registered key (X-Correlation-ID, not the json-tag
+	// X-Request-ID), and a reference resolves by that name.
 	_, ok := doc.Parameters["X-Correlation-ID"]
 	require.TrueT(t, ok, "expected #/parameters/X-Correlation-ID (overridden name)")
 	_, hasOld := doc.Parameters["X-Request-ID"]
@@ -243,12 +240,12 @@ func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_overrides.json")
 }
 
-// TestCoverage_SharedParameters_YAMLRefs exercises P6 (fixture 4,
-// go-swagger#2632): a swagger:operation wholesale-YAML body that references
-// the shared namespace is validated against the completed #/parameters and
-// #/responses maps. A resolving $ref is kept verbatim; a dangling one is
-// dropped with a scan.dangling-{parameter,response}-ref warning rather than
-// emitting an invalid reference.
+// TestCoverage_SharedParameters_YAMLRefs exercises P6 (fixture 4, go-swagger#2632): a
+// swagger:operation wholesale-YAML body that references the shared namespace is validated against
+// the completed #/parameters and #/responses maps.
+//
+// A resolving $ref is kept verbatim; a dangling one is dropped with a
+// scan.dangling-{parameter,response}-ref warning rather than emitting an invalid reference.
 func TestCoverage_SharedParameters_YAMLRefs(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -291,12 +288,12 @@ func TestCoverage_SharedParameters_YAMLRefs(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_yaml.json")
 }
 
-// TestCoverage_SharedParameters_Conflict exercises the keep-first conflict
-// policy (P2, fixture 3): two `swagger:parameters *` structs in different
-// packages register the same short name. The first wins, the later is
-// dropped with a scan.shared-parameter-conflict warning — never renamed,
-// since shared parameters are referenced only by short name. Independent
-// namespaces: #/definitions/Status coexists with #/parameters/Status.
+// TestCoverage_SharedParameters_Conflict exercises the keep-first conflict policy (P2, fixture 3):
+// two `swagger:parameters *` structs in different packages register the same short name.
+//
+// The first wins, the later is dropped with a scan.shared-parameter-conflict warning — never
+// renamed, since shared parameters are referenced only by short name.
+// Independent namespaces: #/definitions/Status coexists with #/parameters/Status.
 func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -310,25 +307,23 @@ func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// X-Token registered once (the survivor wins; the loser is dropped, not
-	// renamed — no X-Token clone under a mangled key). pkga (header) is
-	// scanned before pkgb (query), so the header form is the keep-first
-	// survivor.
+	// X-Token registered once (the survivor wins; the loser is dropped, not renamed — no X-Token
+	// clone under a mangled key). pkga (header) is scanned before pkgb (query), so the header form is
+	// the keep-first survivor.
 	xtoken, ok := doc.Parameters["X-Token"]
 	require.TrueT(t, ok, "expected #/parameters/X-Token")
 	assert.EqualT(t, "header", xtoken.In, "pkga (header) wins keep-first over pkgb (query)")
 	assert.Len(t, doc.Parameters, 2, "X-Token + Status, no renamed duplicate")
 
-	// Independent namespaces: a shared parameter named Status coexists with a
-	// definition named Status.
+	// Independent namespaces: a shared parameter named Status coexists with a definition named Status.
 	_, hasParamStatus := doc.Parameters["Status"]
 	assert.TrueT(t, hasParamStatus, "expected #/parameters/Status")
 	_, hasDefStatus := doc.Definitions["Status"]
 	assert.TrueT(t, hasDefStatus, "expected #/definitions/Status (independent namespace)")
 
-	// Responses follow the same keep-first policy: pkga and pkgb both declare
-	// `swagger:response *` ErrorResponse; pkga (scanned first by import-path
-	// order) wins, pkgb is dropped — registered once, not renamed.
+	// Responses follow the same keep-first policy: pkga and pkgb both declare `swagger:response *`
+	// ErrorResponse; pkga (scanned first by import-path order) wins, pkgb is dropped — registered
+	// once, not renamed.
 	_, hasErr := doc.Responses["ErrorResponse"]
 	require.TrueT(t, hasErr, "expected #/responses/ErrorResponse")
 	assert.Len(t, doc.Responses, 1, "ErrorResponse registered once, no renamed duplicate")
@@ -344,8 +339,8 @@ func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_conflict.json")
 }
 
-// runSharedPrune scans Fixture 6 (shared-parameters-prune) under ScanModels,
-// toggling PruneUnusedModels, and collects the scan.pruned-unused Hints.
+// runSharedPrune scans Fixture 6 (shared-parameters-prune) under ScanModels, toggling
+// PruneUnusedModels, and collects the scan.pruned-unused Hints.
 func runSharedPrune(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnostic) {
 	t.Helper()
 	var pruned []grammar.Diagnostic
@@ -365,10 +360,9 @@ func runSharedPrune(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnost
 	return doc, pruned
 }
 
-// TestCoverage_SharedParameters_Prune_Off is the control for the prune
-// extension (C4, P7): with ScanModels and no PruneUnusedModels, every shared
-// parameter and response is emitted — including the ones no operation
-// references (X-Unused, UnusedResponse).
+// TestCoverage_SharedParameters_Prune_Off is the control for the prune extension (C4, P7): with
+// ScanModels and no PruneUnusedModels, every shared parameter and response is emitted — including
+// the ones no operation references (X-Unused, UnusedResponse).
 func TestCoverage_SharedParameters_Prune_Off(t *testing.T) {
 	doc, pruned := runSharedPrune(t, false)
 
@@ -399,8 +393,8 @@ func TestCoverage_SharedParameters_Prune_On(t *testing.T) {
 	assert.NotContains(t, doc.Parameters, "X-Unused")
 	assert.NotContains(t, doc.Responses, "UnusedResponse")
 
-	// The surviving reference still resolves: listP keeps its #/parameters/X-Used
-	// $ref and its default #/responses/UsedResponse.
+	// The surviving reference still resolves: listP keeps its #/parameters/X-Used $ref and its default
+	// #/responses/UsedResponse.
 	op := doc.Paths.Paths["/p"].Get
 	require.NotNil(t, op)
 	assert.Contains(t, paramRefs(op), "#/parameters/X-Used")
@@ -417,9 +411,8 @@ func TestCoverage_SharedParameters_Prune_On(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_shared_parameters_prune.json")
 }
 
-// runSharedPruneCascade scans the shared-parameters-prune-cascade fixture under
-// ScanModels, toggling PruneUnusedModels, and collects the scan.pruned-unused
-// Hints.
+// runSharedPruneCascade scans the shared-parameters-prune-cascade fixture under ScanModels,
+// toggling PruneUnusedModels, and collects the scan.pruned-unused Hints.
 func runSharedPruneCascade(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnostic) {
 	t.Helper()
 	var pruned []grammar.Diagnostic
@@ -439,9 +432,9 @@ func runSharedPruneCascade(t *testing.T, prune bool) (*spec.Swagger, []grammar.D
 	return doc, pruned
 }
 
-// TestCoverage_SharedParameters_PruneCascade_Off is the control: with ScanModels
-// and no prune, every swagger:model is emitted — including Orphan, reachable only
-// through the unreferenced UnusedResponse — and both shared responses are present.
+// TestCoverage_SharedParameters_PruneCascade_Off is the control: with ScanModels and no prune,
+// every swagger:model is emitted — including Orphan, reachable only through the unreferenced
+// UnusedResponse — and both shared responses are present.
 func TestCoverage_SharedParameters_PruneCascade_Off(t *testing.T) {
 	doc, pruned := runSharedPruneCascade(t, false)
 
@@ -454,22 +447,21 @@ func TestCoverage_SharedParameters_PruneCascade_Off(t *testing.T) {
 	assert.Empty(t, pruned, "nothing is pruned without the flag")
 }
 
-// TestCoverage_SharedParameters_PruneCascade_On witnesses the second step of the
-// prune extension (C4 / P7, §6b): the shared-object prune runs BEFORE the
-// definition reachability walk, so pruning the unreferenced UnusedResponse also
-// prunes Orphan — the definition reachable ONLY through it (the cascade). Shared
-// is kept, because the surviving Survivor still references it: the prune is
+// TestCoverage_SharedParameters_PruneCascade_On witnesses the second step of the prune extension
+// (C4 / P7, §6b): the shared-object prune runs BEFORE the definition reachability walk, so pruning
+// the unreferenced UnusedResponse also prunes Orphan — the definition reachable ONLY through it
+// (the cascade).
+//
+// Shared is kept, because the surviving Survivor still references it: the prune is
 // reachability-correct, not a naive "drop everything the pruned response touched".
 func TestCoverage_SharedParameters_PruneCascade_On(t *testing.T) {
 	doc, pruned := runSharedPruneCascade(t, true)
 
-	// The unreferenced shared response and the definition reached only through
-	// it are both gone.
+	// The unreferenced shared response and the definition reached only through it are both gone.
 	assert.NotContains(t, doc.Responses, "UnusedResponse")
 	assert.NotContains(t, doc.Definitions, "Orphan", "Orphan cascades away with its only keeper")
 
-	// The referenced response, its body model, and the model shared with a
-	// surviving root all stay.
+	// The referenced response, its body model, and the model shared with a surviving root all stay.
 	assert.Contains(t, doc.Responses, "UsedResponse")
 	assert.Contains(t, doc.Definitions, "Survivor")
 	assert.Contains(t, doc.Definitions, "Shared",
@@ -477,8 +469,8 @@ func TestCoverage_SharedParameters_PruneCascade_On(t *testing.T) {
 	assert.Len(t, doc.Responses, 1, "only the referenced shared response survives")
 	assert.Len(t, doc.Definitions, 2, "Survivor + Shared; Orphan pruned")
 
-	// Two located Hints: the shared response (pruned first) and the cascaded
-	// definition (pruned by the definition pass that follows).
+	// Two located Hints: the shared response (pruned first) and the cascaded definition (pruned by the
+	// definition pass that follows).
 	require.Len(t, pruned, 2, "one Hint for the shared response, one for the cascaded definition")
 	var sawResponse, sawDefinition bool
 	for _, d := range pruned {

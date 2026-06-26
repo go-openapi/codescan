@@ -39,8 +39,8 @@ func TestParser_ResponseBlock_OptionalName(t *testing.T) {
 	require.True(t, ok)
 	assert.Empty(t, rb2.Name)
 
-	// `swagger:response *` is a synonym for the bare form: no name (the
-	// builder keys it by the type name), no diagnostics.
+	// `swagger:response *` is a synonym for the bare form: no name (the builder keys it by the type
+	// name), no diagnostics.
 	b3 := parseString(t, "swagger:response *")
 	rb3, ok := b3.(*ResponseBlock)
 	require.True(t, ok)
@@ -82,8 +82,8 @@ func TestParser_SingleLineCommentAsDescription(t *testing.T) {
 			WithSingleLineCommentAsDescription(on)).ParseText(src, pos)
 	}
 
-	// Single-line title-shaped comment: default keeps it as title; the
-	// option moves it to the description.
+	// Single-line title-shaped comment: default keeps it as title; the option moves it to the
+	// description.
 	const single = "A one-line comment.\n\nswagger:model Pet"
 	def := parse(single, false)
 	assert.Equal(t, "A one-line comment.", def.Title())
@@ -93,8 +93,8 @@ func TestParser_SingleLineCommentAsDescription(t *testing.T) {
 	assert.Empty(t, on.Title(), "single-line comment is no longer a title")
 	assert.Equal(t, "A one-line comment.", on.Description())
 
-	// Multi-line comment: the title/description split is preserved in both
-	// modes — the option only affects single-line comments.
+	// Multi-line comment: the title/description split is preserved in both modes — the option only
+	// affects single-line comments.
 	const multi = "Title line.\n\nDescription body.\n\nswagger:model Pet"
 	multiOn := parse(multi, true)
 	assert.Equal(t, "Title line.", multiOn.Title(), "multi-line title unchanged by the option")
@@ -208,8 +208,8 @@ func TestAnnotationKind_PatternProperties_RoundTrip(t *testing.T) {
 }
 
 func TestParser_PatternPropertiesBlock_CapturesRawPairList(t *testing.T) {
-	// The whole `"<re>": <spec>, …` remainder is captured verbatim as one arg
-	// (it contains spaces/colons/commas the builder parses).
+	// The whole `"<re>": <spec>, …` remainder is captured verbatim as one arg (it contains
+	// spaces/colons/commas the builder parses).
 	b := parseString(t, `swagger:patternProperties "^x-": string, "^\d+$": integer`)
 	cb, ok := b.(*ClassifierBlock)
 	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
@@ -253,10 +253,10 @@ func TestParser_DescriptionOverride_CapturesWholeLine(t *testing.T) {
 }
 
 func TestParser_DescriptionOverride_BareIsWellFormed(t *testing.T) {
-	// A bare swagger:description / swagger:title is well-formed grammar (no
-	// parse diagnostic): the empty value is the deliberate godoc-suppression
-	// affordance. The emptiness *warning* (scan.empty-override) is the builder
-	// consumption point's job, not the parser's (design D7 / §4).
+	// A bare swagger:description / swagger:title is well-formed grammar (no parse diagnostic): the
+	// empty value is the deliberate godoc-suppression affordance.
+	// The emptiness *warning* (scan.empty-override) is the builder consumption point's job, not the
+	// parser's (design D7 / §4).
 	for _, src := range []string{"swagger:description", "swagger:title", "swagger:description   "} {
 		b := parseString(t, src)
 		assert.Emptyf(t, b.Diagnostics(), "%q is well-formed → no parser diagnostic", src)
@@ -267,8 +267,8 @@ func TestParser_DescriptionOverride_BareIsWellFormed(t *testing.T) {
 }
 
 func TestParser_DescriptionOverride_MultiLineBody(t *testing.T) {
-	// Option B: lines following swagger:description fold into the description
-	// (blank-line / keyword / annotation / EOF terminated), joined with "\n".
+	// Option B: lines following swagger:description fold into the description (blank-line / keyword /
+	// annotation / EOF terminated), joined with "\n".
 	b := parseString(t, "swagger:description First line of the description.\nSecond line continues it.")
 	cb, ok := b.(*ClassifierBlock)
 	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
@@ -294,9 +294,9 @@ func TestParser_DescriptionOverride_BodyStopsAtBlankAndKeyword(t *testing.T) {
 }
 
 func TestParser_DescriptionOverride_CoexistsWithKeywords(t *testing.T) {
-	// description/title dispatch through the schema family (like swagger:name),
-	// so a co-located validation keyword surfaces as a Property rather than
-	// being rejected as context-invalid under a classifier block.
+	// description/title dispatch through the schema family (like swagger:name), so a co-located
+	// validation keyword surfaces as a Property rather than being rejected as context-invalid under a
+	// classifier block.
 	b := parseString(t, "swagger:description The value.\nmaximum: 100")
 	cb, ok := b.(*ClassifierBlock)
 	require.True(t, ok, "expected *ClassifierBlock, got %T", b)
@@ -503,12 +503,12 @@ func TestParser_ClassifierBlock_StrfmtMissingArg(t *testing.T) {
 	assert.Equal(t, CodeMissingRequiredArg, b.Diagnostics()[0].Code)
 }
 
-// TestParser_ClassifierBlock_TypeWellFormed pins the relaxed swagger:type
-// parsing (F3): a well-formed argument — canonical name, Go builtin, array, or
-// an arbitrary identifier standing for a scanned-type reference — no longer
-// raises a parser diagnostic; semantic resolution (and any unknown-type
-// diagnostic) is the builder's job. Only a structurally malformed token still
-// raises CodeInvalidTypeRef.
+// TestParser_ClassifierBlock_TypeWellFormed pins the relaxed swagger:type parsing (F3): a
+// well-formed argument — canonical name, Go builtin, array, or an arbitrary identifier standing
+// for a scanned-type reference — no longer raises a parser diagnostic; semantic resolution (and
+// any unknown-type diagnostic) is the builder's job.
+//
+// Only a structurally malformed token still raises CodeInvalidTypeRef.
 func TestParser_ClassifierBlock_TypeWellFormed(t *testing.T) {
 	for _, arg := range []string{"string", "integer", "int64", "[]string", "custom", "Custom"} {
 		b := parseString(t, "swagger:type "+arg)
@@ -536,12 +536,12 @@ func TestParser_EnumDecl_PlainList(t *testing.T) {
 	assert.Equal(t, enumFormPlainOnly, eb.InlineForm)
 }
 
-// TestParser_EnumDecl_Bare pins the relaxed bare-swagger:enum contract (F4b):
-// a bare `swagger:enum` (no name, no inline values, no body) is structurally
-// valid — it produces an EnumDeclBlock with an empty Name and raises NO parse
-// diagnostic. The builder infers the enum name from the declared type and
-// collects its consts; "no consts found" is a builder-level concern, not a
-// grammar error.
+// TestParser_EnumDecl_Bare pins the relaxed bare-swagger:enum contract (F4b): a bare `swagger:enum`
+// (no name, no inline values, no body) is structurally valid — it produces an EnumDeclBlock with
+// an empty Name and raises NO parse diagnostic.
+//
+// The builder infers the enum name from the declared type and collects its consts; "no consts
+// found" is a builder-level concern, not a grammar error.
 func TestParser_EnumDecl_Bare(t *testing.T) {
 	b := parseString(t, "swagger:enum")
 	eb, ok := b.(*EnumDeclBlock)
@@ -560,10 +560,10 @@ maxLength: 64`
 	ub, ok := b.(*UnboundBlock)
 	require.True(t, ok)
 	assert.Equal(t, AnnUnknown, ub.AnnotationKind())
-	// UnboundBlocks now run title/desc classification too — first line
-	// ending in punctuation is title (heuristic 2). Required for the
-	// schema builder's PreambleTitle path on indirectly-referenced
-	// non-annotated types (interfaces / aliases).
+	// UnboundBlocks now run title/desc classification too — first line ending in punctuation is
+	// title (heuristic 2).
+	// Required for the schema builder's PreambleTitle path on indirectly-referenced non-annotated
+	// types (interfaces / aliases).
 	assert.Equal(t, "Name of the user.", ub.Title())
 	assert.Empty(t, ub.Description())
 
@@ -632,10 +632,10 @@ Extensions:
 	assert.Equal(t, 2, count)
 }
 
-// TestParser_SchemaBody_ExtensionsBlockTypedNested asserts that
-// nested YAML mappings surface as typed map[string]any, not as
-// yaml.v3's map[any]any or as a flat string. Closes the round-2
-// promise of `.claude/plans/typed-extensions.md`.
+// TestParser_SchemaBody_ExtensionsBlockTypedNested asserts that nested YAML mappings surface as
+// typed map[string]any, not as yaml.v3's map[any]any or as a flat string.
+//
+// Closes the round-2 promise of `.claude/plans/typed-extensions.md`.
 func TestParser_SchemaBody_ExtensionsBlockTypedNested(t *testing.T) {
 	src := `swagger:model Foo
 
@@ -663,9 +663,8 @@ Extensions:
 	assert.True(t, found, "x-config Extension should be present")
 }
 
-// TestParser_SchemaBody_ExtensionsBlockMalformedYAMLEmitsDiagnostic
-// asserts the new CodeInvalidYAMLExtensions code fires when the body
-// fails YAML parsing.
+// TestParser_SchemaBody_ExtensionsBlockMalformedYAMLEmitsDiagnostic asserts the new
+// CodeInvalidYAMLExtensions code fires when the body fails YAML parsing.
 func TestParser_SchemaBody_ExtensionsBlockMalformedYAMLEmitsDiagnostic(t *testing.T) {
 	src := `swagger:model Foo
 

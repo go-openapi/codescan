@@ -26,9 +26,8 @@ func runSkipJSONifyInterface(t *testing.T, skip bool) *spec.Swagger {
 	return doc
 }
 
-// TestCoverage_SkipJSONifyInterface_Off is the control: with the flag off the
-// default-path methods auto-jsonify (lowercase-first camelCase), matching the
-// historic behaviour.
+// TestCoverage_SkipJSONifyInterface_Off is the control: with the flag off the default-path methods
+// auto-jsonify (lowercase-first camelCase), matching the historic behaviour.
 func TestCoverage_SkipJSONifyInterface_Off(t *testing.T) {
 	doc := runSkipJSONifyInterface(t, false)
 
@@ -45,10 +44,9 @@ func TestCoverage_SkipJSONifyInterface_Off(t *testing.T) {
 	assert.Contains(t, props, "explicit_name", "swagger:name override must stay verbatim")
 }
 
-// TestCoverage_SkipJSONifyInterface_On exercises Options.SkipJSONifyInterfaceMethods:
-// with the opt-out on, default-path interface methods are emitted verbatim (the
-// auto-jsonify mangler is skipped) while the swagger:name override still reaches
-// the spec exactly as written.
+// TestCoverage_SkipJSONifyInterface_On exercises Options.SkipJSONifyInterfaceMethods: with the
+// opt-out on, default-path interface methods are emitted verbatim (the auto-jsonify mangler is
+// skipped) while the swagger:name override still reaches the spec exactly as written.
 func TestCoverage_SkipJSONifyInterface_On(t *testing.T) {
 	doc := runSkipJSONifyInterface(t, true)
 

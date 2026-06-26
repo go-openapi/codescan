@@ -12,15 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug334 locks the resolution to go-swagger issue #334 ("not
-// generating model info / empty definitions, Swagger UI error"): a swagger:route
-// annotation placed INSIDE a function body is now detected, and the model is
-// emitted — so definitions and paths are no longer empty.
+// TestCoverage_Bug334 locks the resolution to go-swagger issue #334 ("not generating model info /
+// empty definitions, Swagger UI error"): a swagger:route annotation placed INSIDE a function body
+// is now detected, and the model is emitted — so definitions and paths are no longer empty.
 //
-// 📖 Need doc: when `// swagger:model` is placed BEFORE the doc text
-// (annotation-first), the title/description are dropped — they are only captured
-// when the annotation comes last. Asserted explicitly below so a future change
-// is conscious.
+// 📖 Need doc: when `// swagger:model` is placed BEFORE the doc text (annotation-first), the
+// title/description are dropped — they are only captured when the annotation comes last.
+// Asserted explicitly below so a future change is conscious.
 func TestCoverage_Bug334(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/334/..."},

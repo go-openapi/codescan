@@ -11,17 +11,16 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// ParameterRef is a standalone `swagger:parameters` marker hosted by a
-// func (or other non-struct declaration) rather than a struct definition.
-// Per the disambiguation rule, such a marker is a *reference*: it wires
-// existing shared parameters into an operation or path-item as `$ref`s —
-// its first argument token is the target (an operation id or a `/path`)
-// and the remaining tokens are shared-parameter names.
+// ParameterRef is a standalone `swagger:parameters` marker hosted by a func (or other non-struct
+// declaration) rather than a struct definition.
 //
-// The scanner only discovers and locates the marker; its target and names
-// are parsed from Comments by the grammar (grammar.ParametersBlock) when
-// the shared-parameters builder consumes it. See
-// .claude/plans/features/shared-parameters-fixtures.md §1b.
+// Per the disambiguation rule, such a marker is a *reference*: it wires existing shared parameters
+// into an operation or path-item as `$ref`s — its first argument token is the target (an
+// operation id or a `/path`) and the remaining tokens are shared-parameter names.
+//
+// The scanner only discovers and locates the marker; its target and names are parsed from Comments
+// by the grammar (grammar.ParametersBlock) when the shared-parameters builder consumes it.
+// See .claude/plans/features/shared-parameters-fixtures.md §1b.
 type ParameterRef struct {
 	Comments *ast.CommentGroup
 	File     *ast.File
@@ -42,12 +41,12 @@ type EntityDecl struct {
 	modelOverrideSuppressed bool
 }
 
-// SuppressModelOverride drops this declaration's `swagger:model <name>`
-// override so that Names / DefKey fall back to the Go type name. Used to
-// resolve a same-package duplicate, where two distinct types in one
-// package claim the same override name (a user error): the first keeps
-// the name, later ones revert to their Go name. See name-identity design
-// D-4 (.claude/plans/name-identity-cyclic-ref.md §9.1).
+// SuppressModelOverride drops this declaration's `swagger:model <name>` override so that Names /
+// DefKey fall back to the Go type name.
+//
+// Used to resolve a same-package duplicate, where two distinct types in one package claim the same
+// override name (a user error): the first keeps the name, later ones revert to their Go name.
+// See name-identity design D-4 (.claude/plans/name-identity-cyclic-ref.md §9.1).
 func (d *EntityDecl) SuppressModelOverride() { d.modelOverrideSuppressed = true }
 
 // ModelOverrideSuppressed reports whether SuppressModelOverride was set.
@@ -91,18 +90,19 @@ func (d *EntityDecl) Names() (name, goName string) {
 	return model, goName
 }
 
-// DefKey returns the fully-qualified, compiler-unique definition key for
-// this declaration: "<pkgpath>/<name>", where <name> is the
-// swagger:model override when present, else the Go type name (the first
-// return of Names). This is the build-time key for the definitions map
-// and for every "#/definitions/" $ref target, so two distinct Go types
-// that share a short name can never collide before the spec.Builder's
-// reduce stage shortens names back. See the name-identity / cyclic-$ref
-// design (.claude/plans/name-identity-cyclic-ref.md §9.1, §12.1).
+// DefKey returns the fully-qualified, compiler-unique definition key for this declaration:
+// "<pkgpath>/<name>", where <name> is the swagger:model override when present, else the Go type
+// name (the first return of Names).
 //
-// Universe / package-less types (no enclosing package) fall back to the
-// bare name; in practice those are intercepted as stdlib specials before
-// they ever reach a definition key.
+// This is the build-time key for the definitions map and for every "#/definitions/" $ref target, so
+// two distinct Go types that share a short name can never collide before the spec.Builder's reduce
+// stage shortens names back.
+//
+// See the name-identity / cyclic-$ref design (.claude/plans/name-identity-cyclic-ref.md §9.1,
+// §12.1).
+//
+// Universe / package-less types (no enclosing package) fall back to the bare name; in practice
+// those are intercepted as stdlib specials before they ever reach a definition key.
 func (d *EntityDecl) DefKey() string {
 	name, _ := d.Names()
 	if pkg := d.Obj().Pkg(); pkg != nil {

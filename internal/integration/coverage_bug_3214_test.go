@@ -13,19 +13,20 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3214 locks the fix for go-swagger issue #3214
-// ("Incomplete parsing of referenced typed primitives"). A struct field
-// that references a named primitive type whose doc comment carries both
-// prose and an inline `enum:` annotation must:
+// TestCoverage_Bug3214 locks the fix for go-swagger issue #3214 ("Incomplete parsing of referenced
+// typed primitives").
+//
+// A struct field that references a named primitive type whose doc comment carries both prose and an
+// inline `enum:` annotation must:
 //
 //   - parse the `enum:` declaration into enum values on the referenced
 //     type's definition, and
 //   - preserve the prose untouched, never folding the `enum:` line into
 //     the title or description.
 //
-// The historical bug folded the `enum:` declaration line into the
-// description. This test asserts the parsed shape directly and captures
-// the full output in a golden as a regression lock.
+// The historical bug folded the `enum:` declaration line into the description.
+// This test asserts the parsed shape directly and captures the full output in a golden as a
+// regression lock.
 func TestCoverage_Bug3214(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/3214/..."},
@@ -44,8 +45,8 @@ func TestCoverage_Bug3214(t *testing.T) {
 	assert.NotContains(t, state.Title, "enum:", "the enum line must not leak into the title")
 	assert.NotContains(t, state.Description, "enum:", "the enum line must not leak into the description")
 
-	// Currency: multi-paragraph prose → title + description, enum parsed
-	// and the description paragraph survives intact.
+	// Currency: multi-paragraph prose → title + description, enum parsed and the description
+	// paragraph survives intact.
 	currency, ok := doc.Definitions["Currency"]
 	require.True(t, ok, "Currency must be emitted as its own definition")
 	assert.Equal(t, "string", currency.Type[0])

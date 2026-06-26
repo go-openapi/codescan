@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_BodyResponseDescription verifies the fix for quirk G1
-// (doc-site-quirks.md): a `body:` response with no trailing description no
-// longer fills response.description with the bare Go type token. Instead the
-// description is derived from the referenced model's godoc, falling back to
-// the HTTP status reason phrase, then a neutral placeholder.
+// TestQuirk_BodyResponseDescription verifies the fix for quirk G1 (doc-site-quirks.md): a `body:`
+// response with no trailing description no longer fills response.description with the bare Go type
+// token.
+//
+// Instead the description is derived from the referenced model's godoc, falling back to the HTTP
+// status reason phrase, then a neutral placeholder.
 //
 //	200: body:Pet      → "Pet is a documented model used as a response body."
 //	404: body:Blank    → "Not Found"      (model has no godoc → status phrase)

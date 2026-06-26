@@ -12,13 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ResponseExamplesByMime covers response-level `examples` (a map
-// keyed by mime type) on a struct-based `swagger:response` (go-swagger#2871).
+// TestCoverage_ResponseExamplesByMime covers response-level `examples` (a map keyed by mime type)
+// on a struct-based `swagger:response` (go-swagger#2871).
 //
-// The `swagger:operation` YAML path already carries examples for free (see
-// coverage_bug_1713 / coverage_bug_2871); this verifies the Go-struct
-// `swagger:response` path, where the `examples:` block in the decl comment is
-// parsed into the OAS2 Response.examples field.
+// The `swagger:operation` YAML path already carries examples for free (see coverage_bug_1713 /
+// coverage_bug_2871); this verifies the Go-struct `swagger:response` path, where the `examples:`
+// block in the decl comment is parsed into the OAS2 Response.examples field.
 func TestCoverage_ResponseExamplesByMime(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/response-examples-by-mime/..."},

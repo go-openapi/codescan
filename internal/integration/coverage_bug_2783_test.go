@@ -12,13 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2783 locks the fix for go-swagger issue #2783: two packages
-// each declare `swagger:model Test`. They used to collide on the short key
-// "Test" and SILENTLY MERGE (union of both structs' fields, last-package-wins,
-// non-deterministic). Now each keeps its own identity: two distinct Test
-// definitions (deep-keyed by package while the leaf collides) plus
-// TestResponseBody — three definitions, deterministic. See the name-identity /
-// cyclic-$ref design (.claude/plans/name-identity-cyclic-ref.md).
+// TestCoverage_Bug2783 locks the fix for go-swagger issue #2783: two packages each declare
+// `swagger:model Test`.
+//
+// They used to collide on the short key "Test" and SILENTLY MERGE (union of both structs' fields,
+// last-package-wins, non-deterministic).
+// Now each keeps its own identity: two distinct Test definitions (deep-keyed by package while the
+// leaf collides) plus TestResponseBody — three definitions, deterministic.
+//
+// See the name-identity / cyclic-$ref design (.claude/plans/name-identity-cyclic-ref.md).
 func TestCoverage_Bug2783(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2783/..."},
@@ -32,8 +34,8 @@ func TestCoverage_Bug2783(t *testing.T) {
 		"TestResponseBody + two distinct Tests (b.Test and c.Test no longer merge)")
 	assert.NotContains(t, doc.Definitions, "Test", "no merged bare Test key")
 
-	// The two Tests are distinct, qualified by their package leaf: BTest
-	// carries only b's field, CTest only c's.
+	// The two Tests are distinct, qualified by their package leaf: BTest carries only b's field, CTest
+	// only c's.
 	bTest, okB := doc.Definitions["BTest"]
 	cTest, okC := doc.Definitions["CTest"]
 	require.True(t, okB, "b.Test -> BTest")

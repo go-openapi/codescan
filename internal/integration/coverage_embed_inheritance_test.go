@@ -12,12 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_EmbedInheritance locks the generalized "annotations on an
-// embedded field apply to the members it promotes" rule (go-swagger#2701)
-// beyond parameters: a `required:` annotation on an embed propagates to the
-// promoted properties of a model schema and of a response body schema (built
-// through the same schema builder). Exportedness stays per-field — the
-// unexported promoted member never surfaces.
+// TestCoverage_EmbedInheritance locks the generalized "annotations on an embedded field apply to
+// the members it promotes" rule (go-swagger#2701) beyond parameters: a `required:` annotation on an
+// embed propagates to the promoted properties of a model schema and of a response body schema
+// (built through the same schema builder).
+//
+// Exportedness stays per-field — the unexported promoted member never surfaces.
 func TestCoverage_EmbedInheritance(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/embed-inheritance/..."},
@@ -27,8 +27,8 @@ func TestCoverage_EmbedInheritance(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Model schema: required: on the embed propagates to promoted id/name;
-	// the normal Extra field stays optional; unexported hidden never appears.
+	// Model schema: required: on the embed propagates to promoted id/name; the normal Extra field
+	// stays optional; unexported hidden never appears.
 	widget := doc.Definitions["Widget"]
 	assert.Contains(t, widget.Properties, "id")
 	assert.Contains(t, widget.Properties, "name")
@@ -37,9 +37,9 @@ func TestCoverage_EmbedInheritance(t *testing.T) {
 	assert.ElementsMatch(t, []string{"id", "name"}, widget.Required,
 		"required: on the embed must propagate to the promoted properties (go-swagger#2701)")
 
-	// Response body: a named struct body is emitted as a discovered
-	// definition and $ref'd. The same rule applies through the schema
-	// builder, so the body definition carries the inherited required list.
+	// Response body: a named struct body is emitted as a discovered definition and $ref'd. The same
+	// rule applies through the schema builder, so the body definition carries the inherited required
+	// list.
 	resp, ok := doc.Responses["widgetResponse"]
 	require.True(t, ok)
 	require.NotNil(t, resp.Schema)
@@ -50,20 +50,19 @@ func TestCoverage_EmbedInheritance(t *testing.T) {
 		"required: on an embed inside a response body must propagate too (go-swagger#2701)")
 	assert.NotContains(t, envelope.Properties, "hidden")
 
-	// Responses builder's own embed recursion: an embedded struct promotes
-	// its fields as headers (in: header, the default), confirming the path is
-	// intact.
+	// Responses builder's own embed recursion: an embedded struct promotes its fields as headers (in:
+	// header, the default), confirming the path is intact.
 	hdrs, ok := doc.Responses["embeddedHeadersResponse"]
 	require.True(t, ok)
 	assert.Contains(t, hdrs.Headers, "X-Request-Id")
 	assert.Contains(t, hdrs.Headers, "X-Count")
 
-	// Distinguishing case: `in: body` on the embed routes to the response body
-	// (it would otherwise default to a header) — proving the responses builder
-	// inherits in: from the embed (go-swagger#2701). An `in: body` embed means
-	// the embedded struct IS the body, exactly like a named `Body Foo` field,
-	// so the body $refs the embedded type rather than promoting its fields
-	// (go-swagger#1635).
+	// Distinguishing case: `in: body` on the embed routes to the response body (it would otherwise
+	// default to a header) — proving the responses builder inherits in: from the embed
+	// (go-swagger#2701).
+	//
+	// An `in: body` embed means the embedded struct IS the body, exactly like a named `Body Foo`
+	// field, so the body $refs the embedded type rather than promoting its fields (go-swagger#1635).
 	body, ok := doc.Responses["embeddedBodyResponse"]
 	require.True(t, ok)
 	assert.Empty(t, body.Headers,

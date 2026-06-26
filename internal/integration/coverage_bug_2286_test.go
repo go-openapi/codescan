@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2286 locks go-swagger issue #2286 ("model accepted as
-// response"): naming a swagger:model directly as a route response (`200: model`)
-// is accepted and yields a valid response with a $ref to that model — the lenient
-// shorthand for `200: body:model`.
+// TestCoverage_Bug2286 locks go-swagger issue #2286 ("model accepted as response"): naming a
+// swagger:model directly as a route response (`200: model`) is accepted and yields a valid response
+// with a $ref to that model — the lenient shorthand for `200: body:model`.
 func TestCoverage_Bug2286(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2286/..."},

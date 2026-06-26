@@ -15,18 +15,20 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// fqDefKey matches a fully-qualified definition KEY (an object-valued member
-// whose name is a Go import path), e.g. `"github.com/acme/foo/Bar": {`. The
-// x-go-package extension carries an import path too, but as a STRING value
-// (`"x-go-package": "github.com/..."`), which this pattern does not match.
+// fqDefKey matches a fully-qualified definition KEY (an object-valued member whose name is a Go
+// import path), e.g. `"github.com/acme/foo/Bar": {`.
+//
+// The x-go-package extension carries an import path too, but as a STRING value (`"x-go-package":
+// "github.com/..."`), which this pattern does not match.
 var fqDefKey = regexp.MustCompile(`"[a-z0-9.-]+\.[a-z]{2,}/[^"]*":\s*\{`)
 
-// TestGoldens_NoFullyQualifiedLeak locks the invariant that every committed
-// golden is the REDUCED, full-pipeline output: no definition key or $ref may
-// carry a fully-qualified `<pkgpath>/<name>` identity. The build keys
-// definitions by that fq identity, and the reduce stage shortens them; a leak
-// here means either a builder-unit snapshot crept back in (golden dumps belong
-// to full-pipeline integration tests) or the reduce rewrite pass missed a site.
+// TestGoldens_NoFullyQualifiedLeak locks the invariant that every committed golden is the REDUCED,
+// full-pipeline output: no definition key or $ref may carry a fully-qualified `<pkgpath>/<name>`
+// identity.
+//
+// The build keys definitions by that fq identity, and the reduce stage shortens them; a leak here
+// means either a builder-unit snapshot crept back in (golden dumps belong to full-pipeline
+// integration tests) or the reduce rewrite pass missed a site.
 func TestGoldens_NoFullyQualifiedLeak(t *testing.T) {
 	dir := filepath.Join(scantest.FixturesDir(), "integration", "golden")
 	entries, err := os.ReadDir(dir)

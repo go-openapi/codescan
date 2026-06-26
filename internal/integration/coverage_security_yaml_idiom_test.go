@@ -12,12 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_SecurityYAMLIdiom locks the recommended form of a global
-// Security requirements block: idiomatic OpenAPI 2.0 YAML — a sequence of
-// Security Requirement Objects, scopes in block style. The captured spec is
-// identical to what a real YAML parse of the same source produces, which is
-// now literally true: the security sub-parser (internal/parsers/security)
-// decodes the body as YAML rather than hand-parsing it.
+// TestCoverage_SecurityYAMLIdiom locks the recommended form of a global Security requirements
+// block: idiomatic OpenAPI 2.0 YAML — a sequence of Security Requirement Objects, scopes in block
+// style.
+//
+// The captured spec is identical to what a real YAML parse of the same source produces, which is
+// now literally true: the security sub-parser (internal/parsers/security) decodes the body as YAML
+// rather than hand-parsing it.
 //
 //	Security:
 //	  - oauth:                 # ┐ one requirement object:
@@ -26,9 +27,9 @@ import (
 //	    api_key: []            # ┘   api_key
 //	  - basic: []              #   OR this alternative
 //
-// Doc-facing companion to the per-issue witnesses #2403 (sequence marker /
-// inline scopes), #2479 (explicit empty opt-out) and #2294 (multi-key AND
-// grouping): the positive demonstration that those forms are just YAML.
+// Doc-facing companion to the per-issue witnesses #2403 (sequence marker / inline scopes), #2479
+// (explicit empty opt-out) and #2294 (multi-key AND grouping): the positive demonstration that
+// those forms are just YAML.
 func TestCoverage_SecurityYAMLIdiom(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/security-yaml-idiom/..."},
@@ -50,8 +51,8 @@ func TestCoverage_SecurityYAMLIdiom(t *testing.T) {
 	require.Contains(t, or, "basic", "second alternative is basic alone")
 	assert.Empty(t, or["basic"])
 
-	// The schemes are also defined (proves the YAML-bodied SecurityDefinitions
-	// path and the requirements path agree on the same scheme names).
+	// The schemes are also defined (proves the YAML-bodied SecurityDefinitions path and the
+	// requirements path agree on the same scheme names).
 	require.Contains(t, doc.SecurityDefinitions, "oauth")
 	require.Contains(t, doc.SecurityDefinitions, "api_key")
 	require.Contains(t, doc.SecurityDefinitions, "basic")

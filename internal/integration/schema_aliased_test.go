@@ -39,10 +39,9 @@ func TestAliasedSchemas(t *testing.T) {
 	}
 
 	t.Run("unannotated alias to any should not produce a standalone definition", func(t *testing.T) {
-		// Aliases without `swagger:model` are a Go implementation
-		// detail; they dissolve at use sites and do not surface as
-		// `definitions` entries. The use-site shape is what carries
-		// the open schema (see `with alias to any` subtest below).
+		// Aliases without `swagger:model` are a Go implementation detail; they dissolve at use sites and
+		// do not surface as `definitions` entries.
+		// The use-site shape is what carries the open schema (see `with alias to any` subtest below).
 		_, ok := sp.Definitions["Anything"]
 		require.FalseT(t, ok,
 			"unannotated alias to any must not appear in definitions")
@@ -68,28 +67,26 @@ func TestAliasedSchemas(t *testing.T) {
 	})
 
 	t.Run("unannotated aliased primitive types do not produce a standalone definition", func(t *testing.T) {
-		// Same as Anything above. UUID is `type UUID = int64` with
-		// no `swagger:model`; it dissolves at use sites. The inline
-		// integer shape lives on each field that referred to it
-		// (see `with alias to primitive type` subtest below).
+		// Same as Anything above.
+		// UUID is `type UUID = int64` with no `swagger:model`; it dissolves at use sites.
+		// The inline integer shape lives on each field that referred to it (see `with alias to primitive
+		// type` subtest below).
 		_, ok := sp.Definitions["UUID"]
 		require.FalseT(t, ok,
 			"unannotated alias to a primitive must not appear in definitions")
 	})
 
 	t.Run("annotated alias companions recover the alias-name $ref shape", func(t *testing.T) {
-		// Bidirectional witness: UUIDModeled / AnythingModeled are
-		// the swagger:model-annotated counterparts of UUID /
-		// Anything. With the annotation, each alias surfaces as a
-		// first-class spec entity, and any field typed with the
-		// annotated alias keeps `$ref: <AliasName>` rather than
-		// dissolving to the underlying primitive / open shape.
+		// Bidirectional witness: UUIDModeled / AnythingModeled are the swagger:model-annotated
+		// counterparts of UUID / Anything.
 		//
-		// Together with the UUID / Anything subtests above (and
-		// with the `field defined on an alias inlines its target
-		// shape` block below), these pin the rule: `swagger:model`
-		// is the SOLE gate for whether the alias name surfaces in
-		// the spec.
+		// With the annotation, each alias surfaces as a first-class spec entity, and any field typed with
+		// the annotated alias keeps `$ref: <AliasName>` rather than dissolving to the underlying
+		// primitive / open shape.
+		//
+		// Together with the UUID / Anything subtests above (and with the `field defined on an alias
+		// inlines its target shape` block below), these pin the rule: `swagger:model` is the SOLE gate
+		// for whether the alias name surfaces in the spec.
 		require.Contains(t, sp.Definitions, "UUIDModeled",
 			"annotated alias to int64 must have its own definition")
 		uuidModeled := sp.Definitions["UUIDModeled"]
@@ -107,8 +104,8 @@ func TestAliasedSchemas(t *testing.T) {
 		orderModeled := sp.Definitions["order_modeled"]
 		scantest.AssertRef(t, &orderModeled, "id", "", "#/definitions/UUIDModeled")
 		scantest.AssertRef(t, &orderModeled, "deliveryOption", "", "#/definitions/AnythingModeled")
-		// extended_id stays $ref'd to ExtendedID; ExtendedID is a
-		// named struct (not an alias) — alias rule doesn't apply.
+		// extended_id stays $ref'd to ExtendedID; ExtendedID is a named struct (not an alias) — alias
+		// rule doesn't apply.
 		scantest.AssertRef(t, &orderModeled, "extended_id", "", "#/definitions/ExtendedID")
 	})
 
@@ -117,11 +114,10 @@ func TestAliasedSchemas(t *testing.T) {
 		require.TrueT(t, ok)
 
 		t.Run("field defined on an alias inlines its target shape", func(t *testing.T) {
-			// Unannotated aliases dissolve at use sites — the
-			// underlying shape lives inline on each property.
-			// ExtendedID is a NAMED struct (not an alias) so it
-			// continues to surface as $ref; the rule only affects
-			// alias-as-use-type.
+			// Unannotated aliases dissolve at use sites — the underlying shape lives inline on each
+			// property.
+			// ExtendedID is a NAMED struct (not an alias) so it continues to surface as $ref; the rule only
+			// affects alias-as-use-type.
 			t.Run("with alias to any", func(t *testing.T) {
 				delivery, ok := order.Properties["DeliveryOption"]
 				require.TrueT(t, ok)
@@ -361,10 +357,10 @@ func testAliasedExtendedIDAllOf(t *testing.T, sp *oaispec.Swagger) {
 
 	// Embedding an alias no longer auto-promotes to allOf.
 	// The documented rule is "allOf only when swagger:allOf-tagged."
-	// `ExtendedID` embeds `Empty = struct{}` (alias of an anonymous
-	// empty struct) without that annotation, so the embed contributes
-	// nothing — Empty has no fields to promote. The outer struct
-	// remains flat with just its own properties.
+	// `ExtendedID` embeds `Empty = struct{}` (alias of an anonymous empty struct) without that
+	// annotation, so the embed contributes nothing — Empty has no fields to promote.
+	//
+	// The outer struct remains flat with just its own properties.
 	t.Run("struct with an embedded alias-of-anonymous-empty-struct contributes nothing", func(t *testing.T) {
 		assert.Empty(t, extended.AllOf, "no allOf without explicit swagger:allOf annotation")
 		assertHasTitle(t, extended)
@@ -538,11 +534,12 @@ func testAliasedEmbeddedTypes(t *testing.T, sp *oaispec.Swagger) {
 	t.Helper()
 
 	// Embedding an alias no longer auto-promotes to allOf.
-	// `EmbeddedWithAlias` embeds `Anything = any` and `UUID = int64`
-	// without `swagger:allOf` annotation. Both are aliases of non-
-	// Named types (an interface and a primitive); embedding them in
-	// Go promotes nothing. The spec output reflects that: flat
-	// properties from non-aliased fields only, no allOf, no
+	// `EmbeddedWithAlias` embeds `Anything = any` and `UUID = int64` without `swagger:allOf`
+	// annotation.
+	//
+	// Both are aliases of non- Named types (an interface and a primitive); embedding them in Go
+	// promotes nothing.
+	// The spec output reflects that: flat properties from non-aliased fields only, no allOf, no
 	// dangling $refs.
 	t.Run("embedded aliases of non-Named types contribute nothing without swagger:allOf", func(t *testing.T) {
 		got, ok := sp.Definitions["embedded_with_alias"]

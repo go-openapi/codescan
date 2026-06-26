@@ -12,15 +12,14 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug989 locks the resolution to go-swagger issue #989 ("add
-// description to response"): the inline description text is no longer
-// misinterpreted as a model $ref, and an inline response description is fully
-// captured via the swagger:operation YAML body (403 -> "Unauthorized").
+// TestCoverage_Bug989 locks the resolution to go-swagger issue #989 ("add description to
+// response"): the inline description text is no longer misinterpreted as a model $ref, and an
+// inline response description is fully captured via the swagger:operation YAML body (403 ->
+// "Unauthorized").
 //
-// 📖 Need doc: in the legacy swagger:route Responses block a status code maps to
-// a response name; an inline description value there is NOT captured (the 403
-// gets an empty description). To add a description, use swagger:operation or a
-// dedicated swagger:response object.
+// 📖 Need doc: in the legacy swagger:route Responses block a status code maps to a response name;
+// an inline description value there is NOT captured (the 403 gets an empty description).
+// To add a description, use swagger:operation or a dedicated swagger:response object.
 func TestCoverage_Bug989(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/989/..."},
@@ -33,8 +32,8 @@ func TestCoverage_Bug989(t *testing.T) {
 	require.NotNil(t, adm)
 	assert.Equal(t, "Unauthorized", adm.Responses.StatusCodeResponses[403].Description)
 
-	// swagger:route maps codes to response names; 403 has no model and the
-	// inline description value is dropped (documented limitation).
+	// swagger:route maps codes to response names; 403 has no model and the inline description value is
+	// dropped (documented limitation).
 	usr := doc.Paths.Paths["/users"].Get
 	require.NotNil(t, usr)
 	r200 := usr.Responses.StatusCodeResponses[200]

@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2230 locks go-swagger issue #2230 ("example in json.RawMessage
-// field"): a json.RawMessage field renders as an open (typeless) schema — i.e.
-// "any JSON", which matches RawMessage's meaning — while a typed sibling field
-// carries its example. To constrain or example the RawMessage, annotate it
-// (swagger:type / swagger:strfmt); the raw bytes are not forced to an int array.
+// TestCoverage_Bug2230 locks go-swagger issue #2230 ("example in json.RawMessage field"): a
+// json.RawMessage field renders as an open (typeless) schema — i.e. "any JSON", which matches
+// RawMessage's meaning — while a typed sibling field carries its example.
+//
+// To constrain or example the RawMessage, annotate it (swagger:type / swagger:strfmt); the raw
+// bytes are not forced to an int array.
 func TestCoverage_Bug2230(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2230/..."},

@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_HeaderNamedBasic pins the M1-follow-up fix that
-// brought `in: header` into the SimpleSchema-aware primitive-inline
-// arm of classifierNamedBasic. Pre-fix, a header parameter typed as
-// a named string emitted a `$ref` (invalid under OAS v2
+// TestCoverage_HeaderNamedBasic pins the M1-follow-up fix that brought `in: header` into the
+// SimpleSchema-aware primitive-inline arm of classifierNamedBasic.
+//
+// Pre-fix, a header parameter typed as a named string emitted a `$ref` (invalid under OAS v2
 // SimpleSchema); post-fix it inlines as `{type: string}`.
 func TestCoverage_HeaderNamedBasic(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
@@ -36,8 +36,8 @@ func TestCoverage_HeaderNamedBasic(t *testing.T) {
 	assert.Equal(t, "string", session.Type, "named basic should inline as primitive under SimpleSchema")
 	assert.Empty(t, session.Ref.String(), "no $ref should be emitted")
 
-	// The SessionID type should NOT appear as a top-level definition
-	// — the primitive-inline arm bypasses FindModel.
+	// The SessionID type should NOT appear as a top-level definition — the primitive-inline arm
+	// bypasses FindModel.
 	_, defined := doc.Definitions["SessionID"]
 	assert.False(t, defined, "SessionID should not become a top-level definition")
 }

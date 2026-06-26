@@ -13,14 +13,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2651 locks the fix for go-swagger issue #2651: an operation
-// mixing inline `swagger:operation` parameters with a `swagger:parameters`-bound
-// struct used to mis-bind — the bound body's `$ref` schema was welded onto the
-// inline `id` PATH parameter (invalid: a path param cannot carry a body schema),
-// instead of being emitted as a separate body parameter.
+// TestCoverage_Bug2651 locks the fix for go-swagger issue #2651: an operation mixing inline
+// `swagger:operation` parameters with a `swagger:parameters`-bound struct used to mis-bind — the
+// bound body's `$ref` schema was welded onto the inline `id` PATH parameter (invalid: a path param
+// cannot carry a body schema), instead of being emitted as a separate body parameter.
 //
-// After the fix the bound body is its own `in: body` parameter and the inline
-// path param carries only its simple schema (no Schema/$ref).
+// After the fix the bound body is its own `in: body` parameter and the inline path param carries
+// only its simple schema (no Schema/$ref).
 func TestCoverage_Bug2651(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2651/..."},

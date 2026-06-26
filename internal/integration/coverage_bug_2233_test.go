@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2233 locks go-swagger issue #2233 ("unable to find responses
-// defined in other package using swagger:operation"): a swagger:operation YAML
-// body that `$ref`s a swagger:response defined in ANOTHER package resolves — the
-// response and its body model are emitted (no "$refs must reference a valid
-// location").
+// TestCoverage_Bug2233 locks go-swagger issue #2233 ("unable to find responses defined in other
+// package using swagger:operation"): a swagger:operation YAML body that `$ref`s a swagger:response
+// defined in ANOTHER package resolves — the response and its body model are emitted (no "$refs
+// must reference a valid location").
 func TestCoverage_Bug2233(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2233/..."},

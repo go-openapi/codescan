@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2311 locks go-swagger issue #2311 (the behaviour behind the
-// doc gap): `swagger:ignore` on a struct FIELD drops that property from the
-// model (the docs only mentioned types/whole declarations).
+// TestCoverage_Bug2311 locks go-swagger issue #2311 (the behaviour behind the doc gap):
+// `swagger:ignore` on a struct FIELD drops that property from the model (the docs only mentioned
+// types/whole declarations).
 func TestCoverage_Bug2311(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2311/..."},

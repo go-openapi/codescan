@@ -13,9 +13,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_SimpleSchemaViolation exercises M1's exit validator:
-// a query parameter whose Go type resolves to an object-typed
-// SimpleSchema fires CodeUnsupportedInSimpleSchema and the target is
+// TestCoverage_SimpleSchemaViolation exercises M1's exit validator: a query parameter whose Go type
+// resolves to an object-typed SimpleSchema fires CodeUnsupportedInSimpleSchema and the target is
 // reset to empty `{}`.
 //
 // Plumbing tested:

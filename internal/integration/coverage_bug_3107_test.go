@@ -12,16 +12,16 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug3107 locks the fix for go-swagger issue #3107 ("No
-// struct definition in swagger generate"). Under `generate spec -m`
-// (ScanModels), a swagger:model struct must be emitted with its full
-// shape — `type: object` plus its properties — rather than a bare
-// definition carrying only `x-go-package` with the fields dropped.
+// TestCoverage_Bug3107 locks the fix for go-swagger issue #3107 ("No struct definition in swagger
+// generate").
 //
-// The fixture places the model in its own package, referenced
-// cross-package by a route's response body, so the test also exercises
-// type resolution through the import graph (the v0.30.5 trigger: the
-// model package was resolved by reference, not directly scanned).
+// Under `generate spec -m` (ScanModels), a swagger:model struct must be emitted with its full shape
+// — `type: object` plus its properties — rather than a bare definition carrying only
+// `x-go-package` with the fields dropped.
+//
+// The fixture places the model in its own package, referenced cross-package by a route's response
+// body, so the test also exercises type resolution through the import graph (the v0.30.5 trigger:
+// the model package was resolved by reference, not directly scanned).
 func TestCoverage_Bug3107(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/3107/..."},

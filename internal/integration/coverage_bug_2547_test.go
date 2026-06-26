@@ -12,11 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2547 asserts the EXPECTED resolution of go-swagger issue #2547
-// (quirk F8): a string example/default written with surrounding quotes must have
-// those delimiter quotes stripped. `example: ""` is the empty string; the
-// scanner currently keeps the quotes verbatim (`""` -> the 2-char string `""`,
-// `"Foo"` -> `"Foo"` with quotes), so this is currently RED.
+// TestCoverage_Bug2547 asserts the EXPECTED resolution of go-swagger issue #2547 (quirk F8): a
+// string example/default written with surrounding quotes must have those delimiter quotes stripped.
+//
+// `example: ""` is the empty string; the scanner currently keeps the quotes verbatim (`""` -> the
+// 2-char string `""`, `"Foo"` -> `"Foo"` with quotes), so this is currently RED.
 func TestCoverage_Bug2547(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2547/..."},

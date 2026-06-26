@@ -462,11 +462,10 @@ func TestNewScanCtx_WithBuildTags(t *testing.T) {
 }
 
 func TestNewScanCtx_InvalidPackage(t *testing.T) {
-	// A package that cannot be loaded at all (here: a nonexistent
-	// package, which packages.Load reports as a ListError embedded on a
-	// placeholder package) must fail loud — an Error-severity
-	// scan.degraded-load diagnostic plus an aborting error — instead of
-	// silently producing an incomplete spec (go-swagger#2874).
+	// A package that cannot be loaded at all (here: a nonexistent package, which packages.Load reports
+	// as a ListError embedded on a placeholder package) must fail loud — an Error-severity
+	// scan.degraded-load diagnostic plus an aborting error — instead of silently producing an
+	// incomplete spec (go-swagger#2874).
 	var diags []grammar.Diagnostic
 	sctx, err := NewScanCtx(&Options{
 		Packages:     []string{"./nonexistent"},
@@ -489,18 +488,18 @@ func TestNewScanCtx_InvalidPackage(t *testing.T) {
 	assert.Positive(t, degraded, "expected at least one scan.degraded-load diagnostic")
 }
 
-// TestNewScanCtx_PartialLoad_WarnsAndContinues locks the refinement of §8.2: a
-// package that does not fully type-check but whose type information remains
-// usable (go/packages type-checks best-effort) is a Warning, not an abort — a
-// single non-building package must not sink a whole `./...` scan (#2874).
+// TestNewScanCtx_PartialLoad_WarnsAndContinues locks the refinement of §8.2: a package that does
+// not fully type-check but whose type information remains usable (go/packages type-checks
+// best-effort) is a Warning, not an abort — a single non-building package must not sink a whole
+// `./...` scan (#2874).
 func TestNewScanCtx_PartialLoad_WarnsAndContinues(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, content string) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
 	}
 	write("go.mod", "module probe\n\ngo 1.21\n")
-	// Gadget type-checks fine; the trailing bad declaration produces a
-	// TypeError on the package without erasing its type information.
+	// Gadget type-checks fine; the trailing bad declaration produces a TypeError on the package
+	// without erasing its type information.
 	write("api.go", "package probe\n\n"+
 		"// Gadget is a model.\n//\n// swagger:model\n"+
 		"type Gadget struct {\n\tName string `json:\"name\"`\n}\n\n"+
@@ -589,8 +588,8 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("ValueSpec with names/values parity mismatch returns nil", func(t *testing.T) {
-		// The Go compiler forbids this, but we guard defensively so a
-		// malformed AST (e.g. from tests) doesn't panic on index access.
+		// The Go compiler forbids this, but we guard defensively so a malformed AST (e.g. from tests)
+		// doesn't panic on index access.
 		spec := &ast.ValueSpec{
 			Names:  []*ast.Ident{ast.NewIdent("A"), ast.NewIdent("B")},
 			Type:   ast.NewIdent("Foo"),

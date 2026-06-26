@@ -12,11 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2663 documents the recommended idiom for go-swagger issue
-// #2663 ("How to document a body parameter in a POST request?"). The answer is
-// a doc-only one: a body parameter is a SINGLE parameter whose Go type is the
-// body schema. Declare exactly ONE field carrying `in: body`; give it a named
-// type so the schema is emitted as a reusable $ref.
+// TestCoverage_Bug2663 documents the recommended idiom for go-swagger issue #2663 ("How to document
+// a body parameter in a POST request?").
+//
+// The answer is a doc-only one: a body parameter is a SINGLE parameter whose Go type is the body
+// schema.
+// Declare exactly ONE field carrying `in: body`; give it a named type so the schema is emitted as a
+// reusable $ref.
 //
 // This is also the contrast against the proposals floated on the issue:
 //   - marking each scalar field `in: body` emits a SEPARATE body parameter per

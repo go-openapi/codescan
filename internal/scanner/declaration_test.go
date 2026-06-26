@@ -120,13 +120,12 @@ func TestEntityDecl(t *testing.T) {
 	})
 
 	// Response name resolution moved to the grammar (grammar.ResponseBlock →
-	// responses.Builder.ResponseName); the scanner no longer parses the
-	// swagger:response argument. See the grammar parser tests and the
-	// shared-parameters response coverage.
+	// responses.Builder.ResponseName); the scanner no longer parses the swagger:response argument.
+	// See the grammar parser tests and the shared-parameters response coverage.
 
-	// Operation-id targeting parse moved to the grammar
-	// (grammar.ParametersBlock); see the grammar parser tests. The scanner
-	// no longer parses swagger:parameters arguments.
+	// Operation-id targeting parse moved to the grammar (grammar.ParametersBlock); see the grammar
+	// parser tests.
+	// The scanner no longer parses swagger:parameters arguments.
 
 	t.Run("HasAnnotation caching", func(t *testing.T) {
 		t.Run("HasModelAnnotation caches result", func(t *testing.T) {

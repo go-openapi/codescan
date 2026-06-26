@@ -12,13 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_ModelOverrideSimpleSchema guards the F1/F4 fix against leaking a
-// $ref into a SimpleSchema. A swagger:model type with an override (enum /
-// strfmt) is referenced by $ref in full-schema mode — but $ref is illegal in
-// an OAS-2 SimpleSchema (non-body parameters, response headers), so there the
-// override must INLINE instead. The buildNamedType gate is therefore
-// (isModel && !simpleSchema): a regression would dissolve the schema to {} via
-// the simple-schema $ref safety net, losing the enum/format.
+// TestQuirk_ModelOverrideSimpleSchema guards the F1/F4 fix against leaking a $ref into a
+// SimpleSchema.
+//
+// A swagger:model type with an override (enum / strfmt) is referenced by $ref in full-schema mode
+// — but $ref is illegal in an OAS-2 SimpleSchema (non-body parameters, response headers), so
+// there the override must INLINE instead.
+//
+// The buildNamedType gate is therefore (isModel && !simpleSchema): a regression would dissolve the
+// schema to {} via the simple-schema $ref safety net, losing the enum/format.
 func TestQuirk_ModelOverrideSimpleSchema(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./quirks/model-override-simpleschema/..."},

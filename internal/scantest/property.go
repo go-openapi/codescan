@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// ResolveTestKey returns the fully-qualified definitions key whose leaf
-// (the segment after the last '/') equals short, so a sub-builder unit
-// test can keep indexing the definitions map by the short Go name:
+// ResolveTestKey returns the fully-qualified definitions key whose leaf (the segment after the last
+// '/') equals short, so a sub-builder unit test can keep indexing the definitions map by the short
+// Go name:
 //
 //	schema := models[scantest.ResolveTestKey(t, models, "NoModel")]
 //
@@ -23,15 +23,14 @@ import (
 //	scantest.AssertRef(t, &schema, "pet", "Pet",
 //	    "#/definitions/"+scantest.ResolveTestKey(t, models, "pet"))
 //
-// The schema builder keys the definitions map by the fully-qualified
-// identity ("<pkgpath>/<name>", see scanner.EntityDecl.DefKey); the spec
-// orchestrator's reduce stage later shortens unique leaves back to the
-// bare name, but sub-builder unit tests run WITHOUT that stage. When no
-// definition carries the leaf, short is returned unchanged so absence
-// checks (`_, ok := models[ResolveTestKey(...)]; assert.False(ok)`) still
-// observe a miss. It fails only on a genuinely ambiguous match, which no
-// current unit fixture produces. See
-// .claude/plans/name-identity-cyclic-ref.md §12.1.
+// The schema builder keys the definitions map by the fully-qualified identity ("<pkgpath>/<name>",
+// see scanner.EntityDecl.DefKey); the spec orchestrator's reduce stage later shortens unique leaves
+// back to the bare name, but sub-builder unit tests run WITHOUT that stage.
+//
+// When no definition carries the leaf, short is returned unchanged so absence checks (`_, ok :=
+// models[ResolveTestKey(...)]; assert.False(ok)`) still observe a miss.
+// It fails only on a genuinely ambiguous match, which no current unit fixture produces.
+// See .claude/plans/name-identity-cyclic-ref.md §12.1.
 func ResolveTestKey(t *testing.T, defs map[string]oaispec.Schema, short string) string {
 	t.Helper()
 
@@ -116,9 +115,9 @@ func AssertArrayRef(t *testing.T, schema *oaispec.Schema, jsonName, goName, frag
 }
 
 // AssertRef checks that the named property is a $ref to fragment.
-// Accepts both shapes: a bare $ref schema, and the P7/S7 allOf
-// compound where the $ref rides arm[0] (with description and
-// optional override siblings on the parent / arm[1]).
+//
+// Accepts both shapes: a bare $ref schema, and the P7/S7 allOf compound where the $ref rides arm[0]
+// (with description and optional override siblings on the parent / arm[1]).
 func AssertRef(t *testing.T, schema *oaispec.Schema, jsonName, _, fragment string) {
 	t.Helper()
 

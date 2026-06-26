@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_EmitXGoType locks the answer to go-swagger issue #2924 ("emit
-// x-go-type vendor extension"): the opt-in EmitXGoType option stamps an
-// x-go-type extension on every emitted definition (the fully-qualified Go
-// type), default-off, and suppressed under the SkipExtensions umbrella.
+// TestCoverage_EmitXGoType locks the answer to go-swagger issue #2924 ("emit x-go-type vendor
+// extension"): the opt-in EmitXGoType option stamps an x-go-type extension on every emitted
+// definition (the fully-qualified Go type), default-off, and suppressed under the SkipExtensions
+// umbrella.
 func TestCoverage_EmitXGoType(t *testing.T) {
 	const pkgType = "github.com/go-openapi/codescan/fixtures/enhancements/emit-x-go-type.Widget"
 

@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1121 locks the answer to go-swagger issue #1121 ("how to add
-// description to tags"): a `Tags:` block in the swagger:meta annotation emits the
-// OAI root-level tags section with per-tag description (and externalDocs).
+// TestCoverage_Bug1121 locks the answer to go-swagger issue #1121 ("how to add description to
+// tags"): a `Tags:` block in the swagger:meta annotation emits the OAI root-level tags section with
+// per-tag description (and externalDocs).
 //
 // 📖 Need doc: document the swagger:meta Tags: block for tag descriptions.
 func TestCoverage_Bug1121(t *testing.T) {

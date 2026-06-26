@@ -13,12 +13,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2655 verifies the fix for go-swagger issue #2655: a `Tags:`
-// block in swagger:meta now populates the top-level `tags` section
-// (spec.Swagger.Tags) instead of being swallowed into info.description. Each
-// tag carries its name, description, optional externalDocs and vendor
-// extensions — the YAML list nesting survives the raw-block lexer because
-// `Tags:` preserves per-line indentation (like extensions/securityDefinitions).
+// TestCoverage_Bug2655 verifies the fix for go-swagger issue #2655: a `Tags:` block in swagger:meta
+// now populates the top-level `tags` section (spec.Swagger.Tags) instead of being swallowed into
+// info.description.
+//
+// Each tag carries its name, description, optional externalDocs and vendor extensions — the YAML
+// list nesting survives the raw-block lexer because `Tags:` preserves per-line indentation (like
+// extensions/securityDefinitions).
 func TestCoverage_Bug2655(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2655/..."},
@@ -27,8 +28,7 @@ func TestCoverage_Bug2655(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// The Tags block now lands on doc.Tags, no longer leaking its content
-	// into the info.description.
+	// The Tags block now lands on doc.Tags, no longer leaking its content into the info.description.
 	require.NotNil(t, doc.Info)
 	assert.False(t, strings.Contains(doc.Info.Description, "Everything about your Pets"),
 		"the Tags block content must not leak into info.description")
@@ -48,11 +48,10 @@ func TestCoverage_Bug2655(t *testing.T) {
 	assert.Equal(t, "Store", store.Extensions["x-display-name"],
 		"per-tag vendor extension must survive")
 
-	// Operation-level tags are a plain string list (not objects). A
-	// swagger:route unions its header-line tag (`pets`) with the body
-	// `Tags:` keyword (`pets`, `store`), deduping to [pets, store]. A
-	// swagger:operation gets the same list straight from its wholesale
-	// YAML body.
+	// Operation-level tags are a plain string list (not objects).
+	// A swagger:route unions its header-line tag (`pets`) with the body `Tags:` keyword (`pets`,
+	// `store`), deduping to [pets, store].
+	// A swagger:operation gets the same list straight from its wholesale YAML body.
 	require.NotNil(t, doc.Paths)
 	listPets := doc.Paths.Paths["/pets"].Get
 	require.NotNil(t, listPets, "GET /pets must be present")

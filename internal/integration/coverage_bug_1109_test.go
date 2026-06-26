@@ -14,13 +14,13 @@ import (
 	oaispec "github.com/go-openapi/spec"
 )
 
-// TestCoverage_Bug1109 documents the behaviour behind go-swagger issue
-// #1109 ("generates invalid swagger.json when returning response is
-// model"). Per @casualjim this is expected behaviour, not a codegen bug:
-// `200: <name>` resolves a swagger:response by name, and a route that
-// references a swagger:model by that name needs -m (ScanModels) for the
-// model to be discovered. The original invalid-spec symptom (a dangling
-// `$ref: #/responses/order`) no longer occurs.
+// TestCoverage_Bug1109 documents the behaviour behind go-swagger issue #1109 ("generates invalid
+// swagger.json when returning response is model").
+//
+// Per @casualjim this is expected behaviour, not a codegen bug: `200: <name>` resolves a
+// swagger:response by name, and a route that references a swagger:model by that name needs -m
+// (ScanModels) for the model to be discovered.
+// The original invalid-spec symptom (a dangling `$ref: #/responses/order`) no longer occurs.
 //
 // This test pins the two working forms (both with -m):
 //
@@ -28,8 +28,8 @@ import (
 //     definition-fallback (model name promoted to a body $ref), and
 //   - casualjim's explicit `200: body:order` form.
 //
-// It is flagged "Need doc" in the backlog: the doc site should explain the
-// `-m` requirement and the swagger:response-vs-model name resolution.
+// It is flagged "Need doc" in the backlog: the doc site should explain the `-m` requirement and the
+// swagger:response-vs-model name resolution.
 func TestCoverage_Bug1109(t *testing.T) {
 	t.Run("OP form `200: order` resolves via definition-fallback with -m", func(t *testing.T) {
 		doc, err := codescan.Run(&codescan.Options{
@@ -58,9 +58,9 @@ func TestCoverage_Bug1109(t *testing.T) {
 	})
 }
 
-// assertOrderBodyResponse checks the 200 response carries a body schema
-// $ref to the order definition, and that the definition is emitted — i.e.
-// no dangling #/responses/order and no missing definitions block.
+// assertOrderBodyResponse checks the 200 response carries a body schema $ref to the order
+// definition, and that the definition is emitted — i.e. no dangling #/responses/order and no
+// missing definitions block.
 func assertOrderBodyResponse(t *testing.T, doc *oaispec.Swagger) {
 	t.Helper()
 

@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1881 locks go-swagger issue #1881 (the array-of-object
-// response part): a swagger:response whose body is a slice of a model produces
-// a valid `{type: array, items: {$ref}}` schema.
+// TestCoverage_Bug1881 locks go-swagger issue #1881 (the array-of-object response part): a
+// swagger:response whose body is a slice of a model produces a valid `{type: array, items: {$ref}}`
+// schema.
 func TestCoverage_Bug1881(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1881/..."},

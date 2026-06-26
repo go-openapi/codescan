@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2588 locks go-swagger issue #2588 ("panic on parsing interface
-// type definition"): a struct embedding a named type whose underlying type is an
-// interface (type B A; type C struct{ B }) no longer panics with
-// "interface conversion: ast.Expr is *ast.Ident, not *ast.InterfaceType".
+// TestCoverage_Bug2588 locks go-swagger issue #2588 ("panic on parsing interface type definition"):
+// a struct embedding a named type whose underlying type is an interface (type B A; type C struct{ B
+// }) no longer panics with "interface conversion: ast.Expr is *ast.Ident, not *ast.InterfaceType".
 func TestCoverage_Bug2588(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2588/..."},

@@ -78,8 +78,7 @@ func TestIsLegalForType_ObjectConstraintsOnlyOnObject(t *testing.T) {
 }
 
 func TestIsLegalForType_TypelessSchemaIsLenient(t *testing.T) {
-	// Empty schemaType ("type unknown") is accepted — the caller
-	// decides whether to apply.
+	// Empty schemaType ("type unknown") is accepted — the caller decides whether to apply.
 	kw := grammar.Keyword{Name: "pattern"}
 	ok, hint := validations.IsLegalForType(kw, "")
 	assert.True(t, ok)
@@ -87,8 +86,8 @@ func TestIsLegalForType_TypelessSchemaIsLenient(t *testing.T) {
 }
 
 func TestIsLegalForType_KeywordsWithoutRulesAlwaysLegal(t *testing.T) {
-	// required / readOnly / deprecated / discriminator have no type
-	// constraint — they apply to any type.
+	// required / readOnly / deprecated / discriminator have no type constraint — they apply to any
+	// type.
 	for _, kwName := range []string{"required", "readOnly", "deprecated", "discriminator"} {
 		kw := grammar.Keyword{Name: kwName}
 		for _, schemaType := range []string{"string", "integer", "number", "object", "array"} {
@@ -99,9 +98,8 @@ func TestIsLegalForType_KeywordsWithoutRulesAlwaysLegal(t *testing.T) {
 }
 
 func TestIsLegalForType_DefaultExampleEnumLegalOnAnyType(t *testing.T) {
-	// default / example / enum coerce against the schema's
-	// type+format via CoerceValue / CoerceEnum, so they're always
-	// legal — type validation lives there, not here.
+	// default / example / enum coerce against the schema's type+format via CoerceValue / CoerceEnum,
+	// so they're always legal — type validation lives there, not here.
 	for _, kwName := range []string{"default", "example", "enum"} {
 		kw := grammar.Keyword{Name: kwName}
 		for _, schemaType := range []string{"string", "integer", "number", "object", "array"} {

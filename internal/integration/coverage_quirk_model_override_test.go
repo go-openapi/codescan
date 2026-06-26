@@ -13,15 +13,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_ModelOverrideMatrix verifies the F1/F2/F4 reconciliation: a
-// swagger:model type carrying a per-type override (swagger:strfmt / swagger:type
-// / swagger:enum) now publishes a first-class definition carrying the FULL
-// override schema, and referencing fields $ref it (instead of inlining + an
-// orphan, degenerate definition). The golden quirk_model_override_matrix.json
-// captures the fixed shape.
+// TestQuirk_ModelOverrideMatrix verifies the F1/F2/F4 reconciliation: a swagger:model type carrying
+// a per-type override (swagger:strfmt / swagger:type / swagger:enum) now publishes a first-class
+// definition carrying the FULL override schema, and referencing fields $ref it (instead of inlining
+// + an orphan, degenerate definition).
 //
-// F4b (bare swagger:enum const collection) is NOT yet done — its assertions
-// carry TODO Part C and still pin the current (no-enum) behaviour.
+// The golden quirk_model_override_matrix.json captures the fixed shape.
+//
+// F4b (bare swagger:enum const collection) is NOT yet done — its assertions carry TODO Part C and
+// still pin the current (no-enum) behaviour.
 func TestQuirk_ModelOverrideMatrix(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -36,28 +36,27 @@ func TestQuirk_ModelOverrideMatrix(t *testing.T) {
 	h := doc.Definitions["Holder"].Properties
 	require.NotNil(t, h)
 
-	// F1: strfmt+model — field $refs UUID; the UUID definition carries the
-	// format ({type:string, format:uuid}), no longer an orphan.
+	// F1: strfmt+model — field $refs UUID; the UUID definition carries the format ({type:string,
+	// format:uuid}), no longer an orphan.
 	id := h["id"]
 	assert.Equal(t, "#/definitions/UUID", id.Ref.String())
 	assert.Empty(t, id.Type, "field is a $ref, not an inlined scalar")
 	assert.Equal(t, "uuid", doc.Definitions["UUID"].Format)
 
-	// F2: type+model — field $refs RawID; the RawID definition is {type:string}
-	// (the swagger:type override applied to the decl).
+	// F2: type+model — field $refs RawID; the RawID definition is {type:string} (the swagger:type
+	// override applied to the decl).
 	raw := h["raw"]
 	assert.Equal(t, "#/definitions/RawID", raw.Ref.String())
 	assert.Equal(t, []string{"string"}, []string(doc.Definitions["RawID"].Type))
 
-	// F4: enum+model — field $refs Status; the Status definition carries the
-	// enum values, no longer value-less.
+	// F4: enum+model — field $refs Status; the Status definition carries the enum values, no longer
+	// value-less.
 	state := h["state"]
 	assert.Equal(t, "#/definitions/Status", state.Ref.String())
 	assert.Equal(t, []any{"active", "closed"}, doc.Definitions["Status"].Enum)
 
-	// F4b: bare swagger:enum (no name) on a type decl now infers the enum name
-	// from the declaration and collects its consts; the definition carries the
-	// enum and the field $refs it.
+	// F4b: bare swagger:enum (no name) on a type decl now infers the enum name from the declaration
+	// and collects its consts; the definition carries the enum and the field $refs it.
 	priority := h["priority"]
 	assert.Equal(t, "#/definitions/Priority", priority.Ref.String())
 	require.Len(t, doc.Definitions["Priority"].Enum, 2, "bare swagger:enum collects the decl's consts")

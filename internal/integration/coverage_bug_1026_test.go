@@ -12,13 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1026 locks the resolution to go-swagger issue #1026
-// ("suggestion: x-logo feature"): no dedicated knob is needed — a custom vendor
-// extension (x-logo) is declared in the swagger:meta block via InfoExtensions
-// and lands on the spec's info object.
+// TestCoverage_Bug1026 locks the resolution to go-swagger issue #1026 ("suggestion: x-logo
+// feature"): no dedicated knob is needed — a custom vendor extension (x-logo) is declared in the
+// swagger:meta block via InfoExtensions and lands on the spec's info object.
 //
-// 📖 Need doc: document InfoExtensions / Extensions for arbitrary x-* vendor
-// extensions on info / the spec root.
+// 📖 Need doc: document InfoExtensions / Extensions for arbitrary x-* vendor extensions on info /
+// the spec root.
 func TestCoverage_Bug1026(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1026/..."},

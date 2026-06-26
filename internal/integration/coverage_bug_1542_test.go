@@ -12,13 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1542 locks the resolution to go-swagger issue #1542 ("inserting
-// examples in response schema"): an example on a scalar field is applied, and an
-// example on a map field is applied as an object — provided the map example is
-// written as valid JSON (`{"k":"v"}`).
+// TestCoverage_Bug1542 locks the resolution to go-swagger issue #1542 ("inserting examples in
+// response schema"): an example on a scalar field is applied, and an example on a map field is
+// applied as an object — provided the map example is written as valid JSON (`{"k":"v"}`).
 //
-// 📖 Need doc: complex (map/object) examples must be written as valid JSON on the
-// example: line. (Comma-list / array coercion remains the §2.1 enhancement.)
+// 📖 Need doc: complex (map/object) examples must be written as valid JSON on the example: line.
+// (Comma-list / array coercion remains the §2.1 enhancement.)
 func TestCoverage_Bug1542(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1542/..."},

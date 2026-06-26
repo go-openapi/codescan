@@ -55,12 +55,13 @@ func TestSchemaValueExtractors(t *testing.T) {
 	verifySwaggerOneArgSwaggerTag(t, rxModelOverride, models, append(validParams, "", "  ", " "), invalidParams)
 }
 
-// TestParametersClassificationGate verifies that rxParametersOverride is a
-// PERMISSIVE presence gate: it matches `swagger:parameters` plus any
-// non-empty argument and captures it verbatim, leaving shape validation to
-// the grammar. Forms the strict model matcher rejects (a leading `*`, a
-// `/path`, malformed idents) are accepted here so the grammar can parse
-// and diagnose them. A bare keyword with no argument is not classified.
+// TestParametersClassificationGate verifies that rxParametersOverride is a PERMISSIVE presence
+// gate: it matches `swagger:parameters` plus any non-empty argument and captures it verbatim,
+// leaving shape validation to the grammar.
+//
+// Forms the strict model matcher rejects (a leading `*`, a `/path`, malformed idents) are accepted
+// here so the grammar can parse and diagnose them.
+// A bare keyword with no argument is not classified.
 func TestParametersClassificationGate(t *testing.T) {
 	prefixes := []string{
 		"// swagger:parameters ",
@@ -90,8 +91,8 @@ func TestParametersClassificationGate(t *testing.T) {
 		}
 	}
 
-	// A bare keyword with no argument is not classified (the grammar's
-	// missing-target diagnostic fires only once a node is classified).
+	// A bare keyword with no argument is not classified (the grammar's missing-target diagnostic fires
+	// only once a node is classified).
 	for _, line := range []string{"swagger:parameters", "swagger:parameters ", "// swagger:parameters   "} {
 		assert.Empty(t, rxParametersOverride.FindStringSubmatch(line), "bare keyword must not classify")
 	}

@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1436 locks go-swagger issue #1436 (the -m semantics): without
-// --scan-models, only route-reachable models are emitted; with -m, every
-// swagger:model is emitted (including standalone ones). Works-as-designed; the
-// "prune unreferenced under -m" middle ground is forthcoming-features §12.
+// TestCoverage_Bug1436 locks go-swagger issue #1436 (the -m semantics): without --scan-models, only
+// route-reachable models are emitted; with -m, every swagger:model is emitted (including standalone
+// ones).
+//
+// Works-as-designed; the "prune unreferenced under -m" middle ground is forthcoming-features §12.
 func TestCoverage_Bug1436(t *testing.T) {
 	run := func(m bool) map[string]struct{} {
 		doc, err := codescan.Run(&codescan.Options{

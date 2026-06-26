@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2746 locks the fix for go-swagger issue #2746 ("Strfmt:
-// array of UUID"): a slice of a swagger:strfmt-uuid type used to lose the
-// format on its items (strfmt only applied to a single value). The format now
-// applies to the array's items.
+// TestCoverage_Bug2746 locks the fix for go-swagger issue #2746 ("Strfmt: array of UUID"): a slice
+// of a swagger:strfmt-uuid type used to lose the format on its items (strfmt only applied to a
+// single value).
+//
+// The format now applies to the array's items.
 func TestCoverage_Bug2746(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2746/..."},

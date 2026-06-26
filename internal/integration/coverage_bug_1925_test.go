@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1925 locks go-swagger issue #1925 ("parameters do not support
-// interface"): a body parameter typed `[]map[string]interface{}` no longer
-// aborts spec generation — it produces a valid array-of-object schema with open
-// additionalProperties.
+// TestCoverage_Bug1925 locks go-swagger issue #1925 ("parameters do not support interface"): a body
+// parameter typed `[]map[string]interface{}` no longer aborts spec generation — it produces a
+// valid array-of-object schema with open additionalProperties.
 func TestCoverage_Bug1925(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1925/..."},

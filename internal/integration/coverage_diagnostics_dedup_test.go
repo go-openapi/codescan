@@ -13,12 +13,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_DiagnosticsDeduped pins the OnDiagnostic dedup: the build
-// re-processes the same field/annotation across passes (most visibly a
-// swagger:parameters struct applied to several operation ids, which rebuilds
-// every field once per id), but the callback stream must surface each exact
-// diagnostic — same position, code and message — at most once. The
-// classification corpus exercises exactly that multi-operation pattern.
+// TestCoverage_DiagnosticsDeduped pins the OnDiagnostic dedup: the build re-processes the same
+// field/annotation across passes (most visibly a swagger:parameters struct applied to several
+// operation ids, which rebuilds every field once per id), but the callback stream must surface each
+// exact diagnostic — same position, code and message — at most once.
+//
+// The classification corpus exercises exactly that multi-operation pattern.
 func TestCoverage_DiagnosticsDeduped(t *testing.T) {
 	counts := map[string]int{}
 	emitted := 0

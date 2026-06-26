@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1613 locks the fix for go-swagger issue #1613 ("generate spec
-// for response with string content type"): a swagger:response with a plain string
-// in:body field used to emit a response with no schema (description only). It now
-// emits schema {type: string} (the primitive-body work, #2942).
+// TestCoverage_Bug1613 locks the fix for go-swagger issue #1613 ("generate spec for response with
+// string content type"): a swagger:response with a plain string in:body field used to emit a
+// response with no schema (description only).
+//
+// It now emits schema {type: string} (the primitive-body work, #2942).
 func TestCoverage_Bug1613(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1613/..."},

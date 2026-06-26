@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2218 locks go-swagger issue #2218 ("unable to connect a
-// parameter to a route"): a swagger:parameters struct is bound to its route when
-// the struct's operation id matches the route's operation id — the query
-// parameter appears on the operation.
+// TestCoverage_Bug2218 locks go-swagger issue #2218 ("unable to connect a parameter to a route"): a
+// swagger:parameters struct is bound to its route when the struct's operation id matches the
+// route's operation id — the query parameter appears on the operation.
 func TestCoverage_Bug2218(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/2218/..."},

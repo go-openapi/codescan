@@ -11,11 +11,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestClassification_Spec is the full-pipeline snapshot of the canonical
-// classification fixture (schemas + paths with their parameters, responses and
-// operations), captured across the (SkipExtensions, DescWithRef) option matrix.
-// It is the integration home for the snapshots that used to live as per-builder
-// unit goldens (classification_{schema,params,responses,routes,operations}_*).
+// TestClassification_Spec is the full-pipeline snapshot of the canonical classification fixture
+// (schemas + paths with their parameters, responses and operations), captured across the
+// (SkipExtensions, DescWithRef) option matrix.
+//
+// It is the integration home for the snapshots that used to live as per-builder unit goldens
+// (classification_{schema,params,responses,routes,operations}_*).
 func TestClassification_Spec(t *testing.T) {
 	cases := []struct {
 		name    string

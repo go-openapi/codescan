@@ -22,19 +22,19 @@ const (
 
 	// fixturesModule is the module path of the fixtures nested module.
 	fixturesModule = "github.com/go-openapi/codescan/fixtures"
-	// classificationOrderRef is the fully-qualified $ref of the classification
-	// `order` model — emitted by the schema builder before the spec reduce
-	// stage shortens it (see scanner.EntityDecl.DefKey).
+	// classificationOrderRef is the fully-qualified $ref of the classification `order` model —
+	// emitted by the schema builder before the spec reduce stage shortens it (see
+	// scanner.EntityDecl.DefKey).
 	classificationOrderRef = "#/definitions/" + fixturesModule + "/goparsing/classification/models/order"
 	fixtureMinimal3125     = "bugs/3125/minimal"
 	sampleValue1           = "value1"
 	sampleValue2           = "value2"
 )
 
-// NOTE: the per-type petstore schema snapshots (Tag / Pet / Order) moved to
-// the full-pipeline integration golden petstore_spec.json, which captures the
-// same models in their reduced form. Builder-unit tests assert properties; they
-// no longer dump whole-spec goldens. See .claude/plans/golden-unit-to-integration.md.
+// NOTE: the per-type petstore schema snapshots (Tag / Pet / Order) moved to the full-pipeline
+// integration golden petstore_spec.json, which captures the same models in their reduced form.
+// Builder-unit tests assert properties; they no longer dump whole-spec goldens.
+// See .claude/plans/golden-unit-to-integration.md.
 
 func TestBuilder(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
@@ -606,10 +606,9 @@ func TestAliasedTypes(t *testing.T) {
 	require.NoError(t, prs.Build(WithDefinitions(models)))
 
 	schema := models[scantest.ResolveTestKey(t, models, "OtherTypes")]
-	// Sub-builder unit tests run without the spec reduce stage, so $refs
-	// stay fully-qualified. The alias targets are not built into the local
-	// map (only OtherTypes is), so ResolveTestKey cannot shorten them;
-	// hardcode their package-qualified keys.
+	// Sub-builder unit tests run without the spec reduce stage, so $refs stay fully-qualified.
+	// The alias targets are not built into the local map (only OtherTypes is), so ResolveTestKey
+	// cannot shorten them; hardcode their package-qualified keys.
 	mp := "#/definitions/" + fixturesModule + "/goparsing/classification/models/"
 	tp := "#/definitions/" + fixturesModule + "/goparsing/classification/transitive/mods/"
 	scantest.AssertRef(t, &schema, "named", "Named", mp+"SomeStringType")
@@ -637,9 +636,8 @@ func TestAliasedTypes(t *testing.T) {
 
 	scantest.AssertRef(t, &schema, "modsNamed", "ModsNamed", tp+"modsSomeStringType")
 	scantest.AssertRef(t, &schema, "modsNumbered", "ModsNumbered", tp+"modsSomeIntType")
-	// F1: modsSomeTimeType is swagger:model + swagger:strfmt date-time, so it
-	// now $refs its definition (which carries the format) like its siblings,
-	// rather than inlining {string,date-time}.
+	// F1: modsSomeTimeType is swagger:model + swagger:strfmt date-time, so it now $refs its definition
+	// (which carries the format) like its siblings, rather than inlining {string,date-time}.
 	scantest.AssertRef(t, &schema, "modsDated", "ModsDated", tp+"modsSomeTimeType")
 	scantest.AssertRef(t, &schema, "modsTimed", "ModsTimed", tp+"modsSomeTimedType")
 	scantest.AssertRef(t, &schema, "modsPetted", "ModsPetted", tp+"modsSomePettedType")
@@ -658,9 +656,9 @@ func TestAliasedTypes(t *testing.T) {
 	scantest.AssertRef(t, &schema, "manyModsPetted", "ManyModsPetted", tp+"modsSomePettedsType")
 	scantest.AssertRef(t, &schema, "manyModsPettedPtr", "ManyModsPettedPtr", tp+"modsSomePettedsPtrType")
 
-	// swagger:alias is deprecated (F8): it no longer force-inlines the
-	// primitive, so these now $ref their definitions like any other named
-	// type (consistent with the `named`/`numbered` assertions above).
+	// swagger:alias is deprecated (F8): it no longer force-inlines the primitive, so these now $ref
+	// their definitions like any other named type (consistent with the `named`/`numbered` assertions
+	// above).
 	scantest.AssertRef(t, &schema, "namedAlias", "NamedAlias", mp+"SomeStringTypeAlias")
 	scantest.AssertRef(t, &schema, "numberedAlias", "NumberedAlias", mp+"SomeIntTypeAlias")
 	assertArrayRef(t, &schema, "namedsAlias", "NamedsAlias", mp+"SomeStringTypeAlias")
@@ -703,17 +701,16 @@ func TestAliasedModels(t *testing.T) {
 
 	for k := range defs {
 		for i, b := range names {
-			// defs is keyed by the fully-qualified identity; match on the
-			// leaf via ResolveTestKey rather than the bare name.
+			// defs is keyed by the fully-qualified identity; match on the leaf via ResolveTestKey rather
+			// than the bare name.
 			if scantest.ResolveTestKey(t, defs, b) == k {
 				// remove the entry from the collection
 				names = append(names[:i], names[i+1:]...)
 			}
 		}
 	}
-	// Sub-builder unit tests run without the spec reduce stage; the pet /
-	// Something $ref targets are not in the local map, so their keys are
-	// hardcoded with their package paths.
+	// Sub-builder unit tests run without the spec reduce stage; the pet / Something $ref targets are
+	// not in the local map, so their keys are hardcoded with their package paths.
 	petRef := "#/definitions/" + fixturesModule + "/goparsing/classification/transitive/mods/pet"
 	somethingRef := "#/definitions/" + fixturesModule + "/goparsing/classification/models/Something"
 	if assert.Empty(t, names) {
@@ -907,8 +904,8 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 		schema := allModels[scantest.ResolveTestKey(t, allModels, modelName)]
 		require.Len(t, schema.Properties, 5)
 
-		// Interface-method properties are camelCased; struct fields
-		// without json tags keep the Go identifier verbatim.
+		// Interface-method properties are camelCased; struct fields without json tags keep the Go
+		// identifier verbatim.
 		v1, v2, v3, v4, v5 := valueKeys(modelName)
 
 		require.MapContainsT(t, schema.Properties, v1)
@@ -933,11 +930,10 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 	assertModel(ctx, packagePath, "ItemInterface")
 }
 
-// valueKeys returns the five property keys expected for the fixtures
-// Item (struct, Go names verbatim) and ItemInterface (interface
-// methods, JSON-name-derived via the interface-method mangler — see
-// [§method-mangler](./README.md#method-mangler) — so the keys are
-// camelCased rather than Go-verbatim).
+// valueKeys returns the five property keys expected for the fixtures Item (struct, Go names
+// verbatim) and ItemInterface (interface methods, JSON-name-derived via the interface-method
+// mangler — see [§method-mangler](./README.md#method-mangler) — so the keys are camelCased
+// rather than Go-verbatim).
 func valueKeys(modelName string) (string, string, string, string, string) {
 	if modelName == "ItemInterface" {
 		return sampleValue1, sampleValue2, "value3", "value4", "value5"
@@ -1080,8 +1076,7 @@ func TestStructDiscriminators(t *testing.T) {
 
 	// sch = noModelDefs["lion"]
 
-	// b, _ := json.MarshalIndent(sch, "", "  ")
-	// fmt.Println(string(b))
+	// b, _ := json.MarshalIndent(sch, "", " ") fmt.Println(string(b))
 }
 
 func TestInterfaceDiscriminators(t *testing.T) {
@@ -1311,12 +1306,12 @@ func TestBuilder_DiagnosticsOnInvalidNumeric(t *testing.T) {
 	schema := models[scantest.ResolveTestKey(t, models, "BadMaximum")]
 	require.Contains(t, schema.Properties, "count")
 	count := schema.Properties["count"]
-	// The invalid `maximum: notanumber` is silently dropped — Maximum
-	// stays nil on the property schema.
+	// The invalid `maximum: notanumber` is silently dropped — Maximum stays nil on the property
+	// schema.
 	assert.Nil(t, count.Maximum, "invalid maximum: should be dropped from spec")
 
-	// Builder.Diagnostics() and the OnDiagnostic callback both surface
-	// the parser's CodeInvalidNumber error.
+	// Builder.Diagnostics() and the OnDiagnostic callback both surface the parser's CodeInvalidNumber
+	// error.
 	bd := prs.Diagnostics()
 	require.NotEmpty(t, bd)
 	require.NotEmpty(t, collected)
@@ -1340,9 +1335,9 @@ func TestBuilder_DiagnosticsOnInvalidNumeric(t *testing.T) {
 	assert.True(t, foundBuilder, "Builder.Diagnostics should contain CodeInvalidNumber")
 }
 
-// TestBuilder_DiagnosticsOnAmbiguousEmbed exercises the
-// embed-ambiguity diagnostic path. The fixture defines three
-// shapes that all share a property JSON name across embeds:
+// TestBuilder_DiagnosticsOnAmbiguousEmbed exercises the embed-ambiguity diagnostic path.
+//
+// The fixture defines three shapes that all share a property JSON name across embeds:
 //
 //   - AmbiguousEmbed       — two sibling embeds at the same depth
 //     promote the same JSON name under different Go field names;
@@ -1354,9 +1349,9 @@ func TestBuilder_DiagnosticsOnInvalidNumeric(t *testing.T) {
 //     embedded JSON name; the embed-side override is happening at
 //     depth 0 and the diagnostic must remain silent.
 //
-// The diagnostic carries CodeAmbiguousEmbed (SeverityWarning); the
-// spec output remains last-write-wins regardless. Behaviour is not
-// changed by this signal, only surfaced.
+// The diagnostic carries CodeAmbiguousEmbed (SeverityWarning); the spec output remains
+// last-write-wins regardless.
+// Behaviour is not changed by this signal, only surfaced.
 func TestBuilder_DiagnosticsOnAmbiguousEmbed(t *testing.T) {
 	packagePattern := "./enhancements/diagnostics"
 	packagePath := fixturesModule + "/enhancements/diagnostics"
@@ -1416,14 +1411,12 @@ func TestBuilder_DiagnosticsOnAmbiguousEmbed(t *testing.T) {
 	})
 }
 
-// TestEmbeddedDescriptionAndTags verifies the allOf compound shape
-// for $ref'd fields with field-level x-extensions and example. v1
-// rode them as siblings of $ref (rejecting JSON Schema draft-4);
-// the current builder produces the principled allOf compound where
-// the description lives on the outer parent and the override
-// decorations live on the override arm — see
-// `internal/builders/schema/walker.go#applyToRefField` for the
-// shape rules and the DescWithRef toggle's role.
+// TestEmbeddedDescriptionAndTags verifies the allOf compound shape for $ref'd fields with
+// field-level x-extensions and example. v1 rode them as siblings of $ref (rejecting JSON Schema
+// draft-4); the current builder produces the principled allOf compound where the description lives
+// on the outer parent and the override decorations live on the override arm — see
+// `internal/builders/schema/walker.go#applyToRefField` for the shape rules and the DescWithRef
+// toggle's role.
 func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	packagePattern := "./" + fixtureMinimal3125
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
@@ -1442,12 +1435,12 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	assert.Equal(t, []string{sampleValue1, sampleValue2}, schema.Required)
 	require.Len(t, schema.Properties, 2)
 
-	// Both Value1 and Value2 are typed *ValueStruct / ValueStruct
-	// (named) → $ref. Field-level decorations move to the override
-	// arm of an allOf compound; description rides the outer parent.
+	// Both Value1 and Value2 are typed *ValueStruct / ValueStruct (named) → $ref.
+	// Field-level decorations move to the override arm of an allOf compound; description rides the
+	// outer parent.
 
-	// Vendor extensions ride the OUTER compound (alongside x-go-name)
-	// so the field carries all its x-* metadata at one level.
+	// Vendor extensions ride the OUTER compound (alongside x-go-name) so the field carries all its x-*
+	// metadata at one level.
 	// Validations go on the override arm (AllOf[1]).
 
 	require.MapContainsT(t, schema.Properties, sampleValue1)
@@ -1464,15 +1457,15 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	assert.MapNotContainsT(t, v2.Extensions, "x-nullable")
 	require.Len(t, v2.AllOf, 2, "value2 has an example override → two-arm allOf")
 	assert.Equal(t, "#/definitions/"+fixturesModule+"/"+fixtureMinimal3125+"/ValueStruct", v2.AllOf[0].Ref.String())
-	// The JSON-object example coerces structurally on the $ref override
-	// arm, matching the direct-field path (quirk G3) — it was previously
-	// carried as the raw string `{"value": 42}`.
+	// The JSON-object example coerces structurally on the $ref override arm, matching the direct-field
+	// path (quirk G3) — it was previously carried as the raw string `{"value": 42}`.
 	assert.Equal(t, map[string]any{"value": float64(42)}, v2.AllOf[1].Example)
 }
 
-// TestEmbeddedDescriptionAndTags_OptionVariants captures the
-// (SkipExtensions, DescWithRef) option matrix on the bugs/3125
-// fixture into separately-named goldens. Verifies that:
+// TestEmbeddedDescriptionAndTags_OptionVariants captures the (SkipExtensions, DescWithRef) option
+// matrix on the bugs/3125 fixture into separately-named goldens.
+//
+// Verifies that:
 //
 //   - Validation/extension overrides on a $ref'd field always wrap
 //     in allOf (Value1's x-nullable, Value2's example are both
@@ -1483,9 +1476,8 @@ func TestEmbeddedDescriptionAndTags(t *testing.T) {
 //     x-go-package without affecting user-authored x-nullable or
 //     the allOf shape.
 //
-// The four goldens produce a complete trace of (skipExt, descRef)
-// permutations and serve as regression locks for the option
-// semantics described in scanner.Options.
+// The four goldens produce a complete trace of (skipExt, descRef) permutations and serve as
+// regression locks for the option semantics described in scanner.Options.
 func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -1516,8 +1508,7 @@ func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 			require.MapContainsT(t, schema.Properties, sampleValue1)
 			v1 := schema.Properties[sampleValue1]
 
-			// Both fields have overrides → the allOf compound persists in
-			// every option combination.
+			// Both fields have overrides → the allOf compound persists in every option combination.
 			require.NotEmpty(t, v1.AllOf, "overrides always wrap in allOf")
 			assert.Empty(t, v1.Ref.String(), "outer schema must not carry the ref directly")
 
@@ -1532,28 +1523,28 @@ func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 				assert.Equal(t, "Value1", v1.Extensions["x-go-name"])
 			}
 
-			// DescWithRef only governs the description-only-no-override case;
-			// here both fields keep their descriptions on the outer compound.
+			// DescWithRef only governs the description-only-no-override case; here both fields keep their
+			// descriptions on the outer compound.
 			assert.EqualT(t, "Nullable value", v1.Description)
 		})
 	}
 }
 
-// TestEmbeddedDescriptionAndTags_SkipExtensions verifies that with
-// SkipExtensions=true, the allOf compound on a $ref'd field is NOT
-// polluted by the scanner-derived metadata (x-go-name / x-go-package
-// / x-nullable inferred from pointer-ness). User-authored
-// `Extensions: x-foo` blocks would still flow (they're explicit), but
-// nothing else should land alongside the $ref.
+// TestEmbeddedDescriptionAndTags_SkipExtensions verifies that with SkipExtensions=true, the allOf
+// compound on a $ref'd field is NOT polluted by the scanner-derived metadata (x-go-name /
+// x-go-package / x-nullable inferred from pointer-ness).
 //
-// This is a regression guard: in v1, $ref'd fields had ps.Ref non-empty
-// throughout, so the schema.go x-go-name / x-go-package guards
-// (`if ps.Ref.String() == ""`) silently skipped. Post-S7, the allOf
-// rewrite clears ps.Ref — those guards now fire. Without
-// SkipExtensions=true, x-go-name lands on the outer compound (visible
-// in the regular TestEmbeddedDescriptionAndTags). With
-// SkipExtensions=true, the metadata extension writers respect the
-// option and the outer compound stays clean.
+// User-authored `Extensions: x-foo` blocks would still flow (they're explicit), but nothing else
+// should land alongside the $ref.
+//
+// This is a regression guard: in v1, $ref'd fields had ps.Ref non-empty throughout, so the
+// schema.go x-go-name / x-go-package guards (`if ps.Ref.String() == ""`) silently skipped.
+// Post-S7, the allOf rewrite clears ps.Ref — those guards now fire.
+//
+// Without SkipExtensions=true, x-go-name lands on the outer compound (visible in the regular
+// TestEmbeddedDescriptionAndTags).
+// With SkipExtensions=true, the metadata extension writers respect the option and the outer
+// compound stays clean.
 func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
 	packagePattern := "./" + fixtureMinimal3125
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
@@ -1572,15 +1563,13 @@ func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
 
 	require.Len(t, schema.Properties, 2)
 
-	// User-authored x-nullable should still be present (`Extensions:`
-	// raw block in the source). Scanner-derived x-go-name, x-go-package
-	// should be skipped.
+	// User-authored x-nullable should still be present (`Extensions:` raw block in the source).
+	// Scanner-derived x-go-name, x-go-package should be skipped.
 	v1 := schema.Properties[sampleValue1]
 	assert.MapNotContainsT(t, v1.Extensions, "x-go-name", "x-go-name should be skipped under SkipExtensions=true")
 	assert.MapNotContainsT(t, v1.Extensions, "x-go-package", "x-go-package should be skipped under SkipExtensions=true")
-	// Note: x-nullable on Value1 is user-authored, not scanner-derived;
-	// it travels with the user's `Extensions:` block and SHOULD still
-	// be present even under SkipExtensions=true.
+	// Note: x-nullable on Value1 is user-authored, not scanner-derived; it travels with the user's
+	// `Extensions:` block and SHOULD still be present even under SkipExtensions=true.
 	assert.Equal(t, true, v1.Extensions["x-nullable"], "user-authored x-nullable should survive SkipExtensions=true")
 
 	v2 := schema.Properties[sampleValue2]
@@ -1589,12 +1578,12 @@ func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
 	assert.MapNotContainsT(t, v2.Extensions, "x-nullable", "value2 has no x-nullable in source")
 }
 
-// TestEmbeddedDescriptionAndTags_SkipAllOfCompounding is the A/B
-// witness for the SkipAllOfCompounding option on the bugs/3125
-// fixture. Both Value1 (*ValueStruct, user-authored x-nullable +
-// description) and Value2 (ValueStruct, example + description) are
-// $ref'd fields whose siblings normally wrap into an allOf compound
-// (see TestEmbeddedDescriptionAndTags).
+// TestEmbeddedDescriptionAndTags_SkipAllOfCompounding is the A/B witness for the
+// SkipAllOfCompounding option on the bugs/3125 fixture.
+//
+// Both Value1 (*ValueStruct, user-authored x-nullable + description) and Value2 (ValueStruct,
+// example + description) are $ref'd fields whose siblings normally wrap into an allOf compound (see
+// TestEmbeddedDescriptionAndTags).
 //
 // With SkipAllOfCompounding=true:
 //
@@ -1644,8 +1633,10 @@ func TestEmbeddedDescriptionAndTags_SkipAllOfCompounding(t *testing.T) {
 	assert.Empty(t, v2.Description, "description dropped on a bare $ref")
 	assert.Nil(t, v2.Example, "override example dropped on a bare $ref")
 
-	// Every dropped sibling is reported. Value1 → x-nullable + description;
-	// Value2 → example + description. All carry CodeDroppedRefSibling.
+	// Every dropped sibling is reported.
+	//
+	// Value1 → x-nullable + description; Value2 → example + description.
+	// All carry CodeDroppedRefSibling.
 	var keywords, descDrops int
 	for _, d := range diags {
 		if d.Code != grammar.CodeDroppedRefSibling {
@@ -1678,8 +1669,8 @@ func sliceContainsSubstr(ss []string, sub string) bool {
 	return false
 }
 
-// TestEmbeddedDescriptionAndTags_EmitRefSiblings exercises the
-// EmitRefSiblings lenient mode (no SkipAllOfCompounding) on bugs/3125.
+// TestEmbeddedDescriptionAndTags_EmitRefSiblings exercises the EmitRefSiblings lenient mode (no
+// SkipAllOfCompounding) on bugs/3125.
 //
 //   - Value1 (*ValueStruct, user x-nullable + description): no
 //     validation forces a compound, so description and x-nullable ride
@@ -1734,9 +1725,10 @@ func TestEmbeddedDescriptionAndTags_EmitRefSiblings(t *testing.T) {
 	}
 }
 
-// TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip covers the
-// EmitRefSiblings + SkipAllOfCompounding combination on bugs/3125
-// (the "both on" quadrant). No allOf compound is ever produced:
+// TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip covers the EmitRefSiblings +
+// SkipAllOfCompounding combination on bugs/3125 (the "both on" quadrant).
+//
+// No allOf compound is ever produced:
 //
 //   - Value1: description + x-nullable survive as direct $ref siblings.
 //   - Value2: description survives as a sibling, but `example` (a
@@ -1789,21 +1781,20 @@ func TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip(t *testing.T) {
 	assert.Equal(t, 1, drops, "only the example (a validation) is dropped")
 }
 
-// TestParamsShape_DescWithRef_BothModes covers the description-only
-// $ref'd field case where the user toggles DescWithRef:
+// TestParamsShape_DescWithRef_BothModes covers the description-only $ref'd field case where the
+// user toggles DescWithRef:
 //
 //   - DescWithRef=false (default): the description is dropped and the
 //     field emits as a bare {$ref: ...}.
 //   - DescWithRef=true: the description rides a single-arm allOf
 //     compound — {description: ..., allOf: [{$ref}]}.
 //
-// Fixture: classification operations corpus' `pet` field of
-// `items[]` in NoModel carries only a description plus a $ref to the
-// pet model — no validations, no user-authored extensions.
+// Fixture: classification operations corpus' `pet` field of `items[]` in NoModel carries only a
+// description plus a $ref to the pet model — no validations, no user-authored extensions.
 //
-// When the field carries validation or extension overrides, the
-// allOf compound is mandatory regardless of DescWithRef — covered by
-// TestEmbeddedDescriptionAndTags / TestEmbeddedDescriptionAndTags_SkipExtensions.
+// When the field carries validation or extension overrides, the allOf compound is mandatory
+// regardless of DescWithRef — covered by TestEmbeddedDescriptionAndTags /
+// TestEmbeddedDescriptionAndTags_SkipExtensions.
 func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 	getPetField := func(t *testing.T, descWithRef bool) oaispec.Schema {
 		t.Helper()
@@ -1852,15 +1843,15 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 	})
 }
 
-// TestIssue2540 verifies the JSON Schema draft-4 allOf compound shape
-// for a $ref'd field (`Author Author`) carrying its own field-level
-// `example:`. The example must travel on the override arm of the
-// allOf compound, never as a sibling of $ref. The DescWithRef toggle
-// does not change this case — when validations (here, `example`)
-// are present, the allOf wrap is mandatory regardless of the flag.
+// TestIssue2540 verifies the JSON Schema draft-4 allOf compound shape for a $ref'd field (`Author
+// Author`) carrying its own field-level `example:`.
+//
+// The example must travel on the override arm of the allOf compound, never as a sibling of $ref.
+// The DescWithRef toggle does not change this case — when validations (here, `example`) are
+// present, the allOf wrap is mandatory regardless of the flag.
 func TestIssue2540(t *testing.T) {
-	// Sub-builder unit tests run without the spec reduce stage, so the
-	// definitions key and the $ref stay fully-qualified.
+	// Sub-builder unit tests run without the spec reduce stage, so the definitions key and the $ref
+	// stay fully-qualified.
 	const expectedJSON = `{
 		"github.com/go-openapi/codescan/fixtures/bugs/2540/foo/Book": {
       "description": "At this moment, a book is only described by its publishing date\nand author.",

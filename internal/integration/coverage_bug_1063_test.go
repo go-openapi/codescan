@@ -12,13 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1063 locks the resolution to go-swagger issue #1063 ("making
-// a model readOnly"): a `// read only: true` annotation emits `readOnly: true`
-// on the property.
+// TestCoverage_Bug1063 locks the resolution to go-swagger issue #1063 ("making a model readOnly"):
+// a `// read only: true` annotation emits `readOnly: true` on the property.
 //
-// 📖 Need doc: readOnly is a spec-level marker; excluding the field from request
-// bodies is the responsibility of downstream code generation / validation, not
-// the spec scanner.
+// 📖 Need doc: readOnly is a spec-level marker; excluding the field from request bodies is the
+// responsibility of downstream code generation / validation, not the spec scanner.
 func TestCoverage_Bug1063(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1063/..."},

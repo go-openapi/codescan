@@ -37,10 +37,11 @@ func runPrune(t *testing.T, scanModels, prune bool, input *oaispec.Swagger) (*oa
 	return doc, byCode
 }
 
-// TestPruneUnused_Off is the control: with ScanModels and no prune, every
-// swagger:model is emitted — including the unreferenced Unused / OnlyByUnused —
-// and the a.Thing / b.Thing collision is deconflicted to AThing / BThing (two
-// rename Hints). This is the shape the prune pass reduces.
+// TestPruneUnused_Off is the control: with ScanModels and no prune, every swagger:model is emitted
+// — including the unreferenced Unused / OnlyByUnused — and the a.Thing / b.Thing collision is
+// deconflicted to AThing / BThing (two rename Hints).
+//
+// This is the shape the prune pass reduces.
 func TestPruneUnused_Off(t *testing.T) {
 	doc, byCode := runPrune(t, true, false, nil)
 
@@ -55,11 +56,12 @@ func TestPruneUnused_Off(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_prune_unused_all.json")
 }
 
-// TestPruneUnused_On is the core case. ScanModels + PruneUnusedModels keeps only
-// the route-reachable closure (Used -> B -> C, the recursive Node, and a.Thing),
-// drops the dead set (Unused, OnlyByUnused, b.Thing), and — because the prune
-// runs BEFORE name reduction — the a.Thing / b.Thing collision never surfaces,
-// so a.Thing keeps the bare name "Thing" with no AThing / BThing churn.
+// TestPruneUnused_On is the core case.
+//
+// ScanModels + PruneUnusedModels keeps only the route-reachable closure (Used -> B -> C, the
+// recursive Node, and a.Thing), drops the dead set (Unused, OnlyByUnused, b.Thing), and — because
+// the prune runs BEFORE name reduction — the a.Thing / b.Thing collision never surfaces, so
+// a.Thing keeps the bare name "Thing" with no AThing / BThing churn.
 func TestPruneUnused_On(t *testing.T) {
 	doc, byCode := runPrune(t, true, true, nil)
 
@@ -90,9 +92,9 @@ func TestPruneUnused_On(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_prune_unused.json")
 }
 
-// TestPruneUnused_Diagnostics asserts the prune is loud: one located Hint per
-// pruned definition (Unused, OnlyByUnused, b.Thing), each a Hint severity with a
-// source line, and no rename Hints (the collision was pruned away).
+// TestPruneUnused_Diagnostics asserts the prune is loud: one located Hint per pruned definition
+// (Unused, OnlyByUnused, b.Thing), each a Hint severity with a source line, and no rename Hints
+// (the collision was pruned away).
 func TestPruneUnused_Diagnostics(t *testing.T) {
 	_, byCode := runPrune(t, true, true, nil)
 
@@ -105,9 +107,9 @@ func TestPruneUnused_Diagnostics(t *testing.T) {
 	assert.Empty(t, byCode[grammar.CodeRenamedDefinition])
 }
 
-// TestPruneUnused_NoOpWithoutScanModels confirms the flag is inert without
-// ScanModels (the emitted set is already reachable-only): the output matches the
-// plain reachable scan, and exactly one positionless Hint explains the no-op.
+// TestPruneUnused_NoOpWithoutScanModels confirms the flag is inert without ScanModels (the emitted
+// set is already reachable-only): the output matches the plain reachable scan, and exactly one
+// positionless Hint explains the no-op.
 func TestPruneUnused_NoOpWithoutScanModels(t *testing.T) {
 	doc, byCode := runPrune(t, false, true, nil)
 
@@ -123,9 +125,8 @@ func TestPruneUnused_NoOpWithoutScanModels(t *testing.T) {
 	assert.Zero(t, hints[0].Pos.Line, "the no-op notice is positionless")
 }
 
-// TestPruneUnused_InputSpecPinned confirms decision 2: a definition supplied via
-// InputSpec is pinned — never pruned even when no path references it — and seeds
-// the reachability roots.
+// TestPruneUnused_InputSpecPinned confirms decision 2: a definition supplied via InputSpec is
+// pinned — never pruned even when no path references it — and seeds the reachability roots.
 func TestPruneUnused_InputSpecPinned(t *testing.T) {
 	input := &oaispec.Swagger{
 		SwaggerProps: oaispec.SwaggerProps{
@@ -141,9 +142,8 @@ func TestPruneUnused_InputSpecPinned(t *testing.T) {
 	assert.NotContains(t, doc.Definitions, "Unused")
 }
 
-// TestPruneUnused_Provenance confirms a pruned definition leaves no orphan
-// provenance: no anchor references a pruned node, and every emitted anchor
-// resolves in the rendered spec.
+// TestPruneUnused_Provenance confirms a pruned definition leaves no orphan provenance: no anchor
+// references a pruned node, and every emitted anchor resolves in the rendered spec.
 func TestPruneUnused_Provenance(t *testing.T) {
 	var recorded []scanner.Provenance
 	doc, err := codescan.Run(&codescan.Options{

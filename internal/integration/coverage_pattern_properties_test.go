@@ -13,10 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_PatternProperties verifies the patternProperties object
-// schema keyword: each annotation line adds a regex → empty-schema entry
-// to schema.patternProperties, and the regex is RE2-hygiene-checked like
-// the pattern keyword — an invalid regex is preserved on the schema but
+// TestCoverage_PatternProperties verifies the patternProperties object schema keyword: each
+// annotation line adds a regex → empty-schema entry to schema.patternProperties, and the regex is
+// RE2-hygiene-checked like the pattern keyword — an invalid regex is preserved on the schema but
 // raises a CodeInvalidAnnotation diagnostic (never dropped silently).
 func TestCoverage_PatternProperties(t *testing.T) {
 	var diags []grammar.Diagnostic
@@ -44,8 +43,8 @@ func TestCoverage_PatternProperties(t *testing.T) {
 	require.Len(t, invalid.PatternProperties, 1)
 	assert.Contains(t, invalid.PatternProperties, "[unclosed(")
 
-	// ... and exactly one CodeInvalidAnnotation diagnostic is raised,
-	// naming the patternProperties keyword (mirroring pattern's wording).
+	// ... and exactly one CodeInvalidAnnotation diagnostic is raised, naming the patternProperties
+	// keyword (mirroring pattern's wording).
 	var re2 []grammar.Diagnostic
 	for _, d := range diags {
 		if d.Code == grammar.CodeInvalidAnnotation {

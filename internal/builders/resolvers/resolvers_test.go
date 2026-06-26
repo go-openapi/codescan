@@ -42,8 +42,8 @@ func TestAddExtension(t *testing.T) {
 	assert.Nil(t, ve.Extensions[key3])
 }
 
-// typableCapture builds a MockSwaggerTypable whose Typed() records
-// the (swaggerType, format) pair it receives.
+// typableCapture builds a MockSwaggerTypable whose Typed() records the (swaggerType, format) pair
+// it receives.
 func typableCapture() (*mocks.MockSwaggerTypable, *[2]string) {
 	got := new([2]string)
 	m := &mocks.MockSwaggerTypable{
@@ -135,8 +135,8 @@ func TestUnsupportedBuiltin(t *testing.T) {
 	})
 
 	t.Run("universe-scope object returns false", func(t *testing.T) {
-		// Pkg()==nil objects (predeclared error, any, etc.) never
-		// represent unsafe.Pointer and must therefore not match.
+		// Pkg()==nil objects (predeclared error, any, etc.) never represent unsafe.Pointer and must
+		// therefore not match.
 		tn := types.NewTypeName(token.NoPos, nil, "error", nil)
 		m := &mocks.MockObjecter{ObjFunc: func() *types.TypeName { return tn }}
 		assert.FalseT(t, UnsupportedBuiltin(m))
@@ -287,9 +287,8 @@ func TestParseFieldTag(t *testing.T) {
 
 	t.Run("whitespace-only tag value falls through", func(t *testing.T) {
 		f := ident("Foo")
-		// Backticks wrap a single space — TrimSpace of `" "` != empty (outer check
-		// passes), but Unquote yields " " which does TrimSpace to empty — hits
-		// the final fallthrough.
+		// Backticks wrap a single space — TrimSpace of `" "` != empty (outer check passes), but Unquote
+		// yields " " which does TrimSpace to empty — hits the final fallthrough.
 		f.Tag = &ast.BasicLit{Value: "` `"}
 		name, ignore, isString, omitEmpty, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.NoError(t, err)
@@ -301,15 +300,16 @@ func TestParseFieldTag(t *testing.T) {
 
 	t.Run("malformed tag returns Unquote error", func(t *testing.T) {
 		f := ident("Foo")
-		// Unquote requires surrounding backticks/quotes. Bare word is invalid.
+		// Unquote requires surrounding backticks/quotes.
+		// Bare word is invalid.
 		f.Tag = &ast.BasicLit{Value: "not-a-quoted-tag"}
 		_, _, _, _, err := ParseFieldTag(f, "Foo", jsonTags)
 		require.Error(t, err)
 	})
 
 	t.Run("multi-name group keeps each goName (go-swagger#2638)", func(t *testing.T) {
-		// `R, G, B, A uint8` — go/types yields one var per name sharing the
-		// same AST field; each member must keep its own name.
+		// `R, G, B, A uint8` — go/types yields one var per name sharing the same AST field; each member
+		// must keep its own name.
 		f := multi("R", "G", "B", "A")
 		for _, n := range []string{"R", "G", "B", "A"} {
 			name, _, _, _, err := ParseFieldTag(f, n, jsonTags)
@@ -336,8 +336,8 @@ func TestParseFieldTag(t *testing.T) {
 		assert.TrueT(t, ignore)
 	})
 
-	// NameFromTags — the name is sourced from the first tag type that yields a
-	// usable name; encoding/json directives always come from the json tag.
+	// NameFromTags — the name is sourced from the first tag type that yields a usable name;
+	// encoding/json directives always come from the json tag.
 
 	t.Run("form tag names the field (go-swagger#2912)", func(t *testing.T) {
 		f := ident("SortKey")
@@ -431,8 +431,8 @@ func TestMustNotBeABuiltinType(t *testing.T) {
 }
 
 func TestInternalError_Error(t *testing.T) {
-	// Exercises the internalError.Error method that satisfies the `error`
-	// interface used in fmt.Errorf("...%w", ErrInternal).
+	// Exercises the internalError.Error method that satisfies the `error` interface used in
+	// fmt.Errorf("...%w", ErrInternal).
 	assert.EqualT(t, string(ErrInternal), ErrInternal.Error())
 }
 

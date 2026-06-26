@@ -12,11 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2353 locks go-swagger issue #2353 ("valid spec with body and
-// request param"): an operation that mixes a path parameter and a body parameter
-// produces a valid parameter set — the body param is a clean {in:body, schema:
-// {$ref}} with no forbidden sibling `type`, and the path param is a simple
-// {in:path, type:string}.
+// TestCoverage_Bug2353 locks go-swagger issue #2353 ("valid spec with body and request param"): an
+// operation that mixes a path parameter and a body parameter produces a valid parameter set — the
+// body param is a clean {in:body, schema: {$ref}} with no forbidden sibling `type`, and the path
+// param is a simple {in:path, type:string}.
 func TestCoverage_Bug2353(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2353/..."},

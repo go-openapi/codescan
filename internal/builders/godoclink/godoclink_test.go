@@ -67,7 +67,7 @@ func TestClean(t *testing.T) {
 
 func TestCleanLeavesInitialismCasing(t *testing.T) {
 	m := mangling.NewNameMangler()
-	// ToHumanNameLower keeps recognized initialisms cased; CleanGoDoc must not
-	// re-case them mid-sentence.
+	// ToHumanNameLower keeps recognized initialisms cased; CleanGoDoc must not re-case them
+	// mid-sentence.
 	assert.Equal(t, "Serves over an HTTP server.", Clean("Serves over an [HTTPServer].", Options{Mangler: &m}))
 }

@@ -81,12 +81,12 @@ func TestCommentBlankSubMatcher(t *testing.T) {
 	})
 }
 
-// TestMalformedOverrideName covers go-swagger issue #874: a package-
-// qualified swagger:response / swagger:model name (e.g. "utils.Error")
-// is not a plain identifier. The strict override regex rejects it, so it
-// would be silently dropped; these detectors let the scanner warn instead.
-// A bare marker or a well-formed name (including a trailing sentence
-// period) must NOT be flagged.
+// TestMalformedOverrideName covers go-swagger issue #874: a package- qualified swagger:response /
+// swagger:model name (e.g. "utils.Error") is not a plain identifier.
+//
+// The strict override regex rejects it, so it would be silently dropped; these detectors let the
+// scanner warn instead.
+// A bare marker or a well-formed name (including a trailing sentence period) must NOT be flagged.
 func TestMalformedOverrideName(t *testing.T) {
 	t.Parallel()
 

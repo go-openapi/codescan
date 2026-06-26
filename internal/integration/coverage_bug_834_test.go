@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug834 locks go-swagger issue #834 (the field-annotation half):
-// pattern / max length / example on a field are applied as schema fields, not
-// concatenated into the property description. (The non-json naming-tag ask is the
-// separate forthcoming-features §7 / #1391 item.)
+// TestCoverage_Bug834 locks go-swagger issue #834 (the field-annotation half): pattern / max length
+// / example on a field are applied as schema fields, not concatenated into the property
+// description. (The non-json naming-tag ask is the separate forthcoming-features §7 / #1391 item.)
 func TestCoverage_Bug834(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/834/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
 	require.NoError(t, err)

@@ -13,10 +13,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_InnerMarkdown exercises the swagger:description | literal block
-// scalar end to end: a model and a field description carry verbatim markdown
-// (table with leading pipes, significant blank lines, indented ordered list)
-// into the emitted spec. Reframes go-swagger#3211.
+// TestCoverage_InnerMarkdown exercises the swagger:description | literal block scalar end to end: a
+// model and a field description carry verbatim markdown (table with leading pipes, significant
+// blank lines, indented ordered list) into the emitted spec.
+//
+// Reframes go-swagger#3211.
 func TestCoverage_InnerMarkdown(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/inner-markdown/..."},
@@ -32,8 +33,8 @@ func TestCoverage_InnerMarkdown(t *testing.T) {
 	// Title still comes from the godoc preamble; the markdown is the description.
 	assert.Equal(t, "Widget is a thing.", w.Title)
 
-	// Table leading pipes survive (the literal #3211 grievance), the blank line
-	// between paragraphs is preserved, and the marker never leaks.
+	// Table leading pipes survive (the literal #3211 grievance), the blank line between paragraphs is
+	// preserved, and the marker never leaks.
 	assert.Contains(t, w.Description, "| name | purpose |")
 	assert.Contains(t, w.Description, "**markdown**")
 	assert.Contains(t, w.Description, "\n\n", "significant blank line preserved")

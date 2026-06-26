@@ -12,9 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1267 locks go-swagger issue #1267 ("response files?"): a
-// file-download response is described with produces: application/octet-stream and
-// a body field marked swagger:strfmt binary -> {type:string, format:binary}.
+// TestCoverage_Bug1267 locks go-swagger issue #1267 ("response files?"): a file-download response
+// is described with produces: application/octet-stream and a body field marked swagger:strfmt
+// binary -> {type:string, format:binary}.
 func TestCoverage_Bug1267(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1267/..."}, WorkDir: scantest.FixturesDir(),

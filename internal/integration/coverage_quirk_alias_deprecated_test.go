@@ -13,12 +13,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_AliasDeprecated locks the F8 deprecation of swagger:alias
-// (doc-site-quirks.md). swagger:alias used to force a named primitive to
-// inline ({type:string}) instead of the $ref a named type otherwise gets. It
-// is now an empty sink: it emits a validate.deprecated diagnostic and has no
-// effect on output, so the type resolves through default handling (here, a
-// $ref to its definition under swagger:model).
+// TestQuirk_AliasDeprecated locks the F8 deprecation of swagger:alias (doc-site-quirks.md).
+// swagger:alias used to force a named primitive to inline ({type:string}) instead of the $ref a
+// named type otherwise gets.
+//
+// It is now an empty sink: it emits a validate.deprecated diagnostic and has no effect on output,
+// so the type resolves through default handling (here, a $ref to its definition under
+// swagger:model).
 func TestQuirk_AliasDeprecated(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -40,8 +41,8 @@ func TestQuirk_AliasDeprecated(t *testing.T) {
 	}
 	assert.True(t, deprecated, "swagger:alias must emit a deprecation diagnostic")
 
-	// No effect on output: the field resolves to a $ref (default handling),
-	// not the inline {type:string} swagger:alias used to force.
+	// No effect on output: the field resolves to a $ref (default handling), not the inline
+	// {type:string} swagger:alias used to force.
 	contact := doc.Definitions["Account"].Properties["contact"]
 	ref := contact.Ref
 	assert.Equal(t, "#/definitions/Email", ref.String())

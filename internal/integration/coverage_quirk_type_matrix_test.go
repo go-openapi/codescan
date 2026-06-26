@@ -13,16 +13,17 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestQuirk_TypeMatrix verifies the F3 reconciliation: swagger:type is now a
-// uniform "inline this type" directive (never a $ref), resolved consistently at
-// the field site and the named-type site. It supersedes the documented-current
-// witness this test started as. The golden quirk_type_matrix.json is the
-// fixed baseline; this test pins the headline behaviours and the diagnostics.
+// TestQuirk_TypeMatrix verifies the F3 reconciliation: swagger:type is now a uniform "inline this
+// type" directive (never a $ref), resolved consistently at the field site and the named-type site.
 //
-// Vocabulary (always inlined): canonical OAS-2 scalars + Go-builtin spellings,
-// `[]T` arrays, the `inline` keyword (expand the Go type), the deprecated
-// `array` keyword, type-name references (inline a known definition), with a
-// `file` / unknown diagnostic and a strfmt-iff-format-compatible rule.
+// It supersedes the documented-current witness this test started as.
+// The golden quirk_type_matrix.json is the fixed baseline; this test pins the headline behaviours
+// and the diagnostics.
+//
+// Vocabulary (always inlined): canonical OAS-2 scalars + Go-builtin spellings, `[]T` arrays, the
+// `inline` keyword (expand the Go type), the deprecated `array` keyword, type-name references
+// (inline a known definition), with a `file` / unknown diagnostic and a
+// strfmt-iff-format-compatible rule.
 func TestQuirk_TypeMatrix(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -65,8 +66,8 @@ func TestQuirk_TypeMatrix(t *testing.T) {
 	assert.Contains(t, nInline.Properties, "x")
 	assert.Empty(t, nInline.Ref.String())
 
-	// Type-name reference inlines a known definition (no $ref), even across a
-	// different Go type (pCrossRef is a Go string overridden to Custom).
+	// Type-name reference inlines a known definition (no $ref), even across a different Go type
+	// (pCrossRef is a Go string overridden to Custom).
 	kScanned := m["kScanned"]
 	assert.Contains(t, kScanned.Properties, "x")
 	assert.Empty(t, kScanned.Ref.String())
@@ -77,8 +78,8 @@ func TestQuirk_TypeMatrix(t *testing.T) {
 	assert.Equal(t, []string{"array"}, []string(m["oArrayCustom"].Type))
 	assert.Contains(t, m["oArrayCustom"].Items.Schema.Properties, "x")
 
-	// strfmt + type precedence: type wins; a compatible format is applied, an
-	// incompatible one is dropped (with a diagnostic, asserted below).
+	// strfmt + type precedence: type wins; a compatible format is applied, an incompatible one is
+	// dropped (with a diagnostic, asserted below).
 	assert.Equal(t, []string{"string"}, []string(m["mStrfmtThenString"].Type))
 	assert.Equal(t, "uuid", m["mStrfmtThenString"].Format) // uuid compatible with string
 	assert.Equal(t, []string{"integer"}, []string(m["lStrfmtThenType"].Type))
@@ -93,9 +94,9 @@ func TestQuirk_TypeMatrix(t *testing.T) {
 	assert.Equal(t, []string{"array"}, []string(doc.Definitions["NamedSlice"].Type))
 	assert.Equal(t, []string{"integer"}, []string(doc.Definitions["NamedStrfmtAndType"].Type))
 
-	// Diagnostics: array-deprecated ×2 (field gArray + named NamedSlice),
-	// strfmt-incompatible ×2 (field lStrfmtThenType + named NamedStrfmtAndType),
-	// file ×1, unknown ×1. No grammar invalid-type-ref any more.
+	// Diagnostics: array-deprecated ×2 (field gArray + named NamedSlice), strfmt-incompatible ×2
+	// (field lStrfmtThenType + named NamedStrfmtAndType), file ×1, unknown ×1. No grammar
+	// invalid-type-ref any more.
 	byCode := map[grammar.Code]int{}
 	for _, d := range diags {
 		byCode[d.Code]++

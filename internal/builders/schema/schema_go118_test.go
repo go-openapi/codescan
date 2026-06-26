@@ -54,8 +54,8 @@ func TestGo118AliasedModels(t *testing.T) {
 
 	for k := range defs {
 		for i, b := range names {
-			// defs is keyed by the fully-qualified identity; match on the
-			// leaf via ResolveTestKey rather than the bare name.
+			// defs is keyed by the fully-qualified identity; match on the leaf via ResolveTestKey rather
+			// than the bare name.
 			if scantest.ResolveTestKey(t, defs, b) == k {
 				// remove the entry from the collection
 				names = append(names[:i], names[i+1:]...)

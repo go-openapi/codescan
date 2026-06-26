@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug439 locks go-swagger issue #439 ("too deep scans / Expr
-// unsupported for a schema"): an unrelated, unannotated type with fields the
-// scanner can't model (chan, time.Time) is left untouched — only the discovered
-// body type is emitted, with no "Expr unsupported" error.
+// TestCoverage_Bug439 locks go-swagger issue #439 ("too deep scans / Expr unsupported for a
+// schema"): an unrelated, unannotated type with fields the scanner can't model (chan, time.Time) is
+// left untouched — only the discovered body type is emitted, with no "Expr unsupported" error.
 func TestCoverage_Bug439(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/439/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
 	require.NoError(t, err, "unrelated declarations must not break the scan (go-swagger#439)")

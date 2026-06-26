@@ -11,8 +11,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// descArg returns the folded argument text of the (first) swagger:description
-// annotation in the token stream, or fails the test.
+// descArg returns the folded argument text of the (first) swagger:description annotation in the
+// token stream, or fails the test.
 func descArg(t *testing.T, out []Token) string {
 	t.Helper()
 	for _, tk := range out {
@@ -43,13 +43,13 @@ func hasKind(out []Token, k TokenKind) bool {
 	return false
 }
 
-// TestLexer_DescriptionLiteral_PreservesMarkdown is the core contract: a
-// `swagger:description |` block captures the body verbatim — indentation, a
-// significant blank line, and markdown table pipes all survive.
+// TestLexer_DescriptionLiteral_PreservesMarkdown is the core contract: a `swagger:description |`
+// block captures the body verbatim — indentation, a significant blank line, and markdown table
+// pipes all survive.
 func TestLexer_DescriptionLiteral_PreservesMarkdown(t *testing.T) {
-	// Body lines carry the leading godoc `// ` convention space (modelled here
-	// as a leading space in each line); it is dropped while author indentation
-	// beyond it — the 2-space nested list — is preserved.
+	// Body lines carry the leading godoc `// ` convention space (modelled here as a leading space in
+	// each line); it is dropped while author indentation beyond it — the 2-space nested list — is
+	// preserved.
 	src := strings.Join([]string{
 		"swagger:description |",
 		" Overview",
@@ -66,9 +66,9 @@ func TestLexer_DescriptionLiteral_PreservesMarkdown(t *testing.T) {
 	assert.NotEqual(t, "|", strings.Split(arg, "\n")[0])
 }
 
-// TestLexer_DescriptionLiteral_DashKeepsFollowingAnnotation is the regression
-// the stage-1 literal mode exists for: a lone `---` in the body must not open a
-// YAML fence and swallow the following annotation.
+// TestLexer_DescriptionLiteral_DashKeepsFollowingAnnotation is the regression the stage-1 literal
+// mode exists for: a lone `---` in the body must not open a YAML fence and swallow the following
+// annotation.
 func TestLexer_DescriptionLiteral_DashKeepsFollowingAnnotation(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description |",
@@ -85,9 +85,8 @@ func TestLexer_DescriptionLiteral_DashKeepsFollowingAnnotation(t *testing.T) {
 	assert.False(t, hasKind(out, TokenOpaqueYaml), "the body --- must not open a YAML fence")
 }
 
-// TestLexer_DescriptionLiteral_BlankDoesNotTerminate: unlike the default
-// Option B fold, a blank line inside the literal block is body, not a
-// terminator; the block ends at the next annotation.
+// TestLexer_DescriptionLiteral_BlankDoesNotTerminate: unlike the default Option B fold, a blank
+// line inside the literal block is body, not a terminator; the block ends at the next annotation.
 func TestLexer_DescriptionLiteral_BlankDoesNotTerminate(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description |",
@@ -101,9 +100,8 @@ func TestLexer_DescriptionLiteral_BlankDoesNotTerminate(t *testing.T) {
 	assert.True(t, hasAnnotation(out, labelModel))
 }
 
-// TestLexer_DescriptionLiteral_KeywordLineIsBody: a keyword-looking line inside
-// the block is captured as body, never treated as a terminator (decision 3 — no
-// keyword sensitivity).
+// TestLexer_DescriptionLiteral_KeywordLineIsBody: a keyword-looking line inside the block is
+// captured as body, never treated as a terminator (decision 3 — no keyword sensitivity).
 func TestLexer_DescriptionLiteral_KeywordLineIsBody(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description |",
@@ -115,8 +113,8 @@ func TestLexer_DescriptionLiteral_KeywordLineIsBody(t *testing.T) {
 	assert.Contains(t, arg, "default: not a keyword here")
 }
 
-// TestLexer_DescriptionLiteral_MidLineSwaggerIsBody: only an annotation at the
-// START of a line terminates the block; a `swagger:` token mid-line is prose.
+// TestLexer_DescriptionLiteral_MidLineSwaggerIsBody: only an annotation at the START of a line
+// terminates the block; a `swagger:` token mid-line is prose.
 func TestLexer_DescriptionLiteral_MidLineSwaggerIsBody(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description |",
@@ -130,10 +128,10 @@ func TestLexer_DescriptionLiteral_MidLineSwaggerIsBody(t *testing.T) {
 	assert.True(t, hasAnnotation(out, labelModel), "the line-leading swagger:model terminates and survives")
 }
 
-// TestLexer_DescriptionLiteral_IndentedSwaggerStillTerminates documents the
-// edge: the comment-prefix strip removes leading indentation before the
-// annotation check, so even an indented line that BEGINS with `swagger:`
-// terminates the block (you cannot hide it by indenting, e.g. in a code block).
+// TestLexer_DescriptionLiteral_IndentedSwaggerStillTerminates documents the edge: the
+// comment-prefix strip removes leading indentation before the annotation check, so even an indented
+// line that BEGINS with `swagger:` terminates the block (you cannot hide it by indenting, e.g. in a
+// code block).
 func TestLexer_DescriptionLiteral_IndentedSwaggerStillTerminates(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description |",
@@ -145,8 +143,8 @@ func TestLexer_DescriptionLiteral_IndentedSwaggerStillTerminates(t *testing.T) {
 	assert.True(t, hasAnnotation(out, labelModel))
 }
 
-// TestLexer_DescriptionLiteral_TrailingBlankClipped: bare `|` clips trailing
-// blank lines (interior ones are kept, see above).
+// TestLexer_DescriptionLiteral_TrailingBlankClipped: bare `|` clips trailing blank lines (interior
+// ones are kept, see above).
 func TestLexer_DescriptionLiteral_TrailingBlankClipped(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description |",
@@ -157,15 +155,15 @@ func TestLexer_DescriptionLiteral_TrailingBlankClipped(t *testing.T) {
 	assert.Equal(t, "body", descArg(t, lexString(t, src)))
 }
 
-// TestLexer_DescriptionLiteral_EmptyBody: a marker with no body folds to an
-// empty description rather than leaking the `|`.
+// TestLexer_DescriptionLiteral_EmptyBody: a marker with no body folds to an empty description
+// rather than leaking the `|`.
 func TestLexer_DescriptionLiteral_EmptyBody(t *testing.T) {
 	assert.Equal(t, "", descArg(t, lexString(t, "swagger:description |")))
 }
 
-// TestLexer_DescriptionLiteral_PlainUnchanged: without the `|` marker the
-// default Option B behaviour is intact — the body folds to the first blank line
-// and trailing prose stays out of the description.
+// TestLexer_DescriptionLiteral_PlainUnchanged: without the `|` marker the default Option B
+// behaviour is intact — the body folds to the first blank line and trailing prose stays out of
+// the description.
 func TestLexer_DescriptionLiteral_PlainUnchanged(t *testing.T) {
 	src := strings.Join([]string{
 		"swagger:description short desc",

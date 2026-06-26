@@ -12,11 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1459 locks go-swagger issue #1459 ("example values on map keys
-// instead of AdditionalProp"): a map field accepts an `example` object with
-// meaningful keys, which the spec carries on the additionalProperties schema.
-// The misleading additionalProp1/2/3 keys are only the Swagger UI's fallback
-// when no example is provided.
+// TestCoverage_Bug1459 locks go-swagger issue #1459 ("example values on map keys instead of
+// AdditionalProp"): a map field accepts an `example` object with meaningful keys, which the spec
+// carries on the additionalProperties schema.
+//
+// The misleading additionalProp1/2/3 keys are only the Swagger UI's fallback when no example is
+// provided.
 func TestCoverage_Bug1459(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1459/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,

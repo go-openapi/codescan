@@ -12,17 +12,16 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_AliasPredeclaredRef regression-tests the nil-pkg
-// panic that fires in `buildDeclAlias`'s $ref branch when the
-// alias's RHS is a predeclared type — concretely `type Err = error`.
-// The predeclared `error` interface has no package (universe scope);
-// `ro.Pkg()` returns nil, and the GetModel lookup
-// `ro.Pkg().Path()` nil-panics.
+// TestCoverage_AliasPredeclaredRef regression-tests the nil-pkg panic that fires in
+// `buildDeclAlias`'s $ref branch when the alias's RHS is a predeclared type — concretely `type
+// Err = error`.
 //
-// The fix in `buildDeclAlias`'s `case *types.Named` branch guards
-// the nil package case and routes through `applyStdlibSpecials`,
-// so `error` produces its canonical `{type: string, x-go-type: error}`
-// shape inline instead of crashing the scan.
+// The predeclared `error` interface has no package (universe scope); `ro.Pkg()` returns nil, and
+// the GetModel lookup `ro.Pkg().Path()` nil-panics.
+//
+// The fix in `buildDeclAlias`'s `case *types.Named` branch guards the nil package case and routes
+// through `applyStdlibSpecials`, so `error` produces its canonical `{type: string, x-go-type:
+// error}` shape inline instead of crashing the scan.
 func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-stdlib/..."},
@@ -33,11 +32,10 @@ func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 	require.NoError(t, err, "no panic; no error; spec built")
 	require.NotNil(t, doc)
 
-	// All four stdlib aliases must produce their canonical inline
-	// shape directly on their own definition — no chain hop through a
-	// separately-built target. Lifting applyStdlibSpecials above the
-	// nil-pkg conditional unified what was a within-mode asymmetry
-	// (predeclared `error` inline; packaged stdlib types chained).
+	// All four stdlib aliases must produce their canonical inline shape directly on their own
+	// definition — no chain hop through a separately-built target.
+	// Lifting applyStdlibSpecials above the nil-pkg conditional unified what was a within-mode
+	// asymmetry (predeclared `error` inline; packaged stdlib types chained).
 
 	require.Contains(t, doc.Definitions, "Err",
 		"swagger:model Err = error must produce an Err definition")
@@ -63,10 +61,9 @@ func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 	assert.Empty(t, raw.Ref.String(),
 		"Raw must NOT chain to a separate RawMessage definition under Ref")
 
-	// Unannotated aliases are a Go implementation detail and do not
-	// surface as standalone definitions. SilentTime dissolves at
-	// its use site (Envelope.silent); the recognizer still wins for
-	// the inline shape.
+	// Unannotated aliases are a Go implementation detail and do not surface as standalone definitions.
+	// SilentTime dissolves at its use site (Envelope.silent); the recognizer still wins for the inline
+	// shape.
 	assert.NotContains(t, doc.Definitions, "SilentTime",
 		"unannotated alias of time.Time must not produce a standalone definition")
 	require.Contains(t, doc.Definitions, "Envelope")
@@ -85,12 +82,10 @@ func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 		"no RawMessage def — Raw inlines the open shape, no chain target")
 }
 
-// TestCoverage_AliasStdlibDefault pins the stdlib-recognizer
-// behaviour on `buildDeclAlias`'s Expand branch: aliases of
-// stdlib-special types (time.Time, error, json.RawMessage, any)
-// produce their canonical shape directly in Default mode instead
-// of the structural-walk wrong shape that buildFromType(Underlying)
-// would otherwise emit.
+// TestCoverage_AliasStdlibDefault pins the stdlib-recognizer behaviour on `buildDeclAlias`'s Expand
+// branch: aliases of stdlib-special types (time.Time, error, json.RawMessage, any) produce their
+// canonical shape directly in Default mode instead of the structural-walk wrong shape that
+// buildFromType(Underlying) would otherwise emit.
 //
 // Without the recognizer call before the Underlying fallthrough:
 //   - Timestamp = time.Time → {type: object} (walked the empty struct)
@@ -98,8 +93,8 @@ func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 //   - Raw = json.RawMessage → {type: array, items: {integer, uint8}}
 //   - SilentTime = time.Time → {type: object}
 //
-// With the recognizer call, all four produce their canonical shape
-// inline, matching TransparentAliases mode.
+// With the recognizer call, all four produce their canonical shape inline, matching
+// TransparentAliases mode.
 func TestCoverage_AliasStdlibDefault(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-stdlib/..."},
@@ -125,11 +120,10 @@ func TestCoverage_AliasStdlibDefault(t *testing.T) {
 	assert.Equal(t, "error", errDef.Extensions["x-go-type"],
 		"Err must carry the x-go-type:error extension")
 
-	// SilentTime = time.Time (UNANNOTATED, reachable via field) —
-	// unannotated aliases do not produce standalone definitions.
-	// The recognizer's canonical shape ({string, date-time}) lands
-	// inline at the use site (Envelope.silent) instead of on a
-	// SilentTime def.
+	// SilentTime = time.Time (UNANNOTATED, reachable via field) — unannotated aliases do not produce
+	// standalone definitions.
+	// The recognizer's canonical shape ({string, date-time}) lands inline at the use site
+	// (Envelope.silent) instead of on a SilentTime def.
 	assert.NotContains(t, doc.Definitions, "SilentTime",
 		"unannotated alias of time.Time must not produce a standalone definition under Default")
 	require.Contains(t, doc.Definitions, "Envelope")
@@ -140,9 +134,9 @@ func TestCoverage_AliasStdlibDefault(t *testing.T) {
 	assert.Empty(t, silentField.Ref.String(),
 		"Envelope.silent must be inline; no $ref now that SilentTime is dissolved")
 
-	// Raw = json.RawMessage → recognizeRawMessage produces the open
-	// "any JSON" shape (target.Schema() with no Typed() call). The
-	// emitted Raw definition has no `type` keyword — same as `any`.
+	// Raw = json.RawMessage → recognizeRawMessage produces the open "any JSON" shape
+	// (target.Schema() with no Typed() call).
+	// The emitted Raw definition has no `type` keyword — same as `any`.
 	// The shape is recognizer-canonical even if visually ambiguous.
 	require.Contains(t, doc.Definitions, "Raw")
 	raw := doc.Definitions["Raw"]

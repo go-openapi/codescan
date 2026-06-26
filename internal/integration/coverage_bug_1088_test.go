@@ -14,8 +14,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1088 locks the fix for go-swagger issue #1088 ("editor error
-// for array parameters").
+// TestCoverage_Bug1088 locks the fix for go-swagger issue #1088 ("editor error for array
+// parameters").
 //
 // An array IS valid in a query parameter / response header, but its `items`
 // form a Swagger 2.0 *simple schema*, which may not contain a $ref. The scanner
@@ -26,9 +26,8 @@ import (
 //     dissolves to an empty items schema with a diagnostic, and must NOT leave
 //     an orphan definition behind.
 //
-// The fix lives in the shared resolvers.ItemsTypable (now a
-// schema.SimpleSchemaProbe), so the identical constraint on response headers is
-// fixed by the same change.
+// The fix lives in the shared resolvers.ItemsTypable (now a schema.SimpleSchemaProbe), so the
+// identical constraint on response headers is fixed by the same change.
 func TestCoverage_Bug1088(t *testing.T) {
 	var diagnostics []grammar.Diagnostic
 
@@ -79,14 +78,12 @@ func TestCoverage_Bug1088(t *testing.T) {
 	assert.Empty(t, xObjs.Items.Ref.String(),
 		"an object response-header array item must not carry a $ref (go-swagger#1088)")
 
-	// --- no orphan definition ---
-	// The dissolved $ref must not leave `Ele` lingering in definitions: nothing
-	// references it once the array items are emptied.
+	// --- no orphan definition --- The dissolved $ref must not leave `Ele` lingering in definitions:
+	// nothing references it once the array items are emptied.
 	assert.NotContains(t, doc.Definitions, "Ele",
 		"a dissolved simple-schema $ref must not leave an orphan definition")
 
-	// --- diagnostics ---
-	// Each unrepresentable object element emits a located diagnostic.
+	// --- diagnostics --- Each unrepresentable object element emits a located diagnostic.
 	var objectViolations int
 	for _, d := range diagnostics {
 		if d.Code != grammar.CodeUnsupportedInSimpleSchema {

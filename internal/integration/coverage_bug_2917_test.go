@@ -11,11 +11,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2917 locks the fix for go-swagger issue #2917 ("classifier:
-// unknown swagger annotation \"extendee\""): a grpc-gateway generated comment
-// containing `…openapiv2_swagger:extendee…` used to be matched by the
-// over-broad annotation regex and aborted the scan. The current regex only
-// matches `swagger:` at start-of-line or after whitespace/slash, so the
+// TestCoverage_Bug2917 locks the fix for go-swagger issue #2917 ("classifier: unknown swagger
+// annotation \"extendee\""): a grpc-gateway generated comment containing
+// `…openapiv2_swagger:extendee…` used to be matched by the over-broad annotation regex and
+// aborted the scan.
+//
+// The current regex only matches `swagger:` at start-of-line or after whitespace/slash, so the
 // embedded `_swagger:extendee` is not treated as an annotation.
 func TestCoverage_Bug2917(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{

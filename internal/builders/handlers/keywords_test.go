@@ -10,12 +10,12 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 )
 
-// TestIsSimpleSchemaKeyword_AllowedSet pins the OAS v2 SimpleSchema
-// allowed-keyword vocabulary in code. Any future change to the
-// surface (a new SimpleSchema keyword or a removed one) must update
-// this test alongside the package-level map and the README
-// §simple-schema-mode entry — locking the contract down so it can't
-// drift silently.
+// TestIsSimpleSchemaKeyword_AllowedSet pins the OAS v2 SimpleSchema allowed-keyword vocabulary in
+// code.
+//
+// Any future change to the surface (a new SimpleSchema keyword or a removed one) must update this
+// test alongside the package-level map and the README §simple-schema-mode entry — locking the
+// contract down so it can't drift silently.
 func TestIsSimpleSchemaKeyword_AllowedSet(t *testing.T) {
 	want := []string{
 		grammar.KwMaximum,
@@ -39,10 +39,11 @@ func TestIsSimpleSchemaKeyword_AllowedSet(t *testing.T) {
 	assert.Len(t, simpleSchemaAllowed, len(want), "simpleSchemaAllowed must match the documented surface exactly")
 }
 
-// TestIsSimpleSchemaKeyword_FullSchemaOnly pins the keywords that
-// MUST be rejected as full-Schema-only. These are the keywords the
-// schema Bool handler gates and emits CodeUnsupportedInSimpleSchema
-// for under SimpleSchema mode.
+// TestIsSimpleSchemaKeyword_FullSchemaOnly pins the keywords that MUST be rejected as
+// full-Schema-only.
+//
+// These are the keywords the schema Bool handler gates and emits CodeUnsupportedInSimpleSchema for
+// under SimpleSchema mode.
 func TestIsSimpleSchemaKeyword_FullSchemaOnly(t *testing.T) {
 	forbidden := []string{
 		grammar.KwReadOnly,
@@ -53,8 +54,8 @@ func TestIsSimpleSchemaKeyword_FullSchemaOnly(t *testing.T) {
 	}
 }
 
-// TestIsSimpleSchemaKeyword_Unknown pins the predicate's behaviour
-// on an unknown keyword name — returns false, no panic.
+// TestIsSimpleSchemaKeyword_Unknown pins the predicate's behaviour on an unknown keyword name —
+// returns false, no panic.
 func TestIsSimpleSchemaKeyword_Unknown(t *testing.T) {
 	assert.False(t, IsSimpleSchemaKeyword("nosuchkeyword"))
 	assert.False(t, IsSimpleSchemaKeyword(""))

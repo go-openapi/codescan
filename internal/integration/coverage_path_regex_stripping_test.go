@@ -13,9 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_PathRegexStripping locks inline-regex path-parameter stripping
-// across both the swagger:route and swagger:operation builders, plus the
-// no-op control (a bare {id} template raises no warning).
+// TestCoverage_PathRegexStripping locks inline-regex path-parameter stripping across both the
+// swagger:route and swagger:operation builders, plus the no-op control (a bare {id} template raises
+// no warning).
 func TestCoverage_PathRegexStripping(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -36,9 +36,8 @@ func TestCoverage_PathRegexStripping(t *testing.T) {
 	// Control: plain template emitted unchanged.
 	assert.Contains(t, doc.Paths.Paths, "/plain/{id}")
 
-	// Warnings: one per route/operation that carried a constraint (the
-	// multi-param route reports both names in a single diagnostic); the
-	// plain control raises none.
+	// Warnings: one per route/operation that carried a constraint (the multi-param route reports both
+	// names in a single diagnostic); the plain control raises none.
 	var warns int
 	for _, d := range diags {
 		if d.Code == grammar.CodeInvalidAnnotation && d.Severity == grammar.SeverityWarning {

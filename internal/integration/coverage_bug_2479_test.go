@@ -14,14 +14,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2479 locks the resolution of go-swagger issue #2479
-// ("how to disable security on a route but keep on all endpoints").
+// TestCoverage_Bug2479 locks the resolution of go-swagger issue #2479 ("how to disable security on
+// a route but keep on all endpoints").
 //
-// A route with `Security: []` must emit an explicit empty `security: []` on the
-// operation — the OpenAPI 2.0 idiom for opting OUT of global security. Before the
-// fix the scanner dropped it entirely (no `security` key), so the operation
-// silently inherited global security instead of overriding it. The fix makes
-// security.Parse return a non-nil empty list for the explicit `[]` form, which
+// A route with `Security: []` must emit an explicit empty `security: []` on the operation — the
+// OpenAPI 2.0 idiom for opting OUT of global security.
+// Before the fix the scanner dropped it entirely (no `security` key), so the operation silently
+// inherited global security instead of overriding it.
+//
+// The fix makes security.Parse return a non-nil empty list for the explicit `[]` form, which
 // go-openapi/spec marshals as `"security": []` rather than omitting it.
 func TestCoverage_Bug2479(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{

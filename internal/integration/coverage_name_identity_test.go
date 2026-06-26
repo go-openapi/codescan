@@ -25,8 +25,8 @@ import (
 //     PascalCase concat of their nearest package segments (b.Test -> BTest),
 //     with a diagnostic; same-package duplicates revert the loser to its Go name.
 //
-// Triager-flagged name-conflict family covered here (the whole family resolves
-// at once via this one engine; the merge should `contributes` all of them):
+// Triager-flagged name-conflict family covered here (the whole family resolves at once via this one
+// engine; the merge should `contributes` all of them):
 //
 //   - #2783 — models mixed across packages       (TestNameIdentity_3Way/Mixed, Bug2783)
 //   - #2637 — self-cyclic $ref, same-named type   (Bug2637)
@@ -67,10 +67,9 @@ func hasDiagnostic(diags []grammar.Diagnostic, code grammar.Code) bool {
 
 // --- CONTROLS (deterministic; golden-locked) ----------------------------------
 
-// TestNameIdentity_Recursion is the G3 control: legitimate recursion (direct
-// self-reference Node.next, and mutual Loop<->Knot) produces property back-$refs
-// to ancestor definitions, which is valid OAS and must keep working unchanged
-// through every engine stage.
+// TestNameIdentity_Recursion is the G3 control: legitimate recursion (direct self-reference
+// Node.next, and mutual Loop<->Knot) produces property back-$refs to ancestor definitions, which is
+// valid OAS and must keep working unchanged through every engine stage.
 func TestNameIdentity_Recursion(t *testing.T) {
 	doc := nameIdentityDoc(t, "./enhancements/name-identity-recursion/...")
 
@@ -96,9 +95,10 @@ func TestNameIdentity_Recursion(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_name_identity_recursion.json")
 }
 
-// TestNameIdentity_NoCollision is the G5 control: distinct names across packages,
-// no collision. Its golden must stay byte-identical through every stage — proof
-// the engine introduces zero churn when there is nothing to deconflict.
+// TestNameIdentity_NoCollision is the G5 control: distinct names across packages, no collision.
+//
+// Its golden must stay byte-identical through every stage — proof the engine introduces zero
+// churn when there is nothing to deconflict.
 func TestNameIdentity_NoCollision(t *testing.T) {
 	doc := nameIdentityDoc(t, "./enhancements/name-identity-no-collision/...")
 
@@ -114,6 +114,7 @@ func TestNameIdentity_NoCollision(t *testing.T) {
 // --- COLLISION fixtures (distinct + deterministic; concat-qualified) -----------
 
 // TestNameIdentity_3Way: three packages each declare `swagger:model Widget`.
+//
 // Distinct, one-segment concat: AWidget / BWidget / CWidget.
 func TestNameIdentity_3Way(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./enhancements/name-identity-3way/...")
@@ -128,9 +129,9 @@ func TestNameIdentity_3Way(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_name_identity_3way.json")
 }
 
-// TestNameIdentity_Mixed: BOTH collision kinds resolve distinctly — explicit
-// (x.Item / y.Item, each `swagger:model Item`) and implicit (x.Record /
-// y.Record, unannotated, discovered via reference).
+// TestNameIdentity_Mixed: BOTH collision kinds resolve distinctly — explicit (x.Item / y.Item,
+// each `swagger:model Item`) and implicit (x.Record / y.Record, unannotated, discovered via
+// reference).
 func TestNameIdentity_Mixed(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./enhancements/name-identity-mixed/...")
 
@@ -143,10 +144,11 @@ func TestNameIdentity_Mixed(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_name_identity_mixed.json")
 }
 
-// TestNameIdentity_SamePkgDup (D-4): two DIFFERENT types in the SAME package
-// both claim `swagger:model Dup`. The first keeps "Dup"; the duplicate reverts
-// to its Go name ("Second") with a same-package-duplicate diagnostic. (No
-// cross-package collision here, so the names stay bare.)
+// TestNameIdentity_SamePkgDup (D-4): two DIFFERENT types in the SAME package both claim
+// `swagger:model Dup`.
+//
+// The first keeps "Dup"; the duplicate reverts to its Go name ("Second") with a
+// same-package-duplicate diagnostic. (No cross-package collision here, so the names stay bare.)
 func TestNameIdentity_SamePkgDup(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./enhancements/name-identity-same-pkg-dup/...")
 
@@ -159,9 +161,8 @@ func TestNameIdentity_SamePkgDup(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_name_identity_same_pkg_dup.json")
 }
 
-// TestNameIdentity_Deep: a/mongo.Book and b/mongo.Book share both the leaf name
-// AND the one-segment concat ("MongoBook"), so the concat rung must deepen to
-// two segments: AMongoBook / BMongoBook.
+// TestNameIdentity_Deep: a/mongo.Book and b/mongo.Book share both the leaf name AND the one-segment
+// concat ("MongoBook"), so the concat rung must deepen to two segments: AMongoBook / BMongoBook.
 func TestNameIdentity_Deep(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./enhancements/name-identity-deep/...")
 
@@ -175,12 +176,13 @@ func TestNameIdentity_Deep(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_name_identity_deep.json")
 }
 
-// TestNameIdentity_RecursionCollision is the cyclic-within-collision guard:
-// p.Node and q.Node are each self-recursive AND collide on "Node". They must
-// resolve to distinct names (PNode / QNode), and — the crucial part — each
-// self-`$ref` must be rewritten in lockstep with its OWN renamed key (a ref
-// that points into the very group being renamed), never dangling at the
-// pre-reduce deep key and never pointing at the sibling.
+// TestNameIdentity_RecursionCollision is the cyclic-within-collision guard: p.Node and q.Node are
+// each self-recursive AND collide on "Node".
+//
+// They must resolve to distinct names (PNode / QNode), and — the crucial part — each
+// self-`$ref` must be rewritten in lockstep with its OWN renamed key (a ref that points into the
+// very group being renamed), never dangling at the pre-reduce deep key and never pointing at the
+// sibling.
 func TestNameIdentity_RecursionCollision(t *testing.T) {
 	doc, diags := nameIdentityDocDiags(t, "./enhancements/name-identity-recursion-collision/...")
 
@@ -191,8 +193,8 @@ func TestNameIdentity_RecursionCollision(t *testing.T) {
 	assert.NotContains(t, doc.Definitions, "Node", "no merged bare Node key")
 	assert.True(t, hasDiagnostic(diags, grammar.CodeCollidingModelName))
 
-	// Each self-ref points at its OWN renamed definition (lockstep rewrite),
-	// and the body is not a degenerate self-`$ref` (G2/G3).
+	// Each self-ref points at its OWN renamed definition (lockstep rewrite), and the body is not a
+	// degenerate self-`$ref` (G2/G3).
 	pNode := doc.Definitions["PNode"]
 	qNode := doc.Definitions["QNode"]
 	assert.Empty(t, pNode.Ref.String(), "PNode body must not be a self-$ref")
@@ -211,11 +213,11 @@ func TestNameIdentity_RecursionCollision(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_name_identity_recursion_collision.json")
 }
 
-// TestNameIdentity_Hierarchical exercises the hierarchical fail-safe: two
-// long-named packages each declare `swagger:model Config`, whose flat minimal
-// concat exceeds the readability budget. By default the (always-correct) flat
-// concat is kept; with EmitHierarchicalNames the over-budget group is emitted
-// as nested container definitions instead.
+// TestNameIdentity_Hierarchical exercises the hierarchical fail-safe: two long-named packages each
+// declare `swagger:model Config`, whose flat minimal concat exceeds the readability budget.
+//
+// By default the (always-correct) flat concat is kept; with EmitHierarchicalNames the over-budget
+// group is emitted as nested container definitions instead.
 func TestNameIdentity_Hierarchical(t *testing.T) {
 	const pkg = "./enhancements/name-identity-hierarchical/..."
 
@@ -272,11 +274,11 @@ func TestNameIdentity_Hierarchical(t *testing.T) {
 	})
 }
 
-// TestNameIdentity_ExamplesNoMix locks go-swagger #2126: two packages each
-// declare `swagger:model Widget` with the SAME json field but DIFFERENT example
-// values. The fix keeps the definitions distinct (AWidget / BWidget), so each
-// retains its OWN example — neither package's example bleeds into the other's
-// (the merge used to clobber one with the other).
+// TestNameIdentity_ExamplesNoMix locks go-swagger #2126: two packages each declare `swagger:model
+// Widget` with the SAME json field but DIFFERENT example values.
+//
+// The fix keeps the definitions distinct (AWidget / BWidget), so each retains its OWN example —
+// neither package's example bleeds into the other's (the merge used to clobber one with the other).
 func TestNameIdentity_ExamplesNoMix(t *testing.T) {
 	doc := nameIdentityDoc(t, "./enhancements/name-identity-examples-no-mix/...")
 

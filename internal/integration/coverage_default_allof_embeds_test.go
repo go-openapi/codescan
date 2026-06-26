@@ -26,8 +26,8 @@ func runDefaultAllOfEmbeds(t *testing.T, on bool) *spec.Swagger {
 	return doc
 }
 
-// TestCoverage_DefaultAllOfEmbeds_Off is the control: with the flag off a plain
-// struct embed inlines the embedded type's properties (the historic behaviour).
+// TestCoverage_DefaultAllOfEmbeds_Off is the control: with the flag off a plain struct embed
+// inlines the embedded type's properties (the historic behaviour).
 func TestCoverage_DefaultAllOfEmbeds_Off(t *testing.T) {
 	doc := runDefaultAllOfEmbeds(t, false)
 
@@ -42,10 +42,11 @@ func TestCoverage_DefaultAllOfEmbeds_Off(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_default_allof_embeds_off.json")
 }
 
-// TestCoverage_DefaultAllOfEmbeds_On exercises the feature: a plain model embed
-// becomes an allOf $ref member, a plain non-model embed an inline allOf member,
-// and the embedding struct's own fields a sibling allOf member. A json-named
-// embed and an explicit swagger:allOf embed are unaffected.
+// TestCoverage_DefaultAllOfEmbeds_On exercises the feature: a plain model embed becomes an allOf
+// $ref member, a plain non-model embed an inline allOf member, and the embedding struct's own
+// fields a sibling allOf member.
+//
+// A json-named embed and an explicit swagger:allOf embed are unaffected.
 func TestCoverage_DefaultAllOfEmbeds_On(t *testing.T) {
 	doc := runDefaultAllOfEmbeds(t, true)
 

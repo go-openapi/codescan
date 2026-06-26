@@ -13,19 +13,18 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_NameFromTags exercises the NameFromTags option end-to-end
-// (go-swagger#2912, go-swagger#1391): the emitted name of a schema property,
-// query parameter, or response header is derived from the first struct-tag
-// type listed in Options.NameFromTags. The fixture's fields each carry a
-// json: and a form: tag with differing names.
+// TestCoverage_NameFromTags exercises the NameFromTags option end-to-end (go-swagger#2912,
+// go-swagger#1391): the emitted name of a schema property, query parameter, or response header is
+// derived from the first struct-tag type listed in Options.NameFromTags.
+//
+// The fixture's fields each carry a json: and a form: tag with differing names.
 //
 //   - default (nil → ["json"]): json names, the historic behaviour.
 //   - ["form","json"]: the form name wins, falling back to json.
 //   - explicit empty slice: no tag consulted; the Go field name is used.
 //
-// The encoding/json directives are independent of the setting: json:"-"
-// always excludes (Filter.Internal), and ,omitempty is always read from the
-// json tag.
+// The encoding/json directives are independent of the setting: json:"-" always excludes
+// (Filter.Internal), and ,omitempty is always read from the json tag.
 func TestCoverage_NameFromTags(t *testing.T) {
 	run := func(t *testing.T, nameTags []string) *spec.Swagger {
 		t.Helper()
@@ -54,9 +53,9 @@ func TestCoverage_NameFromTags(t *testing.T) {
 		return names
 	}
 
-	// responseHeaders returns the header map of the listResponse. The route
-	// references it by name, so the response (with its Headers) lands in the
-	// top-level responses section and the path holds a $ref to it.
+	// responseHeaders returns the header map of the listResponse.
+	// The route references it by name, so the response (with its Headers) lands in the top-level
+	// responses section and the path holds a $ref to it.
 	responseHeaders := func(t *testing.T, doc *spec.Swagger) map[string]spec.Header {
 		t.Helper()
 		resp, ok := doc.Responses["listResponse"]
@@ -99,8 +98,8 @@ func TestCoverage_NameFromTags(t *testing.T) {
 		_, ok := responseHeaders(t, doc)["x_request_id"]
 		assert.TrueT(t, ok)
 
-		// Capture the full form-first spec as the golden exhibit of the feature
-		// (form names across schema properties, query parameters and headers).
+		// Capture the full form-first spec as the golden exhibit of the feature (form names across schema
+		// properties, query parameters and headers).
 		scantest.CompareOrDumpJSON(t, doc, "enhancements_name_from_tags_form_first.json")
 	})
 

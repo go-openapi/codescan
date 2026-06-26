@@ -12,12 +12,13 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1395 locks go-swagger issue #1395: the OP's tab-indented
-// swagger:meta with a Security requirement + SecurityDefinitions now parses
-// cleanly into a correct security requirement and apiKey definition. The
-// original report (corrupted definitions) was a misclassified security entry,
-// resolved by the meta-Security parsing fixes (cf. #2403). The OP's
-// "SecurityDefinition" (singular) was a keyword typo.
+// TestCoverage_Bug1395 locks go-swagger issue #1395: the OP's tab-indented swagger:meta with a
+// Security requirement + SecurityDefinitions now parses cleanly into a correct security requirement
+// and apiKey definition.
+//
+// The original report (corrupted definitions) was a misclassified security entry, resolved by the
+// meta-Security parsing fixes (cf. #2403).
+// The OP's "SecurityDefinition" (singular) was a keyword typo.
 func TestCoverage_Bug1395(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1395/..."}, WorkDir: scantest.FixturesDir(),

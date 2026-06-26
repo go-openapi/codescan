@@ -65,20 +65,22 @@ func WithTransparentAliases(enabled bool) TypeIndexOption {
 	}
 }
 
-// WithAfterDeclComments enables folding a declaration's inside-body leading
-// comment (struct) or trailing comment (alias / non-struct type) into the
-// decl's annotation source. See Options.AfterDeclComments.
+// WithAfterDeclComments enables folding a declaration's inside-body leading comment (struct) or
+// trailing comment (alias / non-struct type) into the decl's annotation source.
+//
+// See Options.AfterDeclComments.
 func WithAfterDeclComments(enabled bool) TypeIndexOption {
 	return func(a *TypeIndex) {
 		a.afterDeclComments = enabled
 	}
 }
 
-// WithOnDiagnostic wires the consumer's diagnostic sink so the index can
-// surface scan-environment observations (e.g. a package or route omitted by
-// the caller's own include/exclude rules) as informational Hints. The index
-// is built before the ScanCtx exists, so it reports through the raw callback
-// directly, exactly as detectDegradedLoad does.
+// WithOnDiagnostic wires the consumer's diagnostic sink so the index can surface scan-environment
+// observations (e.g. a package or route omitted by the caller's own include/exclude rules) as
+// informational Hints.
+//
+// The index is built before the ScanCtx exists, so it reports through the raw callback directly,
+// exactly as detectDegradedLoad does.
 func WithOnDiagnostic(cb func(grammar.Diagnostic)) TypeIndexOption {
 	return func(a *TypeIndex) {
 		a.onDiagnostic = cb
@@ -106,10 +108,11 @@ type TypeIndex struct {
 	afterDeclComments       bool
 	onDiagnostic            func(grammar.Diagnostic)
 
-	// enrichedFields guards the Phase-B AfterDeclComments field rewrite
-	// (append Field.Comment onto Field.Doc) so a given field is enriched at
-	// most once even if its struct is visited more than once. This is the only
-	// place AfterDeclComments mutates the shared AST.
+	// enrichedFields guards the Phase-B AfterDeclComments field rewrite (append Field.Comment onto
+	// Field.Doc) so a given field is enriched at most once even if its struct is visited more than
+	// once.
+	//
+	// This is the only place AfterDeclComments mutates the shared AST.
 	enrichedFields map[*ast.Field]struct{}
 }
 
@@ -130,10 +133,11 @@ func NewTypeIndex(pkgs []*packages.Package, opts ...TypeIndexOption) (*TypeIndex
 	return ac, nil
 }
 
-// emit delivers d to the consumer's diagnostic sink when one is wired. No-op
-// otherwise. The index is built before the ScanCtx exists, so it reports
-// through the raw callback (no dedup), exactly as detectNodes-level and
-// detectDegradedLoad observations do.
+// emit delivers d to the consumer's diagnostic sink when one is wired.
+//
+// No-op otherwise.
+// The index is built before the ScanCtx exists, so it reports through the raw callback (no dedup),
+// exactly as detectNodes-level and detectDegradedLoad observations do.
 func (a *TypeIndex) emit(d grammar.Diagnostic) {
 	if a.onDiagnostic == nil {
 		return
@@ -141,8 +145,8 @@ func (a *TypeIndex) emit(d grammar.Diagnostic) {
 	a.onDiagnostic(d)
 }
 
-// emitHintf delivers an informational Hint with no source position (the index
-// observes whole-package / whole-route omissions, not a single token).
+// emitHintf delivers an informational Hint with no source position (the index observes
+// whole-package / whole-route omissions, not a single token).
 func (a *TypeIndex) emitHintf(code grammar.Code, format string, args ...any) {
 	a.emit(grammar.Hintf(token.Position{}, code, format, args...))
 }
@@ -245,9 +249,8 @@ func (a *TypeIndex) processFileDecls(pkg *packages.Package, file *ast.File, n no
 		case *ast.BadDecl:
 			continue
 		case *ast.FuncDecl:
-			// A `swagger:parameters` marker on a func is a reference (it
-			// wires shared parameters into an operation / path-item as
-			// $refs), never a definition — definitions live on struct types.
+			// A `swagger:parameters` marker on a func is a reference (it wires shared parameters into an
+			// operation / path-item as $refs), never a definition — definitions live on struct types.
 			if n&parametersNode != 0 {
 				a.collectParameterRef(pkg, file, fd.Doc)
 			}
@@ -289,17 +292,16 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 			if comments == nil {
 				comments = gd.Doc // /* doc */  type ( Foo struct{} )
 			}
-			// AfterDeclComments (opt-in): also read the swagger annotations that
-			// live inside the declaration (a struct's leading body comment) or
-			// inlined after it (an alias / non-struct type's trailing comment),
-			// so the godoc above stays clean. Folded into a fresh comment group —
-			// ts.Doc is never mutated, so this is idempotent.
+			// AfterDeclComments (opt-in): also read the swagger annotations that live inside the declaration
+			// (a struct's leading body comment) or inlined after it (an alias / non-struct type's trailing
+			// comment), so the godoc above stays clean.
+			// Folded into a fresh comment group — ts.Doc is never mutated, so this is idempotent.
 			if a.afterDeclComments {
 				comments = mergeCommentGroups(comments, afterDeclSource(file, ts))
-				// Phase B: fold each struct field's trailing comment into its Doc
-				// (the field-level inlined form, e.g. `B string // swagger:strfmt
-				// date`). Runs AFTER afterDeclSource so leadingBodyComments still
-				// sees the original field Docs for its exclusion set.
+				// Phase B: fold each struct field's trailing comment into its Doc (the field-level inlined
+				// form, e.g. `B string // swagger:strfmt date`).
+				// Runs AFTER afterDeclSource so leadingBodyComments still sees the original field Docs for its
+				// exclusion set.
 				a.enrichStructFields(ts)
 			}
 
@@ -340,11 +342,13 @@ func afterDeclSource(file *ast.File, ts *ast.TypeSpec) *ast.CommentGroup {
 	return ts.Comment
 }
 
-// leadingBodyComments collects every comment group positioned at the top of a
-// struct body — after the opening brace and before the first field — that is not
-// itself a field's Doc, in source order. Excluding field Docs keeps an adjacent
-// `// swagger:allOf` above the first field attached to that field rather than
-// stolen as a type-level annotation. Returns nil when there are none.
+// leadingBodyComments collects every comment group positioned at the top of a struct body — after
+// the opening brace and before the first field — that is not itself a field's Doc, in source
+// order.
+//
+// Excluding field Docs keeps an adjacent `// swagger:allOf` above the first field attached to that
+// field rather than stolen as a type-level annotation.
+// Returns nil when there are none.
 func leadingBodyComments(file *ast.File, st *ast.StructType) *ast.CommentGroup {
 	fields := st.Fields
 	if fields == nil {
@@ -376,13 +380,16 @@ func leadingBodyComments(file *ast.File, st *ast.StructType) *ast.CommentGroup {
 	return &ast.CommentGroup{List: collected}
 }
 
-// enrichStructFields folds each struct field's trailing line comment
-// (Field.Comment) into its Field.Doc — the field-level inlined form of
-// AfterDeclComments (`B string // swagger:strfmt date`). This mutates the shared
-// AST (the builders read Field.Doc directly), so the enrichedFields guard
-// ensures each field is rewritten at most once. Positions stay ascending
-// (Doc above < trailing comment), so the grammar parses the merged group
-// unchanged. No-op for non-struct types and fields without a trailing comment.
+// enrichStructFields folds each struct field's trailing line comment (Field.Comment) into its
+// Field.Doc — the field-level inlined form of AfterDeclComments (`B string // swagger:strfmt
+// date`).
+//
+// This mutates the shared AST (the builders read Field.Doc directly), so the enrichedFields guard
+// ensures each field is rewritten at most once.
+// Positions stay ascending (Doc above < trailing comment), so the grammar parses the merged group
+// unchanged.
+//
+// No-op for non-struct types and fields without a trailing comment.
 func (a *TypeIndex) enrichStructFields(ts *ast.TypeSpec) {
 	st, ok := ts.Type.(*ast.StructType)
 	if !ok || st.Fields == nil {
@@ -400,11 +407,12 @@ func (a *TypeIndex) enrichStructFields(ts *ast.TypeSpec) {
 	}
 }
 
-// mergeCommentGroups returns a comment group whose List is above ++ extra in
-// source order — above is the doc ABOVE the decl, extra lives inside/below it so
-// positions stay ascending and the grammar reconstructs a clean blank-line gap.
-// Returns the non-nil one when the other is nil (nil only when both are). The
-// input groups are never mutated.
+// mergeCommentGroups returns a comment group whose List is above ++ extra in source order — above
+// is the doc ABOVE the decl, extra lives inside/below it so positions stay ascending and the
+// grammar reconstructs a clean blank-line gap.
+//
+// Returns the non-nil one when the other is nil (nil only when both are).
+// The input groups are never mutated.
 func mergeCommentGroups(above, extra *ast.CommentGroup) *ast.CommentGroup {
 	switch {
 	case extra == nil || len(extra.List) == 0:
@@ -419,11 +427,12 @@ func mergeCommentGroups(above, extra *ast.CommentGroup) *ast.CommentGroup {
 	}
 }
 
-// collectParameterRef records a standalone `swagger:parameters` reference
-// marker found on a func's doc comment. The marker's argument tokens are
-// not parsed here — the grammar does that when a builder consumes the
-// ParameterRef; the scanner only classifies the comment group as carrying
-// a reference. No-op when doc carries no `swagger:parameters` marker.
+// collectParameterRef records a standalone `swagger:parameters` reference marker found on a func's
+// doc comment.
+//
+// The marker's argument tokens are not parsed here — the grammar does that when a builder
+// consumes the ParameterRef; the scanner only classifies the comment group as carrying a reference.
+// No-op when doc carries no `swagger:parameters` marker.
 func (a *TypeIndex) collectParameterRef(pkg *packages.Package, file *ast.File, doc *ast.CommentGroup) {
 	if doc == nil {
 		return
@@ -459,14 +468,13 @@ func (a *TypeIndex) walkImports(pkg *packages.Package) error {
 	return nil
 }
 
-// detectNodes scans all comment groups in a file and returns a bitmask
-// of detected swagger annotation kinds.
+// detectNodes scans all comment groups in a file and returns a bitmask of detected swagger
+// annotation kinds.
 //
 // # Details
 //
-// See [§classifier](./README.md#classifier) — bitmask semantics,
-// struct-annotation exclusivity rule, and the recognised-but-bitless
-// field-decoration tokens.
+// See [§classifier](./README.md#classifier) — bitmask semantics, struct-annotation exclusivity
+// rule, and the recognised-but-bitless field-decoration tokens.
 func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 	var n node
 	for _, comments := range file.Comments {
@@ -524,14 +532,16 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 	return n, nil
 }
 
-// warnMalformedStructName emits a Warning diagnostic when a single-name struct
-// marker (swagger:model / swagger:response) on line carries a name that is
-// not a plain identifier — e.g. a package-qualified "utils.Error"
-// (go-swagger#874). Such names are JSON labels, not Go-qualified
-// identifiers; the strict override matcher rejects them and the marker is
-// ignored. The diagnostic gives the author a clue rather than silently
-// dropping it. The type's package is resolved automatically, so a plain name
-// suffices regardless of which package the type lives in.
+// warnMalformedStructName emits a Warning diagnostic when a single-name struct marker
+// (swagger:model / swagger:response) on line carries a name that is not a plain identifier — e.g.
+// a package-qualified "utils.Error" (go-swagger#874).
+//
+// Such names are JSON labels, not Go-qualified identifiers; the strict override matcher rejects
+// them and the marker is ignored.
+// The diagnostic gives the author a clue rather than silently dropping it.
+//
+// The type's package is resolved automatically, so a plain name suffices regardless of which
+// package the type lives in.
 func (a *TypeIndex) warnMalformedStructName(annotation, line string) {
 	switch annotation {
 	case "model":

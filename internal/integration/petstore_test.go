@@ -32,12 +32,13 @@ func TestAppScanner_NewSpec(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "petstore_spec.json")
 }
 
-// TestAppScanner_Definitions is the regression lock for go-swagger issue
-// #624 ("Model responses don't get included in definitions", a regression
-// from #596). The model-discovery rule: a struct lands in definitions when
-// it is swagger:model-annotated OR referenced (transitively) by a route /
-// response body; an un-annotated, unreferenced struct is excluded. The
-// bookings fixture is the reporter's own repro.
+// TestAppScanner_Definitions is the regression lock for go-swagger issue #624 ("Model responses
+// don't get included in definitions", a regression from #596).
+//
+// The model-discovery rule: a struct lands in definitions when it is swagger:model-annotated OR
+// referenced (transitively) by a route / response body; an un-annotated, unreferenced struct is
+// excluded.
+// The bookings fixture is the reporter's own repro.
 func TestAppScanner_Definitions(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./goparsing/bookings/..."},

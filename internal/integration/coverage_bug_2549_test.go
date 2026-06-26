@@ -12,12 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug2549 locks go-swagger issue #2549 ("example not working for
-// imported Types"): an example on a field whose type is an imported named type
-// (a $ref) is applied via allOf — the example is no longer dropped ("shows 0").
+// TestCoverage_Bug2549 locks go-swagger issue #2549 ("example not working for imported Types"): an
+// example on a field whose type is an imported named type (a $ref) is applied via allOf — the
+// example is no longer dropped ("shows 0").
 //
-// (The example value is carried as the string "210000"; numeric coercion of
-// example values is the separate forthcoming-features §2.1 / #1268 concern.)
+// (The example value is carried as the string "210000"; numeric coercion of example values is the
+// separate forthcoming-features §2.1 / #1268 concern.)
 func TestCoverage_Bug2549(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2549/..."},

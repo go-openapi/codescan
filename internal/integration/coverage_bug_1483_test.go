@@ -12,10 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1483 locks go-swagger issue #1483 ("items doesn't support maps
-// whilst using map[string]string"): a map[string]string field in a body
-// parameter renders as {type:object, additionalProperties:{type:string}} — no
-// "items doesn't support maps" error.
+// TestCoverage_Bug1483 locks go-swagger issue #1483 ("items doesn't support maps whilst using
+// map[string]string"): a map[string]string field in a body parameter renders as {type:object,
+// additionalProperties:{type:string}} — no "items doesn't support maps" error.
 func TestCoverage_Bug1483(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1483/..."}, WorkDir: scantest.FixturesDir(),

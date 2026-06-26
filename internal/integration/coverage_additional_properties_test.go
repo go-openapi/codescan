@@ -13,10 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_AdditionalProperties locks the type-level
-// swagger:additionalProperties marker (go-swagger#2539 / #3005, forthcoming §17):
-// true / false / typed value / model $ref, the map-override case, coexistence
-// with maxProperties, and the lowest-priority precedence rule.
+// TestCoverage_AdditionalProperties locks the type-level swagger:additionalProperties marker
+// (go-swagger#2539 / #3005, forthcoming §17): true / false / typed value / model $ref, the
+// map-override case, coexistence with maxProperties, and the lowest-priority precedence rule.
 func TestCoverage_AdditionalProperties(t *testing.T) {
 	var diags []grammar.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{

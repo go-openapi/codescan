@@ -26,24 +26,22 @@ func runAfterDeclComments(t *testing.T, on bool) *spec.Swagger {
 	return doc
 }
 
-// TestCoverage_AfterDeclComments_Off is the control: with the option off, the
-// inside-body / inlined annotations are inert — the carriers carry no annotation
-// in their (clean) godoc, so nothing is discovered.
+// TestCoverage_AfterDeclComments_Off is the control: with the option off, the inside-body / inlined
+// annotations are inert — the carriers carry no annotation in their (clean) godoc, so nothing is
+// discovered.
 func TestCoverage_AfterDeclComments_Off(t *testing.T) {
 	doc := runAfterDeclComments(t, false)
 	assert.MapNotContainsT(t, doc.Definitions, "widgetModel")
 	assert.MapNotContainsT(t, doc.Definitions, "countType")
 	assert.MapNotContainsT(t, doc.Definitions, "stampType")
-	// Golden pins the FULL inert output: the inside-body / inlined annotations
-	// contribute nothing with the option off (the only discovery is the
-	// location-agnostic route).
+	// Golden pins the FULL inert output: the inside-body / inlined annotations contribute nothing with
+	// the option off (the only discovery is the location-agnostic route).
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_after_decl_comments_off.json")
 }
 
-// TestCoverage_AfterDeclComments_On exercises Phase A: with the option on, the
-// struct's inside-body annotation and the defined type's inlined trailing
-// annotation are discovered, named, and validated; the route inside a func body
-// is discovered (already location-agnostic).
+// TestCoverage_AfterDeclComments_On exercises Phase A: with the option on, the struct's inside-body
+// annotation and the defined type's inlined trailing annotation are discovered, named, and
+// validated; the route inside a func body is discovered (already location-agnostic).
 func TestCoverage_AfterDeclComments_On(t *testing.T) {
 	doc := runAfterDeclComments(t, true)
 

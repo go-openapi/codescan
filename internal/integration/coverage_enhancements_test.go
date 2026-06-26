@@ -14,10 +14,10 @@ import (
 	oaispec "github.com/go-openapi/spec"
 )
 
-// These tests mirror the baseline coverage-enhancement tests. They scan
-// dedicated fixtures under fixtures/enhancements/ and compare the result to
-// the golden JSON captured on the baseline worktree, so we can catch any
-// behavioural drift introduced by the refactor.
+// These tests mirror the baseline coverage-enhancement tests.
+// They scan dedicated fixtures under fixtures/enhancements/ and compare the result to the golden
+// JSON captured on the baseline worktree, so we can catch any behavioural drift introduced by the
+// refactor.
 
 func TestCoverage_EmbeddedTypes(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
@@ -92,10 +92,9 @@ func TestCoverage_InterfaceMethods_XNullable(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_interface_methods_xnullable.json")
 }
 
-// TestCoverage_AliasExpand scans the alias-expand fixture with default
-// Options so that buildAlias / buildFieldAlias take the non-transparent
-// expansion path: each alias resolves to the underlying type and the
-// target is emitted inline rather than as a $ref.
+// TestCoverage_AliasExpand scans the alias-expand fixture with default Options so that buildAlias /
+// buildFieldAlias take the non-transparent expansion path: each alias resolves to the underlying
+// type and the target is emitted inline rather than as a $ref.
 func TestCoverage_AliasExpand(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-expand/..."},
@@ -105,16 +104,15 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Bidirectional witness — same fixture, two body-payload
-	// shapes side by side:
+	// Bidirectional witness — same fixture, two body-payload shapes side by side:
 	//
 	//   - ResponseEnvelope.payload typed PayloadAlias (UNannotated)
 	//     → dissolves to $ref: Payload (the unaliased target)
 	//   - ResponseEnvelopeModeled.payload typed PayloadAliasModeled
 	//     (annotated) → preserves $ref: PayloadAliasModeled
 	//
-	// Together they pin the rule: `swagger:model` is the sole
-	// gate for whether an alias name surfaces in field-site $refs.
+	// Together they pin the rule: `swagger:model` is the sole gate for whether an alias name surfaces
+	// in field-site $refs.
 	respUnann := doc.Definitions["ResponseEnvelope"].Properties["payload"]
 	assert.Equal(t, "#/definitions/Payload", respUnann.Ref.String(),
 		"unannotated PayloadAlias dissolves to its unaliased target")
@@ -125,10 +123,10 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	assert.Equal(t, "#/definitions/PayloadAliasModeled", respAnn.Ref.String(),
 		"annotated PayloadAliasModeled preserves its identity in the field $ref")
 
-	// Bidirectional response-side witness — the same pattern
-	// applied to top-level swagger:response body fields. The
-	// unannotated AliasedResponse and the annotated
-	// AliasedModeledResponse sit on the same fixture canvas.
+	// Bidirectional response-side witness — the same pattern applied to top-level swagger:response
+	// body fields.
+	// The unannotated AliasedResponse and the annotated AliasedModeledResponse sit on the same fixture
+	// canvas.
 	assert.Equal(t, "#/definitions/ResponseEnvelope",
 		doc.Responses["aliasedResponse"].Schema.Ref.String(),
 		"unannotated response body alias dissolves to canonical")
@@ -141,9 +139,9 @@ func TestCoverage_AliasExpand(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_expand.json")
 }
 
-// TestCoverage_AliasRef scans the alias-expand fixture with RefAliases=true
-// so body-parameter and response aliases resolve to $ref via makeRef, and
-// the alias-of-alias chain resolves through the non-transparent switch.
+// TestCoverage_AliasRef scans the alias-expand fixture with RefAliases=true so body-parameter and
+// response aliases resolve to $ref via makeRef, and the alias-of-alias chain resolves through the
+// non-transparent switch.
 func TestCoverage_AliasRef(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-expand/..."},
@@ -157,9 +155,10 @@ func TestCoverage_AliasRef(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_alias_ref.json")
 }
 
-// TestCoverage_AliasResponseRef scans a fixture where the swagger:response
-// annotation is itself on an alias declaration. Under RefAliases=true the
-// scanner takes the responseBuilder.buildAlias refAliases switch, which
+// TestCoverage_AliasResponseRef scans a fixture where the swagger:response annotation is itself on
+// an alias declaration.
+//
+// Under RefAliases=true the scanner takes the responseBuilder.buildAlias refAliases switch, which
 // is not covered by any other test.
 func TestCoverage_AliasResponseRef(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
@@ -198,9 +197,10 @@ func TestCoverage_NamedBasic(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_named_basic.json")
 }
 
-// TestCoverage_WrapperDeclTypeOverride isolates Gap B' — the wrapper's
-// own top-level definition does not honour `swagger:type` on the decl,
-// even though the same annotation works at field reference sites.
+// TestCoverage_WrapperDeclTypeOverride isolates Gap B' — the wrapper's own top-level definition
+// does not honour `swagger:type` on the decl, even though the same annotation works at field
+// reference sites.
+//
 // Pins today's broken behavior so the gap is visible until it's fixed.
 func TestCoverage_WrapperDeclTypeOverride(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
@@ -231,13 +231,15 @@ func TestCoverage_WrapperDeclTypeOverride(t *testing.T) {
 	})
 }
 
-// TestCoverage_RawMessageOverride captures the user-classifier-override
-// precedence for json.RawMessage. The recognizer emits an empty schema
-// (`{}`, "any type") as the baseline. A user-declared wrapping type
-// carrying `swagger:type` decoration overrides via the
+// TestCoverage_RawMessageOverride captures the user-classifier-override precedence for
+// json.RawMessage.
+//
+// The recognizer emits an empty schema (`{}`, "any type") as the baseline.
+// A user-declared wrapping type carrying `swagger:type` decoration overrides via the
 // classifierNamedArrayLike path (RawMessage underlying is []byte).
-// A field-level `swagger:type` is now consumed by scanFieldDoc and
-// applied in applyFieldCarrier after buildFromType (Gap C — closed).
+//
+// A field-level `swagger:type` is now consumed by scanFieldDoc and applied in applyFieldCarrier
+// after buildFromType (Gap C — closed).
 func TestCoverage_RawMessageOverride(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/raw-message-override/..."},
@@ -264,10 +266,9 @@ func TestCoverage_RawMessageOverride(t *testing.T) {
 		def, ok := defs["TypedContainer"]
 		require.TrueT(t, ok)
 
-		// F2: AsObject / AsArray carry swagger:type + swagger:model, so the
-		// fields $ref their definitions (which hold the overridden shape) —
-		// matching the fixture's stated "expect {$ref: ...}" intent, rather
-		// than inlining the override at the field site.
+		// F2: AsObject / AsArray carry swagger:type + swagger:model, so the fields $ref their definitions
+		// (which hold the overridden shape) — matching the fixture's stated "expect {$ref: ...}"
+		// intent, rather than inlining the override at the field site.
 		obj, ok := def.Properties["obj"]
 		require.TrueT(t, ok)
 		objRef := obj.Ref
@@ -280,9 +281,8 @@ func TestCoverage_RawMessageOverride(t *testing.T) {
 	})
 
 	t.Run("case B': wrapper-type top-level definitions honour swagger:type", func(t *testing.T) {
-		// buildFromDecl now applies classifierNamedTypeOverride from
-		// s.Decl.Comments before the kind-dispatch, so the wrapper's
-		// own definition reflects the decl-level swagger:type override
+		// buildFromDecl now applies classifierNamedTypeOverride from s.Decl.Comments before the
+		// kind-dispatch, so the wrapper's own definition reflects the decl-level swagger:type override
 		// (Gap B' — closed).
 		asObject, ok := defs["AsObject"]
 		require.TrueT(t, ok)
@@ -297,9 +297,8 @@ func TestCoverage_RawMessageOverride(t *testing.T) {
 	})
 
 	t.Run("case C: field-level swagger:type overrides on json.RawMessage", func(t *testing.T) {
-		// scanFieldDoc now consumes swagger:type at the field level;
-		// applyFieldCarrier applies it after buildFromType so the
-		// override beats the RawMessage recognizer's empty-schema default.
+		// scanFieldDoc now consumes swagger:type at the field level; applyFieldCarrier applies it after
+		// buildFromType so the override beats the RawMessage recognizer's empty-schema default.
 		def, ok := defs["FieldLevelContainer"]
 		require.TrueT(t, ok)
 
@@ -316,11 +315,11 @@ func TestCoverage_RawMessageOverride(t *testing.T) {
 	})
 }
 
-// TestCoverage_SwaggerTypeArray exercises the fallthrough introduced by
-// upstream #11: when swagger:type is set to a value not recognised by
-// SwaggerSchemaForType (e.g. "array"), the builder resolves the underlying
-// type instead of emitting an empty schema. Covers buildNamedSlice,
-// buildNamedArray and buildNamedStruct fallthrough branches.
+// TestCoverage_SwaggerTypeArray exercises the fallthrough introduced by upstream #11: when
+// swagger:type is set to a value not recognised by SwaggerSchemaForType (e.g. "array"), the builder
+// resolves the underlying type instead of emitting an empty schema.
+//
+// Covers buildNamedSlice, buildNamedArray and buildNamedStruct fallthrough branches.
 func TestCoverage_SwaggerTypeArray(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/swagger-type-array/..."},
@@ -383,9 +382,8 @@ func TestCoverage_EnumDocs(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_enum_docs.json")
 }
 
-// TestCoverage_EnumOverrides captures the v1 behavior for five
-// enum-related cases that W2 needs to pin down before the P5.1
-// schema-builder migration:
+// TestCoverage_EnumOverrides captures the v1 behavior for five enum-related cases that W2 needs to
+// pin down before the P5.1 schema-builder migration:
 //
 //	A. `swagger:enum` with matching consts            — const inference
 //	B. inline `enum: a,b,c` only                      — inline only
@@ -396,8 +394,8 @@ func TestCoverage_EnumDocs(t *testing.T) {
 //
 // See `.claude/plans/workshops/w2-enum.md` §2.6 and
 // `fixtures/enhancements/enum-overrides/types.go` for the fixture.
-// The golden snapshot becomes the v1-behavior contract the v2
-// migration either preserves or consciously diverges from.
+// The golden snapshot becomes the v1-behavior contract the v2 migration either preserves or
+// consciously diverges from.
 func TestCoverage_EnumOverrides(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/enum-overrides/..."},
@@ -422,12 +420,11 @@ func TestCoverage_TextMarshal(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_text_marshal.json")
 }
 
-// TestCoverage_GenericInstantiation exercises buildNamedType's
-// generic-instantiation short-circuit. A field whose type is an
-// instantiation (e.g. `GenericSlice[int]`) must emit with the
-// substituted underlying shape, not as a $ref to the generic
-// declaration (whose own schema is empty because type parameters
-// are filtered as UnsupportedBuiltinType).
+// TestCoverage_GenericInstantiation exercises buildNamedType's generic-instantiation short-circuit.
+//
+// A field whose type is an instantiation (e.g. `GenericSlice[int]`) must emit with the substituted
+// underlying shape, not as a $ref to the generic declaration (whose own schema is empty because
+// type parameters are filtered as UnsupportedBuiltinType).
 func TestCoverage_GenericInstantiation(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/generic-instantiation/..."},
@@ -451,9 +448,10 @@ func TestCoverage_AllHTTPMethods(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_all_http_methods.json")
 }
 
-// TestCoverage_UnknownAnnotation asserts that scanning a file with an
-// unknown swagger: annotation returns a classifier error. This exercises
-// the default branch of typeIndex.detectNodes.
+// TestCoverage_UnknownAnnotation asserts that scanning a file with an unknown swagger: annotation
+// returns a classifier error.
+//
+// This exercises the default branch of typeIndex.detectNodes.
 func TestCoverage_UnknownAnnotation(t *testing.T) {
 	_, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/unknown-annotation/..."},
@@ -499,9 +497,8 @@ func TestCoverage_TopLevelKinds(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_top_level_kinds.json")
 }
 
-// TestCoverage_InputOverlay feeds an InputSpec carrying paths with every
-// HTTP verb so that operations from the input spec are indexed before the
-// scanner merges its own discoveries.
+// TestCoverage_InputOverlay feeds an InputSpec carrying paths with every HTTP verb so that
+// operations from the input spec are indexed before the scanner merges its own discoveries.
 func TestCoverage_InputOverlay(t *testing.T) {
 	input := &oaispec.Swagger{
 		SwaggerProps: oaispec.SwaggerProps{
@@ -541,15 +538,13 @@ func TestCoverage_InputOverlay(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_input_overlay.json")
 }
 
-// TestCoverage_ParametersMapPostDecl scans a fixture that witnesses a bug
-// in parameters.buildFromFieldMap: the schema sub-builder's
-// PostDeclarations are not propagated to the parent parameters
-// builder, so a map's value-type model registered during the build
-// never reaches the spec's definitions section.
+// TestCoverage_ParametersMapPostDecl scans a fixture that witnesses a bug in
+// parameters.buildFromFieldMap: the schema sub-builder's PostDeclarations are not propagated to the
+// parent parameters builder, so a map's value-type model registered during the build never reaches
+// the spec's definitions section.
 //
-// The pre-fix golden shows the buggy state (LocalItem missing from
-// definitions). The fix commit regenerates the golden to show LocalItem
-// appearing, witnessing the resolution.
+// The pre-fix golden shows the buggy state (LocalItem missing from definitions).
+// The fix commit regenerates the golden to show LocalItem appearing, witnessing the resolution.
 func TestCoverage_ParametersMapPostDecl(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/parameters-map-postdecl/..."},
@@ -561,12 +556,13 @@ func TestCoverage_ParametersMapPostDecl(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_parameters_map_postdecl.json")
 }
 
-// The TestCoverage_Routes* family captures the swagger:route body
-// sub-language surface (`Parameters:` and `Responses:` blocks) under
-// integration goldens. The legacy SetOpParams / SetOpResponses parsers
-// in builders/routes are unit-tested in-package only; without these
-// fixtures, retiring those parsers in favour of routebody +
-// handlers.Dispatch* would lose its safety net. See M6.5-PRE plan.
+// The TestCoverage_Routes* family captures the swagger:route body sub-language surface
+// (`Parameters:` and `Responses:` blocks) under integration goldens.
+//
+// The legacy SetOpParams / SetOpResponses parsers in builders/routes are unit-tested in-package
+// only; without these fixtures, retiring those parsers in favour of routebody + handlers.Dispatch*
+// would lose its safety net.
+// See M6.5-PRE plan.
 
 func TestCoverage_RoutesParamsPath(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{

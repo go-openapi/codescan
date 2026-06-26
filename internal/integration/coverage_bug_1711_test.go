@@ -12,13 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1711 documents the resolution to go-swagger issue #1711 ("how
-// to add a different description to parameters"): a parameter's description is the
-// comment text, kept distinct from the Go field name (carried separately as the
-// x-go-name vendor extension).
+// TestCoverage_Bug1711 documents the resolution to go-swagger issue #1711 ("how to add a different
+// description to parameters"): a parameter's description is the comment text, kept distinct from
+// the Go field name (carried separately as the x-go-name vendor extension).
 //
-// 📖 Need doc: the param description comes from the field comment; x-go-name is a
-// separate vendor extension, not concatenated into the description.
+// 📖 Need doc: the param description comes from the field comment; x-go-name is a separate vendor
+// extension, not concatenated into the description.
 func TestCoverage_Bug1711(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./bugs/1711/..."},

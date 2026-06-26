@@ -12,9 +12,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_ResponseTopLevelExample locks example: on top-level non-struct
-// response bodies: an array (example on its own paragraph) and a scalar
-// (trailing example line). Both land on the response body schema (go-swagger#3013).
+// TestCoverage_ResponseTopLevelExample locks example: on top-level non-struct response bodies: an
+// array (example on its own paragraph) and a scalar (trailing example line).
+//
+// Both land on the response body schema (go-swagger#3013).
 func TestCoverage_ResponseTopLevelExample(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/response-toplevel-example/..."},

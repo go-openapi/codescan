@@ -12,12 +12,15 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1118 documents (current behaviour) go-swagger issue #1118
-// ("sometimes title, sometimes description"). This is the same title/description
-// heuristic as #2626: a single-line model comment ending in a period becomes the
-// title; without a trailing period it becomes the description; a multi-line
-// comment splits into title (first line) + description (rest). Kept as-is — an
-// opt-in knob to force description-only is tracked as forthcoming-features.md §13.
+// TestCoverage_Bug1118 documents (current behaviour) go-swagger issue #1118 ("sometimes title,
+// sometimes description").
+//
+// This is the same title/description heuristic as #2626: a single-line model comment ending in a
+// period becomes the title; without a trailing period it becomes the description; a multi-line
+// comment splits into title (first line) + description (rest).
+//
+// Kept as-is — an opt-in knob to force description-only is tracked as forthcoming-features.md
+// §13.
 //
 // 📖 Need doc: document the title/description heuristic (see #2626).
 func TestCoverage_Bug1118(t *testing.T) {

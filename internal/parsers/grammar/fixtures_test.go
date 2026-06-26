@@ -14,9 +14,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// fixturesTest_Petstore_PetModel mirrors fixtures/goparsing/petstore/models/pet.go
-// — a swagger:model with title/description, multiple validations
-// (required, pattern, min/maxLength), and several un-annotated fields.
+// fixturesTest_Petstore_PetModel mirrors fixtures/goparsing/petstore/models/pet.go — a
+// swagger:model with title/description, multiple validations (required, pattern, min/maxLength),
+// and several un-annotated fields.
 func TestFixtures_Petstore_PetModel(t *testing.T) {
 	src := strings.TrimSpace(`
 A Pet is the main product in the store.
@@ -32,10 +32,9 @@ swagger:model pet
 	assert.Equal(t, "It is used to describe the animals available in the store.", mb.Description())
 }
 
-// TestFixtures_Petstore_PetField_RequiredAndPattern mirrors the Name
-// field's docstring: required + pattern + min/maxLength, expressed via
-// the alias forms ("minimum length", "maximum length") that the v1
-// keyword aliases support.
+// TestFixtures_Petstore_PetField_RequiredAndPattern mirrors the Name field's docstring: required +
+// pattern + min/maxLength, expressed via the alias forms ("minimum length", "maximum length") that
+// the v1 keyword aliases support.
 func TestFixtures_Petstore_PetField_RequiredAndPattern(t *testing.T) {
 	src := strings.TrimSpace(`
 The name of the pet.
@@ -71,9 +70,9 @@ maximum length: 50
 	}
 }
 
-// TestFixtures_Petstore_ItemsPrefix_NestedArrayValidation mirrors the
-// PhotoURLs field in fixtures/goparsing/petstore/models/pet.go which
-// uses `items pattern: \.(jpe?g|png)$` for per-item validation.
+// TestFixtures_Petstore_ItemsPrefix_NestedArrayValidation mirrors the PhotoURLs field in
+// fixtures/goparsing/petstore/models/pet.go which uses `items pattern: \.(jpe?g|png)$` for per-item
+// validation.
 func TestFixtures_Petstore_ItemsPrefix_NestedArrayValidation(t *testing.T) {
 	src := strings.TrimSpace(`
 The photo urls for the pet.
@@ -95,8 +94,8 @@ items pattern: \.(jpe?g|png)$
 	assert.True(t, found)
 }
 
-// TestFixtures_Petstore_ItemsPrefix_DeepNesting covers multiple levels
-// of items.* prefix accumulation.
+// TestFixtures_Petstore_ItemsPrefix_DeepNesting covers multiple levels of items.* prefix
+// accumulation.
 func TestFixtures_Petstore_ItemsPrefix_DeepNesting(t *testing.T) {
 	src := strings.TrimSpace(`
 items.items.items.maxLength: 4
@@ -109,9 +108,8 @@ items.items.items.maxLength: 4
 	}
 }
 
-// TestFixtures_Petstore_ParametersBlock mirrors PetID with
-// `swagger:parameters getPetById deletePet updatePet` — three
-// operationID references.
+// TestFixtures_Petstore_ParametersBlock mirrors PetID with `swagger:parameters getPetById deletePet
+// updatePet` — three operationID references.
 func TestFixtures_Petstore_ParametersBlock(t *testing.T) {
 	src := strings.TrimSpace(`
 A PetID parameter model.
@@ -126,9 +124,8 @@ swagger:parameters getPetById deletePet updatePet
 	assert.Equal(t, []string{"getPetById", "deletePet", "updatePet"}, pb.OperationIDs())
 }
 
-// TestFixtures_Petstore_RouteBlock_GodocPrefixWithDeprecated covers the
-// classic `// FooBar swagger:route ...` form plus an inline
-// `Deprecated: true` and a `Responses:` raw block.
+// TestFixtures_Petstore_RouteBlock_GodocPrefixWithDeprecated covers the classic `// FooBar
+// swagger:route ...` form plus an inline `Deprecated: true` and a `Responses:` raw block.
 func TestFixtures_Petstore_RouteBlock_GodocPrefixWithDeprecated(t *testing.T) {
 	src := strings.TrimSpace(`
 GetPets swagger:route GET /pets pets listPets
@@ -166,8 +163,8 @@ Responses:
 }
 
 // TestFixtures_OperationsAnnotation_YAMLBody mirrors
-// fixtures/goparsing/classification/operations_annotation/operations.go's
-// first operation: a YAML-fenced body holding parameters/responses.
+// fixtures/goparsing/classification/operations_annotation/operations.go's first operation: a
+// YAML-fenced body holding parameters/responses.
 func TestFixtures_OperationsAnnotation_YAMLBody(t *testing.T) {
 	src := strings.TrimSpace(`
 swagger:operation GET /pets pets getPet
@@ -202,9 +199,8 @@ responses:
 	assert.Equal(t, "/pets", ob.Path)
 	assert.Equal(t, []string{"pets"}, ob.Tags)
 	assert.Equal(t, "getPet", ob.OpID)
-	// "List all pets" has no trailing punctuation and no internal
-	// blank, so heuristics 1/2/3 don't fire — heuristic 4 classifies
-	// the whole prose as Description. v1's helpers behaves the same
+	// "List all pets" has no trailing punctuation and no internal blank, so heuristics 1/2/3 don't
+	// fire — heuristic 4 classifies the whole prose as Description. v1's helpers behaves the same
 	// way on the equivalent ProseLines slice.
 	assert.Empty(t, ob.Title())
 	assert.Equal(t, "List all pets", ob.Description())
@@ -219,10 +215,9 @@ responses:
 	assert.False(t, yamls[0].Truncated)
 }
 
-// TestFixtures_Meta_PetstoreV1 mirrors fixtures/goparsing/meta/v1/doc.go
-// — the canonical meta block: prose, single-line keywords, raw blocks,
-// extensions, info-extensions, security, security-definitions, with
-// `swagger:meta` at the *bottom* (godoc convention).
+// TestFixtures_Meta_PetstoreV1 mirrors fixtures/goparsing/meta/v1/doc.go — the canonical meta
+// block: prose, single-line keywords, raw blocks, extensions, info-extensions, security,
+// security-definitions, with `swagger:meta` at the *bottom* (godoc convention).
 func TestFixtures_Meta_PetstoreV1(t *testing.T) {
 	src := `Petstore API.
 
@@ -323,12 +318,11 @@ swagger:meta`
 	assert.Contains(t, strings.Join(secDef, "\n"), "type: apiKey")
 }
 
-// TestFixtures_Meta_TagsBlock pins the meta `Tags:` raw block
-// (go-swagger#2655): the body is a YAML sequence of tag objects whose
-// nested `externalDocs:` mapping — itself a meta-family keyword —
-// must be absorbed as body text via the YAML-bodied indentation
-// override, not terminate the block. A following sibling keyword at
-// the same indent as `Tags:` still terminates it.
+// TestFixtures_Meta_TagsBlock pins the meta `Tags:` raw block (go-swagger#2655): the body is a YAML
+// sequence of tag objects whose nested `externalDocs:` mapping — itself a meta-family keyword —
+// must be absorbed as body text via the YAML-bodied indentation override, not terminate the block.
+//
+// A following sibling keyword at the same indent as `Tags:` still terminates it.
 func TestFixtures_Meta_TagsBlock(t *testing.T) {
 	src := "\tTags:\n" +
 		"\t- name: pet\n" +
@@ -349,9 +343,8 @@ func TestFixtures_Meta_TagsBlock(t *testing.T) {
 	require.True(t, ok, "Version sibling must terminate the Tags block")
 	assert.Equal(t, "1.0.0", version)
 
-	// The raw Tags body preserves per-line indentation: the nested
-	// externalDocs mapping is absorbed (indentation override) and the
-	// list markers/depth survive, so the downstream YAML list parses.
+	// The raw Tags body preserves per-line indentation: the nested externalDocs mapping is absorbed
+	// (indentation override) and the list markers/depth survive, so the downstream YAML list parses.
 	var tagsBody string
 	var found bool
 	for p := range mb.Properties() {
@@ -369,9 +362,8 @@ func TestFixtures_Meta_TagsBlock(t *testing.T) {
 	assert.Empty(t, b.Diagnostics())
 }
 
-// TestFixtures_Meta_TosKeywordVariants exercises the trailing-dot,
-// alias spelling ("Terms Of Service" / "TermsOfService" / "tos") that
-// the meta v3 / v4 fixtures show.
+// TestFixtures_Meta_TosKeywordVariants exercises the trailing-dot, alias spelling ("Terms Of
+// Service" / "TermsOfService" / "tos") that the meta v3 / v4 fixtures show.
 func TestFixtures_Meta_TosKeywordVariants(t *testing.T) {
 	cases := []string{
 		"Terms Of Service:\nuse at your own risk\nswagger:meta",
@@ -404,8 +396,7 @@ swagger:response genericError
 	assert.Equal(t, "For certain status codes there are more appropriate error structures.", rb.Description())
 }
 
-// TestFixtures_Petstore_StrfmtAnnotation_FieldLevel mirrors the
-// Birthday field's strfmt tag.
+// TestFixtures_Petstore_StrfmtAnnotation_FieldLevel mirrors the Birthday field's strfmt tag.
 func TestFixtures_Petstore_StrfmtAnnotation_FieldLevel(t *testing.T) {
 	src := strings.TrimSpace(`
 The pet's birthday
@@ -421,8 +412,8 @@ swagger:strfmt date
 	assert.Equal(t, TokenIdentName, cb.Args[0].Kind)
 }
 
-// TestFixtures_Petstore_ParameterIn covers the `in:` keyword inside an
-// UnboundBlock (a parameter struct field).
+// TestFixtures_Petstore_ParameterIn covers the `in:` keyword inside an UnboundBlock (a parameter
+// struct field).
 func TestFixtures_Petstore_ParameterIn(t *testing.T) {
 	src := strings.TrimSpace(`
 The ID of the pet
@@ -440,8 +431,8 @@ required: true
 	assert.True(t, required)
 }
 
-// TestFixtures_AllowedHTTPMethods covers the closed HTTP method
-// vocabulary inspired by fixtures/enhancements/all-http-methods.
+// TestFixtures_AllowedHTTPMethods covers the closed HTTP method vocabulary inspired by
+// fixtures/enhancements/all-http-methods.
 func TestFixtures_AllowedHTTPMethods(t *testing.T) {
 	methods := []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE"}
 	for _, m := range methods {
@@ -454,8 +445,7 @@ func TestFixtures_AllowedHTTPMethods(t *testing.T) {
 	}
 }
 
-// TestFixtures_AllowedHTTPMethods_LowercaseNormalised checks
-// case-insensitive HTTP method matching.
+// TestFixtures_AllowedHTTPMethods_LowercaseNormalised checks case-insensitive HTTP method matching.
 func TestFixtures_AllowedHTTPMethods_LowercaseNormalised(t *testing.T) {
 	b := parseString(t, "swagger:route get /pets pets listPets")
 	rb, ok := b.(*RouteBlock)
@@ -463,8 +453,8 @@ func TestFixtures_AllowedHTTPMethods_LowercaseNormalised(t *testing.T) {
 	assert.Equal(t, "GET", rb.Method, "method canonical form is upper case")
 }
 
-// TestFixtures_GodocLinterTrailingDot covers the trailing-dot elision
-// the godot linter triggers across annotation lines.
+// TestFixtures_GodocLinterTrailingDot covers the trailing-dot elision the godot linter triggers
+// across annotation lines.
 func TestFixtures_GodocLinterTrailingDot(t *testing.T) {
 	cases := []struct {
 		src      string
@@ -498,8 +488,7 @@ func TestFixtures_GodocLinterTrailingDot(t *testing.T) {
 	}
 }
 
-// TestFixtures_CRLFNormalisation ensures \r\n line endings produce the
-// same token stream as \n.
+// TestFixtures_CRLFNormalisation ensures \r\n line endings produce the same token stream as \n.
 func TestFixtures_CRLFNormalisation(t *testing.T) {
 	const src = "swagger:model Pet\r\nrequired: true\r\nmaxLength: 5"
 
@@ -538,9 +527,8 @@ minimum: >0
 	}
 }
 
-// TestFixtures_AllOf_OptionalClassName covers swagger:allOf with and
-// without the polymorphic class name (mirrors the docs examples in
-// 23-classifier-grammar.md).
+// TestFixtures_AllOf_OptionalClassName covers swagger:allOf with and without the polymorphic class
+// name (mirrors the docs examples in 23-classifier-grammar.md).
 func TestFixtures_AllOf_OptionalClassName(t *testing.T) {
 	bare := parseString(t, "swagger:allOf")
 	cbBare, ok := bare.(*ClassifierBlock)
@@ -555,8 +543,8 @@ func TestFixtures_AllOf_OptionalClassName(t *testing.T) {
 	assert.Equal(t, "Animal", cbNamed.Args[0].Text)
 }
 
-// TestFixtures_DefaultAnnotation_JSONForms covers the JsonValue branch
-// (objects, arrays, numbers, booleans) and the RawValue fallback.
+// TestFixtures_DefaultAnnotation_JSONForms covers the JsonValue branch (objects, arrays, numbers,
+// booleans) and the RawValue fallback.
 func TestFixtures_DefaultAnnotation_JSONForms(t *testing.T) {
 	jsonCases := []string{
 		`swagger:default {"limit": 10, "offset": 0}`,
@@ -583,8 +571,8 @@ func TestFixtures_DefaultAnnotation_JSONForms(t *testing.T) {
 	assert.Equal(t, TokenRawValue, cb.Args[0].Kind)
 }
 
-// TestFixtures_EnumDecl_BracketedHybrid covers the hybrid-list example
-// from 23-classifier-grammar.md ("a, {x:1}, c, [1,2,3], …").
+// TestFixtures_EnumDecl_BracketedHybrid covers the hybrid-list example from
+// 23-classifier-grammar.md ("a, {x:1}, c, [1,2,3], …").
 func TestFixtures_EnumDecl_BracketedHybrid(t *testing.T) {
 	b := parseString(t, `swagger:enum my_enum [a, {"x":1, "y":[1,2,3]}, c, [1,2,3], ["u","v"]]`)
 	eb, ok := b.(*EnumDeclBlock)
@@ -595,8 +583,8 @@ func TestFixtures_EnumDecl_BracketedHybrid(t *testing.T) {
 	assert.Equal(t, TokenJSONValue, eb.InlineArgs[0].Kind)
 }
 
-// TestFixtures_EnumDecl_MultilineBody backports the Q15 multi-line
-// value-list body shape on swagger:enum.
+// TestFixtures_EnumDecl_MultilineBody backports the Q15 multi-line value-list body shape on
+// swagger:enum.
 func TestFixtures_EnumDecl_MultilineBody(t *testing.T) {
 	src := strings.TrimSpace(`
 swagger:enum Priority
@@ -616,8 +604,8 @@ enum:
 	assert.Contains(t, eb.BodyValues, "high")
 }
 
-// TestFixtures_BookingMeta_LeadingAnnotation covers the
-// `swagger:meta` placed at the top of the comment group.
+// TestFixtures_BookingMeta_LeadingAnnotation covers the `swagger:meta` placed at the top of the
+// comment group.
 func TestFixtures_BookingMeta_LeadingAnnotation(t *testing.T) {
 	src := strings.TrimSpace(`
 swagger:meta
@@ -640,9 +628,8 @@ Contact: API Team team@example.com
 	assert.Equal(t, "1.4.0", v)
 }
 
-// TestFixtures_OperationDeprecatedAndExternalDocs covers the cross-
-// over deprecated keyword + externalDocs raw block under an inline
-// operation block.
+// TestFixtures_OperationDeprecatedAndExternalDocs covers the cross- over deprecated keyword +
+// externalDocs raw block under an inline operation block.
 func TestFixtures_OperationDeprecatedAndExternalDocs(t *testing.T) {
 	src := strings.TrimSpace(`
 swagger:operation GET /pets pets listPets
@@ -669,10 +656,9 @@ externalDocs:
 	assert.Contains(t, joined, "url: https://example.com/docs")
 }
 
-// TestFixtures_DecorativeYAMLFenceInExtensions confirms decorative
-// `--- … ---` fences around an extensions: body produce byte-identical
-// behaviour with and without the fences (the v1 quirk noted in
-// 10-shared.md and 40-lexer.md §5).
+// TestFixtures_DecorativeYAMLFenceInExtensions confirms decorative `--- … ---` fences around an
+// extensions: body produce byte-identical behaviour with and without the fences (the v1 quirk noted
+// in 10-shared.md and 40-lexer.md §5).
 func TestFixtures_DecorativeYAMLFenceInExtensions(t *testing.T) {
 	withFence := strings.TrimSpace(`
 swagger:meta
@@ -699,9 +685,8 @@ x-baz: 1
 	assert.Equal(t, exts2, exts1, "decorative fence should be transparent")
 }
 
-// TestFixtures_BlockBodyCrossover_KeywordsAcrossSiblings confirms
-// `Consumes:` and `Produces:` consecutive raw blocks each terminate at
-// the next sibling structural keyword, not at blank lines.
+// TestFixtures_BlockBodyCrossover_KeywordsAcrossSiblings confirms `Consumes:` and `Produces:`
+// consecutive raw blocks each terminate at the next sibling structural keyword, not at blank lines.
 func TestFixtures_BlockBodyCrossover_KeywordsAcrossSiblings(t *testing.T) {
 	src := strings.TrimSpace(`
 swagger:meta
@@ -726,8 +711,8 @@ Produces:
 	assert.Contains(t, strings.Join(prod, "\n"), "application/json")
 }
 
-// TestFixtures_FullPipeline_FromCommentGroup exercises the public
-// Parse(*ast.CommentGroup, *token.FileSet) entry — same as scanner does.
+// TestFixtures_FullPipeline_FromCommentGroup exercises the public Parse(*ast.CommentGroup,
+// *token.FileSet) entry — same as scanner does.
 func TestFixtures_FullPipeline_FromCommentGroup(t *testing.T) {
 	src := `package fake
 
@@ -777,9 +762,8 @@ type Pet struct {
 	assert.Equal(t, `\w+`, pat)
 }
 
-// TestFixtures_CrossSchemeKeyword_Schemes confirms the `schemes:`
-// keyword is legal under meta, route, and operation but warns
-// elsewhere (e.g. under model).
+// TestFixtures_CrossSchemeKeyword_Schemes confirms the `schemes:` keyword is legal under meta,
+// route, and operation but warns elsewhere (e.g. under model).
 func TestFixtures_CrossSchemeKeyword_Schemes(t *testing.T) {
 	cases := []struct {
 		src      string
@@ -807,8 +791,8 @@ func TestFixtures_CrossSchemeKeyword_Schemes(t *testing.T) {
 	}
 }
 
-// TestFixtures_StrfmtKeywordAlias_MaxLen confirms that the alias
-// "max len" / "max-len" / "maxLen" are equivalent to "maxLength".
+// TestFixtures_StrfmtKeywordAlias_MaxLen confirms that the alias "max len" / "max-len" / "maxLen"
+// are equivalent to "maxLength".
 func TestFixtures_StrfmtKeywordAlias_MaxLen(t *testing.T) {
 	for _, alias := range []string{"max len", "max-len", "maxLen", "maximum length", "maximumLength"} {
 		src := alias + ": 42"
@@ -819,8 +803,8 @@ func TestFixtures_StrfmtKeywordAlias_MaxLen(t *testing.T) {
 	}
 }
 
-// TestFixtures_DecimalNumberValue_Roundtrip confirms NUMBER_VALUE
-// parses signed/unsigned decimals and fractional values.
+// TestFixtures_DecimalNumberValue_Roundtrip confirms NUMBER_VALUE parses signed/unsigned decimals
+// and fractional values.
 func TestFixtures_DecimalNumberValue_Roundtrip(t *testing.T) {
 	cases := []struct {
 		src  string
@@ -846,9 +830,10 @@ func TestFixtures_DecimalNumberValue_Roundtrip(t *testing.T) {
 	}
 }
 
-// collectExtensionsAsMap turns the iter.Seq[Extension] into a map for
-// equality comparison. Extension.Value is YAML-typed (`any`); callers
-// that only care about presence/equality compare on the typed value.
+// collectExtensionsAsMap turns the iter.Seq[Extension] into a map for equality comparison.
+//
+// Extension.Value is YAML-typed (`any`); callers that only care about presence/equality compare on
+// the typed value.
 func collectExtensionsAsMap(b Block) map[string]any {
 	out := map[string]any{}
 	for e := range b.Extensions() {

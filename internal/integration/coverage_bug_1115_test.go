@@ -12,10 +12,12 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// TestCoverage_Bug1115 locks the fix for go-swagger issue #1115 ("Missing parser
-// for a *ast.StarExpr"): a type aliased to a POINTER (type BarResponse *Thing)
-// used to warn and be omitted. The grammar2 scanner handles the StarExpr — the
-// pointer is dereferenced and the alias emits a $ref like the non-pointer form.
+// TestCoverage_Bug1115 locks the fix for go-swagger issue #1115 ("Missing parser for a
+// *ast.StarExpr"): a type aliased to a POINTER (type BarResponse *Thing) used to warn and be
+// omitted.
+//
+// The grammar2 scanner handles the StarExpr — the pointer is dereferenced and the alias emits a
+// $ref like the non-pointer form.
 func TestCoverage_Bug1115(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1115/..."},
