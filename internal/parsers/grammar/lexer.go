@@ -758,7 +758,11 @@ func collectDescriptionLiteral(in []Token, i int, out *[]Token) int {
 	j := i + 1
 	var body []string
 	for j < len(in) && in[j].Kind == tokenRawLine {
-		body = append(body, in[j].Raw)
+		// Drop the single godoc convention space after `//` (gofmt-canonical
+		// `// text`); it is comment decoration, not body. Author indentation
+		// beyond it, trailing whitespace (markdown hard breaks), pipes, and
+		// blank lines are all preserved verbatim.
+		body = append(body, strings.TrimPrefix(in[j].Raw, " "))
 		j++
 	}
 	for len(body) > 0 && strings.TrimSpace(body[len(body)-1]) == "" {

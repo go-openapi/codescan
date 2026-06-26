@@ -1,0 +1,19 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Widget": {
+      "description": "Widgets support **markdown** in their description:\n\n| name | purpose |\n|------|---------|\n| foo  | bars    |\n\n- point one\n- point two",
+      "type": "object",
+      "title": "Widget is a thing.",
+      "properties": {
+        "name": {
+          "description": "The name must be:\n\n  1. unique\n  2. lowercase",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/inner-markdown"
+    }
+  }
+}

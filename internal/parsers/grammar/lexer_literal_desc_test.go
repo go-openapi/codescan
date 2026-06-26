@@ -47,13 +47,16 @@ func hasKind(out []Token, k TokenKind) bool {
 // `swagger:description |` block captures the body verbatim — indentation, a
 // significant blank line, and markdown table pipes all survive.
 func TestLexer_DescriptionLiteral_PreservesMarkdown(t *testing.T) {
+	// Body lines carry the leading godoc `// ` convention space (modelled here
+	// as a leading space in each line); it is dropped while author indentation
+	// beyond it — the 2-space nested list — is preserved.
 	src := strings.Join([]string{
 		"swagger:description |",
-		"Overview",
+		" Overview",
 		"",
-		"| col1 | col2 |",
-		"|------|------|",
-		"  - nested item",
+		" | col1 | col2 |",
+		" |------|------|",
+		"   - nested item",
 	}, "\n")
 	arg := descArg(t, lexString(t, src))
 
