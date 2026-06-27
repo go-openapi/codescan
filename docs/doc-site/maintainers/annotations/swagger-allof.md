@@ -35,7 +35,7 @@ follow on the doc comment.
 
 ## Supported keywords
 
-[Schema-context keywords]({{% relref "keywords#schema-decorators" %}}) on
+[Schema-context keywords]({{% relref "/maintainers/keywords/schema-validations-and-decorators#schema-decorators" %}}) on
 the inline-object member (the second `allOf` element).
 
 ## Example

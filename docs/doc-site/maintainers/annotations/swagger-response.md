@@ -27,7 +27,7 @@ The struct's fields contribute the response shape:
   `Body`/`in: body` nor `in: header` is treated as a header, not a body
   property. A header's key comes from the `json:` tag / Go field name, or
   a `name:` keyword (e.g. `name: X-Rate-Limit`) — the canonical, preferred
-  form, see the [`name` keyword]({{% relref "/maintainers/keywords#name" %}}).
+  form, see the [`name` keyword]({{% relref "/maintainers/keywords/parameters-and-responses#name" %}}).
 - An **anonymously embedded** struct marked `in: body` *is* the body (a
   `$ref` to the model), not a promotion of its fields.
 - An `interface{}` / `any`-typed field emits an empty schema (`{}`, or

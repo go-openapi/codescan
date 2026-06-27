@@ -25,7 +25,7 @@ operations that do not state their own.
 The scheme `type` drives the rest: `apiKey` needs `in` + `name`, `oauth2` needs a
 `flow` (and the URLs/`scopes` it implies), `basic` needs nothing more. The full
 scheme surface is in the
-[`securityDefinitions` reference]({{% relref "/maintainers/keywords#securitydefinitions" %}}).
+[`securityDefinitions` reference]({{% relref "/maintainers/keywords/security#securitydefinitions" %}}).
 
 ## Require a scheme on a route
 

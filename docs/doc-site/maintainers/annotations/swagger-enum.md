@@ -49,7 +49,7 @@ are equivalent.
 
 ## Supported keywords
 
-[Schema-context keywords]({{% relref "keywords#schema-decorators" %}}). The
+[Schema-context keywords]({{% relref "/maintainers/keywords/schema-validations-and-decorators#schema-decorators" %}}). The
 `enum:` keyword can ALSO be used inline on the type doc to force a value
 set; when present, it overrides the const-derived values and the
 `x-go-enum-desc` is recomputed (or dropped) accordingly.

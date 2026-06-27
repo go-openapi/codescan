@@ -48,8 +48,8 @@ body — its fields and their doc comments carry the schema validations.
 
 ## Supported keywords
 
-Every [schema decorator]({{% relref "keywords#schema-decorators" %}}) and
-[validation keyword]({{% relref "keywords#numeric-validations" %}}) is accepted
+Every [schema decorator]({{% relref "/maintainers/keywords/schema-validations-and-decorators#schema-decorators" %}}) and
+[validation keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#numeric-validations" %}}) is accepted
 on a field doc comment. A keyword that is **not compatible** with the field's
 inferred schema type (e.g. `minLength` on an integer) is ignored and raises a
 diagnostic.

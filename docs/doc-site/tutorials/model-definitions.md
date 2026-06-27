@@ -110,7 +110,7 @@ annotation publishes it as `jsonClass` instead.
 
 {{% notice style="note" %}}
 `swagger:name` is the legacy annotation form. The
-[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}) is the
+[`name:` keyword]({{% relref "/maintainers/keywords/parameters-and-responses#name" %}}) is the
 canonical, universal equivalent — it renames a property here exactly the
 same way, and is the *only* form that also works on parameters and
 response headers. Precedence: `name:` > `swagger:name` > `json:` tag > Go

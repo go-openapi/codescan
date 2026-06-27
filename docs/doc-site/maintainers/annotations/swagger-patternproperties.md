@@ -16,7 +16,7 @@ Adds **typed** `patternProperties` entries — each maps a property-name
 regex to a value schema.
 
 It is the typed counterpart of the regex-only
-[`patternProperties:` keyword]({{% relref "/maintainers/keywords#patternproperties" %}})
+[`patternProperties:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#patternproperties" %}})
 (which uses an empty, any-value schema).
 
 {{% notice style="note" %}}

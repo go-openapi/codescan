@@ -35,7 +35,7 @@ doc comment.
 ## Supported keywords
 
 None of its own. Most spec defaults are instead carried by the
-[`default:` keyword]({{% relref "keywords#default" %}}) on the relevant
+[`default:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#default" %}}) on the relevant
 field; this annotation has a narrow surface and is not commonly authored
 directly.
 
@@ -44,6 +44,6 @@ directly.
 `swagger:default` is value-only: it produces no definition, so there is no
 emitted spec to render. The source below shows the narrow classifier-hint
 form — in practice most defaults come from the
-[`default:` keyword]({{% relref "keywords#default" %}}) on a field.
+[`default:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#default" %}}) on a field.
 
 {{< code file="concepts/examples/examples.go" region="swaggerdefault" lang="go" >}}

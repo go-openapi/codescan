@@ -52,7 +52,7 @@ chosen JSON name:
 
 `swagger:name` is the **legacy** annotation form. The canonical,
 universal field-naming mechanism is the
-[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}), which
+[`name:` keyword]({{% relref "/maintainers/keywords/parameters-and-responses#name" %}}), which
 works at *every* field site — model properties, interface methods,
 parameters, and response headers — with the precedence `name:` >
 `swagger:name` > `json:` tag > Go field name. `swagger:name` remains

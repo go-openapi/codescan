@@ -25,7 +25,7 @@ tutorial.
 
 On a type declaration (alongside `swagger:model`). A field-level
 equivalent exists as the
-[`additionalProperties:` keyword]({{% relref "/maintainers/keywords#additionalproperties" %}}).
+[`additionalProperties:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#additionalproperties" %}}).
 
 ## Grammar (EBNF)
 

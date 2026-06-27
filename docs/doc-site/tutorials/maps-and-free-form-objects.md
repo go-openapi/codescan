@@ -91,7 +91,7 @@ sibling so the reference is preserved:
 
 `patternProperties` constrains *extra* keys by a name regex rather than allowing
 all of them. The regex-only
-[`patternProperties:` keyword]({{% relref "/maintainers/keywords#patternproperties" %}})
+[`patternProperties:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#patternproperties" %}})
 maps a pattern to an empty (any-value) schema. The decl-level
 `swagger:patternProperties "<re>": <spec>, …` marker is the **typed** counterpart
 — each quoted regex pairs with a value spec (a primitive, or a model name that

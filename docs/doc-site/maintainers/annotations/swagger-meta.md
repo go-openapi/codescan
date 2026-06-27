@@ -37,9 +37,9 @@ The body is a `MetaBody` of single-line `MetaKeyword`s
 
 ## Supported keywords
 
-All [meta single-line keywords]({{% relref "keywords#meta-single-line-keywords" %}})
+All [meta single-line keywords]({{% relref "/maintainers/keywords/spec-metadata#meta-single-line-keywords" %}})
 (`schemes`, `version`, `host`, `basePath`, `license`, `contact`) plus the
-meta-scope [body keywords]({{% relref "keywords#body-keywords" %}})
+meta-scope [body keywords]({{% relref "/maintainers/keywords/spec-metadata" %}})
 (`consumes`, `produces`, `security`, `securityDefinitions`, `extensions`,
 `infoExtensions`, `tos`, `externalDocs`, `tags`). A `Tags:` block declares the
 spec's top-level `tags` (name, description, nested `externalDocs`, `x-*`

@@ -61,7 +61,7 @@ swagger:route <METHOD> <path> [tag1 tag2 …] <operationID>
 
 ## Supported keywords
 
-All [body keywords]({{% relref "keywords#body-keywords" %}}) legal in route
+All [body keywords]({{% relref "/maintainers/keywords/routes-and-operations" %}}) legal in route
 context (`consumes`, `produces`, `schemes`, `security`, `parameters`,
 `responses`, `extensions`, `externalDocs`) plus inline `deprecated:` and a body
 `tags:` list (a string list, unioned and deduplicated with the header-line

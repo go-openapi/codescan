@@ -24,7 +24,7 @@ description.
   both and is the canonical, preferred way to set the name — the legacy
   `swagger:name` *annotation* is inert here and emits a `context-invalid`
   diagnostic pointing at `name:`. See the
-  [universal `name` keyword]({{% relref "/maintainers/keywords#name" %}}).
+  [universal `name` keyword]({{% relref "/maintainers/keywords/parameters-and-responses#name" %}}).
 - Operation IDs **accumulate**: the same ID may appear in several
   `swagger:parameters` lines to compose a set from multiple structs, and
   one struct may carry several lines splitting a long ID list.
@@ -55,7 +55,7 @@ body — field doc comments carry the parameter validations.
 
 ## Supported keywords
 
-[param-context keywords]({{% relref "keywords#parameter-location" %}}) on
+[param-context keywords]({{% relref "/maintainers/keywords/parameters-and-responses#parameter-location" %}}) on
 fields: `in`, `required`, the numeric / length / format validations,
 `default`, `example`, `enum`, `allowEmptyValue`, `collectionFormat`.
 
