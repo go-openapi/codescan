@@ -24,6 +24,20 @@ type Pet struct {
 
 // endsnippet:model
 
+// snippet:multiname
+
+// Color is an RGBA colour. A single field group declaring several names emits
+// one property per name — R, G, B and A each become their own integer property.
+// A json tag on the group cannot rename the individual fields (each keeps its
+// own name), though tag options such as omitempty still apply.
+//
+// swagger:model
+type Color struct {
+	R, G, B, A uint8 `json:",omitempty"`
+}
+
+// endsnippet:multiname
+
 // snippet:strfmt
 
 // MAC is a hardware address rendered as a colon-separated hex string.

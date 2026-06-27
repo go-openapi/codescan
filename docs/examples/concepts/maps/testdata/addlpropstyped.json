@@ -1,0 +1,14 @@
+{
+  "description": "Settings is an open object: it keeps its named property and complements it\nwith typed (integer) extra values — the swagger:additionalProperties marker\nsets the policy for keys beyond the named ones.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "x-go-name": "Name"
+    }
+  },
+  "additionalProperties": {
+    "type": "integer"
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/maps"
+}

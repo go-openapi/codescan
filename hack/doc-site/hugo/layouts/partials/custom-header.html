@@ -183,3 +183,86 @@
     });
   })();
 </script>
+
+<style>
+  /* railroad: Mermaid railroad (syntax) diagrams from the `railroad` shortcode */
+  .railroad-diagram { overflow-x: auto; margin: .4rem 0 1.4rem; }
+  .railroad-diagram svg { max-width: none; height: auto; }
+  .railroad-err { color: #b00; white-space: pre-wrap; font-size: .85rem; }
+</style>
+<script>
+  // railroad: render the railroad shortcode's EBNF blocks as Mermaid railroad
+  // (syntax) diagrams. Self-gating — Mermaid (11.16, railroad is beta) is loaded
+  // only on pages that actually contain a .railroad-diagram, and only at
+  // runtime. Each diagram is rendered in ISOLATION via mermaid.render(uniqueId,
+  // ...), sequentially: the beta railroad renderer collides when several
+  // diagrams are batched through mermaid.run(). Mermaid is vendored locally
+  // (themes/codescan-static/js/mermaid11) so the site stays offline-clean.
+  // Re-renders on theme change to track the light/dark variant.
+  (function () {
+    var SRC = '{{ relURL "js/mermaid11/mermaid.min.js" }}';
+    // Quote bare UPPERCASE_LEXER_TOKENS so railroad-ebnf renders them as
+    // terminals (literal boxes) rather than non-terminal references.
+    function quoteTerminals(s) {
+      return s.replace(/\b[A-Z][A-Z0-9_]*[A-Z0-9]\b/g, '"$&"');
+    }
+    // Match the diagram to the site's light/dark variant by sampling the page
+    // background luminance (robust across Relearn's many theme variants).
+    function siteIsDark() {
+      var bg = getComputedStyle(document.body).backgroundColor || '';
+      var m = bg.match(/\d+/g);
+      if (!m || m.length < 3) return false;
+      return (0.2126 * +m[0] + 0.7152 * +m[1] + 0.0722 * +m[2]) < 128;
+    }
+    // The first render replaces the container's <script> with the SVG, so stash
+    // the source on the element to allow re-rendering on a theme switch.
+    function ebnfOf(el) {
+      if (!el.dataset.rrSrc) {
+        var s = el.querySelector('.railroad-src');
+        el.dataset.rrSrc = s ? s.textContent.trim() : '';
+      }
+      return el.dataset.rrSrc;
+    }
+    var rrSeq = 0;
+    async function renderAll(mermaid) {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'loose',
+        theme: siteIsDark() ? 'dark' : 'default',
+      });
+      var blocks = [].slice.call(document.querySelectorAll('.railroad-diagram'));
+      for (var i = 0; i < blocks.length; i++) {
+        var el = blocks[i];
+        var ebnf = quoteTerminals(ebnfOf(el));
+        if (!ebnf) continue;
+        try {
+          var out = await mermaid.render('rrsvg-' + (rrSeq++), 'railroad-ebnf-beta\n' + ebnf);
+          el.innerHTML = out.svg;
+        } catch (e) {
+          el.innerHTML = '<pre class="railroad-err">railroad render failed: ' +
+            (e && e.message ? e.message : e) + '</pre>';
+        }
+      }
+    }
+    function withMermaid(cb) {
+      if (window.mermaid && window.mermaid.render) { cb(window.mermaid); return; }
+      var s = document.createElement('script');
+      s.src = SRC;
+      s.onload = function () { cb(window.mermaid); };
+      s.onerror = function () {
+        document.querySelectorAll('.railroad-diagram').forEach(function (el) {
+          el.innerHTML = '<pre class="railroad-err">railroad: failed to load Mermaid</pre>';
+        });
+      };
+      document.head.appendChild(s);
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!document.querySelector('.railroad-diagram')) return;
+      withMermaid(renderAll);
+      // Relearn fires this on the document when the light/dark variant changes.
+      document.addEventListener('themeVariantLoaded', function () {
+        if (window.mermaid && window.mermaid.render) renderAll(window.mermaid);
+      });
+    });
+  })();
+</script>

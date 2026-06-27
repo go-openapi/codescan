@@ -58,7 +58,7 @@ the policy, where `<spec>` is `true`, `false`, or a value type:
 
 A **type spec** instead of a bool gives the extra values a schema — a primitive
 (or `[]T`), or a model name that becomes a `$ref` (the same value-type grammar as
-[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}}), except a
+[`swagger:type`]({{% relref "/maintainers/annotations/swagger-type" %}}), except a
 type name resolves to a `$ref`):
 
 {{< compare left="concepts/maps/testdata/typed.json"  leftlabel="integer — typed values"
@@ -91,7 +91,7 @@ sibling so the reference is preserved:
 
 `patternProperties` constrains *extra* keys by a name regex rather than allowing
 all of them. The regex-only
-[`patternProperties:` keyword]({{% relref "/maintainers/keywords#patternproperties" %}})
+[`patternProperties:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#patternproperties" %}})
 maps a pattern to an empty (any-value) schema. The decl-level
 `swagger:patternProperties "<re>": <spec>, …` marker is the **typed** counterpart
 — each quoted regex pairs with a value spec (a primitive, or a model name that

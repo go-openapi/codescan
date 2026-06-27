@@ -133,6 +133,8 @@ are emitted as separate terminals.
 | `ANN_ADDITIONAL_PROPERTIES` | `swagger:additionalProperties` |
 | `ANN_PATTERN_PROPERTIES` | `swagger:patternProperties` |
 | `ANN_FILE` | `swagger:file` |
+| `ANN_TITLE` | `swagger:title` |
+| `ANN_DESCRIPTION` | `swagger:description` |
 
 #### Argument terminals
 
@@ -263,6 +265,14 @@ AnnotatedBlock   = SchemaBlock
 UnboundBlock     = [ Description ] , UnboundBlockBody ;
 ```
 
+{{< railroad >}}
+AnnotatedBlock       = SchemaBlock | OperationFamilyBlock | MetaBlock | ClassifierBlock ;
+SchemaBlock          = SchemaAnnotation , [ Title ] , [ Description ] , SchemaAnnotationBody ;
+OperationFamilyBlock = RouteBlock | InlineOperationBlock ;
+MetaBlock            = ANN_META , [ Title ] , [ Description ] , MetaBody ;
+ClassifierBlock      = StrfmtBlock | AliasBlock | AllOfBlock | EnumBlock | IgnoreBlock | DefaultClassifierBlock | TypeBlock | FileBlock ;
+{{< /railroad >}}
+
 The dispatcher reads the first `ANN_*` terminal; its identity
 selects the family. If no annotation appears, the input is an
 `UnboundBlock` — typically a Go struct field with description-only
@@ -284,15 +294,19 @@ SchemaBlock          = SchemaAnnotation
                      , [ Description ]
                      , SchemaAnnotationBody ;
 
-SchemaAnnotation     = ModelAnnotation
-                     | ResponseAnnotation
-                     | ParametersAnnotation
-                     | NameAnnotation ;
+SchemaAnnotation      = ModelAnnotation
+                      | ResponseAnnotation
+                      | ParametersAnnotation
+                      | NameAnnotation
+                      | TitleAnnotation
+                      | DescriptionAnnotation ;
 
-ModelAnnotation      = ANN_MODEL ,      [ IDENT_NAME ] ;
-ResponseAnnotation   = ANN_RESPONSE ,   [ IDENT_NAME ] ;
-ParametersAnnotation = ANN_PARAMETERS , IDENT_NAME , { IDENT_NAME } ;
-NameAnnotation       = ANN_NAME ,       IDENT_NAME ;
+ModelAnnotation       = ANN_MODEL ,       [ IDENT_NAME ] ;
+ResponseAnnotation    = ANN_RESPONSE ,    [ IDENT_NAME ] ;
+ParametersAnnotation  = ANN_PARAMETERS ,  IDENT_NAME , { IDENT_NAME } ;
+NameAnnotation        = ANN_NAME ,        IDENT_NAME ;
+TitleAnnotation       = ANN_TITLE ,       RAW_VALUE ;
+DescriptionAnnotation = ANN_DESCRIPTION , RAW_VALUE ;
 
 SchemaAnnotationBody = { SchemaBodyItem } ;
 UnboundBlockBody     = { SchemaBodyItem } ;
@@ -334,6 +348,27 @@ SchemaDecorator      = RAW_VALUE_DEFAULT
 DiscriminatorLine    = KW_DISCRIMINATOR , BOOL_VALUE ;
 DeprecatedLine       = KW_DEPRECATED , BOOL_VALUE ;
 ```
+
+`swagger:title` / `swagger:description` are schema-family **overrides** — they
+replace the godoc-derived title / description on a model, field, response, or
+header. They dispatch through the schema parser (not the classifier parser), so
+validation keywords co-located on the same comment group still surface. The
+`RAW_VALUE` is the rest of the head line; `swagger:description` additionally folds
+a blank-terminated body (Option B) or, with a trailing `|`, a verbatim literal
+markdown block. A blank override emits `CodeEmptyOverride`; `swagger:title` is
+rejected with `CodeContextInvalid` on a non-body parameter or response header.
+
+{{< railroad >}}
+SchemaBodyItem    = Validation | SchemaDecorator | ExtensionsBlock | ExternalDocsBlock | BLANK ;
+Validation        = NumericValidation | StringValidation | ArrayValidation | EnumValidation | RequiredLine | ReadOnlyLine ;
+NumericValidation = ( KW_MAXIMUM | KW_MINIMUM | KW_MULTIPLE_OF ) , NUMBER_VALUE ;
+StringValidation  = ( KW_PATTERN , STRING_VALUE ) | ( ( KW_MAX_LENGTH | KW_MIN_LENGTH ) , INT_VALUE ) ;
+ArrayValidation   = ( ( KW_MAX_ITEMS | KW_MIN_ITEMS ) , INT_VALUE ) | ( KW_UNIQUE , BOOL_VALUE ) | ( KW_COLLECTION_FORMAT , ENUM_OPTION_VALUE ) ;
+EnumValidation    = RAW_VALUE_ENUM ;
+RequiredLine      = KW_REQUIRED , BOOL_VALUE ;
+ReadOnlyLine      = KW_READ_ONLY , BOOL_VALUE ;
+SchemaDecorator   = RAW_VALUE_DEFAULT | RAW_VALUE_EXAMPLE | ( KW_DISCRIMINATOR , BOOL_VALUE ) | ( KW_DEPRECATED , BOOL_VALUE ) ;
+{{< /railroad >}}
 
 ### Operation family
 
@@ -383,6 +418,20 @@ OperationRawBlock    = RAW_BLOCK_CONSUMES
                      | RAW_BLOCK_PARAMETERS ;
 ```
 
+{{< railroad >}}
+RouteBlock = ANN_ROUTE , OperationArgs , [ Title ] , [ Description ] , RouteBody ;
+{{< /railroad >}}
+
+{{< railroad >}}
+InlineOperationBlock = ANN_OPERATION , OperationArgs , [ Title ] , [ Description ] , InlineOperationBody ;
+{{< /railroad >}}
+
+_…where both share the header arguments:_
+
+{{< railroad >}}
+OperationArgs = HTTP_METHOD , URL_PATH , { IDENT_NAME } , IDENT_NAME ;
+{{< /railroad >}}
+
 The `<GoIdent> swagger:route ...` godoc-prefix exception (which
 allows a leading Go identifier on the route annotation line) is
 absorbed by the lexer; the EBNF sees a plain `ANN_ROUTE`.
@@ -420,6 +469,13 @@ MetaRawBlock         = RAW_BLOCK_CONSUMES
                      | RAW_BLOCK_TOS ;
 ```
 
+{{< railroad >}}
+MetaBlock    = ANN_META , [ Title ] , [ Description ] , MetaBody ;
+MetaBodyItem = MetaKeyword | MetaRawBlock | ExtensionsBlock | InfoExtensionsBlock | ExternalDocsBlock ;
+MetaKeyword  = ( ( KW_VERSION | KW_HOST | KW_BASE_PATH | KW_LICENSE | KW_CONTACT ) , STRING_VALUE ) | ( KW_SCHEMES , COMMA_LIST_VALUE ) ;
+MetaRawBlock = RAW_BLOCK_CONSUMES | RAW_BLOCK_PRODUCES | RAW_BLOCK_SCHEMES | RAW_BLOCK_SECURITY | RAW_BLOCK_SECURITY_DEFINITIONS | RAW_BLOCK_TOS ;
+{{< /railroad >}}
+
 ### Classifier family
 
 Single-purpose annotations that classify the surrounding declaration
@@ -444,6 +500,18 @@ DefaultClassifierBlock = ANN_DEFAULT , [ Title ] , [ Description ] ;
 TypeBlock            = ANN_TYPE , TYPE_REF , [ Title ] , [ Description ] ;
 FileBlock            = ANN_FILE , [ Title ] , [ Description ] ;
 ```
+
+{{< railroad >}}
+ClassifierBlock        = StrfmtBlock | AliasBlock | AllOfBlock | EnumBlock | IgnoreBlock | DefaultClassifierBlock | TypeBlock | FileBlock ;
+StrfmtBlock            = ANN_STRFMT , IDENT_NAME , [ Title ] , [ Description ] ;
+AliasBlock             = ANN_ALIAS , [ IDENT_NAME ] , [ Title ] , [ Description ] ;
+AllOfBlock             = ANN_ALLOF , [ Title ] , [ Description ] ;
+EnumBlock              = ANN_ENUM , [ IDENT_NAME ] , [ Title ] , [ Description ] ;
+IgnoreBlock            = ANN_IGNORE , [ Title ] , [ Description ] ;
+DefaultClassifierBlock = ANN_DEFAULT , [ Title ] , [ Description ] ;
+TypeBlock              = ANN_TYPE , TYPE_REF , [ Title ] , [ Description ] ;
+FileBlock              = ANN_FILE , [ Title ] , [ Description ] ;
+{{< /railroad >}}
 
 Classifiers are stateless markers — they carry no validation body
 of their own. The surrounding declaration's other annotations (or

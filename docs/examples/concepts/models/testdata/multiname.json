@@ -1,0 +1,23 @@
+{
+  "description": "Color is an RGBA colour. A single field group declaring several names emits\none property per name — R, G, B and A each become their own integer property.\nA json tag on the group cannot rename the individual fields (each keeps its\nown name), though tag options such as omitempty still apply.",
+  "type": "object",
+  "properties": {
+    "A": {
+      "type": "integer",
+      "format": "uint8"
+    },
+    "B": {
+      "type": "integer",
+      "format": "uint8"
+    },
+    "G": {
+      "type": "integer",
+      "format": "uint8"
+    },
+    "R": {
+      "type": "integer",
+      "format": "uint8"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/models"
+}

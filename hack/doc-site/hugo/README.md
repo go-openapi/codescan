@@ -63,9 +63,14 @@ The script:
 2. Renders `codescan.yaml` from `codescan.yaml.template`
 3. Starts `hugo server` on <http://localhost:1313/codescan/> with live reload
 
-Requires `hugo` (extended, ≥ v0.150) and `git` on `PATH`. The Relearn theme is
-not committed — download it once into `themes/hugo-relearn` (see the CI
-workflow for the exact release used).
+Requires `hugo` (extended, ≥ v0.150) and `git` on `PATH`. Two third-party assets
+are **not committed** — download them once (see the CI `update-doc.yml` workflow
+for the exact pinned versions):
+
+- the Relearn theme into `themes/hugo-relearn`;
+- Mermaid ≥ 11.16 into `themes/codescan-static/js/mermaid11/mermaid.min.js` (the
+  `railroad` shortcode needs it; served locally so the rendered site makes no
+  runtime CDN calls).
 
 ## Configuration
 

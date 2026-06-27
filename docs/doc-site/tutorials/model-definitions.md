@@ -90,7 +90,7 @@ of an inlined type, `inline` to expand the field's own Go type, or a known type
 name to inline that type. `array` is deprecated in favour of `inline` / `[]T`,
 and `file` is rejected (use `swagger:file`). When combined with `swagger:strfmt`,
 the type wins and the format is kept only if compatible — see the
-[reference]({{% relref "/maintainers/annotations#swaggertype" %}}).
+[reference]({{% relref "/maintainers/annotations/swagger-type" %}}).
 
 The override also works **on an individual field doc** — no wrapper-type
 annotation. Here `Code` is published as a string while its `RawID` type is left
@@ -110,7 +110,7 @@ annotation publishes it as `jsonClass` instead.
 
 {{% notice style="note" %}}
 `swagger:name` is the legacy annotation form. The
-[`name:` keyword]({{% relref "/maintainers/keywords#name" %}}) is the
+[`name:` keyword]({{% relref "/maintainers/keywords/parameters-and-responses#name" %}}) is the
 canonical, universal equivalent — it renames a property here exactly the
 same way, and is the *only* form that also works on parameters and
 response headers. Precedence: `name:` > `swagger:name` > `json:` tag > Go

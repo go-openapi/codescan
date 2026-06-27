@@ -77,6 +77,7 @@ func TestModelFragments(t *testing.T) {
 
 	cases := []struct{ feature, defName string }{
 		{"model", "Pet"},           // swagger:model — a plain struct definition
+		{"multiname", "Color"},     // swagger:model — one property per name in a field group
 		{"strfmt", "Device"},       // swagger:strfmt — a {type:string, format} field
 		{"enum", "Task"},           // swagger:enum — enum values inlined on the field
 		{"allof", "Dog"},           // swagger:allOf — two base $refs + inline arm

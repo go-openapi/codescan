@@ -123,3 +123,17 @@ type TypedPatterns struct {
 }
 
 // endsnippet:patterntyped
+
+// snippet:addlpropstyped
+
+// Settings is an open object: it keeps its named property and complements it
+// with typed (integer) extra values — the swagger:additionalProperties marker
+// sets the policy for keys beyond the named ones.
+//
+// swagger:model
+// swagger:additionalProperties integer
+type Settings struct {
+	Name string `json:"name"`
+}
+
+// endsnippet:addlpropstyped

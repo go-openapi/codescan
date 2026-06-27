@@ -35,8 +35,8 @@ the tags your routes reference (above, `pets` and `store`).
 
 For the full meta keyword surface (security definitions, external docs,
 extensions, terms of service), see the
-[`swagger:meta` reference]({{% relref "/maintainers/annotations#swaggermeta" %}})
-and the [meta keywords]({{% relref "/maintainers/keywords#meta-single-line-keywords" %}}).
+[`swagger:meta` reference]({{% relref "/maintainers/annotations/swagger-meta" %}})
+and the [meta keywords]({{% relref "/maintainers/keywords/spec-metadata#meta-single-line-keywords" %}}).
 
 ## Security
 

@@ -58,5 +58,5 @@ on the base; it is inherited by every subtype through the `$ref`.
   `swagger:allOf` composition this builds on, and the rest of the model surface.
 - [Routes & operations]({{% relref "/tutorials/routes-and-operations" %}}) —
   return a base type and let the discriminator carry the subtype.
-- [`discriminator` keyword]({{% relref "/maintainers/keywords#discriminator" %}})
-  and [`swagger:allOf` reference]({{% relref "/maintainers/annotations#swaggerallof" %}}).
+- [`discriminator` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#discriminator" %}})
+  and [`swagger:allOf` reference]({{% relref "/maintainers/annotations/swagger-allof" %}}).
