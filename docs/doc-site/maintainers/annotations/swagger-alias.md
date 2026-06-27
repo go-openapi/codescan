@@ -10,6 +10,12 @@ description: "Deprecated no-op — alias rendering is controlled by Go aliases +
 empty sink that only raises a `validate.deprecated` diagnostic.
 {{% /notice %}}
 
+## Usage
+
+```goish
+// swagger:alias [ IDENT_NAME ]
+```
+
 ## What it does
 
 Nothing, today. Earlier documentation claimed it published a `$ref` to
@@ -22,7 +28,7 @@ otherwise gets — and that force-inline behaviour has been removed.
 
 On a type alias / named-type declaration.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 AliasBlock = ANN_ALIAS , [ IDENT_NAME ] , [ Title ] , [ Description ] ;

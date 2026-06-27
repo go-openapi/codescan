@@ -4,14 +4,21 @@ weight: 110
 description: "Declares an HTTP route + operation with a YAML-document body."
 ---
 
+## Usage
+
+```goish
+// swagger:operation METHOD PATH [tag …] OPERATION_ID
+```
 
 ## What it does
 
-Declares an HTTP route + operation. Same header line as
-{{% relref "swagger-route" %}} (method, path, optional tags, operation ID),
-but with a different body shape: instead of the structured `Parameters:` /
-`Responses:` keyword surface, `swagger:operation`'s body is a single YAML
-document spelling out the OpenAPI operation object directly.
+Declares an HTTP route + operation with a YAML-document body.
+
+Same header line as {{% relref "swagger-route" %}} (method, path, optional
+tags, operation ID), but with a different body shape: instead of the
+structured `Parameters:` / `Responses:` keyword surface, `swagger:operation`'s
+body is a single YAML document spelling out the OpenAPI operation object
+directly.
 
 Use `swagger:operation` when you want to author the operation in YAML (closer
 to the OpenAPI spec text) or when the operation has shapes the keyword surface
@@ -23,7 +30,7 @@ On a function or variable declaration whose doc comment carries the
 annotation. The Go entity itself doesn't have to be a handler — the annotation
 publishes a path/operation independent of the carrier.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 InlineOperationBlock = ANN_OPERATION , OperationArgs
@@ -57,25 +64,9 @@ The header line is the entire annotation surface.
 
 ## Example
 
-```go
-// swagger:operation GET /items/{id} items getItem
-//
-// ---
-// summary: Get item by ID
-// parameters:
-//   - name: id
-//     in: path
-//     required: true
-//     type: integer
-// responses:
-//   '200':
-//     description: the requested item
-//     schema:
-//       $ref: '#/definitions/Item'
-//   default:
-//     $ref: '#/responses/genericError'
-func GetItem() {}
-```
+{{< example
+    go="concepts/routes/routes.go" goregion="operation"
+    json="concepts/routes/testdata/operation.json" >}}
 
 The `---` delimits the YAML body; everything between the fences is parsed as an
 OpenAPI 2.0 operation object.

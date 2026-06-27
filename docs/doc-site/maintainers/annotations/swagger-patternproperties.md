@@ -4,11 +4,18 @@ weight: 130
 description: "Adds typed patternProperties entries mapping a name regex to a value schema."
 ---
 
+## Usage
+
+```goish
+// swagger:patternProperties "<regex>": <type> [ , "<regex>": <type> … ]
+```
 
 ## What it does
 
 Adds **typed** `patternProperties` entries — each maps a property-name
-regex to a value schema. It is the typed counterpart of the regex-only
+regex to a value schema.
+
+It is the typed counterpart of the regex-only
 [`patternProperties:` keyword]({{% relref "/maintainers/keywords#patternproperties" %}})
 (which uses an empty, any-value schema).
 
@@ -22,7 +29,7 @@ must understand it.
 
 On a type declaration (alongside `swagger:model`).
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 PatternPropertiesAnnotation = ANN_PATTERN_PROPERTIES , PatternPair , { "," , PatternPair } ;
@@ -43,15 +50,9 @@ None of its own. It composes with `maxProperties` / `minProperties` /
 
 ## Example
 
-```go
-// Headers carries x-prefixed string values and numeric-keyed counters.
-//
-// swagger:model
-// swagger:patternProperties "^x-": string, "^\d+$": integer
-type Headers struct {
-	Known string `json:"known"`
-}
-```
+{{< example
+    go="concepts/maps/maps.go" goregion="patterntyped"
+    json="concepts/maps/testdata/patterntyped.json" >}}
 
 **Precedence.** Same lowest-priority, object-only rule as
 [`swagger:additionalProperties`]({{% relref "swagger-additionalproperties" %}}).

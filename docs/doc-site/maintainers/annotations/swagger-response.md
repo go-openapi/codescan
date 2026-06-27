@@ -4,13 +4,19 @@ weight: 140
 description: "Declares a Go struct as a named response object."
 ---
 
+## Usage
+
+```goish
+// swagger:response [ IDENT_NAME ]
+```
 
 ## What it does
 
-Declares a Go struct as a named response object, emitted into the spec's
-top-level `responses` map. Routes / operations reference it by name via
-the response sub-language (`Responses:` body in `swagger:route`, or the
-YAML `$ref` form in `swagger:operation`).
+Declares a Go struct as a named response object.
+
+It is emitted into the spec's top-level `responses` map. Routes /
+operations reference it by name via the response sub-language (`Responses:`
+body in `swagger:route`, or the YAML `$ref` form in `swagger:operation`).
 
 The struct's fields contribute the response shape:
 
@@ -31,7 +37,7 @@ The struct's fields contribute the response shape:
 
 On a struct declaration.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 ResponseAnnotation = ANN_RESPONSE , [ IDENT_NAME ] ;
@@ -56,26 +62,9 @@ body.
 
 ## Example
 
-```go
-// GenericError is the catch-all error response.
-//
-// swagger:response genericError
-type GenericError struct {
-	// in: body
-	Body struct {
-		// Message is the human-readable error message.
-		Message string `json:"message"`
-
-		// Code is the machine-readable error category.
-		Code string `json:"code,omitempty"`
-	}
-
-	// X-Request-ID echoes the request correlation header.
-	//
-	// in: header
-	XRequestID string `json:"X-Request-ID"`
-}
-```
+{{< example
+    go="concepts/routes/routes.go" goregion="response"
+    json="concepts/routes/testdata/response.json" >}}
 
 Routes can then reference it via `response:genericError` in their
 `Responses:` body.

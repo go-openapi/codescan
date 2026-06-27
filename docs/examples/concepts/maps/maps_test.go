@@ -68,6 +68,7 @@ func TestMapFragments(t *testing.T) {
 	goldenJSON(t, doc, "ref", "RefObject")
 	goldenJSON(t, doc, "fieldkeyword", "Holder")
 	goldenJSON(t, doc, "patterntyped", "TypedPatterns")
+	goldenJSON(t, doc, "addlpropstyped", "Settings")
 
 	// A map renders as an object with a single value schema.
 	counts := doc.Definitions["Inventory"].Properties["counts"]

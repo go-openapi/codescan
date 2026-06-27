@@ -4,22 +4,26 @@ weight: 40
 description: "Classifier hint marking a value declaration as a spec default anchor."
 ---
 
+## Usage
+
+```goish
+// swagger:default
+```
 
 ## What it does
 
 Marks the surrounding declaration as the spec's default value for the
-corresponding shape. Used in narrow contexts where the scanner expects
-an explicit anchor for a default.
+corresponding shape.
 
-This annotation is **value-only** — there's no exported entity it
-publishes; it's a classifier hint the scanner consumes during
-discovery.
+Used in narrow contexts where the scanner expects an explicit anchor for a
+default. This annotation is **value-only** — there's no exported entity it
+publishes; it's a classifier hint the scanner consumes during discovery.
 
 ## Where it goes
 
 On a value declaration (`var`, `const`) or a struct field.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 DefaultClassifierBlock = ANN_DEFAULT , [ Title ] , [ Description ] ;
@@ -37,10 +41,9 @@ directly.
 
 ## Example
 
-```go
-// DefaultLimit is the default page size used wherever Limit is not
-// supplied by the caller.
-//
-// swagger:default
-var DefaultLimit = 20
-```
+`swagger:default` is value-only: it produces no definition, so there is no
+emitted spec to render. The source below shows the narrow classifier-hint
+form — in practice most defaults come from the
+[`default:` keyword]({{% relref "keywords#default" %}}) on a field.
+
+{{< code file="concepts/examples/examples.go" region="swaggerdefault" lang="go" >}}

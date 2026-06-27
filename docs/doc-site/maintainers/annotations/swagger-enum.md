@@ -4,6 +4,11 @@ weight: 50
 description: "Marks a named type as an enum and collects its const values."
 ---
 
+## Usage
+
+```goish
+// swagger:enum [ IDENT_NAME ]
+```
 
 ## What it does
 
@@ -30,7 +35,7 @@ On a named type declaration. The type's `const` values are discovered via
 Go's type-system traversal; they do not need to live in the same file.
 The values surface only when a model reaches the enum type through a field.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 EnumBlock = ANN_ENUM , [ IDENT_NAME ] , [ Title ] , [ Description ] ;
@@ -51,48 +56,13 @@ set; when present, it overrides the const-derived values and the
 
 ## Example
 
-```go
-// Priority is the urgency level on a task.
-//
-// swagger:enum Priority
-type Priority string
+A named type marked `swagger:enum` with `const` values, referenced by a
+model field, lands the values on that property (not on a standalone
+definition) together with the `x-go-enum-desc` extension:
 
-const (
-	// PriorityLow is for tasks that can wait.
-	PriorityLow Priority = "low"
-
-	// PriorityMedium is the default.
-	PriorityMedium Priority = "medium"
-
-	// PriorityHigh is for tasks that must run soon.
-	PriorityHigh Priority = "high"
-)
-
-// Task references Priority, which is what makes the enum reachable.
-//
-// swagger:model
-type Task struct {
-	Priority Priority `json:"priority"`
-}
-```
-
-Produces (extract) — the values land on `Task`'s `priority` property, not
-on a `Priority` definition:
-
-```json
-{
-  "Task": {
-    "type": "object",
-    "properties": {
-      "priority": {
-        "type": "string",
-        "enum": ["low", "medium", "high"],
-        "x-go-enum-desc": "low PriorityLow is for tasks that can wait.\nmedium PriorityMedium is the default.\nhigh PriorityHigh is for tasks that must run soon."
-      }
-    }
-  }
-}
-```
+{{< example
+    go="concepts/models/models.go" goregion="enum"
+    json="concepts/models/testdata/enum.json" >}}
 
 By default the const→value mapping is folded into the property's
 `description` **and** duplicated in `x-go-enum-desc`. Set the scanner

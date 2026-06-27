@@ -4,13 +4,19 @@ weight: 30
 description: "Marks a struct as participating in an allOf composition."
 ---
 
+## Usage
+
+```goish
+// swagger:allOf
+```
 
 ## What it does
 
-Marks a struct as participating in an `allOf` composition. The struct's
-fields plus any embedded `swagger:model`-tagged base produce an
-`allOf: [$ref base, {inline fields}]` schema. The companion convention is
-to embed the base type as an anonymous field with this annotation on the
+Marks a struct as participating in an `allOf` composition.
+
+The struct's fields plus any embedded `swagger:model`-tagged base produce
+an `allOf: [$ref base, {inline fields}]` schema. The companion convention
+is to embed the base type as an anonymous field with this annotation on the
 embedding's doc comment (or on the embedded type itself).
 
 ## Where it goes
@@ -18,7 +24,7 @@ embedding's doc comment (or on the embedded type itself).
 On a struct field that embeds another type, or on a struct type that has
 at least one embedded base.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 AllOfBlock = ANN_ALLOF , [ Title ] , [ Description ] ;
@@ -34,40 +40,13 @@ the inline-object member (the second `allOf` element).
 
 ## Example
 
-```go
-// Animal is the abstract base.
-//
-// swagger:model
-type Animal struct {
-	Kind string `json:"kind"`
-}
+A struct embedding a `swagger:model` base with `swagger:allOf` on the embed
+produces an `allOf` of the base `$ref` and an inline-object member carrying
+the embedding struct's own fields:
 
-// Dog is an Animal with a breed.
-//
-// swagger:model
-type Dog struct {
-	// swagger:allOf
-	Animal
-
-	Breed string `json:"breed"`
-}
-```
-
-Produces:
-
-```json
-"Dog": {
-  "allOf": [
-    {"$ref": "#/definitions/Animal"},
-    {
-      "type": "object",
-      "properties": {
-        "breed": {"type": "string", "x-go-name": "Breed"}
-      }
-    }
-  ]
-}
-```
+{{< example
+    go="concepts/models/models.go" goregion="allof"
+    json="concepts/models/testdata/allof.json" >}}
 
 The same composition applies when the embedding struct is a
 `swagger:response` body: the embedded base emits an `allOf: [{$ref}, …]`

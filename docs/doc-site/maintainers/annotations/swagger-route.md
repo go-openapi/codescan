@@ -4,13 +4,19 @@ weight: 150
 description: "Declares an HTTP route + operation in one annotation."
 ---
 
+## Usage
+
+```goish
+// swagger:route METHOD PATH [tag …] OPERATION_ID
+```
 
 ## What it does
 
-Declares an HTTP route + operation in one annotation. The header line carries
-the method, path, optional tags, and the operation ID; the comment body
-carries the operation's metadata (consumes / produces / schemes / security /
-parameters / responses / extensions).
+Declares an HTTP route + operation in one annotation.
+
+The header line carries the method, path, optional tags, and the operation ID;
+the comment body carries the operation's metadata (consumes / produces /
+schemes / security / parameters / responses / extensions).
 
 This is the **terser of the two operation-declaration annotations**. Most
 go-swagger projects use `swagger:route` for hand-written operations; see
@@ -27,7 +33,7 @@ A godoc-style identifier may precede the annotation on the same comment line
 identifier is recognised as a godoc convention and is not part of the
 annotation surface.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 RouteBlock    = ANN_ROUTE , OperationArgs
@@ -65,35 +71,9 @@ tags). The `Parameters:` and `Responses:` sub-languages are documented in
 
 ## Example
 
-```go
-// ListPets swagger:route GET /pets pets users listPets
-//
-// List pets filtered by some parameters.
-//
-//     Consumes:
-//       - application/json
-//
-//     Produces:
-//       - application/json
-//
-//     Schemes: http, https
-//
-//     Security:
-//       api_key:
-//       oauth: read, write
-//
-//     Parameters:
-//       + name: limit
-//         in: query
-//         type: integer
-//         minimum: 1
-//         maximum: 100
-//
-//     Responses:
-//       200: body:[]Pet the pet list
-//       default: response:genericError
-func ListPets() {}
-```
+{{< example
+    go="concepts/routes/routes.go" goregion="route"
+    json="concepts/routes/testdata/route.json" >}}
 
 **Full example.** `fixtures/enhancements/routes-full-petstore-shape/handlers.go`.
 

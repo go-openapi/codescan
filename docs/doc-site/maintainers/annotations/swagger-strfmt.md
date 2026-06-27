@@ -4,13 +4,20 @@ weight: 160
 description: "Marks a named type as a custom string format."
 ---
 
+## Usage
+
+```goish
+// swagger:strfmt FORMAT_NAME
+```
 
 ## What it does
 
-Marks a named type as a custom string format. Wherever the type appears
-as a field, the emitted schema is `{type: string, format: <name>}`. Useful
-for `UUID`, `Email`, `URL`-style types that have a Go type but should
-serialise as a JSON string with a known format.
+Marks a named type as a custom string format.
+
+Wherever the type appears as a field, the emitted schema is
+`{type: string, format: <name>}`. Useful for `UUID`, `Email`, `URL`-style
+types that have a Go type but should serialise as a JSON string with a
+known format.
 
 A field typed by the marked type emits with the format; the underlying
 type does NOT appear as a top-level model definition (strfmt-tagged types
@@ -24,7 +31,7 @@ On a type declaration whose underlying form is a string-marshalable type
 `swagger:strfmt` may also sit on a struct **field** doc to override just
 that field's published format.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 StrfmtBlock = ANN_STRFMT , IDENT_NAME , [ Title ] , [ Description ] ;
@@ -40,17 +47,13 @@ the entire surface.
 
 ## Example
 
-```go
-// MAC is a hardware address rendered as a colon-separated hex string.
-//
-// swagger:strfmt mac
-type MAC string
+A named type marked `swagger:strfmt` (here a `MarshalText`/`UnmarshalText`
+hardware address) emits as `{type: string, format: …}` wherever it is
+referenced — a field typed `MAC` comes out as `{type: string, format: mac}`:
 
-func (m MAC) MarshalText() ([]byte, error) { return []byte(m), nil }
-func (m *MAC) UnmarshalText(b []byte) error { *m = MAC(b); return nil }
-```
-
-A field typed `MAC` emits as `{type: string, format: mac}`.
+{{< example
+    go="concepts/models/models.go" goregion="strfmt"
+    json="concepts/models/testdata/strfmt.json" >}}
 
 Adding `swagger:model` opts the type into a **first-class definition**
 carrying the full `{type: string, format: …}` schema, with referencing

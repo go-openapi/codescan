@@ -4,13 +4,20 @@ weight: 170
 description: "Replaces a field's or named type's inferred Swagger type with an inlined type."
 ---
 
+## Usage
+
+```goish
+// swagger:type <type>   (where <type> is a scalar, []T, inline, or a known type name)
+```
 
 ## What it does
 
 Replaces a field's (or named type's) inferred Swagger type with an
-**inlined** type. `swagger:type` is an inline directive — it never emits a
-`$ref`; the chosen type is rendered directly in place (the default
-`$ref`-for-named-types is the *no-annotation* behaviour).
+**inlined** type.
+
+`swagger:type` is an inline directive — it never emits a `$ref`; the chosen
+type is rendered directly in place (the default `$ref`-for-named-types is
+the *no-annotation* behaviour).
 
 ## Where it goes
 
@@ -27,7 +34,7 @@ schema to inline a type into. A compatible `swagger:strfmt` on the same
 field still rides as a supplementary format.
 {{% /notice %}}
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 TypeBlock = ANN_TYPE , TYPE_REF , [ Title ] , [ Description ] ;
@@ -52,28 +59,21 @@ None — the override type is the entire surface.
 
 ## Example
 
-Type-level override:
+Type-level override — a named type whose underlying shape is irrelevant to
+the wire form is inlined to the chosen scalar; fields typed by it emit as
+`{type: string}` regardless of the underlying shape:
 
-```go
-// ULID is a Crockford-base32 unique identifier rendered as a string.
-//
-// swagger:type string
-type ULID [16]byte
-```
+{{< example
+    go="concepts/models/models.go" goregion="type"
+    json="concepts/models/testdata/type.json" >}}
 
-Fields typed `ULID` emit as `{type: string}` regardless of the underlying
-`[16]byte` shape.
+Field-level override — the same directive on a single struct field replaces
+just that field's inferred type in place (e.g. an opaque payload published
+as a string blob):
 
-Field-level override:
-
-```go
-type Document struct {
-	// Body is an opaque payload published as a string blob.
-	//
-	// swagger:type string
-	Body json.RawMessage `json:"body"`
-}
-```
+{{< example
+    go="concepts/models/models.go" goregion="typefield"
+    json="concepts/models/testdata/typefield.json" >}}
 
 **Interaction with `swagger:strfmt`.** `swagger:type` wins on the type
 axis; a `swagger:strfmt` format on the same field is kept only when

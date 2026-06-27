@@ -4,10 +4,16 @@ weight: 120
 description: "Declares a Go struct as the parameter set for one or more operations."
 ---
 
+## Usage
+
+```goish
+// swagger:parameters OPERATION_ID [OPERATION_ID …]
+```
 
 ## What it does
 
-Declares a Go struct as the parameters set for one or more operations.
+Declares a Go struct as the parameter set for one or more operations.
+
 Each field becomes one parameter on the named operation(s), and the
 field's doc comment carries its `in:`, `required:`, validations, and
 description.
@@ -32,7 +38,7 @@ On a struct declaration. A bare slice variable (`var Filters []string`)
 carries no per-field `in:`/`type:`/`required:`, so parameters must be a
 struct.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 ParametersAnnotation = ANN_PARAMETERS , IDENT_NAME , { IDENT_NAME } ;
@@ -55,33 +61,8 @@ fields: `in`, `required`, the numeric / length / format validations,
 
 ## Example
 
-```go
-// ListItemsParams declares pagination + filter parameters for the
-// listItems operation.
-//
-// swagger:parameters listItems
-type ListItemsParams struct {
-	// Offset is the page offset.
-	//
-	// in: query
-	// minimum: 0
-	// default: 0
-	Offset int `json:"offset"`
-
-	// Limit is the page size.
-	//
-	// in: query
-	// minimum: 1
-	// maximum: 100
-	// default: 20
-	Limit int `json:"limit"`
-
-	// Tag is the filter tag.
-	//
-	// in: query
-	// required: false
-	Tag string `json:"tag,omitempty"`
-}
-```
+{{< example
+    go="concepts/routes/routes.go" goregion="parameters"
+    json="concepts/routes/testdata/parameters.json" >}}
 
 **Full example.** `fixtures/enhancements/simple-schema-violation/api.go`.

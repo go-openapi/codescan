@@ -4,13 +4,20 @@ weight: 10
 description: "Sets a schema's additionalProperties policy for keys beyond the named properties."
 ---
 
+## Usage
+
+```goish
+// swagger:additionalProperties ( true | false | <type> )
+```
 
 ## What it does
 
 Sets a schema's `additionalProperties` — the policy for keys beyond the
-named properties. On a struct it **complements** the named properties; on
-a map type it **overrides** the element-derived value schema; on a type
-that resolved to a bare `$ref` it **defines** a clean object. See the
+named properties.
+
+On a struct it **complements** the named properties; on a map type it
+**overrides** the element-derived value schema; on a type that resolved to
+a bare `$ref` it **defines** a clean object. See the
 [Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}})
 tutorial.
 
@@ -20,7 +27,7 @@ On a type declaration (alongside `swagger:model`). A field-level
 equivalent exists as the
 [`additionalProperties:` keyword]({{% relref "/maintainers/keywords#additionalproperties" %}}).
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 AdditionalPropertiesAnnotation = ANN_ADDITIONAL_PROPERTIES , ( BOOL_VALUE | ValueType ) ;
@@ -44,15 +51,9 @@ None of its own. It composes with `maxProperties` / `minProperties` /
 
 ## Example
 
-```go
-// Settings is an open object: named properties plus typed extra values.
-//
-// swagger:model
-// swagger:additionalProperties integer
-type Settings struct {
-	Name string `json:"name"`
-}
-```
+{{< example
+    go="concepts/maps/maps.go" goregion="addlpropstyped"
+    json="concepts/maps/testdata/addlpropstyped.json" >}}
 
 **Precedence — lowest priority.** `additionalProperties` only rides on an
 `object`. If a prior rule fixed a non-object type (a `swagger:type`

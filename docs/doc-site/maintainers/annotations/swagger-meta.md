@@ -4,21 +4,27 @@ weight: 80
 description: "Declares the package as the top-level OpenAPI spec container."
 ---
 
+## Usage
+
+```goish
+// swagger:meta
+```
 
 ## What it does
 
-Declares the package as the OpenAPI spec container. The scanner reads the
-package doc comment for the top-level spec fields: title (via
-[stripPackagePrefix]({{% relref "grammar#prose" %}}) of the doc's first line),
-description, license, contact, host, basePath, version, schemes, consumes,
-produces, securityDefinitions, extensions, and the rest of the meta keyword
-surface.
+Declares the package as the OpenAPI spec container.
+
+The scanner reads the package doc comment for the top-level spec fields:
+title (via [stripPackagePrefix]({{% relref "grammar#prose" %}}) of the
+doc's first line), description, license, contact, host, basePath, version,
+schemes, consumes, produces, securityDefinitions, extensions, and the rest
+of the meta keyword surface.
 
 ## Where it goes
 
 On the package doc comment. No arguments — a bare annotation.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 MetaBlock = ANN_META , [ Title ] , [ Description ] , MetaBody ;
@@ -41,25 +47,8 @@ extensions per tag).
 
 ## Example
 
-```go
-// Package petstore Petstore API.
-//
-// The purpose of this application is to provide an application
-// that is using plain Go code to define an API.
-//
-//     Schemes: http, https
-//     Host: petstore.swagger.io
-//     BasePath: /v2
-//     Version: 1.0.0
-//
-//     Consumes:
-//       - application/json
-//
-//     Produces:
-//       - application/json
-//
-// swagger:meta
-package petstore
-```
+{{< example
+    go="concepts/meta/doc.go" goregion="meta"
+    json="concepts/meta/testdata/meta.json" >}}
 
 **Full example.** `fixtures/goparsing/spec/api.go`.

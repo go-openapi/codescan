@@ -4,21 +4,27 @@ weight: 100
 description: "Overrides the emitted property name of a struct field or interface method."
 ---
 
+## Usage
+
+```goish
+// swagger:name IDENT_NAME
+```
 
 ## What it does
 
-Overrides the JSON property name that a struct field or interface
-method renders as. By default the scanner derives names from
-`json:"…"` struct tags (or the Go identifier for fields / methods with
-no tag); `swagger:name` overrides that derivation when the tag-based
-shape isn't appropriate — typically on **interface methods**, which
-cannot carry struct tags.
+Overrides the JSON property name that a struct field or interface method
+renders as.
+
+By default the scanner derives names from `json:"…"` struct tags (or the
+Go identifier for fields / methods with no tag); `swagger:name` overrides
+that derivation when the tag-based shape isn't appropriate — typically on
+**interface methods**, which cannot carry struct tags.
 
 ## Where it goes
 
 On a struct field doc OR an interface method doc.
 
-## Syntax
+## Grammar (EBNF)
 
 ```ebnf
 NameAnnotation = ANN_NAME , IDENT_NAME ;
@@ -32,24 +38,13 @@ None — the override name is the entire surface.
 
 ## Example
 
-```go
-// UserProfile is the user's profile interface.
-//
-// swagger:model
-type UserProfile interface {
-	// ID is the user identifier.
-	ID() string
+On an interface method, `swagger:name` overrides the property name the
+method would otherwise publish under (PascalCase Go method name) with the
+chosen JSON name:
 
-	// FullName is the user's display name.
-	//
-	// swagger:name fullName
-	FullName() string
-}
-```
-
-Without `swagger:name`, the method `FullName()` would publish as
-property `FullName` (PascalCase). The annotation renames it to
-`fullName`.
+{{< example
+    go="concepts/models/models.go" goregion="name"
+    json="concepts/models/testdata/name.json" >}}
 
 **Full example.** `fixtures/enhancements/interface-methods/types.go`.
 
