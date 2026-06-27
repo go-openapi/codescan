@@ -133,6 +133,8 @@ are emitted as separate terminals.
 | `ANN_ADDITIONAL_PROPERTIES` | `swagger:additionalProperties` |
 | `ANN_PATTERN_PROPERTIES` | `swagger:patternProperties` |
 | `ANN_FILE` | `swagger:file` |
+| `ANN_TITLE` | `swagger:title` |
+| `ANN_DESCRIPTION` | `swagger:description` |
 
 #### Argument terminals
 
@@ -292,15 +294,19 @@ SchemaBlock          = SchemaAnnotation
                      , [ Description ]
                      , SchemaAnnotationBody ;
 
-SchemaAnnotation     = ModelAnnotation
-                     | ResponseAnnotation
-                     | ParametersAnnotation
-                     | NameAnnotation ;
+SchemaAnnotation      = ModelAnnotation
+                      | ResponseAnnotation
+                      | ParametersAnnotation
+                      | NameAnnotation
+                      | TitleAnnotation
+                      | DescriptionAnnotation ;
 
-ModelAnnotation      = ANN_MODEL ,      [ IDENT_NAME ] ;
-ResponseAnnotation   = ANN_RESPONSE ,   [ IDENT_NAME ] ;
-ParametersAnnotation = ANN_PARAMETERS , IDENT_NAME , { IDENT_NAME } ;
-NameAnnotation       = ANN_NAME ,       IDENT_NAME ;
+ModelAnnotation       = ANN_MODEL ,       [ IDENT_NAME ] ;
+ResponseAnnotation    = ANN_RESPONSE ,    [ IDENT_NAME ] ;
+ParametersAnnotation  = ANN_PARAMETERS ,  IDENT_NAME , { IDENT_NAME } ;
+NameAnnotation        = ANN_NAME ,        IDENT_NAME ;
+TitleAnnotation       = ANN_TITLE ,       RAW_VALUE ;
+DescriptionAnnotation = ANN_DESCRIPTION , RAW_VALUE ;
 
 SchemaAnnotationBody = { SchemaBodyItem } ;
 UnboundBlockBody     = { SchemaBodyItem } ;
@@ -342,6 +348,15 @@ SchemaDecorator      = RAW_VALUE_DEFAULT
 DiscriminatorLine    = KW_DISCRIMINATOR , BOOL_VALUE ;
 DeprecatedLine       = KW_DEPRECATED , BOOL_VALUE ;
 ```
+
+`swagger:title` / `swagger:description` are schema-family **overrides** — they
+replace the godoc-derived title / description on a model, field, response, or
+header. They dispatch through the schema parser (not the classifier parser), so
+validation keywords co-located on the same comment group still surface. The
+`RAW_VALUE` is the rest of the head line; `swagger:description` additionally folds
+a blank-terminated body (Option B) or, with a trailing `|`, a verbatim literal
+markdown block. A blank override emits `CodeEmptyOverride`; `swagger:title` is
+rejected with `CodeContextInvalid` on a non-body parameter or response header.
 
 {{< railroad >}}
 SchemaBodyItem    = Validation | SchemaDecorator | ExtensionsBlock | ExternalDocsBlock | BLANK ;
