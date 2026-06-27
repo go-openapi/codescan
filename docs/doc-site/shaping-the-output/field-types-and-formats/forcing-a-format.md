@@ -31,5 +31,5 @@ a `UUID` type → `{string, format: uuid}`); see
 The `swagger:type` annotation is the related tool when you want to override the
 whole **type**, not just its format — see
 [Type discovery]({{% relref "type-discovery" %}}) and the
-[`swagger:type` reference]({{% relref "/maintainers/annotations#swaggertype" %}}).
+[`swagger:type` reference]({{% relref "/maintainers/annotations/swagger-type" %}}).
 {{% /notice %}}

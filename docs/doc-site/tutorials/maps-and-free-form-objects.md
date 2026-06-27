@@ -58,7 +58,7 @@ the policy, where `<spec>` is `true`, `false`, or a value type:
 
 A **type spec** instead of a bool gives the extra values a schema — a primitive
 (or `[]T`), or a model name that becomes a `$ref` (the same value-type grammar as
-[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}}), except a
+[`swagger:type`]({{% relref "/maintainers/annotations/swagger-type" %}}), except a
 type name resolves to a `$ref`):
 
 {{< compare left="concepts/maps/testdata/typed.json"  leftlabel="integer — typed values"

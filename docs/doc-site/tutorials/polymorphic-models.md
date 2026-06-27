@@ -59,4 +59,4 @@ on the base; it is inherited by every subtype through the `$ref`.
 - [Routes & operations]({{% relref "/tutorials/routes-and-operations" %}}) —
   return a base type and let the discriminator carry the subtype.
 - [`discriminator` keyword]({{% relref "/maintainers/keywords#discriminator" %}})
-  and [`swagger:allOf` reference]({{% relref "/maintainers/annotations#swaggerallof" %}}).
+  and [`swagger:allOf` reference]({{% relref "/maintainers/annotations/swagger-allof" %}}).

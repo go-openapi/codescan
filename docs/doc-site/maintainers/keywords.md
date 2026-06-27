@@ -291,7 +291,7 @@ type MyObjectType map[string]interface{}
 
 For **typed** value schemas (a regex mapped to a primitive or a model
 `$ref` rather than the empty `{}`), use the decl-level
-[`swagger:patternProperties`]({{% relref "/maintainers/annotations#swaggerpatternproperties" %}})
+[`swagger:patternProperties`]({{% relref "/maintainers/annotations/swagger-patternproperties" %}})
 marker. `patternProperties` is a JSON-Schema keyword beyond the Swagger
 2.0 subset — see
 [Maps & free-form objects]({{% relref "/tutorials/maps-and-free-form-objects" %}}).
@@ -302,13 +302,13 @@ Sets the policy for keys beyond the named properties on an
 **object**-typed schema. The argument is `true` (allow any extra key),
 `false` (forbid extra keys — close the object), or a **value type** (a
 primitive / `[]T`, or a model name that becomes a `$ref` — the
-[`swagger:type`]({{% relref "/maintainers/annotations#swaggertype" %}})
+[`swagger:type`]({{% relref "/maintainers/annotations/swagger-type" %}})
 value grammar). On a map field it overrides the Go element schema; on a
 `$ref`'d field the value rides an `allOf` sibling so the reference is
 kept. Aliases: `additional properties`, `additional-properties`.
 
 This is the field-keyword form; the decl-level
-[`swagger:additionalProperties`]({{% relref "/maintainers/annotations#swaggeradditionalproperties" %}})
+[`swagger:additionalProperties`]({{% relref "/maintainers/annotations/swagger-additionalproperties" %}})
 marker does the same on a type. It is the lowest-priority, object-only
 annotation — dropped with a `CodeShapeMismatch` diagnostic if the field
 resolved to a non-object.
@@ -541,7 +541,7 @@ Precedence, most-explicit-wins and **identical in every context**:
 name: keyword  >  swagger:name annotation  >  json: tag  >  Go field name
 ```
 
-[`swagger:name`]({{% relref "/maintainers/annotations#swaggername" %}})
+[`swagger:name`]({{% relref "/maintainers/annotations/swagger-name" %}})
 is the older annotation form — still honoured, and idiomatic on
 interface methods — but `name:` is the universal keyword. Using
 `swagger:name` in a parameter or response-header context (where `name:`

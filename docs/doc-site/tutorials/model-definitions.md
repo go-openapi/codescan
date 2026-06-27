@@ -90,7 +90,7 @@ of an inlined type, `inline` to expand the field's own Go type, or a known type
 name to inline that type. `array` is deprecated in favour of `inline` / `[]T`,
 and `file` is rejected (use `swagger:file`). When combined with `swagger:strfmt`,
 the type wins and the format is kept only if compatible — see the
-[reference]({{% relref "/maintainers/annotations#swaggertype" %}}).
+[reference]({{% relref "/maintainers/annotations/swagger-type" %}}).
 
 The override also works **on an individual field doc** — no wrapper-type
 annotation. Here `Code` is published as a string while its `RawID` type is left
