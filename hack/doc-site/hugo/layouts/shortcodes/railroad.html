@@ -1,0 +1,26 @@
+{{- /*
+  railroad: render an EBNF production as a Mermaid railroad (syntax) diagram,
+  beside the plain ```ebnf``` text it complements (decorative — the EBNF text
+  is always the authoritative grammar).
+
+  Usage — wrap one or more ISO-14977 productions:
+
+    {{< railroad >}}
+    ModelAnnotation = ANN_MODEL , [ IDENT_NAME ] ;
+    {{< /railroad >}}
+
+  The raw EBNF is carried verbatim in a <script type="text/plain"> child; a
+  module in custom-header.html renders each container in isolation (a unique
+  SVG id per diagram — the beta railroad renderer collides when batched) and
+  auto-quotes UPPERCASE lexer terminals so they get literal styling.
+
+  Mermaid (>= 11.16, railroad is beta) is loaded only on pages that use this
+  shortcode, and only at runtime. The diagram is decorative: the authoritative
+  grammar is always the adjacent EBNF text.
+*/ -}}
+{{- $ebnf := trim .Inner "\n" -}}
+{{- $id := printf "rr-%s" (substr (md5 $ebnf) 0 12) -}}
+<div class="railroad-diagram" id="{{ $id }}" role="img" aria-label="Railroad diagram of the EBNF production above">
+  <script type="text/plain" class="railroad-src">{{ $ebnf }}</script>
+  <noscript class="railroad-fallback">Railroad diagram needs JavaScript — see the EBNF above.</noscript>
+</div>

@@ -53,18 +53,26 @@ jobs:
           git fetch upstream --prune --update-shallow --tags 'refs/tags/*:refs/tags/*'
           git fetch origin --prune --update-shallow --tags 'refs/tags/*:refs/tags/*'
       -
-        name: Initialize theme
+        name: Initialize theme and assets
         env:
           RELEARN_VERSION: 9.0.3
+          MERMAID_VERSION: 11.16.0
         run: |
           cd hack/doc-site/hugo
 
-          # Clone theme
+          # Clone theme (not committed)
           curl -sL -o relearn.tgz https://github.com/McShelby/hugo-theme-relearn/archive/refs/tags/"${RELEARN_VERSION}".tar.gz
           tar xf relearn.tgz
           rm -rf themes/hugo-relearn
           mv "hugo-theme-relearn-${RELEARN_VERSION}" hugo-relearn
           mv hugo-relearn themes/
+
+          # Fetch vendored Mermaid (not committed) — the railroad shortcode needs
+          # >= 11.16, newer than the theme's bundled Mermaid; served as a local
+          # static asset so the rendered site makes no runtime CDN calls.
+          mkdir -p themes/codescan-static/js/mermaid11
+          curl -sL -o themes/codescan-static/js/mermaid11/mermaid.min.js \
+            https://cdn.jsdelivr.net/npm/mermaid@"${MERMAID_VERSION}"/dist/mermaid.min.js
       -
         name: Prepare config
         run: |
