@@ -410,6 +410,50 @@ func TestParseFieldTag(t *testing.T) {
 	})
 }
 
+func TestIsTextMarshaler(t *testing.T) {
+	pkg := types.NewPackage("example.com/x", "x")
+
+	// namedWithMarshalText builds a named struct type carrying a value-receiver method
+	// MarshalText whose results are the supplied tuple.
+	namedWithMarshalText := func(name string, results *types.Tuple) *types.Named {
+		tn := types.NewTypeName(token.NoPos, pkg, name, nil)
+		named := types.NewNamed(tn, types.NewStruct(nil, nil), nil)
+		recv := types.NewVar(token.NoPos, pkg, "m", named)
+		sig := types.NewSignatureType(recv, nil, nil, types.NewTuple(), results, false)
+		named.AddMethod(types.NewFunc(token.NoPos, pkg, "MarshalText", sig))
+		return named
+	}
+
+	bytesAndError := types.NewTuple(
+		types.NewVar(token.NoPos, nil, "", types.NewSlice(types.Typ[types.Byte])),
+		types.NewVar(token.NoPos, nil, "", types.Universe.Lookup("error").Type()),
+	)
+
+	t.Run("MarshalText() ([]byte, error) satisfies the interface", func(t *testing.T) {
+		named := namedWithMarshalText("Marshaler", bytesAndError)
+		assert.TrueT(t, IsTextMarshaler(named))
+		// A value-receiver method promotes to the pointer method set too.
+		assert.TrueT(t, IsTextMarshaler(types.NewPointer(named)))
+	})
+
+	t.Run("type without MarshalText does not", func(t *testing.T) {
+		tn := types.NewTypeName(token.NoPos, pkg, "Plain", nil)
+		named := types.NewNamed(tn, types.NewStruct(nil, nil), nil)
+		assert.FalseT(t, IsTextMarshaler(named))
+	})
+
+	t.Run("wrong signature (no error result) does not", func(t *testing.T) {
+		onlyBytes := types.NewTuple(
+			types.NewVar(token.NoPos, nil, "", types.NewSlice(types.Typ[types.Byte])),
+		)
+		assert.FalseT(t, IsTextMarshaler(namedWithMarshalText("Bad", onlyBytes)))
+	})
+
+	t.Run("builtin string does not", func(t *testing.T) {
+		assert.FalseT(t, IsTextMarshaler(types.Typ[types.String]))
+	})
+}
+
 func TestMustNotBeABuiltinType(t *testing.T) {
 	t.Run("user type does not panic", func(t *testing.T) {
 		pkg := types.NewPackage("example.com/foo", "foo")
