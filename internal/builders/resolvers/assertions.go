@@ -6,7 +6,7 @@ package resolvers
 import (
 	"fmt"
 	"go/ast"
-	"go/importer"
+	"go/token"
 	"go/types"
 
 	oaispec "github.com/go-openapi/spec"
@@ -75,23 +75,34 @@ func IsFieldStringable(tpe ast.Expr) bool {
 	return false
 }
 
+// textMarshalerIface is the encoding.TextMarshaler interface, synthesized with go/types:
+//
+//	interface{ MarshalText() (text []byte, err error) }
+//
+// It is built structurally rather than by importing the real "encoding" package through
+// go/importer's default importer. That importer resolves stdlib export data by running
+// "go list -export" against the GOROOT the binary was built against. When GOTOOLCHAIN
+// selects a different toolchain at runtime — or the binary simply runs on a machine whose Go
+// installation lives at a different path than the build machine's — that invocation fails
+// ("cannot find main module"), the error is silently swallowed, and every TextMarshaler check
+// returns false. types.Implements compares method sets structurally, so a synthesized,
+// structurally identical interface is equivalent to the imported one and removes the runtime
+// dependency on a working "go list".
+var textMarshalerIface = types.NewInterfaceType([]*types.Func{ //nolint:gochecknoglobals // immutable synthesized interface, built once, read-only
+	types.NewFunc(token.NoPos, nil, "MarshalText",
+		types.NewSignatureType(nil, nil, nil,
+			nil,
+			types.NewTuple(
+				types.NewVar(token.NoPos, nil, "text", types.NewSlice(types.Typ[types.Byte])),
+				types.NewVar(token.NoPos, nil, "err", types.Universe.Lookup("error").Type()),
+			),
+			false,
+		),
+	),
+}, nil).Complete()
+
 func IsTextMarshaler(tpe types.Type) bool {
-	encoding, err := importer.Default().Import("encoding")
-	if err != nil {
-		return false
-	}
-
-	iface := encoding.Scope().Lookup("TextMarshaler")
-	if iface == nil {
-		return false
-	}
-
-	asInterface, ok := iface.Type().Underlying().(*types.Interface)
-	if !ok {
-		return false
-	}
-
-	return types.Implements(tpe, asInterface)
+	return types.Implements(tpe, textMarshalerIface)
 }
 
 // IsJSONMapKey reports whether a Go map with this key type marshals to a JSON object under
