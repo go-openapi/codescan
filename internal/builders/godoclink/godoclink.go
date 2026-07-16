@@ -28,7 +28,6 @@
 // github.com/fredbi/go-fred-mcp/pkg/doc-filters/godoc-filter; the key difference is that this
 // package *rewrites* the prose whereas that tool *redacts* (length-preserving blanking) for
 // masking.
-//
 package godoclink
 
 import (

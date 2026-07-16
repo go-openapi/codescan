@@ -1,0 +1,113 @@
+# Guards the toolchain-independence of stdlib type detection (encoding.TextMarshaler).
+#
+# codescan is embedded as a compiled binary in downstream tools (e.g. go-swagger) and then run in a
+# possibly-different Go environment than it was built in. resolvers.IsTextMarshaler must NOT depend
+# on a working build-time toolchain/GOROOT at runtime. See
+# .claude/plans/textmarshaler-toolchain-independence.md.
+#
+# This is a bespoke build-once / run-in-a-foreign-environment matrix; it is intentionally NOT part
+# of the shared reusable go-test workflow. codescan makes no library-wide "runs without Go" pledge —
+# the go-less property is local to job B only.
+name: toolchain independence
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Job A — build the test binaries against the STABLE toolchain and publish them as artifacts.
+  # Nothing is asserted here; the binaries bake in stable's GOROOT (runtime.GOROOT()), which jobs
+  # B and C then run against a different / absent GOROOT.
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build_goroot: ${{ steps.goroot.outputs.build_goroot }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: stable
+          cache: false
+      - id: goroot
+        name: Record the build-time GOROOT (baked into the binaries as runtime.GOROOT())
+        run: echo "build_goroot=$(go env GOROOT)" >> "$GITHUB_OUTPUT"
+      - name: Compile the pinpoint (resolvers) and full-workflow (integration) test binaries
+        run: |
+          go test -c -o resolvers.test    ./internal/builders/resolvers/
+          go test -c -o integration.test  ./internal/integration/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: toolchain-test-binaries
+          path: |
+            resolvers.test
+            integration.test
+          if-no-files-found: error
+          retention-days: 1
+
+  # Job B — pinpoint, hermetic. Claim: the TextMarshaler *interface resolution* depends on nothing at runtime.
+  # Deliberately installs NO Go and runs under a scrubbed environment (env -i): no PATH,
+  # no GOROOT, no toolchain.
+  # The absence of setup-go IS the test.
+  # Proven discriminator: this binary passes on the fixed code and fails on the pre-fix go/importer implementation in this same env.
+  pinpoint-no-go:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: toolchain-test-binaries
+      - name: Run resolvers tests with no Go present at all
+        run: |
+          chmod +x resolvers.test   # upload-artifact does not preserve the executable bit
+          env -i HOME="$HOME" ./resolvers.test \
+            -test.run 'TestIsTextMarshaler|TestMustIfaceFromSource' -test.v
+
+  # Job C — wide, full-workflow. Claim: a complete scan survives a build!=run toolchain divergence and still emits correct output.
+  # Runs the integration binary (built on stable) against an OLDER toolchain,
+  # with the build-time GOROOT removed and GOROOT unset, so the old go/importer path would fail
+  # — while packages.Load still works via the older `go` self-locating on PATH.
+  full-workflow-divergent:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 # fixtures source (FixturesDir resolves the build-time checkout path, identical across jobs)
+      # oldstable is a DIFFERENT minor than job A's stable, so its GOROOT lives at a different path.
+      #
+      # It must satisfy the fixtures module's `go` directive (currently go 1.25.0); oldstable only ever increases, so this holds going forward.
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: oldstable
+          cache: false
+      - name: Warm the fixtures module cache (normal toolchain, before divergence)
+        working-directory: fixtures
+        run: go mod download
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: toolchain-test-binaries
+      - name: Remove the build-time GOROOT so the divergence is deterministic
+        # Hosted-runner images may pre-cache the stable toolchain at the same path the binary baked in.
+        #
+        # Deleting it guarantees runtime.GOROOT() points at an absent directory (the condition
+        # the self-check enforces). Different major than oldstable, so this never touches the
+        # toolchain packages.Load uses.
+        run: |
+          build_goroot='${{ needs.build.outputs.build_goroot }}'
+          echo "removing build-time GOROOT: $build_goroot"
+          sudo rm -rf "$build_goroot"
+      - name: Run the full scan under the divergent environment
+        # env -u GOROOT: NEVER set GOROOT to a bogus path — that makes the `go` command itself refuse
+        # to start ("cannot find GOROOT directory") and packages.Load fails for the wrong reason.
+        #
+        # Unsetting it lets `go` self-locate from its own binary while the old importer falls back to
+        # the (now absent) baked GOROOT. GOTOOLCHAIN=local forbids any surprise toolchain download.
+        run: |
+          chmod +x integration.test   # upload-artifact does not preserve the executable bit
+          env -u GOROOT \
+            GOTOOLCHAIN=local \
+            CODESCAN_TC_JOBC=1 \
+            ./integration.test -test.run 'TestToolchainIndependence_FullScan' -test.v

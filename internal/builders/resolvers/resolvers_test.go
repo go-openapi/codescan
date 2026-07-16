@@ -480,5 +480,51 @@ func TestInternalError_Error(t *testing.T) {
 	assert.EqualT(t, string(ErrInternal), ErrInternal.Error())
 }
 
+func TestMustIfaceFromSource(t *testing.T) {
+	// mustIfaceFromSource is the toolchain-independent replacement for go/importer used to
+	// materialize the encoding.TextMarshaler interface. Its contract: a valid one-line source
+	// declaring an interface type T returns that interface; any deviation is a programming error
+	// (src is a compile-time constant) and must panic wrapping ErrInternal — never resolve an
+	// importer or nil-deref.
+	assertPanicsWrappingErrInternal := func(t *testing.T, src string) {
+		t.Helper()
+		defer func() {
+			r := recover()
+			require.NotNil(t, r, "expected a panic")
+			err, ok := r.(error)
+			require.TrueT(t, ok, "panic value should be an error")
+			require.TrueT(t, errors.Is(err, ErrInternal), "panic should wrap ErrInternal")
+		}()
+		_ = mustIfaceFromSource(src)
+	}
+
+	t.Run("valid interface source returns the interface", func(t *testing.T) {
+		iface := mustIfaceFromSource(`package p; type T interface{ MarshalText() (text []byte, err error) }`)
+		require.NotNil(t, iface)
+		require.EqualT(t, 1, iface.NumMethods())
+		require.EqualT(t, "MarshalText", iface.Method(0).Name())
+	})
+
+	t.Run("unparseable source panics wrapping ErrInternal", func(t *testing.T) {
+		assertPanicsWrappingErrInternal(t, `%% this is not go %%`)
+	})
+
+	t.Run("type-check failure panics wrapping ErrInternal", func(t *testing.T) {
+		// References an undefined type: with a nil importer nothing can resolve it, so the
+		// type-checker errors rather than reaching out to a toolchain.
+		assertPanicsWrappingErrInternal(t, `package p; type T interface{ Foo() Undefined }`)
+	})
+
+	t.Run("type T that is not an interface panics wrapping ErrInternal", func(t *testing.T) {
+		assertPanicsWrappingErrInternal(t, `package p; type T struct{}`)
+	})
+
+	t.Run("missing type T panics wrapping ErrInternal", func(t *testing.T) {
+		// Valid, type-checkable source that simply never declares T: the nil scope lookup must be
+		// guarded into an ErrInternal panic, not an opaque nil dereference.
+		assertPanicsWrappingErrInternal(t, `package p; type U interface{ Foo() }`)
+	})
+}
+
 // Assert at compile time that our typable fixture satisfies the interface.
 var _ ifaces.SwaggerTypable = (*mocks.MockSwaggerTypable)(nil)
