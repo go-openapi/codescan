@@ -28,7 +28,7 @@ jobs:
     outputs:
       build_goroot: ${{ steps.goroot.outputs.build_goroot }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: stable
@@ -75,7 +75,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 # fixtures source (FixturesDir resolves the build-time checkout path, identical across jobs)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0 # fixtures source (FixturesDir resolves the build-time checkout path, identical across jobs)
       # oldstable is a DIFFERENT minor than job A's stable, so its GOROOT lives at a different path.
       #
       # It must satisfy the fixtures module's `go` directive (currently go 1.25.0); oldstable only ever increases, so this holds going forward.
