@@ -4,11 +4,13 @@
 // how-to. aliases_test.go scans it and writes the golden fragment the guide
 // renders.
 //
-// NOTE: the first-class-alias modes (a swagger:model type alias under the
-// default/RefAliases modes) currently hang the scanner — see doc-site-quirks F9.
-// This example deliberately uses an unannotated alias (the dissolve case), which
-// is the safe, common behavior; the first-class modes are described
-// conceptually in the guide until F9 is fixed.
+// This example uses an unannotated alias (the dissolve case), the common
+// behaviour the guide leads with; the first-class-alias modes are described
+// conceptually there.
+//
+// (Historical note: those modes once hung the scanner — quirk F9 — which is why
+// this example avoids them. The hang was fixed and is locked across all three
+// alias modes by TestQuirk_AliasModelNoHang.)
 package aliases
 
 // snippet:alias

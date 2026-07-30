@@ -382,6 +382,10 @@ prose** — author-written overrides (harvested separately) are never filtered.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 
+> **Where open quirks live.** This section documents caveats *of this package*.
+> The project-wide register of what is actually open — verified, with the stale
+> historical registers called out — is `.claude/plans/quirks-open.md`.
+
 - **`FindModel` deprecation.** The deprecated alias is still on the
   `ScanCtx` surface for in-tree callers. Once every builder has been
   audited and migrated to the `GetModel` + `AddDiscoveredModel` pair,

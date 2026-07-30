@@ -184,7 +184,7 @@ func classifyHTTPMethod(s string) (string, bool) {
 // It is a LEXICAL check only: the grammar no longer owns the closed type vocabulary.
 // Semantic validity (is it a known keyword / scanned type? is the format compatible?) is resolved
 // by the builder, which alone knows the scanned definitions and the annotated Go type (the F3
-// reconciliation — see .claude/plans/quirks-F-series-fix.md).
+// reconciliation — see .claude/plans/archive/quirks-F-series-fix.md).
 //
 // The lexer only rejects structurally malformed tokens (empty, embedded spaces, a bare `[]`, a
 // leading digit, illegal characters), which the parser flags.
