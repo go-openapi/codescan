@@ -71,8 +71,42 @@ embeds should compose; reach for the option when composition is your house style
 for every plain embed.
 {{% /notice %}}
 
+## When an override cannot be composed
+
+Composition has one limit worth knowing. Inlining an embed **resolves** an
+override — a field the enclosing struct re-declares wins, exactly as Go's depth
+rule decides it. `allOf` instead **accumulates**: members conjoin, and a
+conjunction can only narrow, never replace. So a re-declaration that *replaces*
+is not expressible as composition:
+
+- re-declaring a promoted field to decorate it (add `readOnly`, a description, a
+  validation) leaves the property in **both** members — valid, but a generator
+  walking the members sees it twice;
+- re-declaring it with a **different type** yields `{type: integer}` **and**
+  `{type: string}` for one property — a schema nothing can satisfy.
+
+codescan does not guess which declaration you meant: many Go types can be
+written whose composition has no faithful schema, and inventing one would be
+deciding your intent. Resolve it yourself with
+[`swagger:omit`]({{% relref "/maintainers/annotations/swagger-omit" %}}) on the
+embed, which drops the promoted twin so only your re-declaration survives:
+
+```go
+type Decorated struct {
+	// swagger:omit ID
+	Base
+
+	// ID is assigned by the server.
+	//
+	// read only: true
+	ID int64
+}
+```
+
 ## What's next
 
+- [`swagger:omit`]({{% relref "/maintainers/annotations/swagger-omit" %}}) — drop
+  what an embed promotes but the API should not carry.
 - [Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}}) — the
   `swagger:allOf` annotation and discriminator hints this option generalises.
 - [Descriptions beside a `$ref`]({{% relref "descriptions-beside-a-ref" %}}) —

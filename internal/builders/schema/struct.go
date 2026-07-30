@@ -74,6 +74,12 @@ func (s *Builder) buildStructFields(decl *scanner.EntityDecl, st *types.Struct, 
 }
 
 func (s *Builder) processStructField(fld *types.Var, decl *scanner.EntityDecl, target *oaispec.Schema, nameByJSON map[string]propOwner) error {
+	// `swagger:omit` pre-filter: the field is not promoted, so no property is written for it and no
+	// name is ever computed. See omit.go.
+	if s.isOmitted(fld) {
+		return nil
+	}
+
 	c, ok, err := s.structFieldCarrier(fld, decl, target, nameByJSON)
 	if err != nil || !ok {
 		return err

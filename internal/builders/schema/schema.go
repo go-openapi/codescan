@@ -48,6 +48,13 @@ type Builder struct {
 	// The mechanism is shared with the parameters and responses builders via common.EmbedInheritance;
 	// the schema builder consumes only Required (it has no `in:` location concept).
 	embedInherited common.EmbedInheritance
+
+	// omitted is the set of struct fields the active `swagger:omit` scope filters out of the
+	// promotion walk, keyed by field object (see omit.go).
+	//
+	// Pushed around each embed walk and popped after it, so sibling embeds never leak into one
+	// another.
+	omitted map[*types.Var]struct{}
 }
 
 // NewBuilder constructs an initialized [Builder].

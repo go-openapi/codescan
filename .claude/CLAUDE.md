@@ -213,6 +213,13 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
   incomplete polymorphic family is unusable, so this is a fix, not a knob); each pull
   raises a `scan.discovered-subtype` Hint. go-swagger#1913. See
   `internal/scanner/README.md#subtypes`.
+- `swagger:omit <name>[,<name>…]` is the author's escape hatch for an embed that promotes more
+  than the API should carry (go-swagger#1992): a **pre-filter** on the promotion walk, so the
+  listed Go fields are never written and the annotation reads identically whether the embed is
+  inlined or composed into an `allOf` member. Targets resolve against the *type*
+  (`types.LookupFieldOrMethod`), never against the emitted names. Placed on the embed (plain field
+  names) or on the declaration (dotted embed paths); embeds only. Unresolved / behind-`$ref`
+  targets raise Hints. See `internal/builders/schema/README.md#omit`.
 - The scanner works at the AST / `go/types` level — it never executes or compiles scanned code.
 - Parsers never import builders; they write through the interfaces in `internal/ifaces`.
   When adding a new annotation, extend the relevant builder's `taggers.go` rather than reaching

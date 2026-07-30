@@ -12,7 +12,7 @@ is a route handler", "this is meta-information about the API" — and
 opens the door for [keywords]({{% relref "keywords" %}}) inside the same comment
 block.
 
-There are nineteen annotations. They divide cleanly by what they
+There are twenty annotations. They divide cleanly by what they
 attach to:
 
 - **Spec-level**: `swagger:meta`.
@@ -21,9 +21,9 @@ attach to:
   `swagger:additionalProperties`, `swagger:patternProperties`.
 - **Operation declarations**: `swagger:route`, `swagger:operation`.
 - **Companion declarations**: `swagger:parameters`, `swagger:response`.
-- **Local hints & overrides**: `swagger:ignore`, `swagger:name`,
-  `swagger:title`, `swagger:description`, `swagger:type`, `swagger:file`,
-  `swagger:default`.
+- **Local hints & overrides**: `swagger:ignore`, `swagger:omit`,
+  `swagger:name`, `swagger:title`, `swagger:description`, `swagger:type`,
+  `swagger:file`, `swagger:default`.
 
 This section is the **author-first reference**. Each annotation has its
 own page covering what it produces, where it goes, its EBNF-like

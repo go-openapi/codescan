@@ -20,6 +20,7 @@ trade-offs, and known quirks live here.
 - [§allof](#allof) — `buildAllOf`, `buildNamedAllOf`, `scanEmbeddedFields`
 - [§embedded](#embedded) — embed routing, struct/interface specials asymmetry
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
+- [§omit](#omit) — `swagger:omit` — the author's pre-filter on promoted fields
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
 - [§traceability](#traceability) — `x-go-name` / `x-go-package` / `x-go-type` origin extensions and `EmitXGoType`
@@ -586,6 +587,90 @@ zero-content interfaces invisible at the allOf seam — they don't
 contribute an `{}` entry to the outer schema.
 
 ---
+
+## <a id="omit"></a>§omit — `swagger:omit`, the author's pre-filter on promoted fields
+
+Promoting an embed can produce a schema the author never meant, and codescan must not guess which
+one they meant. The two cases that motivated the annotation (go-swagger#1992 plus the override
+defects found while auditing `DefaultAllOfForEmbeds`):
+
+| shape | Go marshals | inlined | composed (`allOf`) |
+|---|---|---|---|
+| outer `ID` re-declared to add `readOnly` | one `ID` | one, decorated | `ID` in BOTH members |
+| outer `ID string` over `ID int64` | one, string | string | integer AND string — unsatisfiable |
+| a shared type embedded in a request body | every field | every field | every field |
+
+Inlining **resolves** an override (it applies Go's depth rule and emits the winner); `allOf`
+**accumulates** — members conjoin, and conjunction can only narrow, never replace. So an override
+that replaces is not expressible as composition, and no amount of tidying the members fixes it.
+`swagger:omit` is the escape hatch: the author states which promoted fields do not belong, and the
+scanner keeps mirroring the code otherwise.
+
+### It is a pre-filter, not a post-hoc delete
+
+`swagger:omit` means *"do not promote this field when walking the embed"*. One rule then covers both
+renderings — the field is simply never written:
+
+- inlined: an outer re-declaration wins as it already did (so omitting
+  its promoted twin is correctly a no-op there);
+- composed: the base member is built without the field, which removes
+  the duplicate and the unsatisfiable pair above.
+
+No mode-awareness, and no Go-name↔JSON-name reconciliation, because filtering happens *before* names
+are computed — which is why targets are Go field names and why the annotation is indifferent to json
+tags and to `NameFromTags`.
+
+The filter itself is one condition in `processStructField` (`struct.go`); everything else lives in
+`omit.go`.
+
+### Resolution runs against the type, not the walk
+
+Each target is resolved once, at the annotation site, with `types.LookupFieldOrMethod` — Go's own
+promoted-field lookup, so depth and ambiguity rules come for free. The scope then carries the
+resulting `*types.Var` objects and the filter is pointer identity.
+
+Consequences worth keeping: there is no "what was actually omitted" bookkeeping (a target either
+names a field of the type or it does not, known before the walk starts); a target already excluded
+for another reason resolves fine and is silently redundant; and two same-named fields at different
+depths can never be confused, because distinct fields are distinct objects.
+
+### Placement
+
+- **on the embed** (ergonomic): targets are plain field names of that
+  embedded type;
+- **on the declaration** (power form): a dotted path names the embed
+  chain (`Base.ID`, head consumed per level), a bare name is offered to
+  each embed and resolved against its promoted set.
+
+Every path segment but the last must name an **embedded** field: `omit` removes promoted content,
+the only thing the enclosing schema owns. A segment naming a regular field stops the walk and is
+reported as unresolved — reaching through one would edit either another type's inlined copy or a
+`$ref`'d definition.
+
+### Diagnostics (all Hints)
+
+| code | fires when |
+|---|---|
+| `scan.omit-unresolved` | the target names no field of the embedded type — a typo, or a rename upstream |
+| `scan.omit-behind-ref` | the embed is composed as a `$ref` (an annotated model), where OAS2 cannot subtract a property; the omission is dropped rather than silently forking the definition |
+| `scan.shadowed-embed-field` | a field re-declared with `json:"-"` carries the Go name of a promoted field (see below) |
+
+`swagger:omit` is the only construct whose output depends on a hand-written name the compiler never
+checks — everything else is derived from types. `scan.omit-unresolved` is what stops it rotting
+silently when a field is renamed upstream.
+
+### The `json:"-"` shadow is not what authors think
+
+`fields.go` deletes a promoted property when an outer field re-declares it with `json:"-"`. That is
+**unfaithful to `encoding/json`**, which ignores a `-` field entirely: it never enters the name set,
+so it cannot shadow the promoted one and Go keeps marshalling the embedded field. The behaviour is
+locked by `TestOverridingOneIgnore` and left in place for now; the Hint points at `swagger:omit`,
+which removes the field for real. Removing the eviction is a separate decision — see
+`.claude/plans/swagger-omit.md` §7.
+
+Fixtures: `fixtures/enhancements/swagger-omit` (the annotation, both renderings, all three Hints,
+plus the go-swagger#1992 shape verbatim) and `fixtures/enhancements/default-allof-embeds-override`
+(the same overrides *without* the annotation — the documented limit).
 
 ## <a id="embed-depth"></a>§embed-depth — ambiguous-embed diagnostic mechanism
 
