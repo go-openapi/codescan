@@ -21,23 +21,27 @@ timeline
     ✅ v0.34.x (May 2026) : Grammar-based parser
                     : Replace regexp-based parser by lexer+grammar
                     : Fixed many parsing quirks
-    ✅ v0.35.x (June 2026) : Large bug-bashing
+    ✅ v0.35.0 (June 2026) : Large bug-bashing
                     : Documentation site
                     : Fixes ~200+ go-swagger issues
                     : All validations
                     : Parser diagnostics
-                    : Name conflict handling & circular $ref, missing validations, ... 
-    🔶 v0.36.x (July 2026) : CLI & TUI / faster code scanner
-                    : Optimized incremental type scanner
-                    : ✅ more tunable knobs, new annotations
-                    : ✅ go doc filter, private comments, inner markdown
-    ⬜ v0.37.x (August 2026) : playground UI / decouple from `Spec`
-                    : Internal model
-                    : ✅ Discriminator / polymorphism discovery
-                    : More go-swagger backlog fixes & tunable knobs
     section Q3 2026
-    🔍 v0.38.x (Sept 2026) : LSP & IDE integration
+    ✅ v0.35.x (July 2026) : Minor features
+                    : more tunable knobs, new annotations
+                    : Name conflict handling & circular $ref, missing validations, ... 
+                    : go doc filter, private comments, inner markdown
+    ✅ v0.36.0 (July 2026) : TUI
+                    : interactive spec building with TUI tool
+                    : polymorphic subtypes discovery
+    🔶 v0.36.x (August 2026) : faster code scanner
+                    : Optimized incremental type scanner
+                    : dedicated CLI, independent from go-swagger
+    ⬜ v0.37.0 (September 2026) : decouple from `Spec`
                     : go1.26+
+                    : Internal model
+                    : More go-swagger backlog fixes & tunable knobs
     section Q4 2026
+    🔍 v0.38.x (Oct 2026) : LSP & IDE integration, playground UI (tentative)
     🔍 v0.39.x (Oct-Nov 2026) : OAI v3 support (tentative)
 {{< /mermaid >}}
