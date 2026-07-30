@@ -1,0 +1,255 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/cars": {
+      "get": {
+        "summary": "Lists tesla cars.",
+        "operationId": "listCars",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/carResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Battery": {
+      "description": "It proves a pulled subtype keeps discovering its own dependencies.",
+      "type": "object",
+      "title": "Battery is reached from ModelS only.",
+      "properties": {
+        "capacity": {
+          "description": "Capacity in kWh",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Capacity"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes"
+    },
+    "Bike": {
+      "description": "The index unwraps the pointer.",
+      "title": "Bike declares the base as an allOf member BY POINTER.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Vehicle"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "gears": {
+              "description": "Number of gears",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Gears"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/edges"
+    },
+    "Hidden": {
+      "description": "The embed carries an ignore annotation, so no relation exists to index.",
+      "type": "object",
+      "title": "Hidden declares the base as an allOf member, but the embed is dropped.",
+      "properties": {
+        "whatever": {
+          "description": "Whatever",
+          "type": "string",
+          "x-go-name": "Whatever"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/edges"
+    },
+    "Plain": {
+      "description": "Its properties are inlined and no allOf member is emitted, so it is not a\nsubtype.",
+      "type": "object",
+      "title": "Plain embeds the base with no annotation at all.",
+      "properties": {
+        "extra": {
+          "description": "Extra field",
+          "type": "string",
+          "x-go-name": "Extra"
+        },
+        "kind": {
+          "description": "The kind of vehicle",
+          "type": "string",
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/edges",
+      "discriminator": "kind"
+    },
+    "PlainBase": {
+      "description": "Its family is not polymorphic, so nothing is reverse-pulled for it.",
+      "type": "object",
+      "title": "PlainBase is a base WITHOUT a discriminator.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/base"
+    },
+    "PlainSub": {
+      "description": "It is the negative control for the discriminated gate.",
+      "title": "PlainSub declares a non-discriminated base as an allOf member.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/PlainBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "extra": {
+              "description": "Extra field",
+              "type": "string",
+              "x-go-name": "Extra"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes"
+    },
+    "TeslaCar": {
+      "type": "object",
+      "title": "TeslaCar is the discriminated (polymorphic) base.",
+      "properties": {
+        "autoPilot": {
+          "description": "AutoPilot returns true when it supports autopilot",
+          "type": "boolean",
+          "x-go-name": "AutoPilot"
+        },
+        "model": {
+          "description": "The model of tesla car",
+          "type": "string",
+          "x-go-name": "Model"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/base",
+      "discriminator": "model"
+    },
+    "Trike": {
+      "title": "Trike reaches the base through an alias.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Vehicle"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "wheels": {
+              "description": "Number of wheels",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Wheels"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/edges"
+    },
+    "Unrelated": {
+      "description": "It is the negative control for over-generation.",
+      "type": "object",
+      "title": "Unrelated is a swagger:model nothing references.",
+      "properties": {
+        "v": {
+          "type": "string",
+          "x-go-name": "V"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes"
+    },
+    "Vehicle": {
+      "description": "Its discriminator sits on a property rather than on an interface member.",
+      "type": "object",
+      "title": "Vehicle is a struct base.",
+      "properties": {
+        "kind": {
+          "description": "The kind of vehicle",
+          "type": "string",
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/edges",
+      "discriminator": "kind"
+    },
+    "modelS": {
+      "description": "It is reached only through the reverse index, and itself pulls Battery into the\nclosure.",
+      "title": "ModelS is a subtype of base.TeslaCar.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "battery": {
+              "$ref": "#/definitions/Battery"
+            },
+            "edition": {
+              "description": "The edition of this Model S",
+              "type": "string",
+              "x-go-name": "Edition"
+            }
+          }
+        }
+      ],
+      "x-go-name": "ModelS",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes"
+    },
+    "modelX": {
+      "title": "ModelX is another subtype of base.TeslaCar.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "doors": {
+              "description": "Number of doors",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Doors"
+            }
+          }
+        }
+      ],
+      "x-go-name": "ModelX",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes"
+    },
+    "modelY": {
+      "title": "ModelY is a cross-package subtype of base.TeslaCar.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TeslaCar"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "range": {
+              "description": "Range in km",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Range"
+            }
+          }
+        }
+      ],
+      "x-go-name": "ModelY",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes/sub"
+    }
+  },
+  "responses": {
+    "carResp": {
+      "description": "carResp carries the polymorphic base in its body.\n\nThe route therefore reaches the base — and only the base.",
+      "schema": {
+        "$ref": "#/definitions/TeslaCar"
+      }
+    }
+  }
+}

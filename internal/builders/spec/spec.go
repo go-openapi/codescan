@@ -55,6 +55,15 @@ type Builder struct {
 	// DefKey, so the prune (scan.pruned-unused) and rename (scan.renamed-definition) Hints can be
 	// located at the originating Go type even though the spec node may by then be gone or renamed.
 	declPos map[string]token.Position
+	// declIdentity records the Go type identity (typeIdentity) behind each discovered definition,
+	// keyed by DefKey — the bridge from definition-key space back to the reverse `swagger:allOf` index
+	// used by the discriminator-subtype pull (see subtypes.go).
+	declIdentity map[string]string
+	// subtypeIdx is the lazily-built reverse `swagger:allOf` index (base type identity → subtype
+	// declarations).
+	//
+	// Built once per Build, from the model index, which is independent of ScanModels.
+	subtypeIdx subtypeIndex
 	// sharedParamPos / sharedRespPos record the source position of each scanned shared parameter /
 	// response, keyed by its registered name, so the shared prune (scan.pruned-unused, C4) can locate
 	// its Hint at the originating Go declaration.
@@ -110,6 +119,7 @@ func NewBuilder(input *oaispec.Swagger, sc *scanner.ScanCtx, scanModels bool) *B
 		responses:       input.Responses,
 		parameters:      input.Parameters,
 		declPos:         make(map[string]token.Position),
+		declIdentity:    make(map[string]string),
 		sharedParamPos:  make(map[string]token.Position),
 		sharedRespPos:   make(map[string]token.Position),
 		pinnedParams:    pinnedParams,
@@ -362,6 +372,10 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	// node may have been dropped or renamed.
 	s.declPos[decl.DefKey()] = s.ctx.PosOf(decl.Ident.Pos())
 
+	// Stash the Go type behind this definition so the prune reachability walk can ask the reverse
+	// `swagger:allOf` index for the subtypes of a discriminated base (see subtypeKeysOf).
+	s.declIdentity[decl.DefKey()] = typeIdentity(decl.Obj())
+
 	// Cross-ref linkage: initiate the base pointer for this definition so the schema builder
 	// path-joins its members (properties, …) under it, and anchor the definition node itself to its
 	// type declaration.
@@ -391,6 +405,13 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	}
 
 	s.discovered = append(s.discovered, sb.PostDeclarations()...)
+
+	// Reverse discovery: if this definition turned out to be a discriminated base, its subtypes belong
+	// to the emitted document too — nothing $refs them, so top-down discovery can never reach them
+	// (go-swagger#1913).
+	// Queued like any other discovery, so the loop above keeps pulling their own dependencies, and a
+	// subtype that is itself a discriminated base cascades.
+	s.discovered = append(s.discovered, s.discriminatedSubtypesOf(decl)...)
 
 	return nil
 }
