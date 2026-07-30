@@ -348,6 +348,10 @@ func classifyAnnotationArgs(kind AnnotationKind, rest string, linePos token.Posi
 		// type-name).
 		// The builder does the semantic resolution.
 		return []Token{argTypeRef(rest, pos)}
+	case AnnOmit:
+		// The arg is a comma-separated list of Go field names / dotted embed paths, which may carry
+		// spaces after the commas — capture the whole remainder verbatim; the builder splits it.
+		return []Token{{Kind: TokenRawValue, Pos: pos, Text: strings.TrimSpace(rest)}}
 	case AnnPatternProperties:
 		// The arg is a `"<re>": <spec>, …` pair list that may contain spaces/colons/commas inside
 		// quoted regexes — capture the whole remainder verbatim; the builder parses the pairs.

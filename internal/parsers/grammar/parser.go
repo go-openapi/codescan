@@ -615,7 +615,7 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 			s.emit(Errorf(annTok.Args[0].Pos, CodeInvalidTypeRef,
 				"swagger:type: %q is not a well-formed type reference", annTok.Args[0].Text))
 		}
-	case AnnAllOf, AnnIgnore, AnnAlias, AnnFile:
+	case AnnAllOf, AnnIgnore, AnnAlias, AnnFile, AnnOmit:
 	// Optional / no args.
 	default:
 		// ignored annotation

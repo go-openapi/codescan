@@ -15,18 +15,27 @@ type AnnotationKind int
 const (
 	AnnUnknown AnnotationKind = iota
 
-	AnnModel       // swagger:model
-	AnnResponse    // swagger:response
-	AnnParameters  // swagger:parameters
-	AnnRoute       // swagger:route
-	AnnOperation   // swagger:operation
-	AnnMeta        // swagger:meta
-	AnnStrfmt      // swagger:strfmt
-	AnnAlias       // swagger:alias
-	AnnName        // swagger:name
-	AnnAllOf       // swagger:allOf
-	AnnEnum        // swagger:enum
-	AnnIgnore      // swagger:ignore
+	AnnModel      // swagger:model
+	AnnResponse   // swagger:response
+	AnnParameters // swagger:parameters
+	AnnRoute      // swagger:route
+	AnnOperation  // swagger:operation
+	AnnMeta       // swagger:meta
+	AnnStrfmt     // swagger:strfmt
+	AnnAlias      // swagger:alias
+	AnnName       // swagger:name
+	AnnAllOf      // swagger:allOf
+	AnnEnum       // swagger:enum
+	AnnIgnore     // swagger:ignore
+	// AnnOmit — swagger:omit <name>[,<name>…].
+	//
+	// An embed-level / type-level escape hatch: the listed Go field names are not promoted out of the
+	// embedded type, so the author resolves an embed conflict the scanner must not decide for them
+	// (go-swagger#1992).
+	//
+	// The whole remainder is captured as one raw arg token; the schema builder splits the list and
+	// resolves each name against the embedded type.
+	AnnOmit
 	AnnDefaultName // swagger:default — value-only classifier annotation
 	AnnType        // swagger:type
 	AnnFile        // swagger:file
@@ -68,6 +77,7 @@ const (
 	labelAllOf                = "allOf"
 	labelEnum                 = "enum"
 	labelIgnore               = "ignore"
+	labelOmit                 = "omit"
 	labelDefault              = "default"
 	labelType                 = "type"
 	labelFile                 = "file"
@@ -105,6 +115,8 @@ func (a AnnotationKind) String() string {
 		return labelEnum
 	case AnnIgnore:
 		return labelIgnore
+	case AnnOmit:
+		return labelOmit
 	case AnnDefaultName:
 		return labelDefault
 	case AnnType:
@@ -155,6 +167,8 @@ func AnnotationKindFromName(name string) AnnotationKind {
 		return AnnEnum
 	case labelIgnore:
 		return AnnIgnore
+	case labelOmit:
+		return AnnOmit
 	case labelDefault:
 		return AnnDefaultName
 	case labelType:
@@ -208,7 +222,7 @@ func (a AnnotationKind) family() annotationFamily {
 	case AnnMeta:
 		return familyMeta
 	case AnnStrfmt, AnnAlias, AnnAllOf, AnnEnum,
-		AnnIgnore, AnnDefaultName, AnnType, AnnFile,
+		AnnIgnore, AnnOmit, AnnDefaultName, AnnType, AnnFile,
 		AnnAdditionalProperties, AnnPatternProperties:
 		return familyClassifier
 	case AnnUnknown:

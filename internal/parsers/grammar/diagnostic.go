@@ -201,6 +201,31 @@ const (
 	// without ScanModels can be traced to the family that pulled it in.
 	CodeDiscoveredSubtype Code = "scan.discovered-subtype"
 
+	// CodeOmitUnresolved fires when a `swagger:omit` target names no field of the embedded type it is
+	// applied to — a typo, or a field renamed upstream.
+	//
+	// `swagger:omit` is the only construct whose output depends on a hand-written name the compiler
+	// never checks (everything else is derived from types), so an unresolved target is reported rather
+	// than silently ignored: otherwise a rename upstream would make the omitted field quietly reappear.
+	// Informational (Hint); located at the annotation.
+	CodeOmitUnresolved Code = "scan.omit-unresolved"
+
+	// CodeOmitBehindRef fires when a `swagger:omit` target resolves, but the embed carrying it is
+	// emitted as a `$ref` (the embedded type is a `swagger:model` composed with allOf).
+	//
+	// Swagger 2.0 cannot subtract a property from a `$ref`, so the omission is dropped rather than
+	// silently forking the referenced definition.
+	// Informational (Hint); located at the annotation.
+	CodeOmitBehindRef Code = "scan.omit-behind-ref"
+
+	// CodeShadowedEmbedField fires when a struct field re-declared with `json:"-"` carries the same Go
+	// name as a field promoted from an embed.
+	//
+	// encoding/json ignores a `-` field entirely, so it never shadows the promoted one: Go keeps
+	// marshalling the embedded field. The author most likely meant `swagger:omit`.
+	// Informational (Hint); located at the re-declared field.
+	CodeShadowedEmbedField Code = "scan.shadowed-embed-field"
+
 	// CodeRenamedDefinition fires when the reduce stage renames a definition to deconflict a
 	// cross-package name collision (e.g. b.Test / c.Test -> BTest / CTest), so a consumer that tracks
 	// source <-> spec links (the genspec TUI) learns the final name a Go type landed under.

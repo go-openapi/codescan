@@ -291,6 +291,11 @@ type fieldDoc struct {
 	//
 	// Empty for bare `swagger:allOf`.
 	AllOfClass string
+	// OmitTargets — arguments of `swagger:omit <name>[,<name>…]` written ON AN EMBED: the Go field
+	// names not to promote out of the embedded type.
+	//
+	// Nil when the annotation is absent. See omit.go.
+	OmitTargets []string
 }
 
 // scanFieldDoc inspects afld's docstring through the ParseBlocks cache and returns every
@@ -306,7 +311,7 @@ func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
 	}
 	var nameKeyword string
 	for _, b := range s.ParseBlocks(afld.Doc) {
-		switch b.AnnotationKind() { //nolint:exhaustive // field-level walker only consumes these five kinds
+		switch b.AnnotationKind() { //nolint:exhaustive // field-level walker only consumes these six kinds
 		case grammar.AnnIgnore:
 			fd.Ignored = true
 		case grammar.AnnName:
@@ -325,6 +330,10 @@ func (s *Builder) scanFieldDoc(afld *ast.Field) fieldDoc {
 			fd.IsAllOfMember = true
 			if name, ok := b.AnnotationArg(); ok {
 				fd.AllOfClass = name
+			}
+		case grammar.AnnOmit:
+			if arg, ok := b.AnnotationArg(); ok {
+				fd.OmitTargets = append(fd.OmitTargets, parseOmitTargets(arg)...)
 			}
 		}
 		// The `name:` keyword is the canonical field-naming keyword, honoured uniformly across schema /

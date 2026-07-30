@@ -521,7 +521,7 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 				}
 			case "strfmt", "name", "discriminated", "file", "enum", "default", "alias", "type", "additionalProperties", "patternProperties", "title", "description":
 				// Proposal for enhancement: perhaps collect these and pass along to avoid lookups later on
-			case "allOf":
+			case "allOf", "omit":
 			case "ignore":
 			default:
 				return 0, fmt.Errorf("classifier: unknown swagger annotation %q: %w", annotation, ErrScanner)

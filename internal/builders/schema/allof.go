@@ -28,6 +28,10 @@ import (
 func (s *Builder) scanEmbeddedFields(
 	decl *scanner.EntityDecl, st *types.Struct, schema *oaispec.Schema, nameByJSON map[string]propOwner,
 ) (target *oaispec.Schema, hasAllOf bool, err error) {
+	// `swagger:omit` written on the DECLARATION (the power form) applies to the embeds walked below;
+	// the ergonomic form lives on each embed and is read from its fieldDoc.
+	declOmits := s.declOmitTargets(decl.Comments)
+
 	for fld := range st.Fields() {
 		if !fld.Anonymous() {
 			continue
@@ -60,8 +64,18 @@ func (s *Builder) scanEmbeddedFields(
 			isAllOf = true
 		}
 
+		// `swagger:omit` is a PRE-filter: the listed fields are dropped before the embed is walked, so
+		// nothing is ever written for them. That makes the annotation mean the same thing whether the
+		// embed is inlined or composed into an allOf member — see omit.go.
+		// An embed emitted as a $ref cannot have a property subtracted; embedOmitTargets reports that
+		// and filters nothing.
+		restoreOmits := s.pushOmitted(
+			s.embedOmitTargets(fld, afld, fd, declOmits, isAllOf && s.isModelEmbed(fld.Type())),
+		)
+
 		if !isAllOf {
 			target, err = s.buildPlainEmbed(fld, afld, fd, isString, omitEmpty, schema, target, nameByJSON)
+			restoreOmits()
 			if err != nil {
 				return nil, false, err
 			}
@@ -73,8 +87,10 @@ func (s *Builder) scanEmbeddedFields(
 			target = &oaispec.Schema{}
 		}
 		var newSch oaispec.Schema
-		if err := s.buildAllOf(fld.Type(), &newSch); err != nil {
-			return nil, false, err
+		buildErr := s.buildAllOf(fld.Type(), &newSch)
+		restoreOmits()
+		if buildErr != nil {
+			return nil, false, buildErr
 		}
 
 		if fd.AllOfClass != "" {
