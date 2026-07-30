@@ -4,13 +4,9 @@
 // how-to. aliases_test.go scans it and writes the golden fragment the guide
 // renders.
 //
-// This example uses an unannotated alias (the dissolve case), the common
-// behaviour the guide leads with; the first-class-alias modes are described
-// conceptually there.
-//
-// (Historical note: those modes once hung the scanner — quirk F9 — which is why
-// this example avoids them. The hang was fixed and is locked across all three
-// alias modes by TestQuirk_AliasModelNoHang.)
+// This example covers the DISSOLVE case (an unannotated alias), which is the
+// common behaviour the guide leads with. The first-class-alias modes have their
+// own witness next door, in shaping/aliases-firstclass.
 package aliases
 
 // snippet:alias
