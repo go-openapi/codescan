@@ -1,0 +1,19 @@
+{
+  "description": "The point of the idiom is that you do not have to touch it.",
+  "type": "object",
+  "title": "User is the shared domain type — deliberately free of any swagger annotation.",
+  "properties": {
+    "Created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ID": {
+      "type": "integer",
+      "format": "int64"
+    },
+    "Name": {
+      "type": "string"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/omit"
+}
