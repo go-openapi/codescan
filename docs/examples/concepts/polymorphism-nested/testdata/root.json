@@ -1,0 +1,21 @@
+{
+  "description": "Shape is the root of the hierarchy: a base written as an interface, whose\n`discriminator: true` member names the property a consumer switches on.",
+  "type": "object",
+  "required": [
+    "shapeType"
+  ],
+  "properties": {
+    "area": {
+      "type": "number",
+      "format": "double",
+      "x-go-name": "Area"
+    },
+    "shapeType": {
+      "description": "ShapeType selects the concrete subtype.",
+      "type": "string",
+      "x-go-name": "ShapeType"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/polymorphism-nested",
+  "discriminator": "shapeType"
+}

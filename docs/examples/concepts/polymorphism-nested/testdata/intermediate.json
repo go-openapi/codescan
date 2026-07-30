@@ -1,0 +1,23 @@
+{
+  "description": "Polygon is a subtype of Shape AND a base of its own: it composes Shape as an\nallOf member and declares a second discriminator. An intermediate level is\nwritten as an interface, because only an interface can be embedded by the\nconcrete structs below it.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Shape"
+    },
+    {
+      "type": "object",
+      "required": [
+        "polygonType"
+      ],
+      "properties": {
+        "polygonType": {
+          "description": "PolygonType selects the concrete polygon.",
+          "type": "string",
+          "x-go-name": "PolygonType"
+        }
+      },
+      "discriminator": "polygonType"
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/polymorphism-nested"
+}

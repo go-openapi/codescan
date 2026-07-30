@@ -191,6 +191,16 @@ const (
 	// See scanner.Options PruneUnusedModels.
 	CodePrunedUnused Code = "scan.pruned-unused"
 
+	// CodeDiscoveredSubtype fires when a definition is emitted because it is a subtype of a
+	// discriminated base that entered the reachable set — a `swagger:model` declaring that base as an
+	// `allOf` member (go-swagger#1913).
+	//
+	// Such a subtype is unreachable top-down (it references the base, nothing references it), so it is
+	// pulled in by the reverse `swagger:allOf` index rather than by any $ref in the document.
+	// Informational (Hint); carries the subtype's own source position, so a definition that appears
+	// without ScanModels can be traced to the family that pulled it in.
+	CodeDiscoveredSubtype Code = "scan.discovered-subtype"
+
 	// CodeRenamedDefinition fires when the reduce stage renames a definition to deconflict a
 	// cross-package name collision (e.g. b.Test / c.Test -> BTest / CTest), so a consumer that tracks
 	// source <-> spec links (the genspec TUI) learns the final name a Go type landed under.

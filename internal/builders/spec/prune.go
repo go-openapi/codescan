@@ -96,6 +96,16 @@ func (s *Builder) pruneUnusedModels() {
 		queue = queue[1:]
 		sch := s.input.Definitions[cur]
 		collectDefRefs(&sch, mark)
+
+		// A reachable DISCRIMINATED base keeps its whole polymorphic family: the subtypes reference the
+		// base, never the reverse, so the $ref walk above cannot see them and would prune the family down
+		// to its base alone.
+		// This is the discriminator reachability rule deferred here by §12 (go-swagger#1913 / §15).
+		if isDiscriminated(&sch) {
+			for _, sub := range s.subtypeKeysOf(cur) {
+				mark(sub)
+			}
+		}
 	}
 
 	// Prune the unreachable, deterministically.

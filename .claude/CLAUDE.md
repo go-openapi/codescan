@@ -121,7 +121,9 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     Runs before name reduction (so an unused model can't force a spurious
     collision rename on a used one); `InputSpec` definitions are pinned. Each
     drop raises a `scan.pruned-unused` Hint; collision renames raise
-    `scan.renamed-definition`. See `internal/scanner/README.md#prune`.
+    `scan.renamed-definition`. A reachable discriminated base keeps its whole
+    subtype family (see the subtype-discovery note under "Notable design
+    decisions"). See `internal/scanner/README.md#prune`.
   - `InputSpec` — overlay: merge discoveries on top of an existing spec.
   - `BuildTags`, `Include`/`Exclude`, `IncludeTags`/`ExcludeTags`, `ExcludeDeps` — scope control.
   - `RefAliases`, `TransparentAliases`, `DescWithRef` — alias handling knobs
@@ -204,6 +206,13 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
   markdown body — blank lines, indentation, table pipes preserved — until the next
   line-leading annotation or EOF; reframes go-swagger#3211. Plain `swagger:description`
   stays blank-terminated. See `internal/parsers/grammar/README.md#literal-description`.
+- Discriminator subtypes are discovered **backwards**: a subtype `$ref`s its base and
+  nothing `$ref`s the subtype, so a reachable definition carrying `discriminator` pulls
+  in the `swagger:model` types that embed it under `swagger:allOf` — no `ScanModels`
+  needed, and a discriminated family is never pruned down to its base. Always on (an
+  incomplete polymorphic family is unusable, so this is a fix, not a knob); each pull
+  raises a `scan.discovered-subtype` Hint. go-swagger#1913. See
+  `internal/scanner/README.md#subtypes`.
 - The scanner works at the AST / `go/types` level — it never executes or compiles scanned code.
 - Parsers never import builders; they write through the interfaces in `internal/ifaces`.
   When adding a new annotation, extend the relevant builder's `taggers.go` rather than reaching

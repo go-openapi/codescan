@@ -1,0 +1,2 @@
+scan.discovered-subtype: definition "Cat" discovered as a subtype of discriminated base "Pet"
+scan.discovered-subtype: definition "Dog" discovered as a subtype of discriminated base "Pet"

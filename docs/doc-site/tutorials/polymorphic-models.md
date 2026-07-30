@@ -39,10 +39,69 @@ now given meaning by the base's discriminator.
 `Dog` follows the identical shape. A payload is then recognised as a `Cat` or a
 `Dog` by its `petType` value.
 
-If the subtypes are missing from your spec, they are **unreachable**: a subtype
-appears only when something references it or you scan with `ScanModels` (the
-`-m` flag), the same [reachability rule]({{% relref "type-discovery" %}})
-as any model — codescan does not auto-discover subtypes from the base alone.
+## How subtypes are discovered
+
+A family has an awkward property: the references all point **upwards**. A subtype
+`$ref`s its base, and nothing ever `$ref`s a subtype. So an API that returns the
+base — the whole point of polymorphism — names only the base, and the ordinary
+[reachability rule]({{% relref "type-discovery" %}}) would stop right there,
+leaving a `discriminator` with nothing to discriminate between.
+
+codescan therefore looks the relation up **backwards**. When a definition that
+declares a `discriminator` enters the spec, every `swagger:model` that composes it
+under `swagger:allOf` is pulled in with it — wherever those subtypes are declared,
+including other packages. **No `ScanModels` needed.** The route below references
+only `Pet`:
+
+{{< example go="concepts/polymorphism/polymorphism.go" goregion="route"
+            json="concepts/polymorphism/testdata/spec-reachable-only.json"
+            jsonlabel="Whole spec, scanned WITHOUT ScanModels" >}}
+
+`Cat` and `Dog` are in there, and each pull is announced on the
+[`OnDiagnostic`](https://pkg.go.dev/github.com/go-openapi/codescan#Options) sink,
+so a definition you did not ask for by name is never a mystery:
+
+{{< code file="concepts/polymorphism/testdata/hints.txt" lang="text" >}}
+
+Three consequences worth knowing:
+
+- **Reachability, not existence.** The trigger is the base *entering the spec*,
+  not merely existing in the scanned source. A discriminated base that nothing
+  references still emits nothing — bases are not roots, or every hierarchy in a
+  shared library would land in every spec.
+- **The family travels as a unit.** With
+  [`PruneUnusedModels`]({{% relref "pruning-unused-models" %}}) a reachable
+  discriminated base keeps its subtypes, even though no `$ref` reaches them; and
+  an unreachable base is dropped *together with* its subtypes. You never get a
+  base whose subtypes have vanished.
+- **Only `swagger:allOf` counts.** A plain embed inlines the base's properties
+  instead of composing them, so it is not a subtype relation. The
+  [`DefaultAllOfForEmbeds`]({{% relref "composing-embeds-with-allof" %}}) option
+  changes how embeds *render*, deliberately not which definitions *exist*.
+
+## Multi-level hierarchies
+
+A subtype can be a base in its own right. Write the intermediate level as an
+**interface** — only an interface can be embedded by the concrete structs beneath
+it — composing its parent with `swagger:allOf` and declaring a discriminator of
+its own:
+
+{{< example go="concepts/polymorphism-nested/nested.go" goregion="hierarchy"
+            json="concepts/polymorphism-nested/testdata/intermediate.json"
+            jsonlabel="#/definitions/Polygon — subtype AND base" >}}
+
+Discovery cascades: the route references `Shape`, `Shape` pulls `Polygon`, and
+`Polygon` — itself only just discovered — pulls `Square`. Note **where each
+level's discriminator lands**, because the two differ:
+
+| level | shape | `discriminator` |
+|-------|-------|-----------------|
+| root (`Shape`) | a plain object | at the **top level** |
+| intermediate (`Polygon`) | `allOf: [ $ref Shape, {own} ]` | inside its **own `allOf` member** |
+| leaf (`Square`) | `allOf: [ $ref Polygon, {own} ]` | none of its own |
+
+A leaf never inherits its base's `discriminator` as its own: it points at a
+discriminated base, which is what makes it a *subtype*, not a base.
 
 {{% notice style="info" %}}
 The discriminator **value** for each subtype is its definition name (`Cat`,

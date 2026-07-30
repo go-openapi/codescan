@@ -20,6 +20,8 @@ parameters, responses) consumed by the builder layer.
   experimental-API caveat
 - [§prune](#prune) — `PruneUnusedModels` reachability and why it
   runs before name reduction
+- [§subtypes](#subtypes) — discriminator subtype discovery — the
+  reverse `swagger:allOf` index
 - [§model-lookup](#model-lookup) — `GetModel` vs `FindModel` —
   pure read vs implicit registration
 - [§classifier](#classifier) — `detectNodes` bitmask semantics and
@@ -155,10 +157,93 @@ provenance for a pruned node is dropped so no anchor dangles. The
 collision renames the reduce stage *does* perform are surfaced as
 `scan.renamed-definition` Hints (located at the Go type).
 
-**Known limitation.** A discriminator base references its subtypes by
-mapping string, not by `$ref`, so a subtype reachable only through a
-discriminator could be pruned. codescan does not auto-wire discriminator
-subtypes today; revisit if it ever does (forthcoming-features §15).
+**Discriminated families are kept whole.** A subtype `$ref`s its base,
+never the reverse, so the walk above cannot see the subtypes of a
+discriminated base and would prune a polymorphic family down to its base
+alone. A reachable definition carrying `discriminator` therefore also
+marks its subtypes reachable, via the reverse `swagger:allOf` index
+(`spec/subtypes.go`, `subtypeKeysOf`). Note the rule keeps a *reached*
+base's family — it does not make bases roots: a discriminated base
+nothing references is still pruned, together with its subtypes. See
+[§subtypes](#subtypes).
+
+## <a id="subtypes"></a>§subtypes — discriminator subtype discovery
+
+Interface-based polymorphism emits a base definition carrying
+`discriminator` plus one `allOf: [{$ref base}, {own props}]` definition
+per subtype — a struct embedding the base under `swagger:allOf`.
+
+The reference direction is the problem: **a subtype `$ref`s its base;
+nothing `$ref`s a subtype.** So a route that references only the base
+reaches the base and stops, and the emitted family is the base alone —
+useless to a consumer that has to unmarshal the polymorphic payload
+(go-swagger/go-swagger#1913). Before v0.37 the only way to get the
+subtypes was `ScanModels`, which emits every annotated model whether it
+belongs to the family or not.
+
+**Reverse index.** `spec/subtypes.go` builds, once per scan, a
+`base Go type identity → subtype declarations` map from the model index
+(`TypeIndex.Models`, which classification populates whether or not
+`ScanModels` is set — that independence is what makes the pull possible).
+A subtype relation is an *embedded member carrying `swagger:allOf`* — a
+struct's anonymous field **or an interface's anonymous interface**, which
+is how a mid-level type in a multi-level hierarchy is written:
+
+- the pointer is unwrapped (`*Base` composes like `Base`), and an alias
+  embed is indexed under both its own and the aliased type's identity, so
+  the relation is found whichever definition the `allOf` member ends up
+  `$ref`ing under `RefAliases` / `TransparentAliases`;
+- `swagger:ignore` on the embed drops it, exactly as in the schema
+  builder — the index never claims a relation the document lacks;
+- a *plain* (unannotated) embed is not a subtype: it inlines the base's
+  properties, no `allOf` member. `DefaultAllOfForEmbeds` is deliberately
+  **not** honoured here — it is a rendering knob, and letting it decide
+  which definitions exist would be a surprising coupling.
+
+The index is keyed by **Go type identity** (`<pkgpath>.<TypeName>`), not
+by swagger name: it is the one fact both ends can compute without knowing
+the other's `swagger:model` override. Entries are ordered by definition
+key so the pull order — and hence the Hint order — does not follow map
+iteration.
+
+**Two hooks, one per hole.**
+
+1. *Discovery* (`spec.go`, `buildDiscoveredSchema` →
+   `discriminatedSubtypesOf`): when a definition has just been built and
+   carries a `discriminator`, its subtypes are appended to `s.discovered`,
+   so the existing fixpoint loop builds them, discovers *their*
+   dependencies, and cascades if a subtype is itself a discriminated
+   base. Each genuinely new pull raises a located
+   `scan.discovered-subtype` Hint. A no-op under `ScanModels`, where every
+   model is built up front anyway.
+2. *Prune reachability* (`prune.go`): see
+   [§prune](#prune) — required because under `ScanModels` the family is
+   built and then lost, not never-built.
+
+**The gate is the built definition's own `discriminator`**
+(`isDiscriminated`), not a source-level re-derivation. It reads
+identically for an interface base with a `discriminator: true` member and
+a struct base with a `discriminator: true` property, and it is the same
+fact the emitted document exposes. A base with no discriminator pulls
+nothing: its `allOf` users are ordinary compositions, not a polymorphic
+family.
+
+**Multi-level hierarchies.** A mid-level type — a subtype that is itself a
+base — renders as `allOf: [{$ref parent}, {own props, discriminator}]`:
+its properties, and therefore its discriminator, sit in its own compound
+member, *not* at the top level. So the gate looks for an inline
+discriminator anywhere in the definition's own schema. The `$ref` member
+is deliberately **not** followed: a leaf must not inherit its base's
+discriminator, or every subtype would pull in its own siblings. Because
+hook A feeds the discovery fixpoint, the levels cascade — the root pulls
+the mid-level, and the mid-level (only just pulled in itself) pulls the
+leaves on the next round.
+
+Fixtures: `fixtures/enhancements/discriminated-subtypes` (`edges/` holds
+the embed-shape corner cases, in a family no route references — which
+also locks the other half of the gate: an unreached base pulls nothing)
+and `fixtures/enhancements/discriminated-subtypes-nested` (two-level
+hierarchy: `Shape` → `Polygon` → `Square`/`Triangle`).
 
 ## <a id="model-lookup"></a>§model-lookup — `GetModel` vs `FindModel`
 

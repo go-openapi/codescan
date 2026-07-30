@@ -13,7 +13,12 @@ reaches the spec when **either** of these holds:
 - it is **reachable** — referenced (directly or transitively) from an operation,
   parameter, response, or another emitted model; or
 - it is **registered** — annotated `swagger:model`, which (with
-  `Options.ScanModels`) publishes it even when nothing references it.
+  `Options.ScanModels`) publishes it even when nothing references it; or
+- it is a **subtype of an emitted discriminated base** — a `swagger:model` that
+  composes that base with `swagger:allOf`. This one runs *against* the reference
+  direction (a subtype `$ref`s its base, never the reverse), so it is the one case
+  where a definition arrives without anything referencing it. See
+  [Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}}#how-subtypes-are-discovered).
 
 A type that is neither reachable nor registered is simply absent — the scanner
 never invents it. The package below has one of each case:

@@ -57,3 +57,24 @@ type Dog struct {
 }
 
 // endsnippet:children
+
+// snippet:route
+
+// PetResponse returns the polymorphic BASE — nothing in the API surface names
+// Cat or Dog.
+//
+// swagger:response petResponse
+type PetResponse struct {
+	// in: body
+	Body Pet `json:"body"`
+}
+
+// swagger:route GET /pets pets listPets
+//
+// Lists pets.
+//
+// responses:
+//
+//	200: petResponse
+
+// endsnippet:route

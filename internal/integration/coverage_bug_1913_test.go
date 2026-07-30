@@ -17,9 +17,10 @@ import (
 // `discriminator`, and the struct subtypes that embed it via `swagger:allOf` emit `allOf: [{$ref
 // base}, {own props}]`.
 //
-// (The reporter's residual concern — subtypes require -m, which over-generates — is tracked as
-// forthcoming-features §12 (prune under -m) and §15 (auto-discover discriminator subtypes of a
-// referenced base).)
+// The reporter's residual concern — subtypes require -m, which over-generates — is closed: a
+// referenced discriminated base now pulls its subtypes in on its own, with no -m at all. This test
+// keeps locking the -m shape; the discovery half lives in
+// coverage_discriminated_subtypes_test.go.
 func TestCoverage_Bug1913(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/1913/..."},

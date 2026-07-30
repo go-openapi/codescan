@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -34,6 +36,33 @@ func scanPolymorphism(t *testing.T) *spec.Swagger {
 	return doc
 }
 
+// scanReachableOnly scans WITHOUT ScanModels, collecting the scan's diagnostic messages.
+//
+// This is the mode the "How subtypes are discovered" section documents: only the base is referenced
+// (by the route's response), and the subtypes arrive through the reverse swagger:allOf index.
+func scanReachableOnly(t *testing.T) (*spec.Swagger, []string) {
+	t.Helper()
+	// "scan.discovered-subtype" is the stable machine-readable code; codescan.Code is a plain string
+	// type, so a consumer filters on the literal.
+	const discoveredSubtype codescan.Code = "scan.discovered-subtype"
+
+	var hints []string
+	doc, err := codescan.Run(&codescan.Options{
+		WorkDir:  examplesRoot(t),
+		Packages: []string{"./concepts/polymorphism"},
+		OnDiagnostic: func(d codescan.Diagnostic) {
+			if d.Code == discoveredSubtype {
+				hints = append(hints, string(d.Code)+": "+d.Message)
+			}
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+	sort.Strings(hints)
+
+	return doc, hints
+}
+
 func goldenFor(t *testing.T, doc *spec.Swagger, feature, defName string) {
 	t.Helper()
 	schema, ok := doc.Definitions[defName]
@@ -42,14 +71,40 @@ func goldenFor(t *testing.T, doc *spec.Swagger, feature, defName string) {
 	got, err := json.MarshalIndent(schema, "", "  ")
 	require.NoError(t, err)
 	got = append(got, '\n')
+	assertGolden(t, feature+".json", got)
+}
 
-	golden := filepath.Join("testdata", feature+".json")
+// goldenDoc emits and verifies a whole-spec golden (not a single definition fragment).
+func goldenDoc(t *testing.T, doc *spec.Swagger, feature string) {
+	t.Helper()
+	got, err := json.MarshalIndent(doc, "", "  ")
+	require.NoError(t, err)
+	got = append(got, '\n')
+	assertGolden(t, feature+".json", got)
+}
+
+// goldenText emits and verifies a plain-text golden — used for the diagnostics stream, which the
+// tutorial shows verbatim.
+func goldenText(t *testing.T, feature string, lines []string) {
+	t.Helper()
+	assertGolden(t, feature+".txt", []byte(strings.Join(lines, "\n")+"\n"))
+}
+
+// assertGolden compares got against testdata/<name>, rewriting it under UPDATE_GOLDEN.
+func assertGolden(t *testing.T, name string, got []byte) {
+	t.Helper()
+	golden := filepath.Join("testdata", name)
 	if os.Getenv("UPDATE_GOLDEN") != "" {
 		require.NoError(t, os.WriteFile(golden, got, 0o600))
 	}
 	want, err := os.ReadFile(golden)
 	require.NoError(t, err)
-	assert.JSONEq(t, string(want), string(got))
+	if strings.HasSuffix(name, ".json") {
+		assert.JSONEq(t, string(want), string(got))
+
+		return
+	}
+	assert.Equal(t, string(want), string(got))
 }
 
 // TestPolymorphismFragments emits and verifies the golden fragments the tutorial
@@ -73,4 +128,34 @@ func TestPolymorphismFragments(t *testing.T) {
 	goldenFor(t, doc, "base", "Pet")     // discriminator on the base
 	goldenFor(t, doc, "subtype", "Cat")  // allOf: [$ref Pet, own fields]
 	goldenFor(t, doc, "subtype2", "Dog") // a second subtype
+}
+
+// TestPolymorphismDiscovery backs the "How subtypes are discovered" section: with NO ScanModels, the
+// route references only the base, yet the whole family is emitted — the subtypes are pulled in
+// backwards, through the reverse swagger:allOf index, and each pull is announced as a
+// scan.discovered-subtype Hint.
+//
+// It emits the whole no-ScanModels spec plus the Hint stream as goldens, so the tutorial's claim can
+// never drift from real scanner output.
+//
+// Regenerate with: UPDATE_GOLDEN=1 go test ./...
+func TestPolymorphismDiscovery(t *testing.T) {
+	doc, hints := scanReachableOnly(t)
+
+	require.NotNil(t, doc.Paths)
+	assert.Contains(t, doc.Paths.Paths, "/pets", "the route is the only API surface")
+
+	for _, name := range []string{"Pet", "Cat", "Dog"} {
+		assert.Containsf(t, doc.Definitions, name,
+			"%s must be emitted without ScanModels: the base is referenced, the subtypes follow it", name)
+	}
+	assert.Len(t, doc.Definitions, 3, "the family, and nothing else")
+
+	require.Len(t, hints, 2, "one Hint per subtype pulled in")
+	for _, h := range hints {
+		assert.Contains(t, h, `discriminated base "Pet"`, "each Hint names the base that pulled the subtype")
+	}
+
+	goldenDoc(t, doc, "spec-reachable-only")
+	goldenText(t, "hints", hints)
 }
