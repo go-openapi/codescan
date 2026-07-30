@@ -1541,70 +1541,36 @@ edges fixture covers a different (strfmt-tagged) shape already.
 
 ---
 
+### ✅ Named-strfmt + `swagger:model` combo (was 🟡 deferred)
+
+A type carrying both `swagger:strfmt phone` and `swagger:model` used to emit an
+inconsistent pair: `{type: string, format: phone}` at the field site, but a
+struct walk (`{type: object, properties: …}`) for the top-level definition. The
+decl-level strfmt now wins and the field `$ref`s it — verified in
+`enhancements_named_struct_tags-ref.json`: `PhoneNumber` is
+`{type: string, format: phone}` and `Contact.phone` is a `$ref` to it.
+
+Fixed by the F-series pass (`8e20d2f`, quirk F1), not by the attempt described
+in the original entry — which was reverted. History:
+`.claude/plans/archive/deferred-quirks.md` D3.
+
+### ✅ Cross-package definition-name collisions (was 🟡 silently overwrite)
+
+Two packages declaring the same identifier (`pkg/a.User`, `pkg/b.User`) both
+mapped to `definitions["User"]`, and the second build silently overwrote the
+first — one `User` in the output, no record of the collision.
+
+Fixed by the name-identity / cyclic-`$ref` work: every definition is keyed by a
+compiler-unique `DefKey` (`<pkgpath>/<name>`) while building, and a final reduce
+stage projects each back to the shortest unique name, deconflicting collisions
+(`AWidget` / `BWidget`) and raising a `scan.renamed-definition` Hint. See
+[§discovery](#discovery) and `.claude/plans/name-identity-cyclic-ref.md`.
+
 ## <a id="quirks-open"></a>§quirks-open — still open
 
-### 🟡 Named-strfmt + `swagger:model` combo (deferred)
-
-When the author combines `swagger:strfmt` with `swagger:model`
-on the same type, the FIELD reference inlines as `{string, format}`
-(via the strfmt classifier) but the TOP-LEVEL definition body is
-still emitted from walking the underlying struct.
-
-**Reproduction.** Fixture `fixtures/enhancements/named-struct-tags-ref/types.go`
-declares `PhoneNumber` with both `swagger:strfmt phone` and
-`swagger:model`, used by `Contact.Phone`. The golden
-`enhancements_named_struct_tags-ref.json` captures the observable
-inconsistency:
-
-- Field site: `{type: "string", format: "phone"}` — strfmt wins.
-- Top-level definition: `{type: "object", properties: {CountryCode, Number}}` —
-  the struct walk wins; the strfmt annotation is ignored at decl time.
-
-The author asked for "named strfmt" (a reusable `PhoneNumber`
-definition rendered as a formatted string) but gets an inconsistent
-pair: the field says string, the definition says object.
-
-**Attempted fix and reasons it reverted.** The first attempt
-(referred to as "Option 1") would have:
-
-1. Detected `swagger:strfmt` on the decl in `buildDeclNamed` and
-   emitted `{string, fmt}` instead of walking the struct body.
-2. In `buildNamedStruct`, when the target also has `swagger:model`,
-   emitted `$ref` instead of inlining the strfmt.
-
-This was reverted before merge because:
-
-- Pre-existing fixtures in
-  `fixtures/goparsing/classification/transitive/mods/aliases.go` use
-  the same `swagger:strfmt + swagger:model` combination on
-  defined-from-`time.Time` types (e.g. `SomeTimeType time.Time`).
-  The existing tests (`TestAliasedTypes`, `TestAliasedModels`)
-  assert the *inline* baseline (`scantest.AssertProperty(..., "string", ...)`)
-  rather than a `$ref`. Option 1 flips these to `$ref`, requiring
-  coordinated test updates.
-- The decl-level `StrfmtName` check also over-fires on slice / array /
-  map underlyings: `type SomeTimesType []time.Time` with
-  `swagger:strfmt date-time` should emit
-  `{array, items: {string, date-time}}`, not flatten to `{string}`.
-  A correct fix would gate the check on struct-underlying first,
-  then symmetrically consider whether `buildNamedSlice` /
-  `buildNamedArray` / `buildNamedMap` should also route through
-  `$ref` under the `swagger:model` combination.
-
-The surface area is wider than the Option 1 code change suggested,
-and the existing test coverage of the combination is entangled with
-the inconsistency itself.
-
-**Why deferred.** The combination is niche, the footgun is narrow
-(you get what you asked for on one side of the indirection, not
-both), and v2's annotation redesign can reshape the contract without
-carrying this legacy. A focused decision on "named strfmt" semantics
-belongs in the v2 design, not a bug-fix pass.
-
-The `named-struct-tags-ref` fixture and its golden are checked in as
-a deliberate marker — the golden captures the observable
-inconsistency (inline field + struct-body definition) so future work
-on this decision has a failing test to anchor against.
+> **Where open quirks live.** This section documents caveats *of this package*.
+> The project-wide register of what is actually open — verified, with the stale
+> historical registers called out — is `.claude/plans/quirks-open.md`.
 
 ### 🟦 `interface{}` literals (documented behaviour)
 
@@ -1627,155 +1593,18 @@ the substituted underlying via the `TypeArgs` short-circuit
 without a concrete instantiation simply have no representable
 schema.
 
-### 🟡 Cross-package definition-name collisions silently overwrite
+### 🟡 A field-level enum override discards the type's per-value docs, silently
 
-`buildFromDecl` writes the top-level schema as
-`s.definitions[s.Name] = schema`, keyed only by the Go identifier
-(`decl.Names()[0]`). When two packages in a single scan declare a type
-with the same identifier — `pkg/a.User` and `pkg/b.User` — both map
-to `definitions["User"]` and the second build silently overwrites the
-first. The output spec carries only one `User`, with no record of the
-collision and no signal of which package won.
+When a field whose type is marked `swagger:enum TypeName` carries its own
+`enum:` override, the inherited `x-go-enum-desc` is stripped along with the
+replaced values — and **no diagnostic is raised**, so the per-value docs
+`TypeName` contributed vanish without a trace. Reproduced by
+`fixtures/enhancements/enum-overrides` case E (`NotificationE`).
 
-The existing `nameByJSON` (`propOwner`) map in field emission is **not**
-a defense against this case: it tracks JSON property names within a
-single struct's field set plus its embeds (for the ambiguous-embed
-diagnostic), not type-level identifier conflicts across packages.
+Whether the docs should be filtered through (when the override *subsets* the
+type's values) or dropped with a Hint (when it narrows to *different* ones) is a
+design call that belongs with the enum feature, not with this package: see
+`.claude/plans/features/enum-richer-values.md` §1.2b.
 
-#### Target shape
-
-A proper fix needs three pieces:
-
-1. **Detection** — at write time, recognise the case "definition key
-   already exists with non-empty schema and originates from a different
-   package" (use `x-go-package`, or stash origin in the `Builder`).
-2. **Diagnostic** — emit `CodeNameConflict` (severity
-   `SeverityWarning` minimum, possibly `SeverityError` under strict
-   mode) carrying both `(pkg, name)` pairs.
-3. **Policy** — open design call:
-    - **a. Rename** — prefix loser(s) with a stable short-package
-      (e.g. `a_User`, `b_User`). Stable but ugly; needs all `$ref`s
-      to follow the rename — cross-cutting.
-    - **b. Skip + warn** — keep the first writer, drop subsequent
-      ones, emit a warning. Predictable but lossy.
-    - **c. Fail the build** — under strict mode, treat as an error.
-      Forces the author to rename in source. Cleanest semantics,
-      most disruptive.
-
-#### Why deferred
-
-Each policy choice changes the contract for downstream code generators
-(go-swagger, oapi-codegen, …) — they have assumptions about
-`definitions` keys matching exported Go names. The "rename" path
-additionally requires every `$ref` writer in the builders to consult a
-rename map; the surface is wide.
-
-For multi-package scans where the author controls both packages, the
-workaround today is to scope scans to one package per spec, or to
-rename one of the colliding types at the source. A future strict-mode
-flag (e.g. `Options.StrictNameConflicts`) could enable option (c)
-without breaking existing scans.
-
-### 🟡 Stale `x-go-enum-desc` after a field-level enum override
-
-When a field uses a type marked `swagger:enum TypeName` **and** carries
-its own `enum: …` override, v1 mutates the schema in place: it replaces
-`Enum`, strips the inherited `x-go-enum-desc`, and trims the matching
-description suffix. This is **lossy** — the per-value docs contributed
-by `TypeName` are silently discarded.
-
-Concretely, given (fixture `fixtures/enhancements/enum-overrides/`,
-case E):
-
-```go
-// swagger:enum PriorityE
-type PriorityE string
-
-const (
-    PriorityELow  PriorityE = "low"    // low-priority requests
-    PriorityEMed  PriorityE = "medium" // medium-priority requests
-    PriorityEHigh PriorityE = "high"   // high-priority requests
-)
-
-type NotificationE struct {
-    // Inline enum provides a narrower set than the const block.
-    //
-    // enum: urgent, normal
-    Priority PriorityE `json:"priority"`
-}
-```
-
-v1 emits:
-
-```yaml
-priority:
-  type: string
-  enum: [urgent, normal]   # the override wins
-  description: "Inline enum provides a narrower set than the const block."
-  # x-go-enum-desc removed by clearStaleEnumDesc
-  # PriorityE's per-value doc lines silently dropped from description
-```
-
-The cleanup runs reactively from `schemaValidations.SetEnum`
-([typable.go](typable.go#L128)) via `clearStaleEnumDesc`
-([extensions.go](extensions.go#L42)). It treats any
-`x-go-enum-desc` present at `SetEnum` time as inherited (and therefore
-stale once `Enum` is replaced), deletes it, and trims the matching
-suffix off `Description`. The `TrimSuffix` dance is fragile — it
-relies on the enum-desc pipeline having appended the doc lines as a
-literal suffix — but it works under v1's emission discipline.
-
-#### Target shape (allOf composition)
-
-OpenAPI 2.0 supports `allOf` for schema composition, so the cleaner
-model does not have to wait for OAS 3. The replacement shape is:
-
-```yaml
-# PriorityE promoted to a top-level definition:
-definitions:
-  PriorityE:
-    type: string
-    enum: [low, medium, high]
-    description: |
-      low: low-priority requests
-      medium: medium-priority requests
-      high: high-priority requests
-    x-go-enum-desc: |
-      low: low-priority requests
-      medium: medium-priority requests
-      high: high-priority requests
-
-  NotificationE:
-    type: object
-    properties:
-      priority:
-        description: "Inline enum provides a narrower set than the const block."
-        allOf:
-          - $ref: '#/definitions/PriorityE'   # inherited enum + per-value docs
-          - enum: [urgent, normal]            # the override
-```
-
-Each branch keeps its own concern:
-
-- the `$ref` branch carries `PriorityE`'s full schema (values + docs +
-  `x-go-enum-desc`), untouched and reusable by every field that
-  references `PriorityE`;
-- the inline branch carries the narrowing override only.
-
-No mutation of the inherited schema, no `TrimSuffix` dance. Validator
-semantics for enum-narrowing `allOf` aren't perfectly uniform across
-tools, but for the documentation / code-gen use cases codescan feeds
-(go-swagger, oapi-codegen, redoc, …) this composition preserves both
-layers cleanly.
-
-#### Prerequisites for the migration (both currently missing)
-
-1. **Promote unannotated `swagger:enum` types to top-level definitions**
-   so the `$ref` branch has a target. Today they exist only as inlined
-   fragments on each referring field.
-2. **Move override detection from `SetEnum` (validation hook) to the
-   field-emission path**, so the override is composed alongside the
-   inherited schema instead of mutating it after the fact.
-
-Until both land, `clearStaleEnumDesc` stays in place. The TODO in
-`extensions.go` flags it as the replacement target.
+The stripping itself lives in `handlers/dispatch_schema.go:clearStaleEnumDesc`,
+which is where either resolution would land.

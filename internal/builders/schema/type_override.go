@@ -20,7 +20,7 @@ import (
 // (never a $ref).
 //
 // It is the single resolution point for the keyword consumed at every swagger:type site (the F3
-// reconciliation — see .claude/plans/quirks-F-series-fix.md).
+// reconciliation — see .claude/plans/archive/quirks-F-series-fix.md).
 //
 //   - ownType is the annotated field/decl's Go type, consumed by the
 //     `inline` / `array` keywords (which expand that type in place). May be

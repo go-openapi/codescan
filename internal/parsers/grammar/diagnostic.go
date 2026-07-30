@@ -89,7 +89,7 @@ const (
 	// is not valid (e.g. `inline`/`array` as an array element).
 	//
 	// The override is dropped and the subject falls through to its Go type.
-	// See the F3 reconciliation in .claude/plans/quirks-F-series-fix.md.
+	// See the F3 reconciliation in .claude/plans/archive/quirks-F-series-fix.md.
 	CodeUnsupportedType Code = "validate.unsupported-type"
 
 	// CodeDeprecated fires when an accepted-but-deprecated annotation or keyword value is used (the

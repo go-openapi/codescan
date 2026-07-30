@@ -81,7 +81,7 @@ func (s *Builder) classifierTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypabl
 // It is the single resolution point for `swagger:type` on a named type: it routes the argument
 // through resolveTypeOverride (always inlining — keyword scalars / Go builtins / `[]T` / `inline`
 // / `array` / type-name refs), and applies a co-present `swagger:strfmt` as a supplementary format
-// only when compatible with the resolved type (F3 — see .claude/plans/quirks-F-series-fix.md).
+// only when compatible with the resolved type (F3 — see .claude/plans/archive/quirks-F-series-fix.md).
 // ownType is the named Go type (consumed by the `inline`/`array` keywords); pos drives diagnostics.
 //
 // Reports back via the (handled, fallthrough) tuple:

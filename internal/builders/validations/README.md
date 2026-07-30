@@ -161,7 +161,7 @@ once a concrete consumer asks for them.
 the `swagger:type` + `swagger:strfmt` combination, where `swagger:type` wins on
 the type axis and the strfmt format is applied as a **supplementary hint only
 when it is consistent with that type** (the F3 reconciliation — see
-`.claude/plans/quirks-F-series-fix.md`). It is **not** used for the
+`.claude/plans/archive/quirks-F-series-fix.md`). It is **not** used for the
 strfmt-alone path, where strfmt still forces `{type: string, format: X}`
 (go-swagger#1512).
 

@@ -1,0 +1,34 @@
+{
+  "Amount": {
+    "type": "object",
+    "title": "Amount is the underlying model.",
+    "properties": {
+      "cents": {
+        "description": "Cents is the amount in cents.",
+        "type": "integer",
+        "format": "int64",
+        "x-go-name": "Cents"
+      },
+      "currency": {
+        "description": "Currency is the ISO currency code.",
+        "type": "string",
+        "x-go-name": "Currency"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/aliases-firstclass"
+  },
+  "Fee": {
+    "description": "Fee is a FIRST-CLASS alias: the swagger:model annotation keeps the alias name\nin the spec instead of dissolving it to Amount.",
+    "$ref": "#/definitions/Amount"
+  },
+  "Receipt": {
+    "type": "object",
+    "title": "Receipt references the alias, not the target.",
+    "properties": {
+      "charge": {
+        "$ref": "#/definitions/Fee"
+      }
+    },
+    "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/aliases-firstclass"
+  }
+}
