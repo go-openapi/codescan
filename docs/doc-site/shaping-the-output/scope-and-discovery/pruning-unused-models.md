@@ -48,6 +48,13 @@ terminates cleanly on recursive or cyclic models. A model referenced **only by
 another unreferenced model** is itself unreachable, so the whole dead subtree is
 removed, not just its entry point.
 
+One rule does not follow a `$ref`: a reachable definition that declares a
+`discriminator` also keeps its **subtypes**. They compose the base rather than
+being referenced by it, so the walk cannot see them and a polymorphic family would
+otherwise be pruned down to its base alone. The family travels as a unit — an
+*unreachable* base is still dropped, together with its subtypes. See
+[Polymorphic models]({{% relref "/tutorials/polymorphic-models" %}}#how-subtypes-are-discovered).
+
 Those shared `response` / `parameter` roots are pruned too. A
 [shared parameter or response]({{% relref "/tutorials/sharing-parameters-and-responses" %}})
 that **no operation and no path-item references** is itself dropped (with a

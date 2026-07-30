@@ -1,0 +1,20 @@
+{
+  "description": "Square is a leaf, two levels down. It composes the INTERMEDIATE type, so it\ninherits Shape transitively.",
+  "allOf": [
+    {
+      "$ref": "#/definitions/Polygon"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "side": {
+          "description": "Side is the length of a side.",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Side"
+        }
+      }
+    }
+  ],
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/polymorphism-nested"
+}

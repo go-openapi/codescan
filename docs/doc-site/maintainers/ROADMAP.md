@@ -33,7 +33,7 @@ timeline
                     : ✅ go doc filter, private comments, inner markdown
     ⬜ v0.37.x (August 2026) : playground UI / decouple from `Spec`
                     : Internal model
-                    : Discriminator / polymorphism discovery
+                    : ✅ Discriminator / polymorphism discovery
                     : More go-swagger backlog fixes & tunable knobs
     section Q3 2026
     🔍 v0.38.x (Sept 2026) : LSP & IDE integration
