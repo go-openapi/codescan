@@ -50,59 +50,64 @@ func TestHighlight_ClassifiesJSONTokens(t *testing.T) {
 	assert.Contains(t, kindsOn(idx, 6), theme.SyntaxString)
 }
 
-// Spans record where a run starts, so columns must be 1-based and ascending —
-// the renderer takes each run to the next one's column.
-func TestHighlight_SpansAreOrderedByColumn(t *testing.T) {
-	idx := BuildJSONIndex([]byte(hlJSON)).Highlight
-
-	for line := range 8 {
-		spans := idx.Spans(line)
-		for i, sp := range spans {
-			assert.Positive(t, sp.Col, "line %d span %d: columns are 1-based", line, i)
-			if i > 0 {
-				assert.Greater(t, sp.Col, spans[i-1].Col,
-					"line %d: spans must ascend, or runs would overlap", line)
-			}
-		}
-	}
-}
-
-// The YAML lexer currently reports a mapping's value-delimiter BEFORE the key on
-// the same line, so the accumulator sorts. Without that, the renderer would take
-// the first run from column 12 back to column 1 and paint the line wrong.
-func TestHighlight_YAMLSpansAreSortedDespiteEmissionOrder(t *testing.T) {
-	const hlYAML = `definitions:
+// A YAML block collection's delimiters have no character of their own, so they
+// report the span of what they enclose — the opener the first token inside, the
+// closer the last. Both therefore share a column with a token that does own the
+// text, and the accumulator must let that token keep the run: a delimiter run
+// starting where a value starts would paint the value as punctuation.
+const hlYAML = `definitions:
   User:
     count: 3
     ok: true
+tags:
+  - a
+  - b
 `
+
+func TestHighlight_YAMLBlockDelimitersDoNotStealTheirNeighboursColumn(t *testing.T) {
 	idx := BuildYAMLIndex([]byte(hlYAML)).Highlight
 	require.Positive(t, idx.Len())
 
-	for line := range 4 {
-		spans := idx.Spans(line)
-		for i := 1; i < len(spans); i++ {
-			assert.Greater(t, spans[i].Col, spans[i-1].Col, "line %d", line)
-		}
-	}
-
-	// Line 0 is `definitions:` — the key must come first despite being emitted
-	// after its delimiter.
+	// The opening delimiters of `definitions:` — the root mapping's, emitted
+	// BEFORE the key it shares column 1 with.
 	first := idx.Spans(0)
 	require.NotEmpty(t, first)
-	assert.Equal(t, theme.SyntaxKey, first[0].Kind)
+	assert.Equal(t, theme.SyntaxKey, first[0].Kind, "the key owns column 1, not the mapping opener")
 	assert.Equal(t, 1, first[0].Col)
+
+	// `    ok: true` closes User and definitions, so two closing delimiters land
+	// on `true`'s own column, after it.
+	assert.Equal(t,
+		[]theme.SyntaxKind{theme.SyntaxKey, theme.SyntaxKeyword},
+		kindsOn(idx, 3), "`true` keeps its class through the closers")
+
+	// Same at the end of a block sequence: `  - b` closes the sequence and the
+	// document.
+	assert.Equal(t,
+		[]theme.SyntaxKind{theme.SyntaxString},
+		kindsOn(idx, 6), "`b` keeps its class through the closers")
 }
 
-// The YAML lexer reports its trailing EOF delimiters at line 0 / column 0.
-// Attributing those to the first line would paint a run that is not there.
-func TestHighlight_DropsPositionlessTokens(t *testing.T) {
-	idx := BuildYAMLIndex([]byte("a: 1\n")).Highlight
-
-	for _, sp := range idx.Spans(0) {
-		assert.Positive(t, sp.Col)
+// Spans record where a run STARTS, so a line can never hold two runs at the same
+// column, whichever lexer produced them — the renderer would emit one of them as
+// a zero-width run and paint the other over its neighbour's text.
+func TestHighlight_SpansStartAtDistinctColumns(t *testing.T) {
+	for name, idx := range map[string]*HighlightIndex{
+		"json": BuildJSONIndex([]byte(hlJSON)).Highlight,
+		"yaml": BuildYAMLIndex([]byte(hlYAML)).Highlight,
+	} {
+		t.Run(name, func(t *testing.T) {
+			for line, spans := range idx.All() {
+				assert.GreaterOrEqual(t, line, 0, "nothing is filed under a negative line")
+				for i, sp := range spans {
+					assert.Positive(t, sp.Col, "line %d span %d: columns are 1-based", line, i)
+					if i > 0 {
+						assert.Greater(t, sp.Col, spans[i-1].Col, "line %d", line)
+					}
+				}
+			}
+		})
 	}
-	assert.Empty(t, idx.Spans(-1), "nothing is filed under a negative line")
 }
 
 func TestHighlight_NilAndEmpty(t *testing.T) {

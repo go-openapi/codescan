@@ -28,10 +28,10 @@ github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
 github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx59Ho=
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
-github.com/go-openapi/core/json v0.0.2 h1:RACr1Kjs6U8Rzpu0JLnJ2tw5TZ86+5ROXFPNQg1L9I0=
-github.com/go-openapi/core/json v0.0.2/go.mod h1:vEcP/Wkw1ImzIAmGt7lmY+dJ8Ilf0TtvV8vPe8HtVA4=
-github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.2 h1:aJC6mspwBIPzxJoduTagX416RvVRMZL6yygngyITHoM=
-github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.2/go.mod h1:p4x5CYKYZecVZLy22fOMap8EGW5Rkb4yPxpIzWuCYr4=
+github.com/go-openapi/core/json v0.0.3 h1:L4YuBIsLVtn5x52u27z+xRdJQkD0BaverQFNvxl7h6E=
+github.com/go-openapi/core/json v0.0.3/go.mod h1:nQl4bCBPXPOLlpjfSUcT2hcRKUBVuz+xLHx92aH524w=
+github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3 h1:SJ8eF4ebyJiiBMTcqWYve8mrFmwqxcyhJVuIJtefUq4=
+github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3/go.mod h1:m+JesPi99fRt2yNDlLm+fXhqW3HmA/leqv0uXj0FO+Y=
 github.com/go-openapi/jsonpointer v1.0.0 h1:kR9tHqY0CtZaOPVFm622dPVNhrvYpwr4uCxgL3h1H8s=
 github.com/go-openapi/jsonpointer v1.0.0/go.mod h1:Z3rw7dWu1p9IgitXCFamSlA5lmDiklEB6vkaxcNZW5Y=
 github.com/go-openapi/jsonreference v1.0.0 h1:jlmTr6torcd1YgDQvSfNmRtKzYDO4FGBkrAdlAVWnpY=

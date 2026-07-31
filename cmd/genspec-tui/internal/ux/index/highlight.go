@@ -4,8 +4,6 @@
 package index
 
 import (
-	"sort"
-
 	"github.com/go-openapi/core/json/lexers/token"
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
@@ -78,26 +76,27 @@ func syntaxKind(k token.Kind) theme.SyntaxKind {
 }
 
 // addSpan records one token's run. line is 0-based; col is the lexer's 1-based
-// column. Tokens with no position (the EOF delimiters the YAML lexer reports at
-// line 0) are dropped rather than attributed to the first line.
+// column. Both lexers emit in non-decreasing position order, so runs arrive in
+// column order and no sort is needed.
+//
+// They do not arrive in strictly increasing order, though. A YAML block
+// collection has no "{" / "[" / "}" / "]" character for its delimiters to point
+// at, so they take the span of what they enclose: the opener reports the first
+// token inside, the closer the last. Either way a delimiter shares its column
+// with the token that owns the text there, and the two would otherwise make a
+// zero-width run followed by one painting its neighbour as punctuation. The
+// token with characters of its own wins the column.
 func (a *indexAccum) addSpan(line, col int, kind token.Kind) {
-	if line < 0 || col < 1 {
+	runs := a.spans[line]
+	syntax := syntaxKind(kind)
+
+	if n := len(runs); n > 0 && runs[n-1].Col == col {
+		if syntax != theme.SyntaxPunct {
+			runs[n-1].Kind = syntax
+		}
+
 		return
 	}
-	a.spans[line] = append(a.spans[line], theme.Span{Col: col, Kind: syntaxKind(kind)})
-}
 
-// finishSpans orders each line's runs by column.
-//
-// The sort is required, not defensive: the YAML lexer currently reports a
-// mapping's value-delimiter BEFORE the key on the same line, so the stream is
-// not in source order. Fred plans to improve that lexer's column reporting
-// upstream; when it lands in source order this sort becomes a no-op and can go.
-func (a *indexAccum) finishSpans() *HighlightIndex {
-	for line := range a.spans {
-		runs := a.spans[line]
-		sort.Slice(runs, func(i, j int) bool { return runs[i].Col < runs[j].Col })
-	}
-
-	return &HighlightIndex{byLine: a.spans}
+	a.spans[line] = append(runs, theme.Span{Col: col, Kind: syntax})
 }

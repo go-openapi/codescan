@@ -4,7 +4,7 @@
 // codescan consumers.
 module github.com/go-openapi/codescan/docs/examples
 
-go 1.25.8
+go 1.25.0
 
 require (
 	github.com/go-openapi/codescan v0.0.0
