@@ -18,7 +18,9 @@ Supports Go modules (since go1.11).
 
 ## Announcements
 
-* **2025-04-19** : large package layout reshuffle
+* **2026-07-31** : landed a new spec generation TUI tool
+
+* **2026-04-19** : large package layout reshuffle
   * the entire project is being refactored to restore a reasonable level of maintenability
   * the only exposed API is Run() and Options.
 
@@ -32,7 +34,7 @@ API is stable.
 go get github.com/go-openapi/codescan
 ```
 
-## Basic usage
+## Basic usage as a library
 
 ```go
 import (
@@ -43,6 +45,22 @@ swaggerSpec, err := codescan.Run(&codescan.Options{
   Packages: []string{"./..."},
 })
 ```
+
+## Work with the TUI
+
+This project comes with a terminal UI to quickly render a Swagger spec from source
+and navigate your code annotations. It shows diagnostics and you may test the impact
+of the various available options.
+
+```cmd
+go install github.com/go-openapi/codescan/cmd/genspec-tui@latest
+```
+
+```cmd
+genspec-tui -workdir [my source location]
+```
+
+![tui_screenshot](docs/genspec-tui.png)
 
 ## Change log
 
