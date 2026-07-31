@@ -78,7 +78,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0 # fixtures source (FixturesDir resolves the build-time checkout path, identical across jobs)
       # oldstable is a DIFFERENT minor than job A's stable, so its GOROOT lives at a different path.
       #
-      # It must satisfy the fixtures module's `go` directive (currently go 1.25.0); oldstable only ever increases, so this holds going forward.
+      # It must satisfy the fixtures module's `go` directive (currently go 1.25.8, aligned with the
+      # rest of the workspace because go-openapi/core/json declares go 1.25.8). The floor moved by a
+      # PATCH, not a minor, so oldstable still satisfies it: oldstable resolves to the latest patch
+      # of the previous minor, and that is >= any released patch of it. Holds going forward, since
+      # oldstable only ever increases.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: oldstable
