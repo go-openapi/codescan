@@ -218,6 +218,6 @@ func (a *indexAccum) finish() Indexes {
 	return Indexes{
 		Spec:      NewSpecIndex(a.line2ptr, a.ptr2line),
 		Refs:      &RefIndex{byTarget: a.byTarget, byLine: a.byLine, total: a.total},
-		Highlight: a.finishSpans(),
+		Highlight: &HighlightIndex{byLine: a.spans},
 	}
 }

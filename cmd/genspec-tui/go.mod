@@ -1,6 +1,6 @@
 module github.com/go-openapi/codescan/cmd/genspec-tui
 
-go 1.25.8
+go 1.25.0
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
@@ -8,8 +8,8 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-openapi/codescan v0.34.0
-	github.com/go-openapi/core/json v0.0.2
-	github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.2
+	github.com/go-openapi/core/json v0.0.3
+	github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3
 	github.com/go-openapi/testify/v2 v2.6.0
 	github.com/muesli/termenv v0.16.0
 	go.yaml.in/yaml/v3 v3.0.5

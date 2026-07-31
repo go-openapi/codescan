@@ -1,6 +1,6 @@
 module github.com/go-openapi/codescan/fixtures
 
-go 1.25.8
+go 1.25.0
 
 require (
 	github.com/go-openapi/runtime v0.29.3
