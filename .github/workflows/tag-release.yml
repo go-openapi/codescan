@@ -16,4 +16,5 @@ jobs:
     uses: go-openapi/ci-workflows/.github/workflows/release.yml@20153976c20b55ce3289b6f9cf36c7149d3f1fff # v0.4.2
     with:
       tag: ${{ github.ref_name }}
+      is-monorepo: 'true'
     secrets: inherit
