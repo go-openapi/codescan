@@ -28,6 +28,8 @@ github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
 github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx59Ho=
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
+github.com/go-openapi/codescan v0.36.0 h1:sp2RVgGp5IUlYRU3kwlQK6cUiQ9a1GNbgKbaAjdeSoI=
+github.com/go-openapi/codescan v0.36.0/go.mod h1:n0z3IJDm3ysnon+bLfBbHoy0WrRzlBE0LfeuAxGEnuM=
 github.com/go-openapi/core/json v0.0.3 h1:L4YuBIsLVtn5x52u27z+xRdJQkD0BaverQFNvxl7h6E=
 github.com/go-openapi/core/json v0.0.3/go.mod h1:nQl4bCBPXPOLlpjfSUcT2hcRKUBVuz+xLHx92aH524w=
 github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3 h1:SJ8eF4ebyJiiBMTcqWYve8mrFmwqxcyhJVuIJtefUq4=
