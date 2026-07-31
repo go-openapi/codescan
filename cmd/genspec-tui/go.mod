@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/go-openapi/codescan v0.34.0
+	github.com/go-openapi/codescan v0.36.0
 	github.com/go-openapi/core/json v0.0.3
 	github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3
 	github.com/go-openapi/testify/v2 v2.6.0
