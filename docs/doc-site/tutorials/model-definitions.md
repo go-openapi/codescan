@@ -24,6 +24,19 @@ the JSON-Schema `type` / `format`. Well-known standard-library types resolve
 automatically — a `time.Time` field, for instance, is published as
 `{type: string, format: date-time}`.
 
+UUIDs are recognised two different ways, and both publish
+`{type: string, format: uuid}`:
+
+- **by type identity** — the standard-library `uuid.UUID` introduced in Go 1.27,
+  matched on its import path and name, so nothing else can be mistaken for it;
+- **by type name** — any *other* type named `UUID` (case-insensitively) that
+  marshals as text, which covers `github.com/google/uuid`, `gofrs/uuid`,
+  `strfmt.UUID` and the like.
+
+The name-based rule is a heuristic and stays available whichever Go version you
+build with. Either way an explicit [`swagger:strfmt`](#swaggerstrfmt) on the type
+wins, so you can always overrule the recognition.
+
 {{< example go="concepts/models/models.go" goregion="model"
             json="concepts/models/testdata/model.json" jsonlabel="#/definitions/Pet" >}}
 
