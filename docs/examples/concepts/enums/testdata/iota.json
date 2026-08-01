@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "title": "Schedule carries the enum, which is what makes it reachable and so emitted.",
+  "properties": {
+    "day": {
+      "description": "Day the job runs on.\n0 Sunday is the first day.\n1 Monday is the second day.\n2 Tuesday is the third day.",
+      "type": "integer",
+      "format": "int64",
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "x-go-enum-desc": "0 Sunday is the first day.\n1 Monday is the second day.\n2 Tuesday is the third day.",
+      "x-go-name": "Day"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+}

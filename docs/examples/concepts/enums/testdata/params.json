@@ -1,0 +1,32 @@
+[
+  {
+    "enum": [
+      -1,
+      0,
+      1
+    ],
+    "type": "integer",
+    "format": "int8",
+    "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+    "x-go-name": "Pan",
+    "description": "Direction to pan while searching.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+    "name": "pan",
+    "in": "query"
+  },
+  {
+    "type": "array",
+    "items": {
+      "enum": [
+        -1,
+        0,
+        1
+      ],
+      "type": "integer",
+      "format": "int8"
+    },
+    "x-go-name": "Accepted",
+    "description": "Directions the client accepts.",
+    "name": "accepted",
+    "in": "query"
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "title": "Lens carries the float enum.",
+  "properties": {
+    "zoom": {
+      "description": "Zoom step of the lens.\n0 ZoomNone is the neutral step.\n-1.5 ZoomOut steps back.\n1.5 ZoomIn steps in.",
+      "type": "number",
+      "format": "float",
+      "enum": [
+        0,
+        -1.5,
+        1.5
+      ],
+      "x-go-enum-desc": "0 ZoomNone is the neutral step.\n-1.5 ZoomOut steps back.\n1.5 ZoomIn steps in.",
+      "x-go-name": "Zoom"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+}

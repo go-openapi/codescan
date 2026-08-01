@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Threshold carries the computed enum.",
+  "properties": {
+    "level": {
+      "description": "Level to alert at.\n8 LevelLow is the floor.\n16 LevelHigh doubles it.",
+      "type": "integer",
+      "format": "int64",
+      "enum": [
+        8,
+        16
+      ],
+      "x-go-enum-desc": "8 LevelLow is the floor.\n16 LevelHigh doubles it.",
+      "x-go-name": "Level"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+}

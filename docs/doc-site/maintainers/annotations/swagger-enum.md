@@ -12,8 +12,24 @@ description: "Marks a named type as an enum and collects its const values."
 
 ## What it does
 
-Marks a string-typed (or integer-typed) named type as an enum and
-collects the type's `const` declarations.
+Marks a named type over a string, integer, number or boolean as an enum
+and collects the type's `const` declarations.
+
+Values come from the Go type-checker, so any constant expression is
+collected — `iota` (including the implicit specs, which carry neither a
+type nor a value), computed members (`1 << 3`), references to earlier
+members, negative values, every integer base, values above `MaxInt64` in
+an unsigned enum, rune literals (as code points), `true` / `false`, and
+both string forms. The emitted `type` / `format` come from the **declared
+Go type**, never from the members, so an `int8` enum is
+`{integer, int8}` and reordering the const block cannot change the type.
+A type declared over another named type keeps that type's format
+(`type Kind strfmt.UUID` stays `format: uuid`).
+
+Two shapes do not work: an alias to a basic type cannot host an enum (the
+type-checker erases the alias, leaving nothing to collect), and a `rune`
+or `byte` enum emits integers, which is what those types are on the wire.
+See [Enumerations]({{% relref "/tutorials/enumerations" %}}).
 
 - **Without `swagger:model`** (the default): the values are applied
   **inline on each model field that references the type** — the property
