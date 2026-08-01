@@ -12,7 +12,7 @@ trade-offs, and known quirks live here.
 - [§build-entry](#build-entry) — `Build` modes and dispatch entry points
 - [§dispatch-table](#dispatch-table) — `buildNamedType`'s underlying-shape table
 - [§dissolve-named](#dissolve-named) — when a named type is unwrapped instead of `$ref`'d
-- [§special-types](#special-types) — `applyStdlibSpecials`, `applySpecialType`, UUID heuristic
+- [§special-types](#special-types) — `applyStdlibSpecials`, `applySpecialType`, the two UUID recognizers
 - [§textmarshal-order](#textmarshal-order) — `buildFromTextMarshal` precedence
 - [§aliases](#aliases) — `TransparentAliases` vs `RefAliases` vs default-expand
 - [§discovery](#discovery) — `Models` / `ExtraModels` / `discovered`, dedup layers
@@ -137,7 +137,7 @@ Fixture: `fixtures/enhancements/generic-instantiation/`.
 
 ---
 
-## <a id="special-types"></a>§special-types — `applyStdlibSpecials`, `applySpecialType`, UUID heuristic
+## <a id="special-types"></a>§special-types — `applyStdlibSpecials`, `applySpecialType`, the two UUID recognizers
 
 Three layers, all in `special_types.go`:
 
@@ -147,15 +147,46 @@ Three layers, all in `special_types.go`:
   `recognizeUUID` which is **fuzzy** (case-insensitive name match).
 
 - **`applyStdlibSpecials(obj, target)`** — the canonical safe set
-  `{recognizeAny, recognizeTime, recognizeError, recognizeRawMessage}`.
-  All four are identity-based and cannot misfire on user types,
-  so this helper is **called uniformly at every site** that handles
-  a `*types.TypeName`.
+  `{recognizeAny, recognizeTime, recognizeError, recognizeRawMessage,
+  recognizeStdUUID}`. All five are identity-based and cannot misfire
+  on user types, so this helper is **called uniformly at every site**
+  that handles a `*types.TypeName`.
 
-- **`recognizeUUID`** — opt-in via `applySpecialType`'s variadic.
-  Currently used **only by `buildFromTextMarshal`** because the
-  upstream `IsTextMarshaler` gate guarantees the type renders as
-  text, making the fuzzy name match safe.
+The two UUID recognizers are a **certain/guessed pair**, and the
+distinction is the whole reason both exist:
+
+- **`recognizeStdUUID`** — identity match on the go1.27 stdlib
+  `uuid.UUID` (`resolvers.IsStdUUID`: import path `uuid`, name `UUID`).
+  Certain, therefore in the safe set. It is **not** behind a
+  `//go:build go1.27` tag, on purpose: codescan compares types
+  harvested from *scanned* code and never imports `uuid` itself, so
+  tagging it would mean a codescan built by an older toolchain fails
+  to recognize a go1.27 user type — the inverted matrix. Build tags
+  live on the fixture and the integration test, which genuinely cannot
+  compile before go1.27; the predicate keeps toolchain-independent
+  coverage via `TestIsStdUUID`.
+
+- **`recognizeUUID`** — fuzzy, case-insensitive name match, the
+  fallback for `github.com/google/uuid`, `gofrs/uuid`, `strfmt.UUID`
+  and every other third-party type named UUID. Opt-in via
+  `applySpecialType`'s variadic and used **only by
+  `buildFromTextMarshal`**, because the upstream `IsTextMarshaler`
+  gate guarantees the type renders as text, making the name match
+  safe. `buildFromTextMarshal` orders identity **before** fuzzy so
+  the certain match wins.
+
+Neither beats an explicit `swagger:strfmt` / `swagger:type` — the
+classifier runs first, see [§textmarshal-order](#textmarshal-order).
+
+**Not reached by either: a struct embed.** `uuid.UUID` has an array
+underlying type, so `buildNamedEmbedded` falls to its `default` arm
+(only the *interface* arm consults `applyStdlibSpecials`) and skips
+the embed with a `CodeUnsupportedGoType` warning. That asymmetry is
+long-standing and uuid-agnostic — any `strfmt.UUID` / `time.Time`
+embed behaves the same, and Go itself renders such a struct as a bare
+string via the promoted `MarshalText`. Tracked as Q33; the identity
+recognizer deliberately does not change it. Witnessed by
+`TestStdlibUUID`'s embed sub-test.
 
 The seven call sites of `applyStdlibSpecials` (`buildFromDecl`,
 `buildDeclAlias` RHS, `buildAlias`, `buildNamedType`,
@@ -177,7 +208,7 @@ The function is entered from `buildFromType`'s shortcut
 2. route aliases through `buildAlias` (honour `TransparentAliases` / `RefAliases`)
 3. type-assert to `*types.Named` (fallback: `{string, ""}`)
 4. **classifier (`swagger:strfmt`) — explicit user intent wins**
-5. **stdlib trio via `applySpecialType(recognizeError, recognizeTime, recognizeRawMessage, recognizeUUID)`**
+5. **stdlib recognizers via `applySpecialType(recognizeError, recognizeTime, recognizeRawMessage, recognizeStdUUID, recognizeUUID)`** — identity before fuzzy
 6. `PkgForType`-miss bail (gates only the generic fallback below)
 7. **generic fallback** — `{string, ""}` + `x-go-type: pkg.Name`
 

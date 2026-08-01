@@ -151,6 +151,19 @@ func IsStdTime(o *types.TypeName) bool {
 	return o.Pkg() != nil && o.Pkg().Name() == "time" && o.Name() == "Time"
 }
 
+// IsStdUUID reports whether o is the go1.27 stdlib [uuid.UUID].
+//
+// Identity-based, so it never misfires on the many third-party types also named UUID
+// (github.com/google/uuid, gofrs, strfmt, …) — those keep going through the fuzzy
+// name heuristic in the schema builder.
+//
+// Deliberately NOT behind a go1.27 build tag: codescan compares types harvested from
+// *scanned* code, never imports uuid itself, and ships as a binary that may be built by
+// an older toolchain than the module it scans.
+func IsStdUUID(o *types.TypeName) bool {
+	return o.Pkg() != nil && o.Pkg().Path() == "uuid" && o.Name() == "UUID"
+}
+
 func IsStdError(o *types.TypeName) bool {
 	return o.Pkg() == nil && o.Name() == "error"
 }
