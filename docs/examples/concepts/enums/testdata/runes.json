@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Glyph carries the rune enum.",
+  "properties": {
+    "letter": {
+      "description": "Letter of the glyph.\n97 LetterA is the first letter.\n98 LetterB is the second letter.",
+      "type": "integer",
+      "format": "int32",
+      "enum": [
+        97,
+        98
+      ],
+      "x-go-enum-desc": "97 LetterA is the first letter.\n98 LetterB is the second letter.",
+      "x-go-name": "Letter"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+}

@@ -1,0 +1,133 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pan/{pan}": {
+      "get": {
+        "tags": [
+          "pan"
+        ],
+        "summary": "Sets the pan direction.",
+        "operationId": "setPan",
+        "parameters": [
+          {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8",
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "x-go-name": "Pan",
+            "description": "The requested pan direction.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "name": "pan",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ControlParams"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ControlState": {
+      "type": "object",
+      "title": "ControlState carries the enums as schema properties.",
+      "properties": {
+        "aperture": {
+          "description": "The aperture.\n0 ApertureClosed\n18446744073709551615 ApertureOpen",
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            0,
+            18446744073709551615
+          ],
+          "x-go-enum-desc": "0 ApertureClosed\n18446744073709551615 ApertureOpen",
+          "x-go-name": "Aperture"
+        },
+        "mask": {
+          "description": "The active mask.\n42 MaskHex\n42 MaskBinary\n42 MaskOctal\n1000 MaskUnderscore",
+          "type": "integer",
+          "format": "int64",
+          "enum": [
+            42,
+            42,
+            42,
+            1000
+          ],
+          "x-go-enum-desc": "42 MaskHex\n42 MaskBinary\n42 MaskOctal\n1000 MaskUnderscore",
+          "x-go-name": "Mask"
+        },
+        "pan": {
+          "description": "The pan direction.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+          "type": "integer",
+          "format": "int8",
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+          "x-go-name": "Pan"
+        },
+        "tilt": {
+          "description": "The tilt angle.\n-0.5 TiltDown\n0 TiltFlat\n0.5 TiltUp",
+          "type": "number",
+          "format": "double",
+          "enum": [
+            -0.5,
+            0,
+            0.5
+          ],
+          "x-go-enum-desc": "-0.5 TiltDown\n0 TiltFlat\n0.5 TiltUp",
+          "x-go-name": "Tilt"
+        },
+        "zoom": {
+          "description": "The zoom step.\n0 ZoomNone\n-1.5 ZoomOut\n1.5 ZoomIn",
+          "type": "number",
+          "format": "float",
+          "enum": [
+            0,
+            -1.5,
+            1.5
+          ],
+          "x-go-enum-desc": "0 ZoomNone\n-1.5 ZoomOut\n1.5 ZoomIn",
+          "x-go-name": "Zoom"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3412/negative"
+    }
+  },
+  "responses": {
+    "ControlParams": {
+      "description": "ControlParams carries the enums as response headers.\n\nPTZ control parameters",
+      "headers": {
+        "pan": {
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "type": "integer",
+          "format": "int8",
+          "description": "specifies the direction of the pan. -1 is pan left, 0 is no pan, 1 is pan right.",
+          "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right."
+        },
+        "tilt": {
+          "enum": [
+            -0.5,
+            0,
+            0.5
+          ],
+          "type": "number",
+          "format": "double",
+          "description": "specifies the tilt angle.",
+          "x-go-enum-desc": "-0.5 TiltDown\n0 TiltFlat\n0.5 TiltUp"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "title": "Camera carries the signed enum, declared int8.",
+  "properties": {
+    "pan": {
+      "description": "Pan direction of the camera.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+      "type": "integer",
+      "format": "int8",
+      "enum": [
+        -1,
+        0,
+        1
+      ],
+      "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+      "x-go-name": "Pan"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+}

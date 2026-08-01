@@ -206,7 +206,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 				return nil
 			}
 		case *types.Basic:
-			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, ut, defTgt, tpe.Obj().Name()) {
+			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, tpe, ut, defTgt) {
 				return nil
 			}
 		}
@@ -509,7 +509,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 			s.warnUnsupportedGoType("buildNamedType", tio)
 			return nil
 		}
-		if !refModel && s.classifierNamedBasic(cmt, pkg, utitpe, target, tio.Name()) {
+		if !refModel && s.classifierNamedBasic(cmt, pkg, titpe, utitpe, target) {
 			return nil
 		}
 		return s.resolveRefOr(tio, target, func() error {

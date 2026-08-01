@@ -1,0 +1,175 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/cameras/search": {
+      "get": {
+        "tags": [
+          "cameras"
+        ],
+        "summary": "Searches cameras by pan direction.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8",
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "x-go-name": "Pan",
+            "description": "Direction to pan while searching.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "name": "pan",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                -1,
+                0,
+                1
+              ],
+              "type": "integer",
+              "format": "int8"
+            },
+            "x-go-name": "Accepted",
+            "description": "Directions the client accepts.",
+            "name": "accepted",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/cameraList"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Camera": {
+      "type": "object",
+      "title": "Camera carries the signed enum, declared int8.",
+      "properties": {
+        "pan": {
+          "description": "Pan direction of the camera.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+          "type": "integer",
+          "format": "int8",
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+          "x-go-name": "Pan"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+    },
+    "Glyph": {
+      "type": "object",
+      "title": "Glyph carries the rune enum.",
+      "properties": {
+        "letter": {
+          "description": "Letter of the glyph.\n97 LetterA is the first letter.\n98 LetterB is the second letter.",
+          "type": "integer",
+          "format": "int32",
+          "enum": [
+            97,
+            98
+          ],
+          "x-go-enum-desc": "97 LetterA is the first letter.\n98 LetterB is the second letter.",
+          "x-go-name": "Letter"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+    },
+    "Label": {
+      "type": "object",
+      "title": "Label carries the formatted enum.",
+      "properties": {
+        "kind": {
+          "description": "Kind of the label.\n0a8bcf1e-0000-0000-0000-000000000000 KindPrimary is the primary kind.\n0a8bcf1e-1111-1111-1111-111111111111 KindSecondary is the secondary kind.",
+          "type": "string",
+          "format": "uuid",
+          "enum": [
+            "0a8bcf1e-0000-0000-0000-000000000000",
+            "0a8bcf1e-1111-1111-1111-111111111111"
+          ],
+          "x-go-enum-desc": "0a8bcf1e-0000-0000-0000-000000000000 KindPrimary is the primary kind.\n0a8bcf1e-1111-1111-1111-111111111111 KindSecondary is the secondary kind.",
+          "x-go-name": "Kind"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+    },
+    "Lens": {
+      "type": "object",
+      "title": "Lens carries the float enum.",
+      "properties": {
+        "zoom": {
+          "description": "Zoom step of the lens.\n0 ZoomNone is the neutral step.\n-1.5 ZoomOut steps back.\n1.5 ZoomIn steps in.",
+          "type": "number",
+          "format": "float",
+          "enum": [
+            0,
+            -1.5,
+            1.5
+          ],
+          "x-go-enum-desc": "0 ZoomNone is the neutral step.\n-1.5 ZoomOut steps back.\n1.5 ZoomIn steps in.",
+          "x-go-name": "Zoom"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+    },
+    "Schedule": {
+      "type": "object",
+      "title": "Schedule carries the enum, which is what makes it reachable and so emitted.",
+      "properties": {
+        "day": {
+          "description": "Day the job runs on.\n0 Sunday is the first day.\n1 Monday is the second day.\n2 Tuesday is the third day.",
+          "type": "integer",
+          "format": "int64",
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "x-go-enum-desc": "0 Sunday is the first day.\n1 Monday is the second day.\n2 Tuesday is the third day.",
+          "x-go-name": "Day"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+    },
+    "Threshold": {
+      "type": "object",
+      "title": "Threshold carries the computed enum.",
+      "properties": {
+        "level": {
+          "description": "Level to alert at.\n8 LevelLow is the floor.\n16 LevelHigh doubles it.",
+          "type": "integer",
+          "format": "int64",
+          "enum": [
+            8,
+            16
+          ],
+          "x-go-enum-desc": "8 LevelLow is the floor.\n16 LevelHigh doubles it.",
+          "x-go-name": "Level"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+    }
+  },
+  "responses": {
+    "cameraList": {
+      "description": "CameraList is the response body.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Camera"
+        }
+      }
+    }
+  }
+}

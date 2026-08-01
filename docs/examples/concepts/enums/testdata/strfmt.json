@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Label carries the formatted enum.",
+  "properties": {
+    "kind": {
+      "description": "Kind of the label.\n0a8bcf1e-0000-0000-0000-000000000000 KindPrimary is the primary kind.\n0a8bcf1e-1111-1111-1111-111111111111 KindSecondary is the secondary kind.",
+      "type": "string",
+      "format": "uuid",
+      "enum": [
+        "0a8bcf1e-0000-0000-0000-000000000000",
+        "0a8bcf1e-1111-1111-1111-111111111111"
+      ],
+      "x-go-enum-desc": "0a8bcf1e-0000-0000-0000-000000000000 KindPrimary is the primary kind.\n0a8bcf1e-1111-1111-1111-111111111111 KindSecondary is the secondary kind.",
+      "x-go-name": "Kind"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/concepts/enums"
+}

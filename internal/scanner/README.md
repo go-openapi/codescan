@@ -28,6 +28,8 @@ parameters, responses) consumed by the builder layer.
   struct-annotation exclusivity
 - [§after-decl](#after-decl) — `AfterDeclComments` — reading annotations
   inside / below a declaration
+- [§enum-values](#enum-values) — where `swagger:enum` member values
+  come from, and what the degraded reading can still see
 - [§clean-godoc](#clean-godoc) — `CleanGoDoc` — filtering godoc syntax out
   of carried-over title / description prose
 - [§quirks-open](#quirks-open) — deferred follow-ups
@@ -360,6 +362,81 @@ type-based (it resolves a *type* and collects that type's consts via
 semantics today. Supporting it would mean new builder behaviour, which this
 scanner-only feature deliberately avoids. Nested/anonymous inline structs are
 likewise not enriched (only named struct type decls are walked).
+
+## <a id="enum-values"></a>§enum-values — reading `swagger:enum` members
+
+`FindEnumValues` walks the const declarations of a package and
+emits one row per constant whose type is the annotated enum type.
+Two decisions shape it.
+
+### Membership is decided per name, from the type-checker
+
+The spec's syntactic type (`vs.Type`) is not usable as the
+membership test, because inside an `iota` block only the *first*
+spec carries a type at all:
+
+```go
+const (
+    Sunday Weekday = iota   // Type=Weekday  Values=[iota]
+    Monday                  // Type=<nil>    Values=<nil>
+    Tuesday                 // Type=<nil>    Values=<nil>
+)
+```
+
+Monday and Tuesday inherit both implicitly, so a syntactic reader
+sees two specs that declare nothing. Membership therefore comes
+from `TypesInfo.Defs[name].(*types.Const).Type()` — the type the
+checker assigned — which also covers a constant declared without a
+written type (`const Extra = StatusOn`).
+
+The test is **type identity, not name**: the named type must also
+come from the package being walked. A constant declared in the
+annotated package can perfectly well have an imported type
+(`const ForeignDay foreign.Weekday = 13` next to a local `Weekday`
+enum), and it is a member of neither. The syntactic reading ruled
+that out structurally — a qualified type is a selector expression,
+not the bare ident it required — so the package check is what
+keeps the type-checked reading from being *wider* than the one it
+replaced.
+
+An enum cannot be hosted on an **alias to a basic type**
+(`type Unsigned = uint64`): the checker erases the alias, so
+`const Zero Unsigned = 0` is indistinguishable from any other
+`uint64` constant and there is nothing left to match on. The
+annotation is a no-op there — as it was before this change, since
+the classifier never reaches an alias decl either. An alias to a
+*named* enum type (`type Weekday2 = Weekday`) is fine: the
+underlying named type survives.
+
+### Values come from the type-checker, not from the literal
+
+A const's right-hand side is only incidentally a literal. It can
+be `iota`, an expression (`1 << 3`), a reference to an earlier
+member (`Prev * 2`), a rune literal (`'a'`, whose constant is the
+integer 97), or `true` / `false` — which are predeclared
+*identifiers*, since Go has no boolean literal token. Reading the
+value out of the syntax means reimplementing Go's constant
+evaluator: iota counting, implicit repetition, and constant
+folding.
+
+`go/types` has already done that, exactly and with arbitrary
+precision, so `enumConstantValue` converts the resulting
+`constant.Value` by kind (`Int` → `int64`, or `uint64` past
+`MaxInt64`; `Float` → `float64`; `String`; `Bool`). A constant with
+no JSON representation (complex) or one the checker could not
+evaluate is dropped rather than emitted as a null member.
+
+**The degraded reading.** When the package only partially
+type-checked (see `ErrDegradedLoad`), a constant may have no value
+in `Defs`. Rather than let an annotated enum vanish,
+`enumValue` falls back to the literal syntax — a lone literal,
+optionally signed, with rune literals and raw/escaped strings
+handled. It is a strict subset: `iota`, expressions and references
+are invisible to it by construction, and its values keep the kind
+their literal implies rather than the kind of their declared type.
+The builder's `validations.CoerceConstant` closes that last gap —
+see
+[§enum-const-values](../builders/validations/README.md#enum-const-values).
 
 ## <a id="clean-godoc"></a>§clean-godoc — `CleanGoDoc`
 

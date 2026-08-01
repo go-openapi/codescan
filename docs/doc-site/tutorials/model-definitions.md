@@ -59,6 +59,11 @@ Here the values inline on the referencing field. Add `swagger:model` to the enum
 type to make it a first-class definition (carrying the `enum` array) that fields
 `$ref` — again the `swagger:model ⇒ definition + $ref` rule.
 
+Enums have more to them than a string const block: `iota` and computed members,
+what decides the emitted `type` / `format`, and the inline form parameters and
+headers take. They get their own page —
+[Enumerations]({{% relref "/tutorials/enumerations" %}}).
+
 ## swagger:allOf
 
 Embedding base types under `swagger:allOf` composes a schema. Each embedded base
