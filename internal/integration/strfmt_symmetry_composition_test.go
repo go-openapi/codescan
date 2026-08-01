@@ -43,11 +43,9 @@ func TestStrfmtSymmetryComposition(t *testing.T) {
 		},
 
 		exceptions: map[string]string{},
-		knownBroken: forEveryMode(
-			"buildAllOf's alias arm (allof.go:185) calls buildAlias directly, bypassing the "+
-				"classifierAliasTargetStrfmt that its named counterpart buildNamedAllOf runs at allof.go:205",
-			"AllOfBasic", "AllOfStruct",
-		),
+		// The allOf alias arm now reads the member's declaration before dissolving, matching the
+		// classifierAliasTargetStrfmt its named counterpart runs.
+		knownBroken:   map[string]string{},
 		controlBroken: map[string]string{},
 	}
 

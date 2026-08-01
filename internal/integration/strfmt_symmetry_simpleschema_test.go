@@ -42,12 +42,8 @@ func TestStrfmtSymmetrySimpleSchema(t *testing.T) {
 			},
 		},
 
-		exceptions: map[string]string{},
-		knownBroken: forEveryMode(
-			"the SimpleSchema path reaches the pair through buildFromType too, so buildAlias dissolves "+
-				"before any classifier sees the alias decl's comments (schema.go:399-430)",
-			"queryBasic", "querySlice", "headerBasic", "headerSlice",
-		),
+		exceptions:    map[string]string{},
+		knownBroken:   map[string]string{},
 		controlBroken: map[string]string{},
 	}
 

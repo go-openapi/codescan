@@ -408,11 +408,30 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	}
 	resolvers.MustNotBeABuiltinType(o)
 
+	// Look the declaration up BEFORE any dissolve, so the alias's own classifier annotations are
+	// honoured in all three modes.
+	//
+	// The lookup used to sit below the TransparentAliases return, which meant that mode dissolved
+	// without ever reading the declaration — and a `swagger:strfmt` on the alias was lost. Not found
+	// is only an error on the paths that need the decl to emit a $ref; TransparentAliases dissolves
+	// regardless, as it did before.
+	decl, ok := s.Ctx.GetModel(o.Pkg().Path(), o.Name())
+
+	// refModel mirrors buildNamedType's gate: a swagger:model alias publishes its override on its OWN
+	// definition (buildDeclAlias) and is referenced here, so the inline classifier is skipped.
+	//
+	// Not under SimpleSchema, where $ref is illegal in OAS v2 and the override must inline; and not
+	// under TransparentAliases, which never emits the $ref this defers to.
+	refModel := ok && decl.HasModelAnnotation() && !s.simpleSchema && !s.Ctx.TransparentAliases()
+
+	if ok && !refModel && s.classifierAliasStrfmt(decl.Comments, tpe, target) {
+		return nil
+	}
+
 	if s.Ctx.TransparentAliases() {
 		return s.buildFromType(tpe.Rhs(), target)
 	}
 
-	decl, ok := s.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrSchema)
 	}

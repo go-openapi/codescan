@@ -434,6 +434,20 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 	resolvers.MustNotBeABuiltinType(o)
 	resolvers.MustHaveRightHandSide(tpe)
 
+	// Look the declaration up BEFORE any dissolve, so the alias's own `swagger:strfmt` is honoured in
+	// every mode and every parameter location. The lookup used to sit below the TransparentAliases
+	// return, which dissolved without ever reading the declaration.
+	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
+
+	// A body parameter typed as a swagger:model alias keeps its $ref identity, and the format rides
+	// on the alias's own definition — mirroring the schema builder's refModel gate. Everywhere else
+	// the alias dissolves, so the format has to be applied here or it is lost.
+	refModel := ok && decl.HasModelAnnotation() && typable.In() == inBody && !p.Ctx.TransparentAliases()
+
+	if ok && !refModel && p.ClassifierAliasStrfmt(decl.Comments, tpe, typable) {
+		return nil
+	}
+
 	// TransparentAliases supersedes annotation at use sites — dissolve to the unaliased target via
 	// the schema sub-builder.
 	if p.Ctx.TransparentAliases() {
@@ -447,7 +461,6 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil
 	}
 
-	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, tpe.Rhs(), ErrParameters)
 	}

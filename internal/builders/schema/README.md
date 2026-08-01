@@ -296,6 +296,54 @@ Default and Ref; the difference shows up downstream in the
 alias's own definition (Expand structural under Default vs chain
 `$ref` under Ref).
 
+#### `swagger:strfmt` on the alias runs before the dissolve
+
+Every row of the table above ends in either a `$ref` or a
+dissolve, and a dissolve forgets that an alias was involved at
+all. So a `swagger:strfmt` carried by the **alias declaration**
+has to be applied *before* that point, or it is lost — which is
+what used to happen at every use site.
+
+`ClassifierAliasStrfmt` (on `common.Builder`, shared with the
+parameters and responses builders) is that entry. It runs on the
+alias's own comments, dispatching on the alias's underlying kind
+so the format lands where the equivalent **named** declaration
+would put it:
+
+| Alias underlying | Where the format lands | Named counterpart |
+|---|---|---|
+| basic | whole schema | `classifierNamedBasic` |
+| struct | whole schema — strfmt replaces the type | `classifierNamedStructStrfmt` |
+| slice | `byte` → whole schema; else items | `classifierNamedArrayLike` |
+| array | `byte` / `bsonobjectid` → whole schema; else items | `classifierNamedArrayLike` |
+
+Two ordering constraints, both load-bearing:
+
+- **Above the `TransparentAliases` return.** The declaration
+  lookup was historically below it, so that mode dissolved
+  without ever reading the declaration. Lookup and classifier
+  both sit above it now, and a not-found declaration is only an
+  error on the paths that need it to emit a `$ref`.
+- **Before the right-hand side is reached.** For an alias over a
+  recognised stdlib type (`type Stamp = time.Time`), the dissolve
+  lands on `time.Time` itself, where `applyStdlibSpecials` answers
+  `date-time`. An author writing `swagger:strfmt date` must beat
+  that: the annotation is the escape hatch for formats the library
+  cannot infer, so a recognizer is a default for un-annotated code
+  and never an override.
+
+A `swagger:model` alias is the exception, mirroring
+`buildNamedType`'s `refModel` gate: it publishes its override on
+its own definition and is referenced here, so the inline
+classifier is skipped — except under SimpleSchema (`$ref`
+illegal) and `TransparentAliases` (no `$ref` emitted), where the
+format must inline after all.
+
+An alias that carries **no** annotation of its own is unaffected:
+it dissolves as before, and if it lands on an annotated *named*
+type the named machinery applies that type's format, exactly as
+it always did.
+
 The same applies inside allOf composition: `swagger:allOf` on an
 embed governs the *composition* shape (allOf vs flat inline);
 `swagger:model` on an embedded alias governs the *identity* of
@@ -309,6 +357,12 @@ and **cannot carry `$ref`** (OpenAPI 2.0 constraint). At those
 sites the alias always expands to the unaliased target regardless
 of annotation. The annotation gate has no effect for SimpleSchema
 because the question "$ref to what" never arises.
+
+A `swagger:strfmt` on the alias still applies, though — the
+expansion is a dissolve like any other, so `ClassifierAliasStrfmt`
+runs ahead of it in the parameters and responses builders too.
+Since `$ref` is illegal here, it runs even when the alias carries
+`swagger:model`.
 
 ### Top-level alias parameters and responses
 

@@ -272,15 +272,3 @@ func simpleSignature(typ, format string, items *oaispec.Items) string {
 	}
 	return typ + "/" + format
 }
-
-// forEveryMode assigns reason to cell for all three alias modes, the common case when a defect is
-// mode-independent.
-func forEveryMode(reason string, cells ...string) map[string]string {
-	out := make(map[string]string, len(cells)*len(aliasModes()))
-	for _, mode := range aliasModes() {
-		for _, cell := range cells {
-			out[mode.name+"/"+cell] = reason
-		}
-	}
-	return out
-}

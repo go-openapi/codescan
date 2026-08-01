@@ -8,6 +8,8 @@
       "properties": {
         "fieldRawAlias": {
           "description": "FieldRawAlias is the raw-message pair's alias half.",
+          "type": "string",
+          "format": "byte",
           "x-go-name": "FieldRawAlias"
         },
         "fieldRawNamed": {
@@ -19,7 +21,7 @@
         "fieldTimeAlias": {
           "description": "FieldTimeAlias is the time pair's alias half.",
           "type": "string",
-          "format": "date-time",
+          "format": "date",
           "x-go-name": "FieldTimeAlias"
         },
         "fieldTimeNamed": {

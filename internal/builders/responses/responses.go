@@ -380,6 +380,19 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil // just leave an empty schema
 	}
 
+	// Look the declaration up BEFORE any dissolve, so the alias's own `swagger:strfmt` is honoured on
+	// headers as well as bodies. The lookup used to sit below both dissolve paths, so a header typed
+	// as an annotated alias lost its format.
+	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
+
+	// A body field typed as a swagger:model alias keeps its $ref identity and carries the format on
+	// the alias's own definition. A header cannot $ref at all, so the format must be applied here.
+	refModel := ok && decl.HasModelAnnotation() && typable.In() == inBody && !r.Ctx.TransparentAliases()
+
+	if ok && !refModel && r.ClassifierAliasStrfmt(decl.Comments, tpe, typable) {
+		return nil
+	}
+
 	// TransparentAliases supersedes annotation at use sites — dissolve to the unaliased target via
 	// the schema sub-builder.
 	if r.Ctx.TransparentAliases() {
@@ -399,7 +412,6 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
 	}
 
-	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
 	if !ok {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrResponses)
 	}

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -391,15 +392,8 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 //   - handled=false, err=nil   → no classifier matched
 func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, forSlice bool) (handled bool, fallthroughElement bool) {
 	if sfnm, isf := s.findAnnotationArg(cg, grammar.AnnStrfmt); isf {
-		if sfnm == "byte" {
-			tgt.Typed("string", sfnm)
-			return true, false
-		}
-		if !forSlice && sfnm == "bsonobjectid" {
-			tgt.Typed("string", sfnm)
-			return true, false
-		}
-		tgt.Items().Typed("string", sfnm)
+		common.ApplyArrayLikeStrfmt(sfnm, tgt, forSlice)
+
 		return true, false
 	}
 
@@ -413,6 +407,18 @@ func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.Swag
 	}
 
 	return false, false
+}
+
+// classifierAliasStrfmt applies a `swagger:strfmt` carried by an ALIAS declaration.
+//
+// The implementation is shared with the parameters and responses builders, which have their own
+// alias dissolve paths and the same gap. See [common.Builder.ClassifierAliasStrfmt].
+//
+// # Details
+//
+// See [§aliases](./README.md#aliases) — the use-site classifier contract.
+func (s *Builder) classifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, tgt ifaces.SwaggerTypable) bool {
+	return s.ClassifierAliasStrfmt(cg, tpe, tgt)
 }
 
 // classifierAliasTargetStrfmt is the named-type walker fired from `buildNamedAllOf`'s struct branch

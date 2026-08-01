@@ -10,23 +10,6 @@ import "testing"
 //
 // See strfmt_symmetry_harness_test.go for how the ledger reads.
 func TestStrfmtSymmetryCore(t *testing.T) {
-	// The use-site dispatch never reads the alias declaration's comments: buildAlias fetches the decl
-	// only to test HasModelAnnotation(), then dissolves to Rhs().
-	const dissolve = "buildAlias dissolves to Rhs() without consulting the alias decl's comments (schema.go:399-430)"
-
-	// Under TransparentAliases the early return at schema.go:411 precedes the decl lookup entirely, so
-	// not even a model annotation can compensate.
-	const transparent = "TransparentAliases returns at schema.go:411 before the decl lookup; the model annotation cannot compensate"
-
-	broken := forEveryMode(dissolve,
-		"fieldBasic", "fieldStruct", "fieldSlice", "fieldArray",
-		"pointerBasic", "pointerStruct",
-		"sliceElemBasic", "sliceElemStruct",
-		"mapValueBasic", "mapValueStruct",
-	)
-	broken["transparentaliases/modeledBasic"] = transparent
-	broken["transparentaliases/modeledStruct"] = transparent
-
 	ledger := symmetryLedger{
 		pkg:          "enhancements/strfmt-symmetry-core",
 		goldenPrefix: "strfmt_symmetry_core",
@@ -52,9 +35,10 @@ func TestStrfmtSymmetryCore(t *testing.T) {
 			{definition: "EnvelopeModeled", namedProp: "modeledStructNamed", aliasProp: "modeledStructAlias", wantNamed: "string/duration"},
 		},
 
-		// No cell in F1 has a legitimate reason to differ: every observed difference is the bug.
+		// No cell in F1 has a legitimate reason to differ, and none does: the alias half now reads its
+		// own declaration before the dissolve, in all three modes.
 		exceptions:    map[string]string{},
-		knownBroken:   broken,
+		knownBroken:   map[string]string{},
 		controlBroken: map[string]string{},
 	}
 

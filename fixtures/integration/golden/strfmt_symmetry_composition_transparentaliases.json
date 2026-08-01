@@ -6,7 +6,8 @@
       "title": "AllOfBasicAlias composes the basic pair's alias half as an allOf member.",
       "allOf": [
         {
-          "type": "string"
+          "type": "string",
+          "format": "isbn"
         },
         {
           "type": "object",
@@ -45,7 +46,8 @@
       "title": "AllOfStructAlias composes the struct pair's alias half as an allOf member.",
       "allOf": [
         {
-          "$ref": "#/definitions/PlainTarget"
+          "type": "string",
+          "format": "duration"
         },
         {
           "type": "object",

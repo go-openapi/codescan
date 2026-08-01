@@ -8,11 +8,8 @@
       "properties": {
         "fieldArrayAlias": {
           "description": "FieldArrayAlias is the array pair, alias half.",
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "format": "uint8"
-          },
+          "type": "string",
+          "format": "bsonobjectid",
           "x-go-name": "FieldArrayAlias"
         },
         "fieldArrayNamed": {
@@ -24,6 +21,7 @@
         "fieldBasicAlias": {
           "description": "FieldBasicAlias is the basic pair, alias half, in plain field position.",
           "type": "string",
+          "format": "isbn",
           "x-go-name": "FieldBasicAlias"
         },
         "fieldBasicNamed": {
@@ -43,11 +41,8 @@
         },
         "fieldSliceAlias": {
           "description": "FieldSliceAlias is the slice pair, alias half.",
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "format": "uint8"
-          },
+          "type": "string",
+          "format": "byte",
           "x-go-name": "FieldSliceAlias"
         },
         "fieldSliceNamed": {
@@ -57,7 +52,10 @@
           "x-go-name": "FieldSliceNamed"
         },
         "fieldStructAlias": {
-          "$ref": "#/definitions/PlainTarget"
+          "description": "FieldStructAlias is the struct pair, alias half.",
+          "type": "string",
+          "format": "duration",
+          "x-go-name": "FieldStructAlias"
         },
         "fieldStructNamed": {
           "description": "FieldStructNamed is the struct pair, named half.",
@@ -69,7 +67,8 @@
           "description": "MapValueBasicAlias reaches the basic pair's alias half as a map value.",
           "type": "object",
           "additionalProperties": {
-            "type": "string"
+            "type": "string",
+            "format": "isbn"
           },
           "x-go-name": "MapValueBasicAlias"
         },
@@ -86,7 +85,8 @@
           "description": "MapValueStructAlias reaches the struct pair's alias half as a map value.",
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/PlainTarget"
+            "type": "string",
+            "format": "duration"
           },
           "x-go-name": "MapValueStructAlias"
         },
@@ -102,6 +102,7 @@
         "pointerBasicAlias": {
           "description": "PointerBasicAlias reaches the basic pair's alias half through a pointer.",
           "type": "string",
+          "format": "isbn",
           "x-go-name": "PointerBasicAlias"
         },
         "pointerBasicNamed": {
@@ -111,7 +112,10 @@
           "x-go-name": "PointerBasicNamed"
         },
         "pointerStructAlias": {
-          "$ref": "#/definitions/PlainTarget"
+          "description": "PointerStructAlias reaches the struct pair's alias half through a pointer.",
+          "type": "string",
+          "format": "duration",
+          "x-go-name": "PointerStructAlias"
         },
         "pointerStructNamed": {
           "description": "PointerStructNamed reaches the struct pair's named half through a pointer.",
@@ -123,7 +127,8 @@
           "description": "SliceElemBasicAlias reaches the basic pair's alias half as a slice element.",
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "format": "isbn"
           },
           "x-go-name": "SliceElemBasicAlias"
         },
@@ -140,7 +145,8 @@
           "description": "SliceElemStructAlias reaches the struct pair's alias half as a slice element.",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PlainTarget"
+            "type": "string",
+            "format": "duration"
           },
           "x-go-name": "SliceElemStructAlias"
         },
@@ -163,13 +169,17 @@
         "modeledBasicAlias": {
           "description": "ModeledBasicAlias is the annotated basic pair, alias half.",
           "type": "string",
+          "format": "isbn",
           "x-go-name": "ModeledBasicAlias"
         },
         "modeledBasicNamed": {
           "$ref": "#/definitions/ModeledBasicNamed"
         },
         "modeledStructAlias": {
-          "$ref": "#/definitions/PlainTarget"
+          "description": "ModeledStructAlias is the annotated struct pair, alias half.",
+          "type": "string",
+          "format": "duration",
+          "x-go-name": "ModeledStructAlias"
         },
         "modeledStructNamed": {
           "$ref": "#/definitions/ModeledStructNamed"
@@ -199,25 +209,6 @@
       "type": "string",
       "format": "duration",
       "title": "ModeledStructNamed is the struct pair's named half WITH a model annotation.",
-      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
-    },
-    "PlainTarget": {
-      "description": "It carries no format annotation of its own, so any format on the pair's members\ncan only come from the pair's own declaration.",
-      "type": "object",
-      "title": "PlainTarget is an unannotated struct used as the RHS of the struct-kind pair.",
-      "properties": {
-        "left": {
-          "description": "Left is a plain field, present so the struct has observable content when\nthe format is NOT applied.",
-          "type": "string",
-          "x-go-name": "Left"
-        },
-        "right": {
-          "description": "Right is a plain field.",
-          "type": "integer",
-          "format": "int32",
-          "x-go-name": "Right"
-        }
-      },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
     },
     "StrfmtChainNamed": {

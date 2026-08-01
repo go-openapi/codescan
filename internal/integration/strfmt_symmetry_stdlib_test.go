@@ -22,9 +22,6 @@ import "testing"
 //
 // See strfmt_symmetry_harness_test.go for how the ledger reads.
 func TestStrfmtSymmetryStdlib(t *testing.T) {
-	const recognizerWins = "the dissolve reaches the stdlib type itself, so applyStdlibSpecials answers " +
-		"before any classifier sees the alias decl's annotation"
-
 	ledger := symmetryLedger{
 		pkg:          "enhancements/strfmt-symmetry-stdlib",
 		goldenPrefix: "strfmt_symmetry_stdlib",
@@ -42,7 +39,7 @@ func TestStrfmtSymmetryStdlib(t *testing.T) {
 		},
 
 		exceptions:    map[string]string{},
-		knownBroken:   forEveryMode(recognizerWins, "fieldTime", "fieldRaw"),
+		knownBroken:   map[string]string{},
 		controlBroken: map[string]string{},
 	}
 

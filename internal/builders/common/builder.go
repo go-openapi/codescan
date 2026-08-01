@@ -11,6 +11,8 @@ package common
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/godoclink"
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -289,4 +291,71 @@ func (s *Builder) MakeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) 
 	s.AppendPostDecl(decl)
 
 	return nil
+}
+
+// FindAnnotationArg returns the first positional argument of the first Block of the given
+// annotation kind in cg, filtered to non-empty single-word arguments and read through the
+// ParseBlocks cache.
+//
+// Shared here rather than per-builder because the alias classifier below runs from schema,
+// parameters and responses alike.
+func (s *Builder) FindAnnotationArg(cg *ast.CommentGroup, kind grammar.AnnotationKind) (string, bool) {
+	for _, b := range s.ParseBlocks(cg) {
+		if b.AnnotationKind() != kind {
+			continue
+		}
+		arg, ok := b.AnnotationArg()
+		if !ok {
+			continue
+		}
+		if strings.ContainsAny(arg, " \t") {
+			continue
+		}
+
+		return arg, true
+	}
+
+	return "", false
+}
+
+// ApplyArrayLikeStrfmt writes a `swagger:strfmt` format onto an array/slice target.
+//
+// Two formats describe the WHOLE schema rather than its element: `byte` (a base64 string, not an
+// array of integers) and — arrays only — `bsonobjectid`. Every other format decorates the items.
+func ApplyArrayLikeStrfmt(format string, tgt ifaces.SwaggerTypable, forSlice bool) {
+	if format == "byte" || (!forSlice && format == "bsonobjectid") {
+		tgt.Typed("string", format)
+
+		return
+	}
+	tgt.Items().Typed("string", format)
+}
+
+// ClassifierAliasStrfmt applies a `swagger:strfmt` carried by an ALIAS declaration, dispatching on
+// the alias's underlying kind so the format lands exactly where the equivalent NAMED declaration
+// would put it — whole-schema for a basic or struct underlying, items-or-whole for an array/slice.
+//
+// A named declaration reaches its format through the schema builder's classifier walkers, each
+// keyed off the declaration found via DeclForType. Aliases have no such entry: every builder
+// dissolves an alias to its right-hand side, and by then nothing remembers an alias was involved.
+// This is that missing entry, and it must run BEFORE the dissolve.
+//
+// Scoped to `swagger:strfmt`: the other classifier annotations have separate handling on the alias
+// path and are deliberately not swept in here.
+func (s *Builder) ClassifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, tgt ifaces.SwaggerTypable) bool {
+	format, ok := s.FindAnnotationArg(cg, grammar.AnnStrfmt)
+	if !ok {
+		return false
+	}
+
+	switch tpe.Underlying().(type) {
+	case *types.Array:
+		ApplyArrayLikeStrfmt(format, tgt, false)
+	case *types.Slice:
+		ApplyArrayLikeStrfmt(format, tgt, true)
+	default:
+		tgt.Typed("string", format)
+	}
+
+	return true
 }
