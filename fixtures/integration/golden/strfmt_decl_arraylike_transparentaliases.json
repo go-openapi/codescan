@@ -1,0 +1,79 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "EmailsAliasModeled": {
+      "type": "array",
+      "title": "EmailsAliasModeled is the alias half of the element-format pair.",
+      "items": {
+        "type": "string",
+        "format": "email"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "EmailsNamedModeled": {
+      "type": "array",
+      "title": "EmailsNamedModeled is a string slice whose format describes each ELEMENT.",
+      "items": {
+        "type": "string",
+        "format": "email"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "Envelope": {
+      "description": "Envelope reaches the non-model pairs from a field site, where the inline\nclassifier still runs.",
+      "type": "object",
+      "properties": {
+        "fieldIdAlias": {
+          "description": "FieldIDAlias is the whole-value format, alias half, at a field site.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "FieldIDAlias"
+        },
+        "fieldIdNamed": {
+          "description": "FieldIDNamed is the whole-value format, named half, at a field site.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "FieldIDNamed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "IDAliasModeled": {
+      "type": "string",
+      "format": "uuid",
+      "title": "IDAliasModeled is the alias half of the same pair.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "IDNamedModeled": {
+      "type": "string",
+      "format": "uuid",
+      "title": "IDNamedModeled is a fixed byte array that IS a uuid, published as a model.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "RunesAliasModeled": {
+      "type": "string",
+      "format": "password",
+      "title": "RunesAliasModeled is the alias half of the rune pair.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "RunesNamedModeled": {
+      "description": "RunesNamedModeled is a rune sequence — string-like for the same reason a byte\nsequence is, so the format describes the whole value.",
+      "type": "string",
+      "format": "password",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "ULIDAliasModeled": {
+      "type": "string",
+      "format": "ulid",
+      "title": "ULIDAliasModeled is the alias half of the ULID pair.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    },
+    "ULIDNamedModeled": {
+      "description": "ULIDNamedModeled shows the rule generalising to a strfmt type that never had\nan entry in the old allowlist.",
+      "type": "string",
+      "format": "ulid",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-decl-arraylike"
+    }
+  }
+}

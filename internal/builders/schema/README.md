@@ -66,6 +66,19 @@ exit-validator's role.
 4. Dispatch on `s.Decl.ObjType()`: `*types.Named` → `buildFromType(ti.Type, …)`;
    `*types.Alias` → `buildDeclAlias`; otherwise warn-and-skip.
 
+Inside the `*types.Named` arm, an override classifier runs first, selected by
+`Underlying()` kind — struct, basic, array and slice each have an arm. A
+`swagger:model` type carrying an override publishes the **full** override schema
+on its own definition here; field sites then `$ref` it, and
+`buildNamedType`'s `refModel` gate skips the inline classifiers precisely
+because this step is assumed to have run.
+
+That assumption is why the array and slice arms matter: while they were missing,
+a `swagger:model` sequence with a `swagger:strfmt` published a definition with
+the format silently dropped, and no later stage could recover it. `buildDeclAlias`
+applies the same rule on the alias side, so `type ID = [16]byte` and
+`type ID [16]byte` publish the same definition.
+
 ---
 
 ## <a id="dispatch-table"></a>§dispatch-table — `buildNamedType`'s underlying-shape table
@@ -314,8 +327,40 @@ would put it:
 |---|---|---|
 | basic | whole schema | `classifierNamedBasic` |
 | struct | whole schema — strfmt replaces the type | `classifierNamedStructStrfmt` |
-| slice | `byte` → whole schema; else items | `classifierNamedArrayLike` |
-| array | `byte` / `bsonobjectid` → whole schema; else items | `classifierNamedArrayLike` |
+| slice / array | by element type — see below | `classifierNamedArrayLike` |
+
+#### Items vs. whole schema, for a sequence
+
+A format on an array or slice can describe the sequence itself or each of its
+elements. The decision is made by the **element type**, in
+`common.IsStringLikeSequence`:
+
+| Element | Meaning | Result |
+|---|---|---|
+| `byte` / `uint8` | a byte sequence — string-like | format on the **whole schema** |
+| `rune` / `int32` | a rune sequence — string-like | format on the **whole schema** |
+| anything else | a collection of formatted values | format on the **items** |
+
+```go
+type ID     [16]byte  // swagger:strfmt uuid  → {string, format: uuid}
+type Emails []string  // swagger:strfmt email → {array, items: {string, format: email}}
+```
+
+This replaced a two-name allowlist (`byte`, and `bsonobjectid` for arrays only)
+that was standing in for the same question — both are formats for a byte
+sequence, `bsonobjectid` being a strfmt library type that happens to have an
+array underlying. Keying on the element generalises to every such type (`uuid`
+over `[16]byte`, `ulid`, …) with no list to extend, and it removes the
+array-vs-slice asymmetry the allowlist had.
+
+go/types cannot tell `rune` from `int32` (rune is an alias), so `[]int32` is
+treated alike — harmless, since a *string* format on integer elements was
+already a contradiction.
+
+Note this settles only the mechanical half of the question. A format on a
+sequence of some other element type is genuinely ambiguous — whether the author
+means the sequence or its members cannot be read off the Go type — and it stays
+on the items, as it always has.
 
 Two ordering constraints, both load-bearing:
 

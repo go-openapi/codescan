@@ -25,11 +25,8 @@
           "x-go-name": "ObjectID"
         },
         "signature": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "password"
-          },
+          "type": "string",
+          "format": "password",
           "x-go-name": "Signature"
         },
         "token": {

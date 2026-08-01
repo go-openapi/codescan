@@ -209,6 +209,18 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 			if s.classifierNamedBasic(s.Decl.Comments, s.Decl.Pkg, tpe, ut, defTgt) {
 				return nil
 			}
+		case *types.Array:
+			if handled, _ := s.classifierNamedArrayLike(s.Decl.Comments, defTgt, ut.Elem()); handled {
+				return nil
+			}
+		case *types.Slice:
+			// Array and slice were missing from this switch, so a swagger:model sequence carrying a
+			// `swagger:strfmt` published a definition with the format dropped — and nothing downstream
+			// compensates, because buildNamedType's refModel gate skips the inline classifiers precisely
+			// on the assumption that the declaration already applied the override.
+			if handled, _ := s.classifierNamedArrayLike(s.Decl.Comments, defTgt, ut.Elem()); handled {
+				return nil
+			}
 		}
 		ti := s.Decl.Pkg.TypesInfo.Types[s.Decl.Spec.Type]
 		resolvers.MustBeAType(ti) // invariant
@@ -245,8 +257,9 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 	// `swagger:strfmt` on a Named decl is unaffected — that path is covered by
 	// `classifierNamedStructStrfmt` (struct underlying) and `classifierNamedBasic` (primitive
 	// underlying), both fired from `buildNamedType` after the underlying-kind switch.
-	if name, ok := s.findAnnotationArg(s.Decl.Comments, grammar.AnnStrfmt); ok {
-		target.Typed("string", name)
+	// Detection is symmetric with the named decl arm above: the same element-driven items-vs-whole
+	// rule, so `type ID = [16]byte` and `type ID [16]byte` publish the same definition.
+	if s.classifierAliasStrfmt(s.Decl.Comments, tpe, target) {
 		return nil
 	}
 
@@ -536,9 +549,9 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		})
 
 	case *types.Array:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, false, refModel)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, refModel)
 	case *types.Slice:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, true, refModel)
+		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, refModel)
 
 	case *types.Map:
 		return s.resolveRefOr(tio, target, nil)
@@ -549,13 +562,13 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	}
 }
 
-// buildNamedArrayLike is the unified Array/Slice arm. forSlice toggles the slice-only
-// "bsonobjectid" special case in classifierNamedArrayLike. isModel skips the inline override
+// buildNamedArrayLike is the unified Array/Slice arm. elem drives the items-vs-whole decision for
+// a `swagger:strfmt` (see common.ApplyArrayLikeStrfmt). isModel skips the inline override
 // classifier so a swagger:model array/slice type is referenced by $ref (its override schema lives
 // on its own definition).
-func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, forSlice, isModel bool) error {
+func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, isModel bool) error {
 	if !isModel {
-		if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, forSlice); handled {
+		if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, elem); handled {
 			if recurse {
 				defer s.descend("items")()
 				return s.buildFromType(elem, tgt.Items())

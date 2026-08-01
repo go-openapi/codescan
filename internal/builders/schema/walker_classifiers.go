@@ -381,18 +381,18 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 // classifierNamedArrayLike is the named-type walker shared between `buildNamedArray` and
 // `buildNamedSlice`.
 //
-// Both have the same classifier surface — `swagger:strfmt` and `swagger:type` — with subtly
-// different strfmt fall-throughs (array honors a "bsonobjectid" special case the slice doesn't).
-// The boolean `forSlice` switches that arm; the rest is identical.
+// Both have the same classifier surface — `swagger:strfmt` and `swagger:type`. elem is the
+// sequence's element type, which decides whether a format describes the whole value or its items
+// (see [common.ApplyArrayLikeStrfmt]); array and slice are otherwise identical here.
 //
 // Returns:
 //   - handled=true,  err=nil   → caller returns nil
 //   - handled=true,  err!=nil  → unrecognised swagger:type → caller
 //     should fall through to inline the element type
 //   - handled=false, err=nil   → no classifier matched
-func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, forSlice bool) (handled bool, fallthroughElement bool) {
+func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, elem types.Type) (handled bool, fallthroughElement bool) {
 	if sfnm, isf := s.findAnnotationArg(cg, grammar.AnnStrfmt); isf {
-		common.ApplyArrayLikeStrfmt(sfnm, tgt, forSlice)
+		common.ApplyArrayLikeStrfmt(sfnm, elem, tgt)
 
 		return true, false
 	}

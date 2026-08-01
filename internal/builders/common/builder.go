@@ -318,12 +318,43 @@ func (s *Builder) FindAnnotationArg(cg *ast.CommentGroup, kind grammar.Annotatio
 	return "", false
 }
 
-// ApplyArrayLikeStrfmt writes a `swagger:strfmt` format onto an array/slice target.
+// IsStringLikeSequence reports whether an array/slice element type makes the sequence a
+// STRING-LIKE value rather than a collection — a byte sequence (`[]byte`, `[16]byte`) or a rune
+// sequence (`[]rune`).
 //
-// Two formats describe the WHOLE schema rather than its element: `byte` (a base64 string, not an
-// array of integers) and — arrays only — `bsonobjectid`. Every other format decorates the items.
-func ApplyArrayLikeStrfmt(format string, tgt ifaces.SwaggerTypable, forSlice bool) {
-	if format == "byte" || (!forSlice && format == "bsonobjectid") {
+// This is what decides whether a `swagger:strfmt` on the sequence describes the whole value or each
+// element. It replaces a two-name allowlist (`byte`, `bsonobjectid`) that was really standing in for
+// this question: both of those are formats for a byte sequence, `bsonobjectid` being a strfmt
+// library type that happens to have an array underlying. Keying on the element instead of the format
+// name generalises to every such type — `uuid` over `[16]byte`, `ulid`, and whatever comes next —
+// without anyone having to extend a list.
+//
+// go/types cannot distinguish `rune` from `int32` (rune is an alias), so `[]int32` is treated
+// alike. That is harmless: a STRING format on integer elements was already a contradiction.
+func IsStringLikeSequence(elem types.Type) bool {
+	basic, ok := elem.Underlying().(*types.Basic)
+	if !ok {
+		return false
+	}
+
+	switch basic.Kind() {
+	case types.Uint8, types.Int32: // byte, rune
+		return true
+	default:
+		return false
+	}
+}
+
+// ApplyArrayLikeStrfmt writes a `swagger:strfmt` format onto an array/slice target, choosing
+// between the whole schema and its items by the ELEMENT type — see [IsStringLikeSequence].
+//
+//	type ID [16]byte   // swagger:strfmt uuid  → {string, format: uuid}
+//	type Emails []string // swagger:strfmt email → {array, items: {string, format: email}}
+//
+// Note this settles only the mechanical half of the items-vs-whole question. A format on a sequence
+// of some OTHER element type is genuinely ambiguous — it stays on the items, as it always has.
+func ApplyArrayLikeStrfmt(format string, elem types.Type, tgt ifaces.SwaggerTypable) {
+	if IsStringLikeSequence(elem) {
 		tgt.Typed("string", format)
 
 		return
@@ -348,11 +379,11 @@ func (s *Builder) ClassifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, 
 		return false
 	}
 
-	switch tpe.Underlying().(type) {
+	switch ut := tpe.Underlying().(type) {
 	case *types.Array:
-		ApplyArrayLikeStrfmt(format, tgt, false)
+		ApplyArrayLikeStrfmt(format, ut.Elem(), tgt)
 	case *types.Slice:
-		ApplyArrayLikeStrfmt(format, tgt, true)
+		ApplyArrayLikeStrfmt(format, ut.Elem(), tgt)
 	default:
 		tgt.Typed("string", format)
 	}
