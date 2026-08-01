@@ -39,8 +39,9 @@ func (s *Builder) buildFromTextMarshal(tpe types.Type, target ifaces.SwaggerTypa
 	if s.classifierTextMarshal(typeNamed, target) {
 		return nil
 	}
-	// Implicit recognizers in priority order.
-	if applySpecialType(tio, target, s.skipExtensions, recognizeError, recognizeTime, recognizeRawMessage, recognizeUUID) {
+	// Implicit recognizers in priority order: certain (identity) before guessed (fuzzy name).
+	if applySpecialType(tio, target, s.skipExtensions,
+		recognizeError, recognizeTime, recognizeRawMessage, recognizeStdUUID, recognizeUUID) {
 		return nil
 	}
 	// Generic fallback: x-go-type carries pkg.Name, so PkgForType-miss must bail (can't produce the
@@ -61,6 +62,11 @@ const (
 	recognizeAny
 	recognizeError
 	recognizeRawMessage
+	// recognizeStdUUID is an identity match on the go1.27 stdlib uuid.UUID.
+	//
+	// Safe everywhere, so it lives in the canonical set applied by [applyStdlibSpecials].
+	// See [§special-types](./README.md#special-types).
+	recognizeStdUUID
 	// recognizeUUID is a fuzzy name-only match (case-insensitive "uuid").
 	//
 	// Caller-gated — opt in only where the type is guaranteed to render as text.
@@ -69,7 +75,7 @@ const (
 )
 
 // applyStdlibSpecials runs the canonical safe set of identity-based recognizers (any / time.Time /
-// error / json.RawMessage).
+// error / json.RawMessage / go1.27 uuid.UUID).
 //
 // Safe at every call site that handles a *types.TypeName.
 //
@@ -78,7 +84,7 @@ const (
 // See [§special-types](./README.md#special-types).
 func applyStdlibSpecials(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool) bool {
 	return applySpecialType(obj, target, skipExt,
-		recognizeAny, recognizeTime, recognizeError, recognizeRawMessage)
+		recognizeAny, recognizeTime, recognizeError, recognizeRawMessage, recognizeStdUUID)
 }
 
 // applySpecialType iterates wanted recognizers in order and applies the first match to target,
@@ -120,6 +126,12 @@ func applySpecialType(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt
 		case recognizeRawMessage: // json.RawMessage; see [§quirks](./README.md#quirks) for the "any" rationale.
 			if resolvers.IsStdJSONRawMessage(obj) {
 				_ = target.Schema()
+				return true
+			}
+
+		case recognizeStdUUID: // identity — go1.27 stdlib uuid.UUID.
+			if resolvers.IsStdUUID(obj) {
+				target.Typed("string", "uuid")
 				return true
 			}
 

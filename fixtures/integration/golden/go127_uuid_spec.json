@@ -1,0 +1,92 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Embedder": {
+      "description": "Witness for the embedded arm, which the fuzzy name heuristic never reached (it is caller-gated to\nbuildFromTextMarshal). Note the promoted MarshalText makes encoding/json render the WHOLE struct\nas a bare string, dropping Name from the wire — see quirks-open.md Q33.",
+      "type": "object",
+      "title": "Embedder embeds the stdlib uuid.UUID.",
+      "properties": {
+        "name": {
+          "description": "Name is NOT on the wire, whatever the emitted schema says.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go127/uuid"
+    },
+    "Order": {
+      "type": "object",
+      "title": "Order carries the stdlib uuid.UUID in every position the schema builder can reach it from.",
+      "properties": {
+        "byName": {
+          "description": "ByName exercises a map value; the key is a plain string.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "x-go-name": "ByName"
+        },
+        "id": {
+          "description": "ID is a plain field.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "ID"
+        },
+        "ids": {
+          "description": "IDs exercises the items chain.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "x-go-name": "IDs"
+        },
+        "keyed": {
+          "description": "Keyed exercises uuid.UUID as a map KEY: it marshals to a JSON object because the key is a\nTextMarshaler, and the key type itself is not rendered in Swagger 2.0.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "Keyed"
+        },
+        "named": {
+          "$ref": "#/definitions/OrderID"
+        },
+        "overridden": {
+          "description": "Overridden proves the explicit classifier still beats the recognizer.",
+          "type": "string",
+          "format": "date",
+          "x-go-name": "Overridden"
+        },
+        "ptrId": {
+          "description": "PtrID is a pointer, peeled before recognition.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "PtrID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go127/uuid"
+    },
+    "OrderID": {
+      "type": "string",
+      "format": "uuid",
+      "title": "OrderID is a named type whose underlying type is the stdlib uuid.UUID.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go127/uuid"
+    },
+    "Tagged": {
+      "type": "object",
+      "title": "Tagged uses the alias.",
+      "properties": {
+        "alias": {
+          "description": "Alias is declared through the alias above.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "Alias"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/goparsing/go127/uuid"
+    }
+  }
+}
