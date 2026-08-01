@@ -11,7 +11,10 @@ items/headers code paths. Its two halves are:
 - **Value coercion** (`coerce.go`) — turns raw annotation text into
   the Go value implied by the target schema's `type` + `format`,
   for keywords whose payload is a primitive literal (`default:`,
-  `example:`, `enum:`).
+  `example:`, `enum:`). `const_values.go` is the sibling half of
+  this concern: it normalises values the scanner read out of a
+  Go **const block** rather than out of annotation text
+  (see [§enum-const-values](#enum-const-values)).
 - **Shape legality** (`shape.go`) — answers "is this keyword legal
   on a schema of this type?" against the JSON-Schema draft-4
   domain rules that Swagger 2.0 inherits.
@@ -23,6 +26,7 @@ items/headers code paths. Its two halves are:
 - [§contract](#contract) — why these helpers live here and not in the grammar
 - [§coercion-dispatch](#coercion-dispatch) — `CoerceValue` / `ParseDefault` / `ParseEnumValues` routing
 - [§enum-shapes](#enum-shapes) — JSON-array form vs comma-list form
+- [§enum-const-values](#enum-const-values) — `CoerceConstant` and the declared-type rule
 - [§format-axis](#format-axis) — why `Format` is reserved but not consulted today
 - [§format-compat](#format-compat) — `IsFormatCompatible` type×format legality
 - [§type-domain-table](#type-domain-table) — the keyword-vs-type legality table
@@ -129,6 +133,53 @@ strict-mode option could turn this into a diagnostic.
 Per-element coercion is the same `CoerceValue` path as
 `default:` / `example:`, so type-aware typing applies
 uniformly across the three keywords.
+
+## <a id="enum-const-values"></a>§enum-const-values — `CoerceConstant` and the declared-type rule
+
+`swagger:enum` members do not come from annotation text: the
+scanner reads them off a Go const block. It has two readings of
+that block, and `CoerceConstant` is what keeps them agreeing.
+
+The **primary reading** takes the values from the type-checker
+(`go/types` constants). There, a constant's kind already follows
+its declared type — a `float64`-typed `= 0` is a `constant.Float`,
+an `int`-typed `= 42.0` is a `constant.Int` — so `CoerceConstant`
+has nothing to do and passes the value through.
+
+The **degraded reading** (a partially loaded package, where the
+type-checker has no value) falls back to literal syntax, and there
+the declared type is invisible:
+
+```go
+type Tilt float64
+
+const (
+    TiltFlat Tilt = 0      // INT literal   → int64(0)
+    TiltDown Tilt = -0.5   // FLOAT literal → float64(-0.5)
+)
+```
+
+One enum, two Go kinds, one declared type. `CoerceConstant`
+normalises against the Swagger type resolved from that declared
+type, so the degraded reading emits what the primary one would.
+
+Two rules make this safe:
+
+- **The declared type wins, always.** The caller
+  (`schema.applyEnum`) resolves `type` / `format` from the Go
+  type, never from the values. Before this rule existed, the type
+  was read off `reflect.TypeOf(values[0])`, which collapsed `int8`
+  to `int64` and `float32` to `double` — and let the *declaration
+  order* of the const block decide the schema type, so a float
+  enum whose first member was written `= 0` emitted
+  `{type: integer}` carrying fractional members.
+- **A non-representable value is never emitted.** `(nil, false)`
+  tells the caller to drop the member and raise a diagnostic
+  rather than write something the schema's own `type` forbids.
+
+An unresolved (empty) Swagger type passes values through
+untouched: with no type to normalise against, guessing would be
+worse than leaving the scanner's reading intact.
 
 ## <a id="format-axis"></a>§format-axis — `Format` is reserved but not routed
 

@@ -1,0 +1,177 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/pan": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Uploads a pan setting.",
+        "operationId": "uploadPan",
+        "parameters": [
+          {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8",
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "x-go-name": "Requested",
+            "description": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "name": "requested",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/PanResponse"
+          }
+        }
+      }
+    },
+    "/pan/{pan}": {
+      "get": {
+        "tags": [
+          "pan"
+        ],
+        "summary": "Sets the pan direction.",
+        "operationId": "setPan",
+        "parameters": [
+          {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8",
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "x-go-name": "Pan",
+            "description": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "name": "pan",
+            "in": "path",
+            "required": true
+          },
+          {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8",
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "x-go-name": "Preferred",
+            "description": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "name": "preferred",
+            "in": "query"
+          },
+          {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8",
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "x-go-name": "Fallback",
+            "description": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+            "name": "fallback",
+            "in": "header"
+          },
+          {
+            "type": "array",
+            "items": {
+              "enum": [
+                -1,
+                0,
+                1
+              ],
+              "type": "integer",
+              "format": "int8"
+            },
+            "x-go-name": "Allowed",
+            "name": "allowed",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/PanResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "PanState": {
+      "type": "object",
+      "title": "PanState consumes the enum from a schema property, scalar and array.",
+      "properties": {
+        "available": {
+          "description": "The directions still available.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int8",
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right."
+          },
+          "x-go-name": "Available"
+        },
+        "current": {
+          "description": "The current direction.\n-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+          "type": "integer",
+          "format": "int8",
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right.",
+          "x-go-name": "Current"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3412/simpleschema"
+    }
+  },
+  "responses": {
+    "PanResponse": {
+      "description": "PanResponse consumes the enum from response headers — scalar and array — and from a body schema.",
+      "schema": {
+        "$ref": "#/definitions/PanState"
+      },
+      "headers": {
+        "applied": {
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "type": "integer",
+          "format": "int8",
+          "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan holds the current position.\n1 PanRight pans to the right."
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "enum": [
+              -1,
+              0,
+              1
+            ],
+            "type": "integer",
+            "format": "int8"
+          }
+        }
+      }
+    }
+  }
+}

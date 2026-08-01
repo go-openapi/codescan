@@ -531,7 +531,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 
 	t.Run("non-ValueSpec returns nil", func(t *testing.T) {
 		spec := &ast.ImportSpec{Path: &ast.BasicLit{Value: `"fmt"`}}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -540,7 +540,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 		spec := &ast.ValueSpec{
 			Names: []*ast.Ident{ast.NewIdent("X")},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -550,7 +550,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Names: []*ast.Ident{ast.NewIdent("X")},
 			Type:  &ast.SelectorExpr{X: ast.NewIdent("pkg"), Sel: ast.NewIdent("Type")},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -561,7 +561,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Bar"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "1"}},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -571,7 +571,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Names: []*ast.Ident{ast.NewIdent("X")},
 			Type:  ast.NewIdent("Foo"),
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -582,9 +582,55 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{ast.NewIdent("someFunc")},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Empty(t, values)
 		assert.Empty(t, descs)
+	})
+
+	t.Run("ValueSpec with signed numeric values keeps the sign", func(t *testing.T) {
+		// go-swagger#3412: `X Foo = -1` is a unary expression, not a BasicLit, and used to be skipped.
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("X"), ast.NewIdent("Y"), ast.NewIdent("Z")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{
+				&ast.UnaryExpr{Op: token.SUB, X: &ast.BasicLit{Kind: token.INT, Value: "1"}},
+				&ast.UnaryExpr{Op: token.ADD, X: &ast.BasicLit{Kind: token.INT, Value: "2"}},
+				&ast.UnaryExpr{Op: token.SUB, X: &ast.BasicLit{Kind: token.FLOAT, Value: "0.5"}},
+			},
+		}
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
+		assert.Equal(t, []any{int64(-1), int64(2), -0.5}, values)
+		assert.Equal(t, []string{"-1 X", "2 Y", "-0.5 Z"}, descs)
+	})
+
+	t.Run("ValueSpec with a non-numeric unary value skips that position", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("X"), ast.NewIdent("Y")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{
+				// Neither is legal Go for a constant of a basic type; the guard keeps a malformed AST
+				// from producing a null enum member.
+				&ast.UnaryExpr{Op: token.NOT, X: &ast.BasicLit{Kind: token.INT, Value: "1"}},
+				&ast.UnaryExpr{Op: token.SUB, X: &ast.BasicLit{Kind: token.STRING, Value: `"a"`}},
+			},
+		}
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
+		assert.Empty(t, values)
+		assert.Empty(t, descs)
+	})
+
+	t.Run("ValueSpec with non-decimal integer values resolves the base", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("X"), ast.NewIdent("Y"), ast.NewIdent("Z")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{
+				&ast.BasicLit{Kind: token.INT, Value: "0x2a"},
+				&ast.BasicLit{Kind: token.INT, Value: "0b101010"},
+				&ast.BasicLit{Kind: token.INT, Value: "1_000"},
+			},
+		}
+		values, _, _ := sctx.findEnumValue(nil, spec, "Foo")
+		assert.Equal(t, []any{int64(42), int64(42), int64(1000)}, values)
 	})
 
 	t.Run("ValueSpec with names/values parity mismatch returns nil", func(t *testing.T) {
@@ -595,7 +641,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "42"}},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		assert.Nil(t, values)
 		assert.Nil(t, descs)
 	})
@@ -612,7 +658,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// shared doc"}},
 			},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		require.Len(t, values, 2)
 		require.Len(t, descs, 2)
 		assert.EqualT(t, "a", values[0])
@@ -633,7 +679,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				},
 			},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		require.Len(t, values, 1)
 		require.Len(t, descs, 1)
 		assert.EqualT(t, "hello", values[0])
@@ -649,7 +695,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// PriorityLow is a low-priority level."}},
 			},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		require.Len(t, values, 1)
 		assert.EqualT(t, "low PriorityLow is a low-priority level.", descs[0])
 	})
@@ -666,7 +712,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// ChannelEmail and ChannelSMS share a single spec."}},
 			},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		require.Len(t, values, 2)
 		// Both rows strip leading "ChannelEmail" because it matches one of the names.
 		assert.EqualT(t, "email ChannelEmail and ChannelSMS share a single spec.", descs[0])
@@ -682,7 +728,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 				List: []*ast.Comment{{Text: "// The x value."}},
 			},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		require.Len(t, values, 1)
 		assert.EqualT(t, "x X  The x value.", descs[0])
 	})
@@ -693,7 +739,7 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 			Type:   ast.NewIdent("Foo"),
 			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "7"}},
 		}
-		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		values, descs, _ := sctx.findEnumValue(nil, spec, "Foo")
 		require.Len(t, values, 1)
 		intVal, ok := values[0].(int64)
 		require.True(t, ok)

@@ -7,11 +7,11 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
+	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
@@ -154,22 +154,189 @@ func (s *Builder) recordEnumOrigins(enumPos []token.Pos) {
 	}
 }
 
-func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, utitpe *types.Basic, tgt ifaces.SwaggerTypable, declTypeName string) (resolved bool) {
+// applyEnum writes the enum members of enumName onto tgt, together with the type/format of the
+// enum's own declared Go type.
+//
+// Type and format come from utitpe — the DECLARED underlying basic type — never from the values.
+// The scanner hands over evaluated constants, so every integer width collapses to int64 and every
+// float width to float64 on the way out; typing the schema from the first value made an
+// `int8` enum an `int64` one, a `float32` enum a `double`, and — when a float enum's first member
+// happened to be written as an integer literal (`= 0`) — produced `{type: integer}` carrying
+// fractional members, a schema no validator can satisfy. Each value is then normalised to that
+// declared type (go-swagger#3412 follow-up).
+//
+// Returns false when the enum has no usable member, leaving tgt untouched so the caller can fall
+// through to the type-resolution engine.
+//
+// # Details
+//
+// See [§enum-typing](./README.md#enum-typing) — why the declared type wins over the parsed values,
+// and the two defects that rule settles.
+func (s *Builder) applyEnum(pkg *packages.Package, declared *types.Named, utitpe *types.Basic, tgt ifaces.SwaggerTypable, enumName string) (resolved bool) {
+	enumValues, enumDesces, enumPos, _ := s.Ctx.FindEnumValues(pkg, enumName)
+	if len(enumValues) == 0 {
+		return false
+	}
+
+	schemaType := basicSchemaType(utitpe)
+	values := make([]any, 0, len(enumValues))
+	descs := make([]string, 0, len(enumValues))
+	positions := make([]token.Pos, 0, len(enumValues))
+
+	for i, raw := range enumValues {
+		value, ok := validations.CoerceConstant(raw, schemaType)
+		if !ok {
+			// Unreachable from code that compiles: Go rejects a const whose value does not fit its
+			// declared type. Reported rather than emitted, so a malformed member can never contradict
+			// the schema's own type.
+			s.RecordDiagnostic(grammar.Warnf(s.declPos(), grammar.CodeInvalidEnumOption,
+				"swagger:enum %s: const value %v is not representable as %s; member dropped",
+				enumName, raw, utitpe.Name()))
+			continue
+		}
+
+		values = append(values, value)
+		if i < len(enumDesces) {
+			descs = append(descs, enumDesces[i])
+		}
+		if i < len(enumPos) {
+			positions = append(positions, enumPos[i])
+		}
+	}
+
+	if len(values) == 0 {
+		return false
+	}
+
+	if !s.applyEnumType(declared, utitpe, tgt, schemaType, enumName) {
+		return false
+	}
+
+	tgt.WithEnum(values...)
+	if len(descs) > 0 {
+		tgt.WithEnumDescription(strings.Join(descs, "\n"))
+	}
+	s.recordEnumOrigins(positions)
+
+	return true
+}
+
+// applyEnumType writes the enum's `type` / `format` onto tgt, resolved from the enum's declared Go
+// type.
+//
+// The underlying basic type is the usual answer, but it is not always the whole one: a type
+// declared OVER another named type (`type Kind strfmt.UUID`) reaches go/types with `string` as its
+// underlying, and everything the intermediate contributed — here the `uuid` format — is gone from
+// that view. The same type without the enum annotation keeps its format, because the ordinary path
+// resolves the declaration's right-hand side rather than its underlying; inheritedStrfmt is the
+// enum arm's equivalent of that, restricted to what a strfmt can legally decorate (a string).
+//
+// Reports false when the underlying type has no Swagger representation at all (a complex64 enum):
+// there is no schema to write members onto, and the caller falls through so the type-resolution
+// engine reports the unsupported type.
+func (s *Builder) applyEnumType(declared *types.Named, utitpe *types.Basic, tgt ifaces.SwaggerTypable, schemaType, enumName string) bool {
+	if schemaType == "string" {
+		if format, ok := s.inheritedStrfmt(declared); ok {
+			tgt.Typed("string", format)
+
+			return true
+		}
+	}
+
+	if err := resolvers.SwaggerSchemaForType(utitpe.Name(), tgt); err != nil {
+		// e.g. a complex64 enum: no JSON representation, so there is no schema to write the members
+		// onto. The type-resolution engine reports the unsupported type on the fallthrough.
+		s.RecordDiagnostic(grammar.Warnf(s.declPos(), grammar.CodeUnsupportedGoType,
+			"swagger:enum %s: underlying type %s has no Swagger representation: %v",
+			enumName, utitpe.Name(), err))
+
+		return false
+	}
+
+	return true
+}
+
+// inheritedStrfmt returns the strfmt format that declared inherits from the type it is written
+// over, walking the chain of declarations to its right.
+//
+// `type Kind strfmt.UUID` carries no `swagger:strfmt` of its own — the annotation sits on
+// `strfmt.UUID`, one declaration to the right — and go/types offers no way back to it, since
+// Underlying() jumps straight to the bottom `string`. The AST does: a declaration's Spec.Type is
+// the type it was written over, and the walk repeats from there, so an indirection chain several
+// redefinitions long resolves like a single one.
+//
+// The walk stops at the first type that is not itself a named declaration (the basic bottom), at
+// one the scan cannot see the source of, or at a repeat — Go forbids a cyclic type declaration, but
+// nothing guarantees the AST handed to us came from code that compiles.
+//
+// Only `swagger:strfmt` is inherited: a type-changing annotation (`swagger:type`) on an intermediate
+// would contradict the enum's own members rather than decorate them.
+func (s *Builder) inheritedStrfmt(declared *types.Named) (string, bool) {
+	seen := make(map[types.Type]struct{})
+
+	for current := types.Type(declared); current != nil; {
+		if _, dup := seen[current]; dup {
+			return "", false
+		}
+		seen[current] = struct{}{}
+
+		decl, ok := s.Ctx.DeclForType(current)
+		if !ok || decl == nil || decl.Spec == nil || decl.Pkg == nil {
+			return "", false
+		}
+
+		// The enum's own declaration is the first step: its swagger:strfmt (if any) already won in
+		// classifierNamedBasic's strfmt-first arm, so a match here can only come from further right.
+		if current != types.Type(declared) {
+			if format, ok := s.findAnnotationArg(decl.Comments, grammar.AnnStrfmt); ok {
+				return format, true
+			}
+		}
+
+		rhs, ok := decl.Pkg.TypesInfo.Types[decl.Spec.Type]
+		if !ok {
+			return "", false
+		}
+
+		switch rhs.Type.(type) {
+		case *types.Named, *types.Alias:
+			current = rhs.Type
+		default:
+			return "", false
+		}
+	}
+
+	return "", false
+}
+
+// basicSchemaType maps a Go basic type to the Swagger type whose value domain it belongs to.
+//
+// Driven by go/types' own kind bits rather than a name table, so every integer width (including
+// `byte` / `rune`) lands on "integer" without enumerating them. Types with no Swagger value domain
+// (complex, unsafe.Pointer) yield "" — the caller's cue to leave values untouched.
+func basicSchemaType(utitpe *types.Basic) string {
+	switch info := utitpe.Info(); {
+	case info&types.IsInteger != 0:
+		return "integer"
+	case info&types.IsFloat != 0:
+		return "number"
+	case info&types.IsString != 0:
+		return "string"
+	case info&types.IsBoolean != 0:
+		return "boolean"
+	default:
+		return ""
+	}
+}
+
+func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Package, declared *types.Named, utitpe *types.Basic, tgt ifaces.SwaggerTypable) (resolved bool) {
 	if name, ok := s.findAnnotationArg(cg, grammar.AnnStrfmt); ok {
 		tgt.Typed("string", name)
 		return true
 	}
 
-	if enumName, ok := s.enumName(cg, declTypeName); ok {
-		enumValues, enumDesces, enumPos, _ := s.Ctx.FindEnumValues(pkg, enumName)
-		if len(enumValues) > 0 {
-			tgt.WithEnum(enumValues...)
-			enumTypeName := reflect.TypeOf(enumValues[0]).String()
-			_ = resolvers.SwaggerSchemaForType(enumTypeName, tgt)
-			if len(enumDesces) > 0 {
-				tgt.WithEnumDescription(strings.Join(enumDesces, "\n"))
-			}
-			s.recordEnumOrigins(enumPos)
+	if enumName, ok := s.enumName(cg, declared.Obj().Name()); ok {
+		if s.applyEnum(pkg, declared, utitpe, tgt, enumName) {
 			return true
 		}
 		// swagger:enum with no matching const values.

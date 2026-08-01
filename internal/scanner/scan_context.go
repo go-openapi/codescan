@@ -911,7 +911,7 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 			}
 
 			for _, spec := range gd.Specs {
-				values, descriptions, positions := s.findEnumValue(spec, enumName)
+				values, descriptions, positions := s.findEnumValue(pkg, spec, enumName)
 				if len(values) == 0 {
 					continue
 				}
@@ -926,51 +926,111 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 	return list, descList, posList, true
 }
 
-// findEnumValue extracts one (value, description) pair per (name, value) position in a const spec.
+// findEnumValue extracts one (value, description) row per name declared by a const spec whose type
+// is enumName.
 //
-// For a multi-name spec like `const A, B T = "a", "b"` it emits two rows — A↔"a" and B↔"b"
-// — each sharing the spec's doc comment.
-// The Go compiler guarantees len(Names) == len(Values) when Values is non-empty, so out-of-parity
-// specs are ignored defensively.
-func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string, positions []token.Pos) {
+// For a multi-name spec like `const A, B T = "a", "b"` it emits two rows — A↔"a" and B↔"b" —
+// each sharing the spec's doc comment.
+//
+// Membership is decided per NAME, from the type the type-checker assigned to that constant, not
+// from the spec's syntactic type: inside an `iota` block only the first spec carries a type at all,
+// and every following one inherits it implicitly.
+//
+// # Details
+//
+// See [§enum-values](./README.md#enum-values) — why the values come from go/types and what the
+// degraded reading can still see.
+func (s *ScanCtx) findEnumValue(pkg *packages.Package, spec ast.Spec, enumName string) (values []any, descriptions []string, positions []token.Pos) {
 	vs, ok := spec.(*ast.ValueSpec)
 	if !ok {
-		return nil, nil, nil
-	}
-
-	vsIdent, ok := vs.Type.(*ast.Ident)
-	if !ok {
-		return nil, nil, nil
-	}
-
-	if vsIdent.Name != enumName {
-		return nil, nil, nil
-	}
-
-	if len(vs.Values) == 0 || len(vs.Values) != len(vs.Names) {
 		return nil, nil, nil
 	}
 
 	docSuffix := buildEnumDocSuffix(vs.Doc, vs.Names)
 
 	for i, nameIdent := range vs.Names {
-		bl, ok := vs.Values[i].(*ast.BasicLit)
+		value, ok := s.enumMemberValue(pkg, vs, i, nameIdent, enumName)
 		if !ok {
 			continue
 		}
 
-		literalValue := enumBasicLitValue(bl)
-
 		var desc strings.Builder
-		fmt.Fprintf(&desc, "%v %s", literalValue, nameIdent.Name)
+		fmt.Fprintf(&desc, "%v %s", value, nameIdent.Name)
 		desc.WriteString(docSuffix)
 
-		values = append(values, literalValue)
+		values = append(values, value)
 		descriptions = append(descriptions, desc.String())
 		positions = append(positions, nameIdent.Pos())
 	}
 
 	return values, descriptions, positions
+}
+
+// enumMemberValue resolves the value of the i-th name declared by a const spec, when that constant
+// belongs to the enum type enumName.
+//
+// The type-checker is the source of truth: it has already evaluated the constant exactly, so the
+// value arrives resolved whatever shape the source took (`iota`, `1 << 3`, `'a'`, a reference to
+// another constant). Membership is read from the constant's own type, which is what makes the
+// implicit specs of an `iota` block visible.
+//
+// The AST reading below it fires only when the type-checker has no constant for the name — a
+// partially loaded package, where an annotated enum should still contribute what can be read
+// literally rather than vanish. It keeps the pre-types-info preconditions: an explicit type ident
+// on the spec, and one value per name.
+func (s *ScanCtx) enumMemberValue(pkg *packages.Package, vs *ast.ValueSpec, i int, nameIdent *ast.Ident, enumName string) (any, bool) {
+	if cst := constObjectFor(pkg, nameIdent); cst != nil {
+		if !isNamedType(cst.Type(), pkg.PkgPath, enumName) {
+			return nil, false
+		}
+
+		return enumConstantValue(cst.Val())
+	}
+
+	vsIdent, ok := vs.Type.(*ast.Ident)
+	if !ok || vsIdent.Name != enumName {
+		return nil, false
+	}
+
+	if len(vs.Values) == 0 || len(vs.Values) != len(vs.Names) {
+		return nil, false
+	}
+
+	value := enumValue(vs.Values[i])
+
+	return value, value != nil
+}
+
+// constObjectFor returns the type-checked constant declared by nameIdent, or nil when the package
+// carries no type information for it (nil package, no TypesInfo, or a name the type-checker could
+// not resolve in a degraded load).
+func constObjectFor(pkg *packages.Package, nameIdent *ast.Ident) *types.Const {
+	if pkg == nil || pkg.TypesInfo == nil {
+		return nil
+	}
+
+	cst, _ := pkg.TypesInfo.Defs[nameIdent].(*types.Const)
+
+	return cst
+}
+
+// isNamedType reports whether tpe is the named (possibly aliased) type called name, declared by the
+// package at pkgPath.
+//
+// The package is part of the test because a constant declared in the scanned package may well have
+// an IMPORTED type: `const ForeignOne other.Kind = 901`, sitting next to a local `Kind` enum, is a
+// member of neither. The syntactic reading this replaces excluded it structurally — a qualified type
+// is a selector expression, not the bare ident it required — so dropping the package check would
+// silently widen every enum to its same-named neighbours.
+func isNamedType(tpe types.Type, pkgPath, name string) bool {
+	named, ok := types.Unalias(tpe).(*types.Named)
+	if !ok {
+		return false
+	}
+
+	obj := named.Obj()
+
+	return obj.Name() == name && obj.Pkg() != nil && obj.Pkg().Path() == pkgPath
 }
 
 // buildEnumDocSuffix renders the shared doc comment as " <line1> <line2>..." (with a leading single

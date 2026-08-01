@@ -220,6 +220,18 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
   (`types.LookupFieldOrMethod`), never against the emitted names. Placed on the embed (plain field
   names) or on the declaration (dotted embed paths); embeds only. Unresolved / behind-`$ref`
   targets raise Hints. See `internal/builders/schema/README.md#omit`.
+- A `swagger:enum` schema takes its `type`/`format` from the **declared** Go type (`int8` →
+  `integer/int8`, `float32` → `number/float`), never from the parsed const values, and each member is
+  normalised to that type — typing from the first value let the const block's declaration order
+  decide the schema type. Member *values* come from the type-checker
+  (`TypesInfo.Defs[name].(*types.Const).Val()`), never from the literal syntax, and membership is
+  decided per name from the constant's own type — which is what makes `iota` blocks (where only the
+  first spec carries a type and a value) visible at all. So `iota`, expressions (`1 << 3`),
+  references to earlier members, rune literals (`'a'` → 97), `true`/`false` (identifiers, not
+  literals), raw/escaped strings, every integer base and above-`MaxInt64` members all resolve
+  (go-swagger#3412). A literal reader survives only as the degraded-load fallback. See
+  `internal/scanner/README.md#enum-values`, `internal/builders/schema/README.md#enum-typing` and
+  `internal/builders/validations/README.md#enum-const-values`.
 - The scanner works at the AST / `go/types` level — it never executes or compiles scanned code.
 - Parsers never import builders; they write through the interfaces in `internal/ifaces`.
   When adding a new annotation, extend the relevant builder's `taggers.go` rather than reaching

@@ -1429,6 +1429,107 @@ annotation of interest.
 | `classifierNamedStructStrfmt` | `buildNamedStruct` strfmt-first branch | `swagger:strfmt` |
 | `scanFieldDoc` | field-level FieldWalker (`applyFieldCarrier`) | `swagger:ignore`, `swagger:name`, `swagger:strfmt`, `swagger:type` (with the same single-word filter), `swagger:allOf` |
 
+### <a id="enum-typing"></a>Enum typing — the declared Go type wins
+
+`classifierNamedBasic`'s `swagger:enum` arm delegates to
+`applyEnum`, which resolves the schema's `type` / `format` from
+`utitpe` — the enum's **declared** underlying basic type — and then
+normalises every member to it via
+`validations.CoerceConstant`.
+
+This is deliberate, and it is the opposite of what the code did
+before.
+
+**What the scanner loses is the value's width, not the type.** An
+enum member arrives as an `any` holding one of five Go
+representations — `int64`, `uint64`, `float64`, `string`, `bool` —
+because that is what `go/constant` converts to
+(`constant.Int64Val`, `Float64Val`, …). A member of an `int8` enum
+and a member of an `int64` one are both an `int64` in that box;
+nothing about the box says which. The **declared Go type is still
+right there** on the builder side (`utitpe`), and it is the only
+place `format: int8` can come from — so the value is the wrong
+thing to ask.
+
+Typing the schema from `reflect.TypeOf(values[0])` — asking the
+box — therefore:
+
+- collapsed `int8` / `uint16` / `float32` enums to
+  `int64` / `int64` / `double`, while the *same* Go types on a
+  plain field resolved correctly through
+  `resolvers.SwaggerSchemaForType`;
+- made the emitted type depend on the **declaration order** of the
+  const block — a `float64` enum whose first member was written
+  `= 0` (an INT literal) emitted `{type: integer}` while still
+  carrying its fractional members, a schema no validator can
+  satisfy, and reordering the block silently changed the output.
+
+Both call sites (`buildFromDecl`'s named-basic arm and the field
+site) pass the declared `*types.Basic`, so definitions, non-body
+parameters and response headers all get the same treatment. On the
+SimpleSchema targets that means the full set — `in: path` /
+`query` / `header` / `formData`, the `items` of an array-typed one,
+and response headers including their `items` — all carry the
+members with the declared `type` / `format`.
+
+### The underlying type is not always the whole answer
+
+"Declared type" means the declaration, not `Underlying()`. The two
+differ as soon as a type is written **over another named type**:
+
+```go
+type Kind strfmt.UUID          // Underlying() == string. The uuid is gone.
+```
+
+`strfmt.UUID` carries the `swagger:strfmt uuid` annotation, and
+go/types offers no way back to it — `Underlying()` jumps straight
+to the bottom `string`. Without the enum annotation this type
+still emits `{type: string, format: uuid}`, because the ordinary
+declaration path (`buildFromDecl`) resolves `Spec.Type` — the
+right-hand side — rather than the underlying. The enum arm typed
+from the underlying alone, so **annotating a type as an enum cost
+the author their format**, silently.
+
+`applyEnumType` closes that: for a string-domain enum it first
+asks `inheritedStrfmt`, which walks the chain of declarations to
+the right (`Spec.Type`, repeatedly) looking for a
+`swagger:strfmt`, so an indirection several redefinitions long
+resolves like a single one. The walk stops at the basic bottom, at
+a declaration the scan cannot see the source of, or at a repeat.
+Only `swagger:strfmt` is inherited — a type-*changing* annotation
+on an intermediate would contradict the enum's own members rather
+than decorate them — and only onto a string, which is all a strfmt
+can legally decorate.
+
+`basicSchemaType` maps that type to the Swagger value domain from
+go/types' own kind bits (`IsInteger` / `IsFloat` / `IsString` /
+`IsBoolean`) rather than a name table, so `byte` and `rune` need no
+special casing and a domain-less type (complex) yields `""` — the
+cue to leave values untouched.
+
+### A `rune` / `byte` enum is an integer enum, and that is correct
+
+```go
+type Letter rune
+const LetterA Letter = 'a'     // → {type: integer, format: int32, enum: [97]}
+```
+
+An author who writes character literals usually expects
+`enum: ["a"]`, and gets `97`. That surprise is Go's, not ours: a
+scalar `rune` is an `int32` on the wire, so
+`json.Marshal(Letter('a'))` is `97`, and `encoding/json` **refuses**
+to unmarshal `"a"` into that field. A string-typed schema here
+would describe a payload the server rejects — the integer is the
+only faithful answer, and no rule about enums can change it.
+
+The author's remedy is a type whose *wire form* is a string:
+`type Letter string` with `LetterA Letter = "a"`. Left visible
+rather than papered over; the `byte` / `rune` cases in
+`fixtures/bugs/3412/constforms` pin the behaviour.
+
+See [§enum-const-values](../validations/README.md#enum-const-values)
+for the coercion rules on the values themselves.
+
 ---
 
 ## <a id="quirks"></a>§quirks — known behavioural caveats
