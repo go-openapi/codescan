@@ -1,0 +1,229 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Envelope": {
+      "description": "Envelope reaches every pair from a use site. Field names are the lower-camel\ncell ID, so a golden diff names its own cell.",
+      "type": "object",
+      "properties": {
+        "fieldArrayAlias": {
+          "description": "FieldArrayAlias is the array pair, alias half.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8"
+          },
+          "x-go-name": "FieldArrayAlias"
+        },
+        "fieldArrayNamed": {
+          "description": "FieldArrayNamed is the array pair, named half.",
+          "type": "string",
+          "format": "bsonobjectid",
+          "x-go-name": "FieldArrayNamed"
+        },
+        "fieldBasicAlias": {
+          "description": "FieldBasicAlias is the basic pair, alias half, in plain field position.",
+          "type": "string",
+          "x-go-name": "FieldBasicAlias"
+        },
+        "fieldBasicNamed": {
+          "description": "FieldBasicNamed is the basic pair, named half, in plain field position.",
+          "type": "string",
+          "format": "isbn",
+          "x-go-name": "FieldBasicNamed"
+        },
+        "fieldChainAlias": {
+          "description": "FieldChainAlias is the chain pair, alias half.",
+          "type": "string",
+          "format": "ssn",
+          "x-go-name": "FieldChainAlias"
+        },
+        "fieldChainNamed": {
+          "$ref": "#/definitions/StrfmtChainNamed"
+        },
+        "fieldSliceAlias": {
+          "description": "FieldSliceAlias is the slice pair, alias half.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8"
+          },
+          "x-go-name": "FieldSliceAlias"
+        },
+        "fieldSliceNamed": {
+          "description": "FieldSliceNamed is the slice pair, named half.",
+          "type": "string",
+          "format": "byte",
+          "x-go-name": "FieldSliceNamed"
+        },
+        "fieldStructAlias": {
+          "$ref": "#/definitions/PlainTarget"
+        },
+        "fieldStructNamed": {
+          "description": "FieldStructNamed is the struct pair, named half.",
+          "type": "string",
+          "format": "duration",
+          "x-go-name": "FieldStructNamed"
+        },
+        "mapValueBasicAlias": {
+          "description": "MapValueBasicAlias reaches the basic pair's alias half as a map value.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "MapValueBasicAlias"
+        },
+        "mapValueBasicNamed": {
+          "description": "MapValueBasicNamed reaches the basic pair's named half as a map value.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "isbn"
+          },
+          "x-go-name": "MapValueBasicNamed"
+        },
+        "mapValueStructAlias": {
+          "description": "MapValueStructAlias reaches the struct pair's alias half as a map value.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/PlainTarget"
+          },
+          "x-go-name": "MapValueStructAlias"
+        },
+        "mapValueStructNamed": {
+          "description": "MapValueStructNamed reaches the struct pair's named half as a map value.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "duration"
+          },
+          "x-go-name": "MapValueStructNamed"
+        },
+        "pointerBasicAlias": {
+          "description": "PointerBasicAlias reaches the basic pair's alias half through a pointer.",
+          "type": "string",
+          "x-go-name": "PointerBasicAlias"
+        },
+        "pointerBasicNamed": {
+          "description": "PointerBasicNamed reaches the basic pair's named half through a pointer.",
+          "type": "string",
+          "format": "isbn",
+          "x-go-name": "PointerBasicNamed"
+        },
+        "pointerStructAlias": {
+          "$ref": "#/definitions/PlainTarget"
+        },
+        "pointerStructNamed": {
+          "description": "PointerStructNamed reaches the struct pair's named half through a pointer.",
+          "type": "string",
+          "format": "duration",
+          "x-go-name": "PointerStructNamed"
+        },
+        "sliceElemBasicAlias": {
+          "description": "SliceElemBasicAlias reaches the basic pair's alias half as a slice element.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "SliceElemBasicAlias"
+        },
+        "sliceElemBasicNamed": {
+          "description": "SliceElemBasicNamed reaches the basic pair's named half as a slice element.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "isbn"
+          },
+          "x-go-name": "SliceElemBasicNamed"
+        },
+        "sliceElemStructAlias": {
+          "description": "SliceElemStructAlias reaches the struct pair's alias half as a slice element.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlainTarget"
+          },
+          "x-go-name": "SliceElemStructAlias"
+        },
+        "sliceElemStructNamed": {
+          "description": "SliceElemStructNamed reaches the struct pair's named half as a slice element.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "duration"
+          },
+          "x-go-name": "SliceElemStructNamed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "EnvelopeModeled": {
+      "type": "object",
+      "title": "EnvelopeModeled reaches the model-annotated pairs from a use site.",
+      "properties": {
+        "modeledBasicAlias": {
+          "$ref": "#/definitions/ModeledBasicAlias"
+        },
+        "modeledBasicNamed": {
+          "$ref": "#/definitions/ModeledBasicNamed"
+        },
+        "modeledStructAlias": {
+          "$ref": "#/definitions/ModeledStructAlias"
+        },
+        "modeledStructNamed": {
+          "$ref": "#/definitions/ModeledStructNamed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "ModeledBasicAlias": {
+      "description": "ModeledBasicAlias is the basic pair's alias half WITH a model annotation — the\nannotation that stops buildAlias dissolving at the use site (schema.go:426).",
+      "type": "string",
+      "format": "isbn",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "ModeledBasicNamed": {
+      "type": "string",
+      "format": "isbn",
+      "title": "ModeledBasicNamed is the basic pair's named half WITH a model annotation.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "ModeledStructAlias": {
+      "type": "string",
+      "format": "duration",
+      "title": "ModeledStructAlias is the struct pair's alias half WITH a model annotation.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "ModeledStructNamed": {
+      "type": "string",
+      "format": "duration",
+      "title": "ModeledStructNamed is the struct pair's named half WITH a model annotation.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "PlainTarget": {
+      "description": "It carries no format annotation of its own, so any format on the pair's members\ncan only come from the pair's own declaration.",
+      "type": "object",
+      "title": "PlainTarget is an unannotated struct used as the RHS of the struct-kind pair.",
+      "properties": {
+        "left": {
+          "description": "Left is a plain field, present so the struct has observable content when\nthe format is NOT applied.",
+          "type": "string",
+          "x-go-name": "Left"
+        },
+        "right": {
+          "description": "Right is a plain field.",
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "Right"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    },
+    "StrfmtChainNamed": {
+      "description": "It carries no annotation itself: the format must be inherited from\nBaseFormatted, one declaration to the right (inheritedStrfmt).",
+      "type": "string",
+      "format": "ssn",
+      "title": "StrfmtChainNamed is a named type declared over an ALREADY-annotated named type.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-core"
+    }
+  }
+}

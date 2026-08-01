@@ -1,0 +1,83 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/simple": {
+      "get": {
+        "tags": [
+          "symmetry"
+        ],
+        "operationId": "simpleOp",
+        "parameters": [
+          {
+            "type": "string",
+            "format": "isbn",
+            "x-go-name": "QueryBasicNamed",
+            "description": "QueryBasicNamed is the basic pair's named half in query position.",
+            "name": "queryBasicNamed",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "QueryBasicAlias",
+            "description": "QueryBasicAlias is the basic pair's alias half in query position.",
+            "name": "queryBasicAlias",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "format": "byte",
+            "x-go-name": "QuerySliceNamed",
+            "description": "QuerySliceNamed is the slice pair's named half in query position.",
+            "name": "querySliceNamed",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "uint8"
+            },
+            "x-go-name": "QuerySliceAlias",
+            "description": "QuerySliceAlias is the slice pair's alias half in query position.",
+            "name": "querySliceAlias",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/simpleResponse"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "simpleResponse": {
+      "description": "SimpleResponse carries the response-header cells. Non-body fields of a\nresponse struct become headers, which are SimpleSchema locations too.",
+      "headers": {
+        "headerBasicAlias": {
+          "type": "string",
+          "description": "HeaderBasicAlias is the basic pair's alias half in header position."
+        },
+        "headerBasicNamed": {
+          "type": "string",
+          "format": "isbn",
+          "description": "HeaderBasicNamed is the basic pair's named half in header position."
+        },
+        "headerSliceAlias": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8"
+          },
+          "description": "HeaderSliceAlias is the slice pair's alias half in header position."
+        },
+        "headerSliceNamed": {
+          "type": "string",
+          "format": "byte",
+          "description": "HeaderSliceNamed is the slice pair's named half in header position."
+        }
+      }
+    }
+  }
+}
