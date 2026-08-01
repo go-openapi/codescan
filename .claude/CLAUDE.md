@@ -37,7 +37,7 @@ to builders without direct coupling.
 | `scan_context.go` | `ScanCtx` / `NewScanCtx` — loads Go packages via `golang.org/x/tools/go/packages` |
 | `index.go` | `TypeIndex` — node classification (meta/route/operation/model/parameters/response) |
 | `declaration.go` | `EntityDecl` — wraps a type/value declaration with its enclosing file/package |
-| `enum_value.go` | `enumBasicLitValue` — converts a `const Foo Kind = "bar"` RHS into its runtime value (enum discovery) |
+| `enum_value.go` | `enumLiteralValue` — converts a `const Foo Kind = "bar"` RHS into its runtime value (enum discovery), unwrapping signed numeric literals (`-1` is a unary minus applied to `1`) and reporting unsupported/unparseable forms so the caller skips them rather than emitting a nil member; `enumBasicLitValue` handles the unsigned case |
 | `provenance.go` | `Provenance` — ties a spec JSON pointer to the source position of the Go construct that produced it; emitted via `Options.OnProvenance` (cross-ref linker, source side) |
 | `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |
 

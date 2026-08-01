@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -699,6 +700,159 @@ func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 		require.True(t, ok)
 		assert.EqualT(t, int64(7), intVal)
 		assert.EqualT(t, "7 X", descs[0])
+	})
+
+	// go-swagger#3412: Go models `-1` as a unary minus applied to the literal `1`, so a signed
+	// const reaches this collector as *ast.UnaryExpr and used to be dropped from the enum.
+	t.Run("ValueSpec with negative integer literal keeps the sign", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("PanLeft")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.UnaryExpr{
+				Op: token.SUB,
+				X:  &ast.BasicLit{Kind: token.INT, Value: "1"},
+			}},
+		}
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		intVal, ok := values[0].(int64)
+		require.True(t, ok, "a signed INT literal must stay an int64")
+		assert.EqualT(t, int64(-1), intVal)
+		assert.EqualT(t, "-1 PanLeft", descs[0])
+	})
+
+	t.Run("ValueSpec with explicitly positive integer literal drops the plus", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("PanRight")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.UnaryExpr{
+				Op: token.ADD,
+				X:  &ast.BasicLit{Kind: token.INT, Value: "1"},
+			}},
+		}
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		intVal, ok := values[0].(int64)
+		require.True(t, ok)
+		assert.EqualT(t, int64(1), intVal)
+		assert.EqualT(t, "1 PanRight", descs[0])
+	})
+
+	t.Run("ValueSpec with negative float literal keeps the sign", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("Below")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.UnaryExpr{
+				Op: token.SUB,
+				X:  &ast.BasicLit{Kind: token.FLOAT, Value: "1.5"},
+			}},
+		}
+		values, _, _ := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		floatVal, ok := values[0].(float64)
+		require.True(t, ok)
+		assert.EqualT(t, -1.5, floatVal)
+	})
+
+	t.Run("ValueSpec with most negative int64 round-trips", func(t *testing.T) {
+		// The sign must be folded into the literal text before parsing: 9223372036854775808 on its
+		// own overflows an int64.
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("Min")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.UnaryExpr{
+				Op: token.SUB,
+				X:  &ast.BasicLit{Kind: token.INT, Value: "9223372036854775808"},
+			}},
+		}
+		values, _, _ := sctx.findEnumValue(spec, "Foo")
+		require.Len(t, values, 1)
+		intVal, ok := values[0].(int64)
+		require.True(t, ok)
+		assert.EqualT(t, int64(math.MinInt64), intVal)
+	})
+
+	t.Run("ValueSpec with non-sign unary operator skips that position", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("X")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.UnaryExpr{
+				Op: token.XOR,
+				X:  &ast.BasicLit{Kind: token.INT, Value: "1"},
+			}},
+		}
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		assert.Empty(t, values)
+		assert.Empty(t, descs)
+	})
+
+	t.Run("ValueSpec with signed non-numeric literal skips that position", func(t *testing.T) {
+		// `-'a'` is legal Go but not a meaningful enum entry.
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("X")},
+			Type:  ast.NewIdent("Foo"),
+			Values: []ast.Expr{&ast.UnaryExpr{
+				Op: token.SUB,
+				X:  &ast.BasicLit{Kind: token.CHAR, Value: `'a'`},
+			}},
+		}
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		assert.Empty(t, values)
+		assert.Empty(t, descs)
+	})
+
+	// An integer literal is read exactly as Go's scanner wrote it, so every form Go accepts for a
+	// const carries its real value into the enum — signed or not.
+	t.Run("ValueSpec accepts every integer literal form Go writes", func(t *testing.T) {
+		for _, tc := range []struct {
+			name     string
+			literal  string
+			negative bool
+			expected int64
+		}{
+			{name: "hexadecimal", literal: "0x10", expected: 16},
+			{name: "negative hexadecimal", literal: "0x10", negative: true, expected: -16},
+			{name: "binary", literal: "0b1010", expected: 10},
+			{name: "negative binary", literal: "0b1010", negative: true, expected: -10},
+			{name: "octal", literal: "0o17", expected: 15},
+			{name: "negative octal", literal: "0o17", negative: true, expected: -15},
+			// Go reads a leading zero as octal, so `017` is 15 — not 17.
+			{name: "legacy octal", literal: "017", expected: 15},
+			{name: "negative legacy octal", literal: "017", negative: true, expected: -15},
+			{name: "digit separators", literal: "1_000", expected: 1000},
+			{name: "negative digit separators", literal: "1_000", negative: true, expected: -1000},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				var value ast.Expr = &ast.BasicLit{Kind: token.INT, Value: tc.literal}
+				if tc.negative {
+					value = &ast.UnaryExpr{Op: token.SUB, X: value}
+				}
+				spec := &ast.ValueSpec{
+					Names:  []*ast.Ident{ast.NewIdent("X")},
+					Type:   ast.NewIdent("Foo"),
+					Values: []ast.Expr{value},
+				}
+				values, _, _ := sctx.findEnumValue(spec, "Foo")
+				require.Len(t, values, 1)
+				intVal, ok := values[0].(int64)
+				require.True(t, ok, "an INT literal must stay an int64")
+				assert.EqualT(t, tc.expected, intVal)
+			})
+		}
+	})
+
+	// A const whose value cannot be represented is skipped outright: emitting it as a nil enum
+	// member would put a null in the spec, and go-openapi/spec reflects on the first member.
+	t.Run("ValueSpec with unrepresentable integer literal skips that position", func(t *testing.T) {
+		spec := &ast.ValueSpec{
+			Names: []*ast.Ident{ast.NewIdent("TooBig")},
+			Type:  ast.NewIdent("Foo"),
+			// One past math.MaxInt64.
+			Values: []ast.Expr{&ast.BasicLit{Kind: token.INT, Value: "9223372036854775808"}},
+		}
+		values, descs, _ := sctx.findEnumValue(spec, "Foo")
+		assert.Empty(t, values)
+		assert.Empty(t, descs)
 	})
 }
 

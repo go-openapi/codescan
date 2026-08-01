@@ -25,6 +25,13 @@ collects the type's `const` declarations.
   point at it via `$ref` — the general `swagger:model ⇒ definition + $ref`
   rule applied to enums.
 
+Only `const` declarations with a literal right-hand side are collected:
+string, integer and float literals, including signed ones (`-1`, `+1`).
+Integers are read in whatever form Go accepts — decimal, `0x` hexadecimal,
+`0b` binary, `0o` and legacy `0` octal, with optional `_` digit separators.
+Constants with no explicit literal — most notably `iota`-derived ones —
+are not collected, and neither is a value too large to represent.
+
 If `swagger:enum` names a type for which no matching `const` values are
 found, the enum semantics are dropped and the type falls through to
 ordinary type resolution (typically a plain `$ref`, no `enum` array).

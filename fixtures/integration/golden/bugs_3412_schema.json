@@ -1,0 +1,25 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "ControlParams": {
+      "type": "object",
+      "title": "ControlParams are PTZ control parameters.",
+      "properties": {
+        "pan": {
+          "description": "specifies the direction of the pan.\n-1 PanLeft pans to the left.\n0 NoPan does not pan.\n1 PanRight pans to the right.",
+          "type": "integer",
+          "format": "int64",
+          "enum": [
+            -1,
+            0,
+            1
+          ],
+          "x-go-enum-desc": "-1 PanLeft pans to the left.\n0 NoPan does not pan.\n1 PanRight pans to the right.",
+          "x-go-name": "Pan"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/bugs/3412"
+    }
+  }
+}

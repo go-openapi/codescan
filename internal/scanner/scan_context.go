@@ -932,6 +932,10 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 // — each sharing the spec's doc comment.
 // The Go compiler guarantees len(Names) == len(Values) when Values is non-empty, so out-of-parity
 // specs are ignored defensively.
+//
+// Values are collected from literals only: a signed numeric literal is unwrapped, since Go models
+// `-1` as a unary operator applied to `1` rather than as a negative literal. Any other RHS form
+// (identifier — including iota-derived constants — call, arithmetic) is skipped.
 func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, descriptions []string, positions []token.Pos) {
 	vs, ok := spec.(*ast.ValueSpec)
 	if !ok {
@@ -954,12 +958,10 @@ func (s *ScanCtx) findEnumValue(spec ast.Spec, enumName string) (values []any, d
 	docSuffix := buildEnumDocSuffix(vs.Doc, vs.Names)
 
 	for i, nameIdent := range vs.Names {
-		bl, ok := vs.Values[i].(*ast.BasicLit)
+		literalValue, ok := enumLiteralValue(vs.Values[i])
 		if !ok {
 			continue
 		}
-
-		literalValue := enumBasicLitValue(bl)
 
 		var desc strings.Builder
 		fmt.Fprintf(&desc, "%v %s", literalValue, nameIdent.Name)
