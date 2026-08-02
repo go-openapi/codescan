@@ -174,6 +174,15 @@ func (t tagOptions) Name() string {
 	return t[0]
 }
 
+// jsonTagIgnores reports whether a json struct tag skips the field entirely.
+//
+// encoding/json compares the WHOLE tag to "-": `json:"-"` ignores the field, while `json:"-,"` and
+// `json:"-,omitempty"` name it literally "-". Splitting on the comma first conflates the two, which
+// dropped a field Go does marshal.
+func jsonTagIgnores(st reflect.StructTag) bool {
+	return st.Get("json") == "-"
+}
+
 // ParseFieldTag derives the emitted name and the encoding/json directives for a struct field.
 //
 // The name is sourced from the first struct-tag type in nameTags that supplies a usable name — a
@@ -221,7 +230,7 @@ func ParseFieldTag(field *ast.Field, goName string, nameTags []string) (name str
 		isString = IsFieldStringable(field.Type)
 	}
 	omitEmpty = jsonParts.Contain("omitempty")
-	if jsonParts.Name() == "-" {
+	if jsonTagIgnores(st) {
 		return name, true, isString, omitEmpty, nil
 	}
 
@@ -229,10 +238,19 @@ func ParseFieldTag(field *ast.Field, goName string, nameTags []string) (name str
 	// A rename can't name N members of a multi-name group, so each keeps its own Go name.
 	if len(field.Names) <= 1 {
 		for _, tagType := range nameTags {
-			if candidate := tagOptions(strings.Split(st.Get(tagType), ",")).Name(); candidate != "" && candidate != "-" {
-				name = candidate
-				break
+			candidate := tagOptions(strings.Split(st.Get(tagType), ",")).Name()
+			if candidate == "" {
+				continue
 			}
+			// "-" is a legitimate name only from the json tag, and only because the whole-tag ignore case
+			// returned above: `json:"-,"` names the field literally "-". For any other tag type there is
+			// no encoding rule to appeal to, so "-" stays "no usable name".
+			if candidate == "-" && tagType != "json" {
+				continue
+			}
+			name = candidate
+
+			break
 		}
 	}
 
@@ -255,9 +273,11 @@ func ExplicitJSONName(field *ast.Field) string {
 	if err != nil || strings.TrimSpace(tv) == "" {
 		return ""
 	}
-	name := tagOptions(strings.Split(reflect.StructTag(tv).Get("json"), ",")).Name()
-	if name == "-" {
+	st := reflect.StructTag(tv)
+	if jsonTagIgnores(st) {
 		return ""
 	}
-	return name
+
+	// A remaining "-" is the literal name (`json:"-,"`), not an ignore.
+	return tagOptions(strings.Split(st.Get("json"), ",")).Name()
 }

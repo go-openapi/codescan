@@ -21,6 +21,7 @@ trade-offs, and known quirks live here.
 - [§embedded](#embedded) — embed routing, struct/interface specials asymmetry
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
 - [§omit](#omit) — `swagger:omit` — the author's pre-filter on promoted fields
+- [§json-dash](#json-dash) — what `json:"-"` does, and the two shapes it is confused with
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
 - [§traceability](#traceability) — `x-go-name` / `x-go-package` / `x-go-type` origin extensions and `EmitXGoType`
@@ -717,6 +718,41 @@ zero-content interfaces invisible at the allOf seam — they don't
 contribute an `{}` entry to the outer schema.
 
 ---
+
+## <a id="json-dash"></a>§json-dash — `json:"-"` is not a way to hide a promoted field
+
+The emitted property set must match what `encoding/json` puts on the wire. Two
+readings of the `-` tag used to diverge from it.
+
+**A `-` field is ignored, not shadowing.** encoding/json drops such a field
+entirely — it never enters the name set — so re-declaring a promoted field with
+`json:"-"` does **not** hide the embedded one, which Go keeps marshalling:
+
+```go
+type Outer struct { Base; Age int32 `json:"-"` }   // Base has Age int32 `json:"age"`
+
+json.Marshal → {"id":1,"name":"n","age":42}        // age survives, from Base
+```
+
+The builder used to delete the promoted property here, which understated the
+wire. It no longer does. The intent is real, though — an author writing this
+wants the field gone — so the shape raises `scan.shadowed-embed-field`, pointing
+at [`swagger:omit`](#omit), which drops it for real. Contrast with a re-declaration
+under a *real* name, where Go's depth rule does apply and the outer field wins.
+
+Tagging the **embed itself** `json:"-"` is a different act and does drop the whole
+embed; that always worked.
+
+**The whole tag must be `-` to ignore.** encoding/json compares the entire tag,
+so `json:"-,"` and `json:"-,omitempty"` name the field literally `-`. Splitting on
+the comma first conflates the two and dropped a field Go marshals; `jsonTagIgnores`
+in `resolvers` now does the whole-tag comparison, and `-` is accepted as a name
+from the `json` tag only (no other tag type has an encoding rule to appeal to).
+
+**Witness.** `fixtures/enhancements/json-tag-fidelity` is differential: the fixture
+module marshals its own types and commits the key sets as `wire.golden.json`, and
+`TestJSONTagFidelity` asserts the emitted property sets equal them. Neither side
+hard-codes an expectation — the oracle is encoding/json itself.
 
 ## <a id="omit"></a>§omit — `swagger:omit`, the author's pre-filter on promoted fields
 

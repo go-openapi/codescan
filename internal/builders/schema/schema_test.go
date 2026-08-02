@@ -51,7 +51,13 @@ func TestBuilder(t *testing.T) {
 		schema.Description,
 	)
 	assert.Len(t, schema.Required, 3)
-	assert.Len(t, schema.Properties, 12)
+	// 13, not 12: `json:"-,omitempty"` on IgnoredOther names the field literally "-" rather than
+	// ignoring it — encoding/json compares the WHOLE tag to "-". Its sibling `json:"-"` on Ignored is
+	// a true ignore and contributes nothing.
+	assert.Len(t, schema.Properties, 13)
+	dash, hasDash := schema.Properties["-"]
+	assert.TrueT(t, hasDash, `json:"-,omitempty" must emit a property named "-"`)
+	assert.EqualT(t, "IgnoredOther", dash.Extensions["x-go-name"])
 
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
 	prop, ok := schema.Properties["id"]
@@ -509,6 +515,17 @@ func TestArrayOfPointers(t *testing.T) {
 	scantest.AssertProperty(t, &schema, "array", "cars", "", "Cars")
 }
 
+// TestOverridingOneIgnore pins the wire-faithful reading of a promoted field re-declared with
+// `json:"-"`.
+//
+// encoding/json ignores a `-` field ENTIRELY: it never enters the name set, so it does not shadow
+// the `age` promoted from the embed, which Go still marshals. The schema describes the wire, so
+// `age` stays. This test previously asserted 2 properties — the schema understated the wire, and
+// the assertion recorded that as the contract.
+//
+// An author who wants the property gone wants `swagger:omit` on the embed; the scan raises
+// `scan.shadowed-embed-field` pointing there. Differential coverage against encoding/json itself
+// lives in TestJSONTagFidelity.
 func TestOverridingOneIgnore(t *testing.T) {
 	ctx := scantest.LoadClassificationPkgsCtx(t)
 	decl := getClassificationModel(ctx, "OverridingOneIgnore")
@@ -521,7 +538,8 @@ func TestOverridingOneIgnore(t *testing.T) {
 
 	scantest.AssertProperty(t, &schema, "integer", "id", "int64", "ID")
 	scantest.AssertProperty(t, &schema, "string", "name", "", "Name")
-	assert.Len(t, schema.Properties, 2)
+	scantest.AssertProperty(t, &schema, "integer", "age", "int32", "Age")
+	assert.Len(t, schema.Properties, 3)
 }
 
 type collectionAssertions struct {
