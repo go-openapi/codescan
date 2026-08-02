@@ -351,7 +351,15 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 		return nil
 	}
 	if resolvers.IsStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameter definition: %w", o.Name(), ErrParameters)
+		// An `error` has no meaning as a parameter, and the schema builder's rendering of it
+		// (`{type: string}`) would be a lie about what a client should send. Dropping the field is the
+		// right outcome — a struct shared between a parameter set and a response should lose it on the
+		// parameter side rather than carry it.
+		//
+		// It used to abort the whole scan. Skip-with-a-diagnostic is the house rule, and its sibling
+		// two arms down already follows it for a Go type with no SimpleSchema form (go-swagger#2804);
+		// this guard predates that and never got the same treatment.
+		return errUnrepresentableParam
 	}
 	resolvers.MustNotBeABuiltinType(o)
 

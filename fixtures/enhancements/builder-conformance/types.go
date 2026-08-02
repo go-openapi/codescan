@@ -92,6 +92,25 @@ type RawAlias = json.RawMessage
 // inline element, pointer, plain basic — so that a factorization of those arms is
 // guarded in all three positions rather than by goldens alone.
 
+// EmailsNamed is a named STRING slice carrying a NON-special format.
+//
+// This is the pinned divergence. The element-driven rule (see
+// common.ApplyArrayLikeStrfmt) asks whether the ELEMENT makes the sequence
+// string-like: `byte` and `rune` do, so a format describes the whole value;
+// `string` does not, so the format describes each element. The schema builder
+// applies that rule. The parameters and responses builders short-circuit on a
+// local `strfmtFromDoc` helper that predates it and writes
+// `Typed("string", format)` unconditionally, claiming the value IS one email
+// when the Go type is a list of them.
+//
+// swagger:strfmt email
+type EmailsNamed []string
+
+// CodesNamed is the array flavour of the same divergence.
+//
+// swagger:strfmt email
+type CodesNamed [4]string
+
 // Plain is a struct reached directly as a field.
 type Plain struct {
 	// Left is a plain property.
@@ -153,6 +172,12 @@ type ModelHost struct {
 
 	// Basic is the plain-basic arm.
 	Basic int32 `json:"basic"`
+
+	// Emails is the pinned slice+non-special-format divergence.
+	Emails EmailsNamed `json:"emails"`
+
+	// Codes is the array flavour of the same.
+	Codes CodesNamed `json:"codes"`
 }
 
 // ParamsFmt reaches FmtNamed as a body parameter.
@@ -510,3 +535,53 @@ type RespInline struct {
 //
 //	200: respInline
 func HandlerInline() {}
+
+// ParamsEmails reaches the emails subject as a body parameter.
+//
+// swagger:parameters confEmails
+type ParamsEmails struct {
+	// in: body
+	Body EmailsNamed `json:"body"`
+}
+
+// RespEmails reaches the emails subject as a response body.
+//
+// swagger:response respEmails
+type RespEmails struct {
+	// in: body
+	Body EmailsNamed `json:"body"`
+}
+
+// HandlerEmails binds the emails subject.
+//
+// swagger:route POST /emails conf confEmails
+//
+// Responses:
+//
+//	200: respEmails
+func HandlerEmails() {}
+
+// ParamsCodes reaches the codes subject as a body parameter.
+//
+// swagger:parameters confCodes
+type ParamsCodes struct {
+	// in: body
+	Body CodesNamed `json:"body"`
+}
+
+// RespCodes reaches the codes subject as a response body.
+//
+// swagger:response respCodes
+type RespCodes struct {
+	// in: body
+	Body CodesNamed `json:"body"`
+}
+
+// HandlerCodes binds the codes subject.
+//
+// swagger:route POST /codes conf confCodes
+//
+// Responses:
+//
+//	200: respCodes
+func HandlerCodes() {}

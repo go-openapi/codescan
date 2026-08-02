@@ -43,6 +43,16 @@ type ViolatingParams struct {
 	Unrepresentable struct {
 		Left string `json:"left"`
 	} `json:"unrepresentable"`
+
+	// Errored is case 3 — an `error` has no meaning as a parameter, so the
+	// field is dropped rather than described. A struct shared between a
+	// parameter set and a response should lose it on the parameter side.
+	//
+	// This used to abort the whole scan; skip-with-a-diagnostic is the house
+	// rule, and the sibling above already followed it.
+	//
+	// in: query
+	Errored error `json:"errored"`
 }
 
 // DoViolation handles the violating route.

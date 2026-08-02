@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -57,7 +58,7 @@ func TestCoverage_SimpleSchemaViolation(t *testing.T) {
 	require.Contains(t, doc.Paths.Paths, "/violation")
 	op := doc.Paths.Paths["/violation"].Get
 	require.NotNil(t, op)
-	require.Len(t, op.Parameters, 2)
+	require.Len(t, op.Parameters, 2, "the error-typed field is dropped, not described")
 
 	byName := make(map[string]oaispec.Parameter, len(op.Parameters))
 	for _, p := range op.Parameters {
@@ -71,6 +72,19 @@ func TestCoverage_SimpleSchemaViolation(t *testing.T) {
 	assert.Equal(t, "query", bad.In, "in: query preserved")
 	assert.Equal(t, "string", bad.Type, "the Go-derived type must survive a refused override")
 	assert.Empty(t, bad.Ref.String(), "Ref is forbidden under SimpleSchema")
+
+	// Case 3 — the error-typed field is gone entirely, and said so.
+	_, hasErrored := byName["errored"]
+	assert.False(t, hasErrored, "an error-typed parameter must be dropped")
+	var saidSo bool
+	for _, d := range got {
+		if d.Code == grammar.CodeUnsupportedInSimpleSchema && strings.Contains(d.Message, "errored") {
+			saidSo = true
+
+			break
+		}
+	}
+	assert.True(t, saidSo, "dropping the error-typed parameter must be reported; got %v", got)
 
 	// Case 2 — nothing to fall back to, so the target is wiped.
 	unrep, ok := byName["unrepresentable"]

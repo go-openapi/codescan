@@ -71,6 +71,30 @@ func TestBuilderConformance(t *testing.T) {
 		{prop: "inline", path: "/inline", response: "respInline", note: "slice arm with an inline element"},
 		{prop: "ptr", path: "/ptr", response: "respPtr"},
 		{prop: "basic", path: "/basic", response: "respBasic"},
+
+		// PINNED DIVERGENCES — see knownBroken below.
+		{
+			prop: "emails", path: "/emails", response: "respEmails",
+			note: "named []string + non-special format: schema puts it on items, the other two on the whole schema",
+		},
+		{
+			prop: "codes", path: "/codes", response: "respCodes",
+			note: "array flavour of the same",
+		},
+	}
+
+	// Cells where the builders are known to disagree today. Each entry is the fix's worklist, and the
+	// assertion runs in BOTH directions: a listed cell that starts agreeing fails too, so the list
+	// cannot rot into a stale TODO.
+	//
+	// The parameters and responses builders short-circuit `buildNamedField` on a local
+	// `strfmtFromDoc` helper that writes `Typed("string", format)` unconditionally. It predates the
+	// element-driven items-vs-whole rule the schema builder applies, so a format on a `[]string`
+	// lands on the whole schema instead of on its items — the emitted spec says "one email" where the
+	// Go type is a list of them.
+	knownBroken := map[string]string{
+		"emails": "strfmtFromDoc short-circuit bypasses the element-driven rule (Q39 tier 3)",
+		"codes":  "strfmtFromDoc short-circuit bypasses the element-driven rule (Q39 tier 3)",
 	}
 
 	model := doc.Definitions["ModelHost"].Properties
@@ -90,8 +114,20 @@ func TestBuilderConformance(t *testing.T) {
 			asParam := bodyParamSignature(t, doc, s.path)
 			asResponse := responseBodySignature(t, doc, s.response)
 
-			verdict := "OK"
-			if control != asParam || control != asResponse {
+			paramAgrees := control == asParam
+			responseAgrees := control == asResponse
+			agrees := paramAgrees && responseAgrees
+			reason, pinned := knownBroken[s.prop]
+
+			var verdict string
+			switch {
+			case agrees && pinned:
+				verdict = "UNPINNED — remove it from knownBroken"
+			case agrees:
+				verdict = "OK"
+			case pinned:
+				verdict = "PINNED(Q39)"
+			default:
 				verdict = "DIVERGES"
 			}
 			if s.note != "" {
@@ -99,6 +135,12 @@ func TestBuilderConformance(t *testing.T) {
 			}
 			fmt.Fprintf(&ledger, "%-8s %-26s %-26s %-26s %s\n", s.prop, control, asParam, asResponse, verdict)
 
+			if pinned {
+				assert.False(t, agrees,
+					"%s: pinned as broken (%s) but the builders now agree — remove it", s.prop, reason)
+
+				return
+			}
 			assert.Equal(t, control, asParam,
 				"the parameters builder must render this shape as the schema builder does")
 			assert.Equal(t, control, asResponse,
@@ -107,6 +149,10 @@ func TestBuilderConformance(t *testing.T) {
 	}
 
 	t.Log(ledger.String())
+
+	// The comparison above only asks whether the three builders agree; a wrong answer they all share
+	// would pass it. The golden makes every subject's emitted spec reviewable on its own.
+	scantest.CompareOrDumpJSON(t, doc, "enhancements_builder_conformance.json")
 }
 
 // bodyParamSignature renders the body parameter of the operation on path.
