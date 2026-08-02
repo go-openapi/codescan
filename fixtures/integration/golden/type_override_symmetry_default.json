@@ -93,7 +93,9 @@
     "AllOfScalarNamed": {
       "title": "AllOfScalarNamed composes the scalar pair's named half as an allOf member.",
       "allOf": [
-        {},
+        {
+          "type": "string"
+        },
         {
           "type": "object",
           "properties": {

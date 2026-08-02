@@ -508,10 +508,8 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	// PkgForType-miss catches types we can't anchor to a scanned package (predeclared `comparable`,
 	// generic type params, compiler-internal shapes).
 	//
-	// Complementary to the UnsupportedBuiltin guard above; also yields `pkg` for the Basic classifier
-	// below.
-	pkg, found := s.Ctx.PkgForType(titpe)
-	if !found {
+	// Complementary to the UnsupportedBuiltin guard above.
+	if _, found := s.Ctx.PkgForType(titpe); !found {
 		return nil
 	}
 
@@ -550,13 +548,23 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 		return s.buildFromType(titpe.Underlying(), target)
 	}
 
+	// The shape-aware half of the classifier cascade, shared with the composition arm
+	// (buildNamedAllOf) so the two cannot answer a `swagger:strfmt` / `swagger:enum` differently.
+	// Skipped for a swagger:model type, whose overrides ride on its own definition.
+	if !refModel {
+		if handled, recurse := s.applyNamedShapeClassifier(cmt, titpe, target); handled {
+			if recurse != nil {
+				return recurse()
+			}
+
+			return nil
+		}
+	}
+
 	// Underlying-shape table.
 	// See [§dispatch-table](./README.md#dispatch-table).
 	switch utitpe := titpe.Underlying().(type) {
 	case *types.Struct:
-		if !refModel && s.classifierNamedStructStrfmt(cmt, target) {
-			return nil
-		}
 		return s.resolveRefOr(tio, target, nil)
 
 	case *types.Interface:
@@ -567,17 +575,14 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 			s.warnUnsupportedGoType("buildNamedType", tio)
 			return nil
 		}
-		if !refModel && s.classifierNamedBasic(cmt, pkg, titpe, utitpe, target) {
-			return nil
-		}
 		return s.resolveRefOr(tio, target, func() error {
 			return resolvers.SwaggerSchemaForType(utitpe.String(), target)
 		})
 
 	case *types.Array:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, refModel)
+		return s.buildNamedArrayLike(tio, utitpe.Elem(), target)
 	case *types.Slice:
-		return s.buildNamedArrayLike(tio, cmt, utitpe.Elem(), target, refModel)
+		return s.buildNamedArrayLike(tio, utitpe.Elem(), target)
 
 	case *types.Map:
 		return s.resolveRefOr(tio, target, nil)
@@ -588,21 +593,11 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	}
 }
 
-// buildNamedArrayLike is the unified Array/Slice arm. elem drives the items-vs-whole decision for
-// a `swagger:strfmt` (see common.ApplyArrayLikeStrfmt). isModel skips the inline override
-// classifier so a swagger:model array/slice type is referenced by $ref (its override schema lives
-// on its own definition).
-func (s *Builder) buildNamedArrayLike(tio *types.TypeName, cmt *ast.CommentGroup, elem types.Type, tgt ifaces.SwaggerTypable, isModel bool) error {
-	if !isModel {
-		if handled, recurse := s.classifierNamedArrayLike(cmt, tgt, elem); handled {
-			if recurse {
-				defer s.descend("items")()
-				return s.buildFromType(elem, tgt.Items())
-			}
-			return nil
-		}
-	}
-
+// buildNamedArrayLike is the unified Array/Slice arm.
+//
+// The author's classifiers ran in applyNamedShapeClassifier before this point, so what remains is
+// the $ref-or-inline decision and the items build.
+func (s *Builder) buildNamedArrayLike(tio *types.TypeName, elem types.Type, tgt ifaces.SwaggerTypable) error {
 	return s.resolveRefOr(tio, tgt, func() error {
 		defer s.descend("items")()
 		return s.buildFromType(elem, tgt.Items())

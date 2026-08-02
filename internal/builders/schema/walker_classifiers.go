@@ -473,6 +473,71 @@ func (s *Builder) classifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, 
 // — checks the alias's target type's docstring for `swagger:strfmt`.
 //
 // On match writes `{string, <format>}` to schema and returns true.
+// applyNamedShapeClassifier runs the author's classifier annotations that depend on a named type's
+// UNDERLYING shape: `swagger:strfmt` for a struct, `swagger:strfmt` / `swagger:enum` for a basic,
+// and the element-driven `swagger:strfmt` / `swagger:type` for an array or slice.
+//
+// handled reports that the classifiers produced the schema; recurse is non-nil when one of them
+// asked for the type to be rebuilt rather than resolved here.
+//
+// This is the shape-aware half of the cascade, and the reason it is a function rather than three
+// lines inside a switch: the composition arm needs the same answers as the field dispatch, and the
+// copy it used to keep — `classifierAliasTargetStrfmt` — is shape-BLIND. That copy writes
+// `Typed("string", format)` whatever the underlying is, so a `[]string` annotated `email` composed
+// into an allOf claimed the member IS an email address rather than a list of them, and a
+// `swagger:enum` reached it not at all.
+func (s *Builder) applyNamedShapeClassifier(
+	cg *ast.CommentGroup, titpe *types.Named, tgt ifaces.SwaggerTypable,
+) (handled bool, recurse func() error) {
+	switch utitpe := titpe.Underlying().(type) {
+	case *types.Struct:
+		return s.classifierNamedStructStrfmt(cg, tgt), nil
+
+	case *types.Basic:
+		// A builtin with no Swagger form is left to the caller, which warns and skips it. The guard sits
+		// ahead of the classifier because that is the order the field dispatch has always applied, and
+		// moving it would quietly start honouring an annotation on a type that cannot carry one.
+		if resolvers.UnsupportedBuiltinType(utitpe) {
+			return false, nil
+		}
+
+		// PkgForType yields the package the enum's const values are collected from; a miss means the
+		// type cannot be anchored to a scanned package, so there is nothing to collect.
+		pkg, found := s.Ctx.PkgForType(titpe)
+		if !found {
+			return false, nil
+		}
+
+		return s.classifierNamedBasic(cg, pkg, titpe, utitpe, tgt), nil
+
+	case *types.Array:
+		return s.arrayLikeClassifier(cg, tgt, utitpe.Elem())
+
+	case *types.Slice:
+		return s.arrayLikeClassifier(cg, tgt, utitpe.Elem())
+
+	default:
+		return false, nil
+	}
+}
+
+// arrayLikeClassifier adapts classifierNamedArrayLike's (handled, fallthroughElement) pair to the
+// closure form applyNamedShapeClassifier returns.
+func (s *Builder) arrayLikeClassifier(
+	cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, elem types.Type,
+) (bool, func() error) {
+	handled, fallthroughElement := s.classifierNamedArrayLike(cg, tgt, elem)
+	if !handled || !fallthroughElement {
+		return handled, nil
+	}
+
+	return true, func() error {
+		defer s.descend("items")()
+
+		return s.buildFromType(elem, tgt.Items())
+	}
+}
+
 func (s *Builder) classifierAliasTargetStrfmt(tpe types.Type, tgt ifaces.SwaggerTypable) bool {
 	decl, ok := s.Ctx.DeclForType(tpe)
 	if !ok || decl == nil {

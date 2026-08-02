@@ -232,9 +232,6 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 	tgt := NewTypable(schema, 0, s.skipExtensions)
 	tio := ftpe.Obj()
 
-	if s.classifierAliasTargetStrfmt(ftpe, tgt) {
-		return nil
-	}
 	if ApplyStdlibSpecials(tio, tgt, s.skipExtensions) {
 		return nil
 	}
@@ -244,10 +241,39 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 		return fmt.Errorf("can't find source for named allOf member %s: %w", ftpe.String(), ErrSchema)
 	}
 
+	// A `swagger:model` member is referenced, and its classifiers ride on its own definition — the
+	// same gate buildNamedType applies before inlining an override.
 	if decl.HasModelAnnotation() {
 		return s.MakeRef(decl, tgt)
 	}
 
+	// The author's classifiers, in the precedence the field dispatch uses: `swagger:type` decides the
+	// type axis outright, then the shape-aware classifiers.
+	//
+	// This arm used to run one shape-BLIND strfmt check and no type override at all, so a member
+	// carrying `swagger:type` or `swagger:enum` came out as an EMPTY schema (its basic underlying then
+	// fell to the warn-and-skip default below), and a format on a string sequence landed on the whole
+	// member instead of on its items.
+	if handled, recurse := s.classifierNamedTypeOverride(
+		decl.Comments, tgt, ftpe, s.Ctx.PosOf(tio.Pos()),
+	); handled {
+		if recurse {
+			return s.buildFromType(ftpe.Underlying(), tgt)
+		}
+
+		return nil
+	}
+	if handled, recurse := s.applyNamedShapeClassifier(decl.Comments, ftpe, tgt); handled {
+		if recurse != nil {
+			return recurse()
+		}
+
+		return nil
+	}
+
+	// Shape dispatch. Unlike the field arm this INLINES rather than emitting a $ref: a member that is
+	// not a `swagger:model` has no definition to point at, and publishing one would put types in the
+	// spec their author never asked to expose.
 	switch utpe := ftpe.Underlying().(type) {
 	case *types.Struct:
 		return s.buildFromStruct(decl, utpe, schema, make(map[string]propOwner))

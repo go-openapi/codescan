@@ -41,20 +41,18 @@ func TestTypeOverrideSymmetry(t *testing.T) {
 			{definition: "Envelope", namedProp: "sliceElemScalarNamed", aliasProp: "sliceElemScalarAlias", wantNamed: "array<string/>"},
 			{definition: "Envelope", namedProp: "mapValueScalarNamed", aliasProp: "mapValueScalarAlias", wantNamed: "map<string/>"},
 
-			// The allOf member drops the override on BOTH halves, and the named half emits an empty
-			// member. A shared gap rather than an alias asymmetry, so it is deferred to its own quirk
-			// rather than folded in here — pinned as a known difference until then.
+			// The allOf member. The named half used to emit an EMPTY member — the arm ran no type
+			// classifier, so a `swagger:type` on it was dropped and its basic underlying then fell to the
+			// warn-and-skip default. It now composes the override exactly as the alias half does.
 			{
 				namedProp: "AllOfScalarNamed", aliasProp: "AllOfScalarAlias",
-				note: "Q40: buildNamedAllOf runs no type classifier — named emits an EMPTY member, alias dissolves",
+				wantNamed: "allOf[string/+object{note}]",
+				note:      "the composition arm now runs the same classifier cascade as the field dispatch",
 			},
 		},
 
-		exceptions: map[string]string{},
-		knownBroken: forEveryMode(
-			"Q40 — the allOf member path honours no classifier; deferred, tracked separately",
-			"AllOfScalar",
-		),
+		exceptions:    map[string]string{},
+		knownBroken:   map[string]string{},
 		controlBroken: map[string]string{},
 	}
 

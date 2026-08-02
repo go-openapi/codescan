@@ -126,14 +126,7 @@ func TestBuilderConformance(t *testing.T) {
 	// dispatch the other three converge on, and it runs a different subset of the classifiers again.
 	//
 	// Same both-directions assertion: a listed cell that starts agreeing fails too.
-	knownBrokenAllOf := map[string]string{
-		"typ": "Q40 — buildNamedAllOf runs no swagger:type classifier, so the member comes out empty",
-		"enum": "Q40 family — no enum classifier either; a basic underlying then falls to the " +
-			"warn-and-skip default and the member comes out empty",
-		"emails": "Q34 family — the arm's strfmt classifier predates the element-driven rule, so the " +
-			"format lands on the whole member instead of on its items",
-		"codes": "Q34 family — array flavour of the same",
-	}
+	knownBrokenAllOf := map[string]string{}
 
 	model := doc.Definitions["ModelHost"].Properties
 	require.NotEmpty(t, model, "the control host must have properties")
