@@ -35,16 +35,15 @@ func TestResponseNamedNonStruct(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
-	// Known-remaining divergence, asserted in both directions so it cannot rot.
+	// Cells where the two positions are legitimately expected to differ. Empty: a response body and a
+	// model field are both full-schema, so every difference found here has been a defect.
 	//
-	// `type Stamp time.Time` is not `time.Time` — the recognizer keys on identity, so it correctly
-	// declines. The model side still resolves it, because buildFromDecl builds from the declaration's
-	// WRITTEN right-hand side (`time.Time`, a named type) and the recognizer fires one level in. This
-	// arm uses `Underlying()` instead, which peels past that layer to time.Time's struct, so the
-	// response is read as a struct whose fields become headers — and time.Time exports none.
-	knownBroken := map[string]string{
-		"stamp": "Underlying() peels past the declaration's named RHS; the model side uses Spec.Type",
-	}
+	// The `stamp` cell was pinned until the arm learned to follow the declaration's WRITTEN
+	// right-hand side. `type Stamp time.Time` is not `time.Time`, so the recognizer keys on identity
+	// and declines — but `Underlying()` peeled past the `time.Time` layer entirely, where the
+	// recognizer would have seen it, leaving the response to be read as a struct whose fields become
+	// headers. time.Time exports none, so the response carried no schema.
+	knownBroken := map[string]string{}
 
 	props := doc.Definitions["Host"].Properties
 	require.NotEmpty(t, props, "the control host must have properties")

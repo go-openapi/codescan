@@ -122,7 +122,10 @@
       }
     },
     "stampResp": {
-      "description": "StampResp declares the response on the named time.Time."
+      "description": "StampResp declares the response on the named time.Time.",
+      "schema": {
+        "$ref": "#/definitions/Stamp"
+      }
     }
   }
 }

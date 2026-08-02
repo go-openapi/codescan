@@ -244,12 +244,75 @@ func (r *Builder) buildFromType(otpe types.Type, resp *oaispec.Response, seen ma
 	}
 }
 
+// namedWrittenRHS reports a declaration whose written right-hand side is itself a NAMED type,
+// together with that type.
+//
+// Only a named right-hand side redirects the build: a struct literal, a slice or a basic type is
+// already the shape the response arm should build, and sending those through the sub-builder would
+// publish the response type as a definition.
+func namedWrittenRHS(ctx *scanner.ScanCtx, o *types.TypeName) (*scanner.EntityDecl, types.Type, bool) {
+	decl, found := ctx.DeclForType(o.Type())
+	if !found {
+		return nil, nil, false
+	}
+	rhs, ok := writtenRHS(decl)
+	if !ok {
+		return nil, nil, false
+	}
+	if _, isNamed := rhs.(*types.Named); !isNamed {
+		return nil, nil, false
+	}
+
+	return decl, rhs, true
+}
+
+// writtenRHS returns the type a declaration was WRITTEN over — `Stamp` in `type StampResp Stamp` —
+// as opposed to the fully peeled underlying that `types.Named.Underlying` yields.
+//
+// The distinction matters wherever a named layer carries meaning: a stdlib recognizer keys on
+// `time.Time`, which peeling discards.
+func writtenRHS(decl *scanner.EntityDecl) (types.Type, bool) {
+	if decl == nil || decl.Spec == nil || decl.Pkg == nil {
+		return nil, false
+	}
+	ti, ok := decl.Pkg.TypesInfo.Types[decl.Spec.Type]
+	if !ok || ti.Type == nil {
+		return nil, false
+	}
+
+	return ti.Type, true
+}
+
 func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen map[string]bool) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) || resolvers.IsStdError(o) {
 		return fmt.Errorf("%s type not supported in the context of a responses section definition: %w", o.Name(), ErrResponses)
 	}
 	resolvers.MustNotBeABuiltinType(o)
+
+	// Follow the declaration's WRITTEN right-hand side when that is itself a named type, before
+	// dispatching on the underlying shape.
+	//
+	// `Underlying()` peels every named layer at once, so `type Stamp time.Time` arrives here as
+	// time.Time's STRUCT — read as a response struct whose fields become headers, of which time.Time
+	// has none, so the response came out with no schema. The schema builder does not have this problem
+	// because it builds from `Spec.Type`, where the recognizer sees `time.Time` one level in.
+	//
+	// Only a NAMED right-hand side redirects: a struct literal, a slice or a basic type is already the
+	// shape this arm should build, and sending those through the sub-builder would publish the
+	// response type as a definition.
+	if decl, rhs, ok := namedWrittenRHS(r.Ctx, o); ok {
+		var sch oaispec.Schema
+		typable := schema.NewTypable(&sch, 0, r.Ctx.SkipExtensions())
+		if err := schema.DelegateAs(r.Builder, decl,
+			schema.OptionFor(rhs, typable), schema.WithPath(r.bodyPathFor(typable)),
+		); err != nil {
+			return err
+		}
+		resp.WithSchema(&sch)
+
+		return nil
+	}
 
 	switch stpe := o.Type().Underlying().(type) {
 	case *types.Struct:
