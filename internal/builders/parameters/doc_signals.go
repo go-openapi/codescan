@@ -80,19 +80,3 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 
 	return pd
 }
-
-// strfmtFromDoc returns the argument of a `swagger:strfmt <name>` annotation present in blocks (the
-// pre-parsed common.Builder cache slice for some CommentGroup).
-//
-// Single-word filter mirrors the schema package's `findAnnotationArg` rule.
-func strfmtFromDoc(blocks []grammar.Block) (string, bool) {
-	for _, b := range blocks {
-		if b.AnnotationKind() != grammar.AnnStrfmt {
-			continue
-		}
-		if arg, ok := b.AnnotationArg(); ok && !strings.ContainsAny(arg, " \t") {
-			return arg, true
-		}
-	}
-	return "", false
-}

@@ -72,30 +72,19 @@ func TestBuilderConformance(t *testing.T) {
 		{prop: "ptr", path: "/ptr", response: "respPtr"},
 		{prop: "basic", path: "/basic", response: "respBasic"},
 
-		// PINNED DIVERGENCES — see knownBroken below.
 		{
 			prop: "emails", path: "/emails", response: "respEmails",
-			note: "named []string + non-special format: schema puts it on items, the other two on the whole schema",
+			note: "named []string + non-special format — the element-driven rule puts it on items",
 		},
-		{
-			prop: "codes", path: "/codes", response: "respCodes",
-			note: "array flavour of the same",
-		},
+		{prop: "codes", path: "/codes", response: "respCodes", note: "array flavour of the same"},
 	}
 
-	// Cells where the builders are known to disagree today. Each entry is the fix's worklist, and the
-	// assertion runs in BOTH directions: a listed cell that starts agreeing fails too, so the list
-	// cannot rot into a stale TODO.
+	// Cells where the builders are legitimately expected to disagree. Empty: the three full-schema
+	// positions have no reason to differ, so every divergence found here has been a defect.
 	//
-	// The parameters and responses builders short-circuit `buildNamedField` on a local
-	// `strfmtFromDoc` helper that writes `Typed("string", format)` unconditionally. It predates the
-	// element-driven items-vs-whole rule the schema builder applies, so a format on a `[]string`
-	// lands on the whole schema instead of on its items — the emitted spec says "one email" where the
-	// Go type is a list of them.
-	knownBroken := map[string]string{
-		"emails": "strfmtFromDoc short-circuit bypasses the element-driven rule (Q39 tier 3)",
-		"codes":  "strfmtFromDoc short-circuit bypasses the element-driven rule (Q39 tier 3)",
-	}
+	// The assertion runs in BOTH directions, so a listed cell that starts agreeing fails too and the
+	// list cannot rot into a stale TODO.
+	knownBroken := map[string]string{}
 
 	model := doc.Definitions["ModelHost"].Properties
 	require.NotEmpty(t, model, "the control host must have properties")

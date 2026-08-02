@@ -176,22 +176,22 @@ func (r *Builder) bodyPathFor(typable ifaces.SwaggerTypable) string {
 	return ""
 }
 
-func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]bool) error {
+func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable) error {
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
 	case *types.Struct:
 		return schema.Delegate(r.Builder, schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable)))
 	case *types.Pointer:
-		return r.buildFromField(fld, ftpe.Elem(), typable, seen)
+		return r.buildFromField(fld, ftpe.Elem(), typable)
 	case *types.Interface:
 		return schema.Delegate(r.Builder, schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable)))
 	case *types.Array:
 		defer r.descendBody("items")()
-		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return r.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Slice:
 		defer r.descendBody("items")()
-		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return r.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Map:
 		return r.buildFromFieldMap(ftpe, typable)
 	case *types.Named:
@@ -313,17 +313,8 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrResponses)
 	}
 
-	d := decl.Obj()
-	if resolvers.IsStdTime(d) {
-		typable.Typed("string", "date-time")
-		return nil
-	}
-
-	if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments)); isf {
-		typable.Typed("string", sfnm)
-		return nil
-	}
-
+	// See the parameters builder's twin: the delegation reaches the schema builder's element-aware
+	// classifiers, which the local shortcuts that used to sit here were not.
 	return schema.DelegateAs(r.Builder, decl,
 		schema.OptionFor(decl.ObjType(), typable), schema.WithPath(r.bodyPathFor(typable)),
 	)
@@ -391,7 +382,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 	// single body, so per-field promotion is meaningless). go-swagger#1635. Other in: values still
 	// promote the embed's fields (#2701).
 	if r.inherited.InSet && r.inherited.In == inBody {
-		err := r.buildBodyEmbed(fld, resp, seen)
+		err := r.buildBodyEmbed(fld, resp)
 		r.inherited = saved
 		if err != nil {
 			return err
@@ -412,7 +403,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 // buildBodyEmbed renders an anonymously-embedded field marked `in: body` as the response body,
 // exactly like a named `Body Foo` field: the embedded type drives the body schema (a $ref to a
 // model, or its inline shape) instead of its members becoming response headers (go-swagger#1635).
-func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response, seen map[string]bool) error {
+func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response) error {
 	var refAttempted bool
 	header := oaispec.Header{}
 	return r.buildFromField(fld, fld.Type(), responseTypable{
@@ -421,7 +412,7 @@ func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response, seen ma
 		response:     resp,
 		skipExt:      r.Ctx.SkipExtensions(),
 		refAttempted: &refAttempted,
-	}, seen)
+	})
 }
 
 func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl, resp *oaispec.Response, seen map[string]bool) error {
@@ -525,7 +516,7 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 			response:     resp,
 			skipExt:      r.Ctx.SkipExtensions(),
 			refAttempted: &refAttempted,
-		}, seen); err != nil {
+		}); err != nil {
 			if errors.Is(err, errUnrepresentableHeader) {
 				// The field type has no OAS v2 SimpleSchema representation in this header (non-body) location
 				// (e.g. a map).

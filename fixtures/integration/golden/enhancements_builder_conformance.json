@@ -61,8 +61,11 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "type": "string",
-              "format": "email"
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email"
+              }
             }
           }
         ],
@@ -85,8 +88,11 @@
             "name": "body",
             "in": "body",
             "schema": {
-              "type": "string",
-              "format": "email"
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email"
+              }
             }
           }
         ],
@@ -551,15 +557,21 @@
     "respCodes": {
       "description": "RespCodes reaches the codes subject as a response body.",
       "schema": {
-        "type": "string",
-        "format": "email"
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
       }
     },
     "respEmails": {
       "description": "RespEmails reaches the emails subject as a response body.",
       "schema": {
-        "type": "string",
-        "format": "email"
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
       }
     },
     "respEnum": {

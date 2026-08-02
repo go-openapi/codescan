@@ -296,20 +296,20 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 	return p.buildFromType(tpe.Rhs(), op, seen)
 }
 
-func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable) error {
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
 	case *types.Struct:
 		return schema.Delegate(p.Builder, schema.OptionFor(ftpe, typable))
 	case *types.Pointer:
-		return p.buildFromField(fld, ftpe.Elem(), typable, seen)
+		return p.buildFromField(fld, ftpe.Elem(), typable)
 	case *types.Interface:
 		return schema.Delegate(p.Builder, schema.OptionFor(ftpe, typable))
 	case *types.Array:
-		return p.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return p.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Slice:
-		return p.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return p.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Map:
 		return p.buildFromFieldMap(ftpe, typable)
 	case *types.Named:
@@ -368,16 +368,10 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrParameters)
 	}
 
-	if resolvers.IsStdTime(o) {
-		typable.Typed("string", "date-time")
-		return nil
-	}
-
-	if sfnm, isf := strfmtFromDoc(p.ParseBlocks(decl.Comments)); isf {
-		typable.Typed("string", sfnm)
-		return nil
-	}
-
+	// No local recognizer or format short-circuit here: the delegation below reaches the schema
+	// builder's own, which are element-aware. The shortcuts that used to sit here wrote
+	// `Typed("string", format)` unconditionally, so a format on a `[]string` landed on the whole
+	// schema instead of on its items — describing a list of email addresses as one email address.
 	return schema.DelegateAs(p.Builder, decl, schema.OptionFor(decl.ObjType(), typable))
 }
 
@@ -539,7 +533,7 @@ func stripArrayPrefixes(arg string) (base string, depth int) {
 //
 // Returns skip=true (with a recorded diagnostic) when the Go type has no OAS v2 SimpleSchema
 // representation in this location and the field should be dropped.
-func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name, in string, pty ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) (skip bool, err error) {
+func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name, in string, pty ifaces.SwaggerTypable) (skip bool, err error) {
 	switch {
 	case in == "formData" && signals.file:
 		pty.Typed("file", "")
@@ -549,7 +543,7 @@ func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name
 		// The override wins outright; the Go type is not consulted.
 		// A compatible swagger:strfmt then rides as a supplementary format back in processParamField.
 	default:
-		if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
+		if err := p.buildFromField(fld, fld.Type(), pty); err != nil {
 			if errors.Is(err, errUnrepresentableParam) {
 				// The field type has no OAS v2 SimpleSchema representation in this non-body location (e.g. a
 				// map under in=query).
@@ -650,7 +644,7 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		pty = schema.NewTypable(pty.Schema(), 0, p.Ctx.SkipExtensions())
 	}
 
-	if skip, err := p.resolveParamType(signals, fld, name, in, pty, seen); err != nil {
+	if skip, err := p.resolveParamType(signals, fld, name, in, pty); err != nil {
 		return "", err
 	} else if skip {
 		return "", nil
