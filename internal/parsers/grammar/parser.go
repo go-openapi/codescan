@@ -540,6 +540,16 @@ func (s *parseState) parseMetaBlock(annIdx int, annTok Token) Block {
 
 // --- Classifier family -------------------------------------------------------
 
+// isStructuralKeyword reports whether a keyword is a field directive rather than part of the
+// schema-body grammar.
+//
+// `in:` places a field (query / path / header / body / formData) and `name:` renames it. Both are
+// consumed by the parameters and responses builders directly from the doc text, so they may appear
+// alongside any annotation — including a classifier, whose body is otherwise prose-only.
+func isStructuralKeyword(name string) bool {
+	return name == KwIn || name == KwName
+}
+
 //nolint:ireturn // stable seam.
 func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind AnnotationKind) Block {
 	base := newBaseBlock(kind, annTok.Pos)
@@ -567,6 +577,17 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 			s.emit(Warnf(t.Pos, CodeContextInvalid,
 				"keyword %q not valid under swagger:%s", t.Keyword, kind))
 		case TokenKeyword:
+			if isStructuralKeyword(t.Name) {
+				// `in:` and `name:` are field directives, not schema-body keywords: they say WHERE a field
+				// goes and what it is CALLED, and the parameters / responses builders read them straight
+				// from the doc text rather than from this block.
+				//
+				// A parameter field may legitimately carry both a classifier annotation and `in:` — indeed
+				// `in:` is mandatory there — so rejecting it made the canonical file-upload idiom warn
+				// about its own required directive. The same field without the annotation never warned,
+				// so this was inconsistent as well as wrong.
+				continue
+			}
 			s.emit(Warnf(t.Pos, CodeContextInvalid,
 				"keyword %q not valid under swagger:%s", t.Name, kind))
 		case TokenOpaqueYaml:

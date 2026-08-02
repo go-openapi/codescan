@@ -29,6 +29,8 @@ type MyFileParams struct {
 	//
 	// in: formData
 	//
+	// maximum: 3
+	//
 	// swagger:file
 	MyFormFile *bytes.Buffer `json:"myFormFile"`
 }
