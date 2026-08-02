@@ -599,10 +599,9 @@ func (s *parseState) parseClassifierBlock(annIdx int, annTok Token, kind Annotat
 				"swagger:strfmt requires a name argument"))
 		}
 	case AnnDefaultName:
-		if !annTok.HasArg(1) {
-			s.emit(Errorf(annTok.Pos, CodeMissingRequiredArg,
-				"swagger:default requires a value argument"))
-		}
+		// No arg requirement: swagger:default is a deprecated no-op sink, and demanding a value for a
+		// value nothing reads would hard-error on the very spelling the annotation was documented with
+		// (the bare form). Both forms parse; the builder raises the deprecation.
 	case AnnType:
 		// Only the STRUCTURAL shape is checked here: a missing arg, or a malformed token (embedded
 		// spaces, bare `[]`, illegal chars).

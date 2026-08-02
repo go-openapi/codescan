@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -186,13 +187,33 @@ func TestCoverage_ResponseEdges(t *testing.T) {
 }
 
 func TestCoverage_NamedBasic(t *testing.T) {
+	var diags []string
 	doc, err := codescan.Run(&codescan.Options{
-		Packages:   []string{"./enhancements/named-basic/..."},
-		WorkDir:    scantest.FixturesDir(),
-		ScanModels: true,
+		Packages:     []string{"./enhancements/named-basic/..."},
+		WorkDir:      scantest.FixturesDir(),
+		ScanModels:   true,
+		OnDiagnostic: func(d codescan.Diagnostic) { diags = append(diags, d.String()) },
 	})
 	require.NoError(t, err)
 	require.NotNil(t, doc)
+
+	// Grade carries the deprecated swagger:default. The annotation is an inert sink, so Grade emits
+	// exactly what an unannotated named int would — a real definition, referenced by $ref — and the
+	// deprecation is reported rather than silently swallowed.
+	require.Contains(t, doc.Definitions, "Grade", "the deprecated annotation must not suppress the definition")
+	assert.Equal(t, "integer", doc.Definitions["Grade"].Type[0])
+	gradeProp := doc.Definitions["User"].Properties["grade"]
+	assert.Equal(t, "#/definitions/Grade", gradeProp.Ref.String())
+
+	var sawDeprecation bool
+	for _, d := range diags {
+		if strings.Contains(d, "swagger:default is deprecated") {
+			sawDeprecation = true
+
+			break
+		}
+	}
+	assert.True(t, sawDeprecation, "swagger:default must raise a deprecation diagnostic; got %v", diags)
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_named_basic.json")
 }

@@ -1552,7 +1552,7 @@ annotation of interest.
 |---|---|---|
 | `classifierTextMarshal` | `buildFromTextMarshal` end-of-pipe | `swagger:strfmt` |
 | `classifierNamedTypeOverride` | `buildFromType` named fallback, `buildFromStruct` pre-pass | `swagger:type` |
-| `classifierNamedBasic` | `buildNamedBasic` | cascade: `swagger:strfmt → swagger:enum → swagger:default → swagger:type → swagger:alias` (the alias arm doubles as the SimpleSchema-mode primitive-inline branch — see [§simple-schema-mode](#simple-schema-mode)) |
+| `classifierNamedBasic` | `buildNamedBasic` | cascade: `swagger:strfmt → swagger:enum → swagger:type`, then the SimpleSchema-mode primitive-inline branch (see [§simple-schema-mode](#simple-schema-mode)). `swagger:default` and `swagger:alias` are deprecated sinks: each raises `validate.deprecated` and falls through. `swagger:default` used to be TERMINAL here, returning handled on a target it never wrote — which published a typeless schema for the declared type |
 | `classifierNamedArrayLike` | `buildNamedArray` / `buildNamedSlice` | `swagger:strfmt`, `swagger:type` |
 | `classifierAliasTargetStrfmt` | `buildNamedAllOf` (struct + interface arms) | `swagger:strfmt` |
 | `classifierStructPreBuildType` | `buildFromStruct` top | `swagger:type` |

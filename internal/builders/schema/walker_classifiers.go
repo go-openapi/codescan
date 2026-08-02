@@ -347,8 +347,23 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 			"swagger:enum %s: no matching const values found; enum semantics dropped", enumName))
 	}
 
-	if _, ok := s.findAnnotationArg(cg, grammar.AnnDefaultName); ok {
-		return true
+	// swagger:default is DEPRECATED: it is now an empty sink.
+	//
+	// It never emitted a `default` into the spec in any placement or form. Worse, this arm used to
+	// return handled=true on a target it had not written, so a named basic type carrying it published
+	// a TYPELESS definition — and every property referencing it came out typeless too, silently.
+	//
+	// Every place OpenAPI 2.0 admits a default is already served: the `default:` keyword covers the
+	// Schema, Parameter, Items and Header objects (which is exactly its registered context set), and a
+	// `default` response-code head in a route's `Responses:` body covers the Responses object. That
+	// closes the surface, so the annotation has no meaning left to implement.
+	//
+	// Emit a deprecation diagnostic and fall through, exactly as the swagger:alias sink below does.
+	if def := s.findAnnotation(cg, grammar.AnnDefaultName); def != nil {
+		s.RecordDiagnostic(grammar.Warnf(def.Pos(), grammar.CodeDeprecated,
+			`swagger:default is deprecated and no longer affects output; use the "default:" keyword `+
+				`on the field, parameter, header or type declaration, or a "default:" response code `+
+				`in a route's Responses: body`))
 	}
 
 	if typeName, ok := s.findAnnotationArg(cg, grammar.AnnType); ok {

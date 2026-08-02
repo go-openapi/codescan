@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package named_basic exercises the schemaBuilder.buildNamedBasic branches
-// for named basic types carrying swagger:strfmt, swagger:type and
-// swagger:default annotations.
+// for named basic types carrying swagger:strfmt, swagger:type and the
+// deprecated swagger:default annotation.
 package named_basic
 
 // Email is a named string with a swagger:strfmt tag. The scanner must
@@ -18,8 +18,14 @@ type Email string
 // swagger:type string
 type Colour int
 
-// Grade is a named int tagged with swagger:default which causes the
-// scanner to emit an empty schema for the declared type.
+// Grade is a named int tagged with the DEPRECATED swagger:default
+// annotation. The annotation is an inert sink: Grade must emit exactly
+// what it would without it — a plain named int, referenced by $ref from
+// the field site — and the scan must raise a deprecation diagnostic.
+//
+// It used to claim the target without writing it, publishing a typeless
+// schema for the declared type and a typeless property for every field
+// referencing it.
 //
 // swagger:default Grade
 type Grade int

@@ -23,7 +23,9 @@ attach to:
 - **Companion declarations**: `swagger:parameters`, `swagger:response`.
 - **Local hints & overrides**: `swagger:ignore`, `swagger:omit`,
   `swagger:name`, `swagger:title`, `swagger:description`, `swagger:type`,
-  `swagger:file`, `swagger:default`.
+  `swagger:file`.
+- **Deprecated no-ops**, parsed and reported but without effect:
+  `swagger:alias`, `swagger:default`.
 
 This section is the **author-first reference**. Each annotation has its
 own page covering what it produces, where it goes, its EBNF-like
@@ -101,8 +103,9 @@ After the `swagger:<name>` head, an annotation may carry positional
 arguments. The shapes:
 
 - **No args**: `swagger:meta`, `swagger:ignore`, `swagger:enum`,
-  `swagger:allOf`, `swagger:file`, `swagger:default` — bare
-  annotation, the surrounding decl supplies the entity name.
+  `swagger:allOf`, `swagger:file` — bare annotation, the surrounding
+  decl supplies the entity name. `swagger:default` also accepts a bare
+  form, but its argument is optional and unread — it is deprecated.
 - **One IDENT arg**: `swagger:model Pet`, `swagger:response
   errorResponse`, `swagger:strfmt uuid`, `swagger:name fullName`,
   `swagger:type integer`, `swagger:alias TimestampAlias` — the
@@ -142,7 +145,7 @@ contracts, and each annotation's own page for the detail.
 | `swagger:additionalProperties` | — | ✅ (object schema) | — | — | — | — | — |
 | `swagger:patternProperties` | — | ✅ (object schema) | — | — | — | — | — |
 | `swagger:file` | — | — | — | — | — | — | — |
-| `swagger:default` | — | — | — | — | — | — | — |
+| `swagger:default` *(deprecated)* | — | — | — | — | — | — | — |
 
 A blank cell means the keyword family is not legal in that context;
 attempting to use it emits `CodeContextInvalid` and the keyword is
