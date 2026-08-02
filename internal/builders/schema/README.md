@@ -543,6 +543,21 @@ same user-classifier-first precedence the rest of the builder uses).
 
 ### `scanEmbeddedFields` — embed classification
 
+**Which `fieldDoc` signals an embed consumes.** Exactly five: `Ignored`
+(`swagger:ignore`), `JSONName` (`swagger:name`, via `embedNestName`),
+`OmitTargets` (`swagger:omit`, via `embedOmitTargets`), `IsAllOfMember` /
+`AllOfClass` (`swagger:allOf`), and the `required:` inheritance hint read by
+`buildPlainEmbed`. All five describe the *embedding*.
+
+`StrfmtName` and `TypeOverride` are parsed into the same `fieldDoc` and are
+**never read here** — they describe the embedded type, whose shape comes from
+its own declaration, not from the site that embeds it. Writing either on an
+embed raises `CodeIneffectiveAnnotation` (`warnIneffectiveEmbedAnnotations`)
+rather than being dropped in silence: both ARE honoured on a regular field
+(`fields.go`), so the same annotation one field over means something, and the
+scanner rejects an *unknown* annotation in that same comment — so without the
+warning the author gets validation feedback implying it took effect.
+
 Walks `*types.Struct`'s anonymous fields. Three signals decide
 classification per embed:
 

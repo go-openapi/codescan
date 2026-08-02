@@ -71,6 +71,34 @@ embeds should compose; reach for the option when composition is your house style
 for every plain embed.
 {{% /notice %}}
 
+## Annotate the embedded type, not the embed
+
+A classifier annotation in an **embedded field's** doc comment does nothing.
+`swagger:strfmt` and `swagger:type` written there are ignored — codescan reports
+them under `scan.ineffective-annotation` rather than dropping them quietly:
+
+```go
+type Wrong struct {
+	// swagger:strfmt uuid   ← ignored, and warned about
+	Token
+}
+```
+
+An embed contributes the shape of the type it embeds, and what that shape is
+comes from that type's own declaration. Put the annotation there and every embed
+of it composes the same way:
+
+```go
+// swagger:strfmt uuid
+type Token [16]byte
+```
+
+The catch is that both annotations *are* honoured on an ordinary field, so the
+same line means something one field down and nothing on an embed. Only
+`swagger:allOf`, [`swagger:omit`]({{% relref "/maintainers/annotations/swagger-omit" %}}),
+`swagger:name`, `swagger:ignore` and a `required:` inheritance hint act on an
+embed itself — everything else describes the embedded type and belongs with it.
+
 ## When an override cannot be composed
 
 Composition has one limit worth knowing. Inlining an embed **resolves** an
