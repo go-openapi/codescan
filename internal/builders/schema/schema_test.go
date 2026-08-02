@@ -1848,6 +1848,12 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 // The example must travel on the override arm of the allOf compound, never as a sibling of $ref.
 // The DescWithRef toggle does not change this case — when validations (here, `example`) are
 // present, the allOf wrap is mandatory regardless of the flag.
+//
+// The decl-level `example:` / `default:` on Book are incidental to that shape, but they pin a
+// second property: an object literal is emitted as real JSON at a DECLARATION site, exactly as the
+// field-level one on `Author` already was. They used to differ inside this very expectation — the
+// declaration pair came out as escaped strings, because a decl's keywords are coerced before its Go
+// type is known.
 func TestIssue2540(t *testing.T) {
 	// Sub-builder unit tests run without the spec reduce stage, so the definitions key and the $ref
 	// stay fully-qualified.
@@ -1856,8 +1862,8 @@ func TestIssue2540(t *testing.T) {
       "description": "At this moment, a book is only described by its publishing date\nand author.",
       "type": "object",
       "title": "Book holds all relevant information about a book.",
-			"example": "{ \"Published\": 2026, \"Author\": \"Fred\" }",
-      "default": "{ \"Published\": 1900, \"Author\": \"Unknown\" }",
+			"example": {"Published": 2026, "Author": "Fred"},
+      "default": {"Published": 1900, "Author": "Unknown"},
       "properties": {
         "Author": {
           "allOf": [

@@ -10,6 +10,14 @@ description: "Marks a named type as an enum and collects its const values."
 // swagger:enum [ IDENT_NAME ]
 ```
 
+{{% notice style="note" %}}
+Not to be confused with the [`enum:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#enum" %}}),
+which produces the same spec keyword from the opposite direction: it takes the
+members you write literally, typed from the schema it sits on, whereas this
+annotation collects them from a Go `const` block, typed from the declared Go
+type. Side-by-side in the [enumerations tutorial]({{% relref "/tutorials/enumerations" %}}).
+{{% /notice %}}
+
 ## What it does
 
 Marks a named type over a string, integer, number or boolean as an enum

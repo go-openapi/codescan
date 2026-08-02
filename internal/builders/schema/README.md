@@ -1466,6 +1466,20 @@ sees `""` ("type unknown") and accepts everything. A shape-constrained
 keyword on a mismatched scalar model (e.g. `minProperties:` on a
 `type Foo string`) would therefore be written and never flagged.
 
+The same ordering has a second consequence, on VALUES rather than on
+shape gating. `default:`, `example:` and `enum:` are coerced against
+`SchemaTypeOf(ps)`, which is `""` at dispatch time, so `ParseDefault` /
+`ParseEnumValues` fall back to the raw string: `default: 8080` on a named
+int became the string `"8080"`, `enum: 1,2,3` became `["1","2","3"]` — an
+enum no validator can satisfy on an integer schema — and a JSON array
+literal became a string holding JSON source.
+
+`RecoerceDeclValues` runs at the same seam as `RecheckSchemaShape` and
+re-types those three from their raw form. Re-coercion is sound precisely
+because the fallback preserved the author's text verbatim: a value still
+stored as a string is one that was never typed. String-typed schemas are
+skipped, since there the fallback and the correct answer coincide.
+
 Field- and items-level dispatch don't have this problem: their target's
 type is already set when their block is dispatched, so `checkShape`
 gates correctly inline.

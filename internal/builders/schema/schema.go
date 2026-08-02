@@ -106,8 +106,10 @@ func (s *Builder) Build(opts ...Option) error {
 
 		// The decl-comment block is dispatched before the Go type is resolved onto the schema (see
 		// buildFromDecl), so the inline checkShape ran against an empty type.
-		// Re-gate now that the type is known: strip validations illegal for the resolved type and warn.
+		// Re-gate now that the type is known: strip validations illegal for the resolved type and warn,
+		// and re-type the value keywords that were coerced against nothing.
 		// See [§decl-shape-recheck](./README.md#decl-shape-recheck).
+		handlers.RecoerceDeclValues(&schema)
 		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
 
 		s.definitions[defKey] = schema

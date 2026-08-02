@@ -503,6 +503,56 @@ func checkShape(p grammar.Property, ps *oaispec.Schema, diag func(grammar.Diagno
 //
 // uniqueItems is intentionally not rechecked: its grammar keyword (`unique`) carries no type-domain
 // rule, matching the field/items paths which likewise never shape-gate it. diag may be nil.
+// RecoerceDeclValues re-types `default`, `example` and `enum` on a declaration's schema once the Go
+// type is known.
+//
+// A declaration's comment block is dispatched BEFORE its Go type is resolved onto the schema (see
+// buildFromDecl), so these three keywords ran through ParseDefault / ParseEnumValues with an empty
+// schema type and fell back to their raw string form: `default: 8080` on a named int became the
+// string "8080", `enum: 1,2,3` became ["1","2","3"] — an enum no validator can satisfy on an
+// integer schema — and a JSON array became a string holding JSON source. The same keywords on a
+// struct field, a parameter or a header were always correct, because there the type is known when
+// the walk runs.
+//
+// Re-coercion is safe precisely because the fallback preserved the author's raw text verbatim: a
+// value still stored as a string is one that was never typed. A string-typed schema is skipped —
+// there the fallback and the correct answer coincide, so there is nothing to redo.
+//
+// Runs beside RecheckSchemaShape, at the same "the type is known now" seam.
+func RecoerceDeclValues(sch *oaispec.Schema) {
+	if sch == nil || len(sch.Type) == 0 {
+		return
+	}
+	typ := sch.Type[0]
+	if typ == "string" {
+		return
+	}
+
+	if raw, ok := sch.Default.(string); ok {
+		if v, err := validations.ParseDefault(raw, typ, sch.Format); err == nil {
+			sch.Default = v
+		}
+	}
+	if raw, ok := sch.Example.(string); ok {
+		if v, err := validations.ParseDefault(raw, typ, sch.Format); err == nil {
+			sch.Example = v
+		}
+	}
+
+	// Enum members were coerced individually against the empty type, so each is independently a
+	// string. Re-coerce per member and leave any that resists — a member that will not parse as the
+	// schema's type is the author's error to see, not ours to drop.
+	for i, member := range sch.Enum {
+		raw, ok := member.(string)
+		if !ok {
+			continue
+		}
+		if v, err := validations.CoerceValue(raw, &oaispec.SimpleSchema{Type: typ}); err == nil {
+			sch.Enum[i] = v
+		}
+	}
+}
+
 func RecheckSchemaShape(sch *oaispec.Schema, pos token.Position, diag func(grammar.Diagnostic)) {
 	if sch == nil || len(sch.Type) == 0 {
 		return

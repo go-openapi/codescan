@@ -12,6 +12,37 @@ that pair into an `enum` array on every schema, parameter and header the type
 reaches. This page covers what the scanner accepts on the value side, what
 decides the emitted `type` / `format`, and the two shapes that do not work.
 
+{{% notice style="note" title="`swagger:enum` and `enum:` are two different things" %}}
+They produce the same spec keyword from opposite directions, and the names are
+close enough to trip over:
+
+| | `swagger:enum` — an **annotation** | `enum:` — a **keyword** |
+|---|---|---|
+| Where | on the type declaration | inside any annotation block, on a field, parameter, header or declaration |
+| Members come from | the Go `const` block of that type, read from the type-checker | the literal list you write after the colon |
+| Type / format | the **declared Go type** | the schema the keyword sits on |
+| Use it when | the values already exist as Go constants | there is no const block, or the members are not Go values at all |
+
+```go
+// swagger:enum Kind        ← annotation: members are collected from the consts
+type Kind string
+const (
+	KindA Kind = "a"
+	KindB Kind = "b"
+)
+
+type Filter struct {
+	// enum: asc, desc       ← keyword: members are what you wrote
+	Order string `json:"order"`
+}
+```
+
+The annotation is the better tool whenever the constants exist: it stays in
+sync with the code, carries each member's doc comment into `x-go-enum-desc`,
+and cannot drift from the Go values. The keyword is the escape hatch for
+everything else.
+{{% /notice %}}
+
 Every Go snippet below comes from the test-covered
 [`docs/examples/concepts/enums`](https://github.com/go-openapi/codescan/tree/master/docs/examples/concepts/enums)
 package, and every JSON pane is a golden file a test regenerates.
