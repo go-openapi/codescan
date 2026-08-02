@@ -448,7 +448,17 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return r.MakeRef(decl, typable)
 	}
 
-	return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
+	// Dissolve through the schema sub-builder, handing it the ALIAS — see the parameters builder's
+	// twin. Unaliasing here discarded the declaration before its classifiers could be read.
+	sb := schema.NewBuilder(r.Ctx, r.Decl)
+	if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
+		return err
+	}
+	for _, d := range sb.PostDeclarations() {
+		r.AppendPostDecl(d)
+	}
+
+	return nil
 }
 
 func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, resp *oaispec.Response, seen map[string]bool) error {

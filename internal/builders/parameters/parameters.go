@@ -503,7 +503,19 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return p.MakeRef(decl, typable)
 	}
 
-	return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
+	// Dissolve through the schema sub-builder, handing it the ALIAS. Unaliasing here would discard the
+	// declaration before its classifier annotations could be read — the same defect the non-body
+	// branch above had, one branch over, which is how `swagger:type` on an alias kept working for a
+	// query parameter and not for a body one.
+	sb := schema.NewBuilder(p.Ctx, p.Decl)
+	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
+		return err
+	}
+	for _, d := range sb.PostDeclarations() {
+		p.AppendPostDecl(d)
+	}
+
+	return nil
 }
 
 func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
