@@ -1,0 +1,128 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/code": {
+      "get": {
+        "tags": [
+          "resp"
+        ],
+        "operationId": "opCode",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/codeResp"
+          }
+        }
+      }
+    },
+    "/count": {
+      "get": {
+        "tags": [
+          "resp"
+        ],
+        "operationId": "opCount",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/countResp"
+          }
+        }
+      }
+    },
+    "/emails": {
+      "get": {
+        "tags": [
+          "resp"
+        ],
+        "operationId": "opEmails",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/emailsResp"
+          }
+        }
+      }
+    },
+    "/stamp": {
+      "get": {
+        "tags": [
+          "resp"
+        ],
+        "operationId": "opStamp",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/stampResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Count": {
+      "description": "Count is a named integer with no annotation at all — the control that isolates\n\"did the schema get attached\" from \"was it built correctly\".",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-named-nonstruct"
+    },
+    "Host": {
+      "type": "object",
+      "title": "Host reaches every subject as a MODEL FIELD, the control for the response side.",
+      "properties": {
+        "code": {
+          "description": "Code is the whole-schema-format subject.",
+          "type": "string",
+          "format": "isbn",
+          "x-go-name": "Code"
+        },
+        "count": {
+          "$ref": "#/definitions/Count"
+        },
+        "emails": {
+          "description": "Emails is the element-driven-format subject.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "x-go-name": "Emails"
+        },
+        "stamp": {
+          "$ref": "#/definitions/Stamp"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-named-nonstruct"
+    },
+    "Stamp": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Stamp is a named time.Time — the stdlib recognizer's subject.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/response-named-nonstruct"
+    }
+  },
+  "responses": {
+    "codeResp": {
+      "description": "CodeResp declares the response on the formatted string.",
+      "schema": {
+        "type": "string",
+        "format": "isbn"
+      }
+    },
+    "countResp": {
+      "description": "CountResp declares the response on the unannotated control.",
+      "schema": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "emailsResp": {
+      "description": "EmailsResp declares the response on the formatted slice.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      }
+    },
+    "stampResp": {
+      "description": "StampResp declares the response on the named time.Time."
+    }
+  }
+}

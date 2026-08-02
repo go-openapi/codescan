@@ -263,15 +263,29 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 			var sch oaispec.Schema
 			typable := schema.NewTypable(&sch, 0, r.Ctx.SkipExtensions())
 
+			// The recognizer and the declaration's format are applied HERE rather than by the sub-build,
+			// and the sub-build is handed the UNDERLYING rather than the declared type — deliberately.
+			// A `swagger:response` declares a response, not a model: passing the named type would send
+			// it through the $ref machinery and publish it as a definition, which is the one thing this
+			// arm must not do.
+			//
+			// Both branches used to write into `sch` and return WITHOUT the resp.WithSchema below, so a
+			// response declared on a named time.Time or a named formatted type carried a description and
+			// no schema whatsoever.
 			d := decl.Obj()
 			if resolvers.IsStdTime(d) {
 				typable.Typed("string", "date-time")
+				resp.WithSchema(&sch)
+
 				return nil
 			}
 			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments)); isf {
-				typable.Typed("string", sfnm)
+				applyDeclFormat(sfnm, tpe.Underlying(), typable)
+				resp.WithSchema(&sch)
+
 				return nil
 			}
+
 			if err := schema.DelegateAs(r.Builder, decl,
 				schema.OptionFor(tpe.Underlying(), typable), schema.WithPath(r.bodyPathFor(typable)),
 			); err != nil {
@@ -282,6 +296,24 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 			return nil
 		}
 		return fmt.Errorf("responses can only be structs, did you mean for %s to be the response body?: %w", tpe.String(), ErrResponses)
+	}
+}
+
+// applyDeclFormat writes a declaration's `swagger:strfmt` onto target, honouring the element-driven
+// items-vs-whole rule rather than assuming the whole schema.
+//
+// A byte or rune sequence is string-like and takes the format itself; any other sequence takes it on
+// its items, so a `[]string` annotated `email` is a list of email addresses and not one of them. The
+// rule itself lives in common, shared with the schema builder's own classifier — this only picks the
+// element to hand it.
+func applyDeclFormat(format string, underlying types.Type, target ifaces.SwaggerTypable) {
+	switch u := underlying.(type) {
+	case *types.Slice:
+		common.ApplyArrayLikeStrfmt(format, u.Elem(), target)
+	case *types.Array:
+		common.ApplyArrayLikeStrfmt(format, u.Elem(), target)
+	default:
+		target.Typed("string", format)
 	}
 }
 
