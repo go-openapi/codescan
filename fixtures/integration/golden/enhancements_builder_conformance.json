@@ -493,6 +493,82 @@
     }
   },
   "definitions": {
+    "AllOfHost": {
+      "description": "A member of an allOf is a full schema describing one type, exactly as a model\nfield is, so the two must agree. It is reached by a different arm than any of\nthe other three positions — `buildNamedAllOf` rather than the field dispatch —\nand that arm consults its own subset of the classifiers.\n\nOne allOf rather than one host per subject, deliberately: members that resolve\nside by side also witness that no member's classifier leaks into its\nneighbours, which separate hosts could not show. The composing struct's own\nfield lands in a trailing member, so member i is subject i.\n\nSubjects absent here are the ones Go cannot embed under a usable name: a map, a\nslice of an inline struct, and the pointer/basic/predeclared arms, whose\nembedded field name would either collide with another member or be unexported.",
+      "title": "AllOfHost reaches every EMBEDDABLE subject as an allOf MEMBER, one member per\nsubject, in the same order ModelHost declares them.",
+      "allOf": [
+        {
+          "type": "string",
+          "format": "isbn"
+        },
+        {
+          "type": "string",
+          "format": "isbn"
+        },
+        {},
+        {
+          "type": "string"
+        },
+        {},
+        {
+          "type": "string",
+          "format": "byte"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {},
+        {
+          "type": "object",
+          "properties": {
+            "left": {
+              "description": "Left is a plain property.",
+              "type": "string",
+              "x-go-name": "Left"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "say": {
+              "description": "Say returns a word.",
+              "type": "string",
+              "x-go-name": "Say"
+            }
+          }
+        },
+        {
+          "type": "string",
+          "format": "email"
+        },
+        {
+          "type": "string",
+          "format": "email"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {},
+        {
+          "type": "string",
+          "x-go-type": "error"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "description": "Note is the composing struct's own field, which lands in the trailing member.",
+              "type": "string",
+              "x-go-name": "Note"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/builder-conformance"
+    },
     "ModelHost": {
       "description": "and the control for the other two.",
       "type": "object",

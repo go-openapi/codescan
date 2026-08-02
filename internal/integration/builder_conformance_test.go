@@ -23,9 +23,14 @@ import (
 // model field and a query parameter while silently dropping for a body parameter. This test is the
 // detector.
 //
-// It compares three FULL-SCHEMA positions, where no legitimate difference exists:
+// It compares four FULL-SCHEMA positions, where no legitimate difference exists:
 //
-//	a model field  ·  a body parameter  ·  a response body
+//	a model field  ·  a body parameter  ·  a response body  ·  an allOf member
+//
+// The first three converge on one field dispatch. The fourth does not: an allOf member is resolved
+// by `buildNamedAllOf`, a composition arm with its own copy of the classifier cascade — so it is the
+// position most likely to have been left behind by a fix, and adding it immediately showed three
+// classifiers missing there rather than the one already on record.
 //
 // SimpleSchema positions are excluded on purpose. A non-body parameter and a response header have a
 // genuinely different legality surface — `type` mandatory and restricted, `$ref` forbidden — which
@@ -34,7 +39,7 @@ import (
 // difference.
 //
 // The subjects carry no hand-written expectations: each is asserted against the model field, whose
-// behaviour is pinned by its own witnesses elsewhere. This suite only asks whether the three agree.
+// behaviour is pinned by its own witnesses elsewhere. This suite only asks whether the four agree.
 func TestBuilderConformance(t *testing.T) {
 	var diags []codescan.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
@@ -58,40 +63,44 @@ func TestBuilderConformance(t *testing.T) {
 		// The reason is location-specific and stated, not emergent: it is the only shape in this
 		// suite where a full-schema position legitimately produces nothing.
 		paramDropped string
+
+		// allOf marks a subject also reached as an allOf MEMBER. The members of AllOfHost appear in
+		// this table's order, so the flagged subjects and the members zip positionally.
+		allOf bool
 	}{
-		{prop: "fmt", path: "/fmt", response: "respFmt"},
-		{prop: "fmtAl", path: "/fmt-al", response: "respFmtAl"},
-		{prop: "typ", path: "/typ", response: "respTyp"},
+		{prop: "fmt", path: "/fmt", response: "respFmt", allOf: true},
+		{prop: "fmtAl", path: "/fmt-al", response: "respFmtAl", allOf: true},
+		{prop: "typ", path: "/typ", response: "respTyp", allOf: true},
 		{
-			prop: "typAl", path: "/typ-al", response: "respTypAl",
+			prop: "typAl", path: "/typ-al", response: "respTypAl", allOf: true,
 			note: "the pair that caught the body-branch gap: swagger:type on an alias",
 		},
-		{prop: "enum", path: "/enum", response: "respEnum"},
-		{prop: "bytes", path: "/bytes", response: "respBytes"},
-		{prop: "stamp", path: "/stamp", response: "respStamp"},
-		{prop: "raw", path: "/raw", response: "respRaw"},
+		{prop: "enum", path: "/enum", response: "respEnum", allOf: true},
+		{prop: "bytes", path: "/bytes", response: "respBytes", allOf: true},
+		{prop: "stamp", path: "/stamp", response: "respStamp", allOf: true},
+		{prop: "raw", path: "/raw", response: "respRaw", allOf: true},
 
 		// Shape subjects: the arms of the field dispatch rather than the classifiers. The classifier
 		// subjects above reach only the Named and Alias arms; these reach the rest, so a factorization
 		// of those arms is guarded in all three positions.
-		{prop: "struct", path: "/struct", response: "respStruct"},
-		{prop: "iface", path: "/iface", response: "respIface"},
+		{prop: "struct", path: "/struct", response: "respStruct", allOf: true},
+		{prop: "iface", path: "/iface", response: "respIface", allOf: true},
 		{prop: "mapping", path: "/mapping", response: "respMapping"},
 		{prop: "inline", path: "/inline", response: "respInline", note: "slice arm with an inline element"},
 		{prop: "ptr", path: "/ptr", response: "respPtr"},
 		{prop: "basic", path: "/basic", response: "respBasic"},
 
 		{
-			prop: "emails", path: "/emails", response: "respEmails",
+			prop: "emails", path: "/emails", response: "respEmails", allOf: true,
 			note: "named []string + non-special format — the element-driven rule puts it on items",
 		},
-		{prop: "codes", path: "/codes", response: "respCodes", note: "array flavour of the same"},
+		{prop: "codes", path: "/codes", response: "respCodes", allOf: true, note: "array flavour of the same"},
 
 		// Stdlib-identity subjects. The classifier subjects above name their stdlib type through an
 		// alias; these reach it as the NAMED type, which is the arm where each builder carried its own
 		// subset of the recognizers.
-		{prop: "stampN", path: "/stamp-n", response: "respStampN", note: "time.Time as the named type"},
-		{prop: "rawN", path: "/raw-n", response: "respRawN", note: "json.RawMessage as the named type"},
+		{prop: "stampN", path: "/stamp-n", response: "respStampN", allOf: true, note: "time.Time as the named type"},
+		{prop: "rawN", path: "/raw-n", response: "respRawN", allOf: true, note: "json.RawMessage as the named type"},
 		{prop: "anyv", path: "/anyv", response: "respAnyV", note: "the predeclared any"},
 		{
 			prop: "errN", path: "/err-n", response: "respErrN",
@@ -101,6 +110,7 @@ func TestBuilderConformance(t *testing.T) {
 		{
 			prop: "errAl", path: "/err-al", response: "respErrAl",
 			note:         "the same through an alias — the recognizer only fires after the dissolve",
+			allOf:        true,
 			paramDropped: "an error has no meaning as something a client sends",
 		},
 	}
@@ -112,13 +122,35 @@ func TestBuilderConformance(t *testing.T) {
 	// list cannot rot into a stale TODO.
 	knownBroken := map[string]string{}
 
+	// The allOf MEMBER position keeps its own pin list. Its arm — `buildNamedAllOf` — is not the field
+	// dispatch the other three converge on, and it runs a different subset of the classifiers again.
+	//
+	// Same both-directions assertion: a listed cell that starts agreeing fails too.
+	knownBrokenAllOf := map[string]string{
+		"typ": "Q40 — buildNamedAllOf runs no swagger:type classifier, so the member comes out empty",
+		"enum": "Q40 family — no enum classifier either; a basic underlying then falls to the " +
+			"warn-and-skip default and the member comes out empty",
+		"emails": "Q34 family — the arm's strfmt classifier predates the element-driven rule, so the " +
+			"format lands on the whole member instead of on its items",
+		"codes": "Q34 family — array flavour of the same",
+	}
+
 	model := doc.Definitions["ModelHost"].Properties
 	require.NotEmpty(t, model, "the control host must have properties")
 
+	// AllOfHost embeds the flagged subjects in this table's order, which is what lets the two zip.
+	var inAllOfOrder []string
+	for _, s := range subjects {
+		if s.allOf {
+			inAllOfOrder = append(inAllOfOrder, s.prop)
+		}
+	}
+	byAllOf := allOfMemberSignatures(t, doc, inAllOfOrder)
+
 	var ledger strings.Builder
-	fmt.Fprintf(&ledger, "\n%-8s %-26s %-26s %-26s %s\n",
-		"SUBJECT", "MODEL FIELD", "BODY PARAM", "RESPONSE BODY", "")
-	fmt.Fprintf(&ledger, "%s\n", strings.Repeat("-", 100))
+	fmt.Fprintf(&ledger, "\n%-8s %-26s %-26s %-26s %-26s %s\n",
+		"SUBJECT", "MODEL FIELD", "BODY PARAM", "RESPONSE BODY", "ALLOF MEMBER", "")
+	fmt.Fprintf(&ledger, "%s\n", strings.Repeat("-", 128))
 
 	for _, s := range subjects {
 		t.Run(s.prop, func(t *testing.T) {
@@ -128,6 +160,33 @@ func TestBuilderConformance(t *testing.T) {
 			control := schemaSignature(want, doc.Definitions, 0)
 			asParam, hasParam := bodyParamSignature(t, doc, s.path)
 			asResponse := responseBodySignature(t, doc, s.response)
+
+			// The allOf member is a full schema describing the same type, so it is held to the same
+			// equality — under its own pin list, since it is reached by its own arm. Asserted here, above
+			// the dropped-parameter branch: whether a PARAMETER refuses the type says nothing about how
+			// it composes, and returning early would leave that cell displayed but unchecked.
+			asAllOf, inAllOf := byAllOf[s.prop]
+			allOfCell, allOfVerdict := "—", ""
+			if inAllOf {
+				allOfCell = asAllOf
+				allOfReason, allOfPinned := knownBrokenAllOf[s.prop]
+				switch {
+				case asAllOf == control && allOfPinned:
+					allOfVerdict = " · ALLOF UNPINNED — remove it"
+				case asAllOf != control && !allOfPinned:
+					allOfVerdict = " · ALLOF DIVERGES"
+				case allOfPinned:
+					allOfVerdict = " · ALLOF PINNED"
+				}
+				if allOfPinned {
+					assert.NotEqual(t, control, asAllOf,
+						"%s: allOf member pinned as broken (%s) but it now agrees — remove it",
+						s.prop, allOfReason)
+				} else {
+					assert.Equal(t, control, asAllOf,
+						"an allOf member must render this shape as a model field does")
+				}
+			}
 
 			if s.paramDropped != "" {
 				// The refusal must be reported, not silent: a parameter vanishing from an operation with no
@@ -140,8 +199,9 @@ func TestBuilderConformance(t *testing.T) {
 				assert.Equal(t, control, asResponse,
 					"a dropped parameter says nothing about the response, which must still agree")
 
-				fmt.Fprintf(&ledger, "%-8s %-26s %-26s %-26s %s\n",
-					s.prop, control, "<dropped>", asResponse, "DECLARED — "+s.paramDropped)
+				fmt.Fprintf(&ledger, "%-8s %-26s %-26s %-26s %-26s %s\n",
+					s.prop, control, "<dropped>", asResponse, allOfCell,
+					"DECLARED — "+s.paramDropped+allOfVerdict)
 
 				return
 			}
@@ -163,10 +223,14 @@ func TestBuilderConformance(t *testing.T) {
 			default:
 				verdict = "DIVERGES"
 			}
+
+			verdict += allOfVerdict
+
 			if s.note != "" {
 				verdict += " — " + s.note
 			}
-			fmt.Fprintf(&ledger, "%-8s %-26s %-26s %-26s %s\n", s.prop, control, asParam, asResponse, verdict)
+			fmt.Fprintf(&ledger, "%-8s %-26s %-26s %-26s %-26s %s\n",
+				s.prop, control, asParam, asResponse, allOfCell, verdict)
 
 			if pinned {
 				assert.False(t, agrees,
@@ -186,6 +250,34 @@ func TestBuilderConformance(t *testing.T) {
 	// The comparison above only asks whether the three builders agree; a wrong answer they all share
 	// would pass it. The golden makes every subject's emitted spec reviewable on its own.
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_builder_conformance.json")
+}
+
+// allOfMemberSignatures renders AllOfHost's members and keys them by the subject each one carries.
+//
+// The mapping is positional, so it is only trustworthy if the shape is exactly what the fixture
+// promises: one member per flagged subject, in order, plus a trailing member holding the composing
+// struct's own field. Both are asserted here rather than assumed — a member that fails to build
+// emits an EMPTY member rather than none (that is the Q40 symptom), so a count that still matches is
+// evidence the indices did not shift, and a count that does not tells us the mapping is meaningless
+// before any cell is compared.
+func allOfMemberSignatures(t *testing.T, doc *oaispec.Swagger, props []string) map[string]string {
+	t.Helper()
+
+	host, ok := doc.Definitions["AllOfHost"]
+	require.True(t, ok, "missing AllOfHost")
+	require.Len(t, host.AllOf, len(props)+1,
+		"AllOfHost must hold one member per flagged subject plus the own-fields member")
+
+	own := schemaSignature(host.AllOf[len(props)], doc.Definitions, 0)
+	require.Equal(t, "object{note}", own,
+		"the trailing member must be the composing struct's own field; the members are misaligned")
+
+	out := make(map[string]string, len(props))
+	for i, prop := range props {
+		out[prop] = schemaSignature(host.AllOf[i], doc.Definitions, 0)
+	}
+
+	return out
 }
 
 // bodyParamSignature renders the body parameter of the operation on path, reporting whether one was

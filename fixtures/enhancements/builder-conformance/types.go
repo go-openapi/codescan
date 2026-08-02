@@ -12,12 +12,16 @@
 //
 // # What is compared
 //
-// One Go shape reached from three FULL-SCHEMA positions, where no legitimate
-// difference exists and the three must agree exactly:
+// One Go shape reached from four FULL-SCHEMA positions, where no legitimate
+// difference exists and the four must agree exactly:
 //
-//   - a model field                (schema builder)
+//   - a model field                (schema builder, the control)
 //   - a body parameter             (parameters builder)
 //   - a response body              (responses builder)
+//   - an allOf member              (schema builder, composition arm)
+//
+// The first three converge on one field dispatch; the fourth is reached by
+// buildNamedAllOf instead, which keeps its own copy of the classifier cascade.
 //
 // SimpleSchema positions are deliberately excluded. A non-body parameter and a
 // response header have a genuinely different legality surface — `type` is
@@ -212,6 +216,74 @@ type ModelHost struct {
 
 	// ErrAl names the same through an alias.
 	ErrAl ErrAlias `json:"errAl"`
+}
+
+// AllOfHost reaches every EMBEDDABLE subject as an allOf MEMBER, one member per
+// subject, in the same order ModelHost declares them.
+//
+// A member of an allOf is a full schema describing one type, exactly as a model
+// field is, so the two must agree. It is reached by a different arm than any of
+// the other three positions — `buildNamedAllOf` rather than the field dispatch —
+// and that arm consults its own subset of the classifiers.
+//
+// One allOf rather than one host per subject, deliberately: members that resolve
+// side by side also witness that no member's classifier leaks into its
+// neighbours, which separate hosts could not show. The composing struct's own
+// field lands in a trailing member, so member i is subject i.
+//
+// Subjects absent here are the ones Go cannot embed under a usable name: a map, a
+// slice of an inline struct, and the pointer/basic/predeclared arms, whose
+// embedded field name would either collide with another member or be unexported.
+//
+// swagger:model AllOfHost
+type AllOfHost struct {
+	// swagger:allOf
+	FmtNamed
+
+	// swagger:allOf
+	FmtAlias
+
+	// swagger:allOf
+	TypeNamed
+
+	// swagger:allOf
+	TypeAlias
+
+	// swagger:allOf
+	EnumNamed
+
+	// swagger:allOf
+	BytesNamed
+
+	// swagger:allOf
+	StampAlias
+
+	// swagger:allOf
+	RawAlias
+
+	// swagger:allOf
+	Plain
+
+	// swagger:allOf
+	Speaker
+
+	// swagger:allOf
+	EmailsNamed
+
+	// swagger:allOf
+	CodesNamed
+
+	// swagger:allOf
+	time.Time
+
+	// swagger:allOf
+	json.RawMessage
+
+	// swagger:allOf
+	ErrAlias
+
+	// Note is the composing struct's own field, which lands in the trailing member.
+	Note string `json:"note"`
 }
 
 // ParamsFmt reaches FmtNamed as a body parameter.
