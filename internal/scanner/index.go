@@ -151,6 +151,15 @@ func (a *TypeIndex) emitHintf(code grammar.Code, format string, args ...any) {
 	a.emit(grammar.Hintf(token.Position{}, code, format, args...))
 }
 
+// posOf resolves p against pkg's FileSet, tolerating a package that has none.
+func posOf(pkg *packages.Package, p token.Pos) token.Position {
+	if pkg == nil || pkg.Fset == nil || !p.IsValid() {
+		return token.Position{}
+	}
+
+	return pkg.Fset.Position(p)
+}
+
 func (a *TypeIndex) build(pkgs []*packages.Package) error {
 	for _, pkg := range pkgs {
 		if _, known := a.AllPackages[pkg.PkgPath]; known {
@@ -185,7 +194,7 @@ func (a *TypeIndex) processPackage(pkg *packages.Package) error {
 }
 
 func (a *TypeIndex) processFile(pkg *packages.Package, file *ast.File) error {
-	n, err := a.detectNodes(file)
+	n, err := a.detectNodes(pkg, file)
 	if err != nil {
 		return err
 	}
@@ -495,7 +504,7 @@ func (a *TypeIndex) walkImports(pkg *packages.Package) error {
 //
 // See [§classifier](./README.md#classifier) — bitmask semantics, struct-annotation exclusivity
 // rule, and the recognised-but-bitless field-decoration tokens.
-func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
+func (a *TypeIndex) detectNodes(pkg *packages.Package, file *ast.File) (node, error) {
 	var n node
 	for _, comments := range file.Comments {
 		var seenStruct string // tracks the struct annotation for this comment group
@@ -544,7 +553,12 @@ func (a *TypeIndex) detectNodes(file *ast.File) (node, error) {
 			case "allOf", "omit":
 			case "ignore":
 			default:
-				return 0, fmt.Errorf("classifier: unknown swagger annotation %q: %w", annotation, ErrScanner)
+				// An annotation nobody recognises is almost always a typo, and it used to abort the entire
+				// scan — one mistyped keyword in one comment and a whole package graph produced nothing.
+				// Skip-and-diagnose is the house rule, and this is the case that most deserves it: the
+				// author gets the name, the location, and every other annotation in the tree still works.
+				a.emit(grammar.Warnf(posOf(pkg, cline.Pos()), grammar.CodeInvalidAnnotation,
+					"unknown swagger annotation %q; the comment is ignored", annotation))
 			}
 		}
 	}
