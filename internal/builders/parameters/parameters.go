@@ -301,11 +301,11 @@ func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
 	case *types.Struct:
-		return p.buildFromFieldStruct(ftpe, typable)
+		return schema.Delegate(p.Builder, schema.OptionFor(ftpe, typable))
 	case *types.Pointer:
 		return p.buildFromField(fld, ftpe.Elem(), typable, seen)
 	case *types.Interface:
-		return p.buildFromFieldInterface(ftpe, typable)
+		return schema.Delegate(p.Builder, schema.OptionFor(ftpe, typable))
 	case *types.Array:
 		return p.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
 	case *types.Slice:
@@ -319,18 +319,6 @@ func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrParameters)
 	}
-}
-
-func (p *Builder) buildFromFieldStruct(tpe *types.Struct, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(p.Ctx, p.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
-		return err
-	}
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
 }
 
 func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
@@ -350,38 +338,10 @@ func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 		Schema: sch,
 	}
 
-	sb := schema.NewBuilder(p.Ctx, p.Decl)
-	if err := sb.Build(schema.WithType(
+	return schema.Delegate(p.Builder, schema.WithType(
 		ftpe.Elem(),
-		schema.NewTypable(sch, typable.Level()+1, p.Ctx.SkipExtensions())),
-	); err != nil {
-		return err
-	}
-
-	// Propagate the sub-builder's PostDeclarations so a model discovered only through the map's value
-	// type (no swagger:model annotation, no other reference site) makes it into the spec's definitions
-	// section.
-	//
-	// Every sibling buildFromFieldXxx method does the same; this loop went missing in M2.5's
-	// schema-builder factor-out — see the parameters-map-postdecl fixture.
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
-}
-
-func (p *Builder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(p.Ctx, p.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
+		schema.NewTypable(sch, typable.Level()+1, p.Ctx.SkipExtensions()),
+	))
 }
 
 func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
@@ -410,17 +370,7 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 		return nil
 	}
 
-	sb := schema.NewBuilder(p.Ctx, decl)
-	sb.InferNames()
-	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable)); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
+	return schema.DelegateAs(p.Builder, decl, schema.OptionFor(decl.ObjType(), typable))
 }
 
 func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {

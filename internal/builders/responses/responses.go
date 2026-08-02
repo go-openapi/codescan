@@ -181,11 +181,11 @@ func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
 	case *types.Struct:
-		return r.buildFromFieldStruct(ftpe, typable)
+		return schema.Delegate(r.Builder, schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable)))
 	case *types.Pointer:
 		return r.buildFromField(fld, ftpe.Elem(), typable, seen)
 	case *types.Interface:
-		return r.buildFromFieldInterface(ftpe, typable)
+		return schema.Delegate(r.Builder, schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable)))
 	case *types.Array:
 		defer r.descendBody("items")()
 		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
@@ -201,19 +201,6 @@ func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrResponses)
 	}
-}
-
-func (r *Builder) buildFromFieldStruct(ftpe *types.Struct, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
 }
 
 func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
@@ -238,32 +225,10 @@ func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 	// value's inline props (if any) anchor there.
 	defer r.descendBody("additionalProperties")()
 	valTypable := schema.NewTypable(sch, typable.Level()+1, r.Ctx.SkipExtensions())
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(
+	return schema.Delegate(r.Builder,
 		schema.WithType(ftpe.Elem(), valTypable),
 		schema.WithPath(r.bodyPathFor(valTypable)),
-	); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
-}
-
-func (r *Builder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
+	)
 }
 
 func (r *Builder) buildFromType(otpe types.Type, resp *oaispec.Response, seen map[string]bool) error {
@@ -307,15 +272,13 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 				typable.Typed("string", sfnm)
 				return nil
 			}
-			sb := schema.NewBuilder(r.Ctx, decl)
-			sb.InferNames()
-			if err := sb.Build(schema.OptionFor(tpe.Underlying(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
+			if err := schema.DelegateAs(r.Builder, decl,
+				schema.OptionFor(tpe.Underlying(), typable), schema.WithPath(r.bodyPathFor(typable)),
+			); err != nil {
 				return err
 			}
 			resp.WithSchema(&sch)
-			for _, d := range sb.PostDeclarations() {
-				r.AppendPostDecl(d)
-			}
+
 			return nil
 		}
 		return fmt.Errorf("responses can only be structs, did you mean for %s to be the response body?: %w", tpe.String(), ErrResponses)
@@ -361,17 +324,9 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 		return nil
 	}
 
-	sb := schema.NewBuilder(r.Ctx, decl)
-	sb.InferNames()
-	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
+	return schema.DelegateAs(r.Builder, decl,
+		schema.OptionFor(decl.ObjType(), typable), schema.WithPath(r.bodyPathFor(typable)),
+	)
 }
 
 func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {

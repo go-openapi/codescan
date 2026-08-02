@@ -9,10 +9,51 @@ import (
 	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/ifaces"
+	"github.com/go-openapi/codescan/internal/scanner"
 )
 
 // inBodyLocation is the `in:` value naming a full-Schema parameter or response field.
 const inBodyLocation = "body"
+
+// Delegate runs a schema sub-build for b and hands back whatever it discovered.
+//
+// The parameters and responses builders resolve most field shapes by deferring to this package, and
+// each had written the three-step dance out per shape: construct a sub-builder on the caller's
+// context and declaration, build, then drain the post-declaration queue into the caller. Forgetting
+// the drain loses a discovered model silently, which is the kind of thing five copies eventually get
+// wrong in one of them.
+//
+// The Options stay with the caller, because that is where the builders genuinely differ — the
+// responses builder threads a cross-ref path, and a map value is targeted explicitly rather than
+// through OptionFor.
+func Delegate(b *common.Builder, opts ...Option) error {
+	return delegateWith(b, NewBuilder(b.Ctx, b.Decl), opts...)
+}
+
+// DelegateAs is Delegate bound to a RESOLVED declaration rather than the caller's own.
+//
+// A field whose type resolves to another declaration is built in that declaration's context, so the
+// sub-builder takes it and infers names from it. The InferNames call is easy to omit and its absence
+// is not obvious in the output, which is reason enough for the two callers to share one spelling.
+func DelegateAs(b *common.Builder, decl *scanner.EntityDecl, opts ...Option) error {
+	sb := NewBuilder(b.Ctx, decl)
+	sb.InferNames()
+
+	return delegateWith(b, sb, opts...)
+}
+
+func delegateWith(b *common.Builder, sb *Builder, opts ...Option) error {
+	if err := sb.Build(opts...); err != nil {
+		return err
+	}
+	// Propagate the sub-build's discoveries: a model reached only through this field — no
+	// swagger:model annotation, no other reference site — arrives in the spec only via this queue.
+	for _, d := range sb.PostDeclarations() {
+		b.AppendPostDecl(d)
+	}
+
+	return nil
+}
 
 // BuildFieldAlias resolves an alias reached as a FIELD of a `swagger:parameters` or
 // `swagger:response` struct.
@@ -35,18 +76,7 @@ func BuildFieldAlias(b *common.Builder, tpe *types.Alias, typable ifaces.Swagger
 	resolvers.MustHaveRightHandSide(tpe)
 
 	dissolve := func(t types.Type) error {
-		sb := NewBuilder(b.Ctx, b.Decl)
-		opts := make([]Option, 0, len(extra)+1)
-		opts = append(opts, OptionFor(t, typable))
-		opts = append(opts, extra...)
-		if err := sb.Build(opts...); err != nil {
-			return err
-		}
-		for _, d := range sb.PostDeclarations() {
-			b.AppendPostDecl(d)
-		}
-
-		return nil
+		return Delegate(b, append([]Option{OptionFor(t, typable)}, extra...)...)
 	}
 
 	// Everything dissolves through the schema builder, which owns the classifier cascade and the
