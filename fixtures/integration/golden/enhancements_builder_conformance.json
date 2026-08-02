@@ -1,6 +1,27 @@
 {
   "swagger": "2.0",
   "paths": {
+    "/anyv": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confAnyV",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respAnyV"
+          }
+        }
+      }
+    },
     "/basic": {
       "post": {
         "tags": [
@@ -128,6 +149,32 @@
         "responses": {
           "200": {
             "$ref": "#/responses/respEnum"
+          }
+        }
+      }
+    },
+    "/err-al": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confErrAl",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respErrAl"
+          }
+        }
+      }
+    },
+    "/err-n": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confErrN",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respErrN"
           }
         }
       }
@@ -306,6 +353,27 @@
         }
       }
     },
+    "/raw-n": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confRawN",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respRawN"
+          }
+        }
+      }
+    },
     "/stamp": {
       "post": {
         "tags": [
@@ -326,6 +394,30 @@
         "responses": {
           "200": {
             "$ref": "#/responses/respStamp"
+          }
+        }
+      }
+    },
+    "/stamp-n": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confStampN",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respStampN"
           }
         }
       }
@@ -406,6 +498,10 @@
       "type": "object",
       "title": "ModelHost reaches every subject as a MODEL FIELD — the schema builder's view,",
       "properties": {
+        "anyv": {
+          "description": "AnyV is the predeclared any.",
+          "x-go-name": "AnyV"
+        },
         "basic": {
           "description": "Basic is the plain-basic arm.",
           "type": "integer",
@@ -446,6 +542,18 @@
           ],
           "x-go-enum-desc": "1 EnumLow is the low member.\n2 EnumHigh is the high member.",
           "x-go-name": "Enum"
+        },
+        "errAl": {
+          "description": "ErrAl names the same through an alias.",
+          "type": "string",
+          "x-go-name": "ErrAl",
+          "x-go-type": "error"
+        },
+        "errN": {
+          "description": "ErrN is the predeclared error — no package, no declaration.",
+          "type": "string",
+          "x-go-name": "ErrN",
+          "x-go-type": "error"
         },
         "fmt": {
           "description": "Fmt is the named-format subject.",
@@ -492,11 +600,21 @@
           "description": "Raw is the open-schema subject.",
           "x-go-name": "Raw"
         },
+        "rawN": {
+          "description": "RawN is the open-schema stdlib type reached as the named type.",
+          "x-go-name": "RawN"
+        },
         "stamp": {
           "description": "Stamp is the stdlib-alias subject.",
           "type": "string",
           "format": "date-time",
           "x-go-name": "Stamp"
+        },
+        "stampN": {
+          "description": "StampN is the stdlib time reached as the named type.",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "StampN"
         },
         "struct": {
           "$ref": "#/definitions/Plain"
@@ -540,6 +658,10 @@
     }
   },
   "responses": {
+    "respAnyV": {
+      "description": "RespAnyV reaches the predeclared any as a response body.",
+      "schema": {}
+    },
     "respBasic": {
       "description": "RespBasic reaches the basic subject as a response body.",
       "schema": {
@@ -580,6 +702,20 @@
         "type": "integer",
         "format": "uint64"
       }
+    },
+    "respErrAl": {
+      "description": "RespErrAl reaches the aliased error as a response body.",
+      "schema": {
+        "type": "string"
+      },
+      "x-go-type": "error"
+    },
+    "respErrN": {
+      "description": "RespErrN reaches the predeclared error as a response body.",
+      "schema": {
+        "type": "string"
+      },
+      "x-go-type": "error"
     },
     "respFmt": {
       "description": "RespFmt reaches FmtNamed as a response body.",
@@ -636,8 +772,19 @@
       "description": "RespRaw reaches RawAlias as a response body.",
       "schema": {}
     },
+    "respRawN": {
+      "description": "RespRawN reaches the named open-schema type as a response body.",
+      "schema": {}
+    },
     "respStamp": {
       "description": "RespStamp reaches StampAlias as a response body.",
+      "schema": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "respStampN": {
+      "description": "RespStampN reaches the named stdlib time as a response body.",
       "schema": {
         "type": "string",
         "format": "date-time"

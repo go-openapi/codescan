@@ -205,7 +205,7 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 	if s.classifierAliasTargetStrfmt(ftpe, tgt) {
 		return nil
 	}
-	if applyStdlibSpecials(tio, tgt, s.skipExtensions) {
+	if ApplyStdlibSpecials(tio, tgt, s.skipExtensions) {
 		return nil
 	}
 

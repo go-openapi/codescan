@@ -85,6 +85,25 @@ type StampAlias = time.Time
 // RawAlias is an alias to the open "any JSON" stdlib type.
 type RawAlias = json.RawMessage
 
+// --- stdlib-identity subjects: reached as the NAMED type, not through an alias ---
+//
+// The two subjects above name their stdlib type through an alias, which lands in
+// the alias arm. A field typed `time.Time` or `json.RawMessage` DIRECTLY lands in
+// the named arm instead, where each builder used to carry its own subset of the
+// identity recognizers. Nothing reached that arm before these.
+//
+// `error` is the one that makes the subsets observable without a truncated
+// package graph: it is predeclared, so its object has a nil package and no
+// declaration exists to look up in any graph. A builder that demands the
+// declaration before consulting the recognizer cannot degrade — it dereferences
+// nil.
+
+// ErrAlias names the predeclared error through an alias.
+//
+// The alias's own object is this name, not `error`, so an identity recognizer
+// keyed on the object never fires here — only after the alias dissolves.
+type ErrAlias = error
+
 // --- shape subjects: the arms of the field dispatch, rather than the classifiers ---
 //
 // The subjects above are all named or alias types, which reach only two arms of
@@ -178,6 +197,21 @@ type ModelHost struct {
 
 	// Codes is the array flavour of the same.
 	Codes CodesNamed `json:"codes"`
+
+	// StampN is the stdlib time reached as the named type.
+	StampN time.Time `json:"stampN"`
+
+	// RawN is the open-schema stdlib type reached as the named type.
+	RawN json.RawMessage `json:"rawN"`
+
+	// AnyV is the predeclared any.
+	AnyV any `json:"anyv"`
+
+	// ErrN is the predeclared error — no package, no declaration.
+	ErrN error `json:"errN"`
+
+	// ErrAl names the same through an alias.
+	ErrAl ErrAlias `json:"errAl"`
 }
 
 // ParamsFmt reaches FmtNamed as a body parameter.
@@ -585,3 +619,135 @@ type RespCodes struct {
 //
 //	200: respCodes
 func HandlerCodes() {}
+
+// --- stdlib-identity subjects in the other two positions ---
+
+// ParamsStampN reaches the named stdlib time as a body parameter.
+//
+// swagger:parameters confStampN
+type ParamsStampN struct {
+	// in: body
+	Body time.Time `json:"body"`
+}
+
+// RespStampN reaches the named stdlib time as a response body.
+//
+// swagger:response respStampN
+type RespStampN struct {
+	// in: body
+	Body time.Time `json:"body"`
+}
+
+// HandlerStampN binds the named stdlib time subject.
+//
+// swagger:route POST /stamp-n conf confStampN
+//
+// Responses:
+//
+//	200: respStampN
+func HandlerStampN() {}
+
+// ParamsRawN reaches the named open-schema type as a body parameter.
+//
+// swagger:parameters confRawN
+type ParamsRawN struct {
+	// in: body
+	Body json.RawMessage `json:"body"`
+}
+
+// RespRawN reaches the named open-schema type as a response body.
+//
+// swagger:response respRawN
+type RespRawN struct {
+	// in: body
+	Body json.RawMessage `json:"body"`
+}
+
+// HandlerRawN binds the named open-schema subject.
+//
+// swagger:route POST /raw-n conf confRawN
+//
+// Responses:
+//
+//	200: respRawN
+func HandlerRawN() {}
+
+// ParamsAnyV reaches the predeclared any as a body parameter.
+//
+// swagger:parameters confAnyV
+type ParamsAnyV struct {
+	// in: body
+	Body any `json:"body"`
+}
+
+// RespAnyV reaches the predeclared any as a response body.
+//
+// swagger:response respAnyV
+type RespAnyV struct {
+	// in: body
+	Body any `json:"body"`
+}
+
+// HandlerAnyV binds the predeclared-any subject.
+//
+// swagger:route POST /anyv conf confAnyV
+//
+// Responses:
+//
+//	200: respAnyV
+func HandlerAnyV() {}
+
+// ParamsErrN reaches the predeclared error as a body parameter.
+//
+// swagger:parameters confErrN
+type ParamsErrN struct {
+	// The name is the subject's, not the usual "body": the diagnostic raised when this parameter is
+	// dropped has to be attributable to it.
+	//
+	// in: body
+	Body error `json:"errN"`
+}
+
+// RespErrN reaches the predeclared error as a response body.
+//
+// swagger:response respErrN
+type RespErrN struct {
+	// in: body
+	Body error `json:"body"`
+}
+
+// HandlerErrN binds the predeclared-error subject.
+//
+// swagger:route POST /err-n conf confErrN
+//
+// Responses:
+//
+//	200: respErrN
+func HandlerErrN() {}
+
+// ParamsErrAl reaches the aliased error as a body parameter.
+//
+// swagger:parameters confErrAl
+type ParamsErrAl struct {
+	// Named for the subject, as above.
+	//
+	// in: body
+	Body ErrAlias `json:"errAl"`
+}
+
+// RespErrAl reaches the aliased error as a response body.
+//
+// swagger:response respErrAl
+type RespErrAl struct {
+	// in: body
+	Body ErrAlias `json:"body"`
+}
+
+// HandlerErrAl binds the aliased-error subject.
+//
+// swagger:route POST /err-al conf confErrAl
+//
+// Responses:
+//
+//	200: respErrAl
+func HandlerErrAl() {}

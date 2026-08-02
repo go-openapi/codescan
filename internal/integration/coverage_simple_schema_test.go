@@ -74,17 +74,21 @@ func TestCoverage_SimpleSchemaViolation(t *testing.T) {
 	assert.Empty(t, bad.Ref.String(), "Ref is forbidden under SimpleSchema")
 
 	// Case 3 — the error-typed field is gone entirely, and said so.
+	//
+	// Under its OWN code, not the SimpleSchema one the other two cases carry. `error` is meaningless
+	// as an inbound value in every location including `in: body`, so reporting it as a SimpleSchema
+	// restriction sent the reader to change an `in:` that was never the problem.
 	_, hasErrored := byName["errored"]
 	assert.False(t, hasErrored, "an error-typed parameter must be dropped")
 	var saidSo bool
 	for _, d := range got {
-		if d.Code == grammar.CodeUnsupportedInSimpleSchema && strings.Contains(d.Message, "errored") {
+		if d.Code == grammar.CodeUnsupportedGoType && strings.Contains(d.Message, "errored") {
 			saidSo = true
 
 			break
 		}
 	}
-	assert.True(t, saidSo, "dropping the error-typed parameter must be reported; got %v", got)
+	assert.True(t, saidSo, "dropping the error-typed parameter must be reported under its own code; got %v", got)
 
 	// Case 2 — nothing to fall back to, so the target is wiped.
 	unrep, ok := byName["unrepresentable"]

@@ -36,10 +36,14 @@ import (
 // The subjects carry no hand-written expectations: each is asserted against the model field, whose
 // behaviour is pinned by its own witnesses elsewhere. This suite only asks whether the three agree.
 func TestBuilderConformance(t *testing.T) {
+	var diags []codescan.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/builder-conformance/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
+		OnDiagnostic: func(d codescan.Diagnostic) {
+			diags = append(diags, d)
+		},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, doc)
@@ -49,6 +53,11 @@ func TestBuilderConformance(t *testing.T) {
 		path     string // route carrying the body parameter
 		response string // response whose body carries it
 		note     string
+
+		// paramDropped marks a subject the parameters builder must REFUSE rather than render.
+		// The reason is location-specific and stated, not emergent: it is the only shape in this
+		// suite where a full-schema position legitimately produces nothing.
+		paramDropped string
 	}{
 		{prop: "fmt", path: "/fmt", response: "respFmt"},
 		{prop: "fmtAl", path: "/fmt-al", response: "respFmtAl"},
@@ -77,6 +86,23 @@ func TestBuilderConformance(t *testing.T) {
 			note: "named []string + non-special format — the element-driven rule puts it on items",
 		},
 		{prop: "codes", path: "/codes", response: "respCodes", note: "array flavour of the same"},
+
+		// Stdlib-identity subjects. The classifier subjects above name their stdlib type through an
+		// alias; these reach it as the NAMED type, which is the arm where each builder carried its own
+		// subset of the recognizers.
+		{prop: "stampN", path: "/stamp-n", response: "respStampN", note: "time.Time as the named type"},
+		{prop: "rawN", path: "/raw-n", response: "respRawN", note: "json.RawMessage as the named type"},
+		{prop: "anyv", path: "/anyv", response: "respAnyV", note: "the predeclared any"},
+		{
+			prop: "errN", path: "/err-n", response: "respErrN",
+			note:         "the predeclared error: nil package, so no declaration exists to look up",
+			paramDropped: "an error has no meaning as something a client sends",
+		},
+		{
+			prop: "errAl", path: "/err-al", response: "respErrAl",
+			note:         "the same through an alias — the recognizer only fires after the dissolve",
+			paramDropped: "an error has no meaning as something a client sends",
+		},
 	}
 
 	// Cells where the builders are legitimately expected to disagree. Empty: the three full-schema
@@ -100,8 +126,26 @@ func TestBuilderConformance(t *testing.T) {
 			require.True(t, ok, "missing control property %s", s.prop)
 
 			control := schemaSignature(want, doc.Definitions, 0)
-			asParam := bodyParamSignature(t, doc, s.path)
+			asParam, hasParam := bodyParamSignature(t, doc, s.path)
 			asResponse := responseBodySignature(t, doc, s.response)
+
+			if s.paramDropped != "" {
+				// The refusal must be reported, not silent: a parameter vanishing from an operation with no
+				// word to the author is the failure mode the skip-with-a-diagnostic rule exists to avoid.
+				assert.False(t, hasParam,
+					"%s: the parameters builder must drop this (%s), but it emitted %s",
+					s.prop, s.paramDropped, asParam)
+				assert.True(t, hasDiagnosticFor(diags, s.prop),
+					"%s: dropped without a diagnostic naming it", s.prop)
+				assert.Equal(t, control, asResponse,
+					"a dropped parameter says nothing about the response, which must still agree")
+
+				fmt.Fprintf(&ledger, "%-8s %-26s %-26s %-26s %s\n",
+					s.prop, control, "<dropped>", asResponse, "DECLARED — "+s.paramDropped)
+
+				return
+			}
+			require.True(t, hasParam, "%s: no body parameter on %s", s.prop, s.path)
 
 			paramAgrees := control == asParam
 			responseAgrees := control == asResponse
@@ -144,8 +188,10 @@ func TestBuilderConformance(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_builder_conformance.json")
 }
 
-// bodyParamSignature renders the body parameter of the operation on path.
-func bodyParamSignature(t *testing.T, doc *oaispec.Swagger, path string) string {
+// bodyParamSignature renders the body parameter of the operation on path, reporting whether one was
+// emitted at all. A missing parameter is a result rather than a fatality: a subject the builder is
+// required to refuse has to be distinguishable from one it silently lost.
+func bodyParamSignature(t *testing.T, doc *oaispec.Swagger, path string) (string, bool) {
 	t.Helper()
 
 	require.NotNil(t, doc.Paths, "fixture must produce paths")
@@ -159,11 +205,22 @@ func bodyParamSignature(t *testing.T, doc *oaispec.Swagger, path string) string 
 		}
 		require.NotNil(t, p.Schema, "body parameter on %s carries no schema", path)
 
-		return schemaSignature(*p.Schema, doc.Definitions, 0)
+		return schemaSignature(*p.Schema, doc.Definitions, 0), true
 	}
-	t.Fatalf("no body parameter on %s", path)
 
-	return ""
+	return "", false
+}
+
+// hasDiagnosticFor reports whether any diagnostic names the subject's property, which is also the
+// Go field name the fixture gives it in every position.
+func hasDiagnosticFor(diags []codescan.Diagnostic, prop string) bool {
+	for _, d := range diags {
+		if strings.Contains(strings.ToLower(d.Message), strings.ToLower(prop)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // responseBodySignature renders the body schema of the named response.

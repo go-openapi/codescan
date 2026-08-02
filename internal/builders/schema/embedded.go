@@ -64,7 +64,7 @@ func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, nameByJS
 
 // buildNamedEmbedded inlines an embedded named struct or interface into the outer schema.
 //
-// The interface arm runs `applyStdlibSpecials` so `error` etc. recognize cleanly; the struct arm
+// The interface arm runs `ApplyStdlibSpecials` so `error` etc. recognize cleanly; the struct arm
 // does not — the asymmetry is intentional, see README §embedded.
 //
 // # Details
@@ -95,7 +95,7 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 		}
 		o := tpe.Obj()
 		target := NewTypable(schema, 0, s.skipExtensions)
-		if applyStdlibSpecials(o, target, s.skipExtensions) {
+		if ApplyStdlibSpecials(o, target, s.skipExtensions) {
 			return nil
 		}
 
@@ -135,7 +135,7 @@ func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *
 		o := ftpe.Obj()
 		var dummySchema oaispec.Schema
 		ps := NewTypable(&dummySchema, 0, s.skipExtensions)
-		if applyStdlibSpecials(o, ps, s.skipExtensions) {
+		if ApplyStdlibSpecials(o, ps, s.skipExtensions) {
 			return false, nil
 		}
 		return s.buildNamedInterface(ftpe, flist, decl, schema, nameByJSON)

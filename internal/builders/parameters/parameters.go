@@ -346,11 +346,7 @@ func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 
 func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
 	o := ftpe.Obj()
-	if resolvers.IsAny(o) {
-		// e.g. Field interface{} or Field any
-		return nil
-	}
-	if resolvers.IsStdError(o) {
+	if resolvers.IsStdErrorType(ftpe) {
 		// An `error` has no meaning as a parameter, and the schema builder's rendering of it
 		// (`{type: string}`) would be a lie about what a client should send. Dropping the field is the
 		// right outcome — a struct shared between a parameter set and a response should lose it on the
@@ -359,9 +355,19 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 		// It used to abort the whole scan. Skip-with-a-diagnostic is the house rule, and its sibling
 		// two arms down already follows it for a Go type with no SimpleSchema form (go-swagger#2804);
 		// this guard predates that and never got the same treatment.
-		return errUnrepresentableParam
+		//
+		// This is the ONE recognizer where a parameter must not answer as the other two builders do,
+		// so it sits above the canonical set rather than inside it.
+		return errNotAParameter
 	}
 	resolvers.MustNotBeABuiltinType(o)
+
+	// The rest of the identity recognizers answer from the object alone, so they run before the lookup
+	// rather than after it. The subset hand-rolled here was `any` only — which is unreachable in this
+	// arm, since the predeclared `any` is an alias and lands in the one below.
+	if schema.ApplyStdlibSpecials(o, typable, p.Ctx.SkipExtensions()) {
+		return nil
+	}
 
 	decl, found := p.Ctx.DeclForType(o.Type())
 	if !found {
@@ -383,8 +389,13 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 
 		return nil // just leave an empty schema
 	}
-	if resolvers.IsStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameter definition: %w", o.Name(), ErrParameters)
+	if resolvers.IsStdErrorType(tpe) {
+		// Same refusal as the named arm, and it has to be spelled against the resolved type: an alias's
+		// own object is the alias name, so the object-level recognizer that used to sit here could never
+		// fire and `type Wrapped = error` was emitted as a parameter while a bare `error` was dropped.
+		//
+		// It also aborted the entire scan where its twin skips the field.
+		return errNotAParameter
 	}
 	resolvers.MustNotBeABuiltinType(o)
 
@@ -544,11 +555,12 @@ func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name
 		// A compatible swagger:strfmt then rides as a supplementary format back in processParamField.
 	default:
 		if err := p.buildFromField(fld, fld.Type(), pty); err != nil {
-			if errors.Is(err, errUnrepresentableParam) {
+			// Both sentinels mean "skip the field rather than panic or fail the whole scan"; they differ
+			// only in what the author is told.
+			switch {
+			case errors.Is(err, errUnrepresentableParam):
 				// The field type has no OAS v2 SimpleSchema representation in this non-body location (e.g. a
-				// map under in=query).
-				// Record a located diagnostic and skip the field instead of panicking or failing the whole
-				// scan.
+				// map under in=query). Naming the location is the point — the same type is fine in a body.
 				//
 				// See go-swagger/go-swagger#2804.
 				p.RecordDiagnostic(grammar.Warnf(
@@ -557,8 +569,21 @@ func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name
 					"parameter %q (in=%q) has Go type %s, which has no OAS v2 SimpleSchema representation; parameter skipped",
 					name, in, fld.Type().String(),
 				))
+
+				return true, nil
+			case errors.Is(err, errNotAParameter):
+				// Meaningless in every location, so the message deliberately does NOT suggest that another
+				// `in:` would work.
+				p.RecordDiagnostic(grammar.Warnf(
+					p.Ctx.PosOf(fld.Pos()),
+					grammar.CodeUnsupportedGoType,
+					"parameter %q has Go type %s, which describes an outcome rather than a value a client can send; parameter skipped",
+					name, fld.Type().String(),
+				))
+
 				return true, nil
 			}
+
 			return false, err
 		}
 	}

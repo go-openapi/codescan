@@ -64,7 +64,7 @@ const (
 	recognizeRawMessage
 	// recognizeStdUUID is an identity match on the go1.27 stdlib uuid.UUID.
 	//
-	// Safe everywhere, so it lives in the canonical set applied by [applyStdlibSpecials].
+	// Safe everywhere, so it lives in the canonical set applied by [ApplyStdlibSpecials].
 	// See [§special-types](./README.md#special-types).
 	recognizeStdUUID
 	// recognizeUUID is a fuzzy name-only match (case-insensitive "uuid").
@@ -74,15 +74,22 @@ const (
 	recognizeUUID
 )
 
-// applyStdlibSpecials runs the canonical safe set of identity-based recognizers (any / time.Time /
+// ApplyStdlibSpecials runs the canonical safe set of identity-based recognizers (any / time.Time /
 // error / json.RawMessage / go1.27 uuid.UUID).
 //
-// Safe at every call site that handles a *types.TypeName.
+// Safe at every call site that handles a *types.TypeName. Exported for the parameters and responses
+// builders, which reach it from their own field arms: each used to carry a hand-rolled subset of
+// these, differing per function, and the subsets drifted.
+//
+// Call it BEFORE any declaration lookup. Every recognizer here answers from the object's identity
+// alone, so requiring a declaration first subordinates a rule that needs nothing to one that can
+// fail — and for the predeclared `error` it always fails, since a predeclared object has no package
+// and therefore no declaring source to find.
 //
 // # Details
 //
 // See [§special-types](./README.md#special-types).
-func applyStdlibSpecials(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool) bool {
+func ApplyStdlibSpecials(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool) bool {
 	return applySpecialType(obj, target, skipExt,
 		recognizeAny, recognizeTime, recognizeError, recognizeRawMessage, recognizeStdUUID)
 }

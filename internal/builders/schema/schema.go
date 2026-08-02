@@ -172,7 +172,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 	// chain).
 	// See [§special-types](./README.md#special-types).
 	ps := NewTypable(schema, 0, s.skipExtensions)
-	if applyStdlibSpecials(s.Decl.Obj(), ps, s.skipExtensions) {
+	if ApplyStdlibSpecials(s.Decl.Obj(), ps, s.skipExtensions) {
 		return nil
 	}
 
@@ -293,7 +293,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 		// The TransparentAliases path at line 156 already gets this right via buildFromType(rhs); Expand
 		// needs the same recognizer call before its Underlying fallthrough.
 		if obj := rhsTypeName(rhs); obj != nil &&
-			applyStdlibSpecials(obj, target, s.skipExtensions) {
+			ApplyStdlibSpecials(obj, target, s.skipExtensions) {
 			return nil
 		}
 		return s.buildFromType(tpe.Underlying(), target)
@@ -316,7 +316,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 		// For predeclared `error`, this is also the only safe path: it has no package, so the GetModel
 		// lookup below would nil-panic on Pkg().Path().
 		// User-defined named types (non-stdlib) fall through to the GetModel + MakeRef chain as before.
-		if applyStdlibSpecials(ro, target, s.skipExtensions) {
+		if ApplyStdlibSpecials(ro, target, s.skipExtensions) {
 			return nil
 		}
 		if ro.Pkg() == nil {
@@ -338,7 +338,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 			return nil
 		}
 
-		if applyStdlibSpecials(ro, target, s.skipExtensions) {
+		if ApplyStdlibSpecials(ro, target, s.skipExtensions) {
 			return nil
 		}
 
@@ -420,7 +420,7 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	}
 
 	o := tpe.Obj()
-	if applyStdlibSpecials(o, target, s.skipExtensions) {
+	if ApplyStdlibSpecials(o, target, s.skipExtensions) {
 		return nil
 	}
 	resolvers.MustNotBeABuiltinType(o)
@@ -501,7 +501,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	}
 
 	tio := titpe.Obj()
-	if applyStdlibSpecials(tio, target, s.skipExtensions) {
+	if ApplyStdlibSpecials(tio, target, s.skipExtensions) {
 		return nil
 	}
 
@@ -701,10 +701,10 @@ func hasNamedCore(tpe types.Type) bool {
 }
 
 // rhsTypeName extracts the *types.TypeName from an alias RHS when it is one of the two kinds
-// applyStdlibSpecials accepts: *types.Named (the direct stdlib reference, e.g. `Timestamp =
+// ApplyStdlibSpecials accepts: *types.Named (the direct stdlib reference, e.g. `Timestamp =
 // time.Time`) or *types.Alias (the chained reference, e.g. `Wrap = Timestamp`).
 //
-// Returns nil for anonymous and other RHS kinds — applyStdlibSpecials has nothing to recognize on
+// Returns nil for anonymous and other RHS kinds — ApplyStdlibSpecials has nothing to recognize on
 // those.
 //
 // Used by buildDeclAlias's Expand branch to consult the stdlib recognizers before walking

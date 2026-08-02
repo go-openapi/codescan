@@ -403,7 +403,16 @@ func (r *Builder) buildAlias(tpe *types.Alias, resp *oaispec.Response, seen map[
 }
 
 func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
-	decl, found := r.Ctx.DeclForType(ftpe.Obj().Type())
+	o := ftpe.Obj()
+
+	// The identity recognizers answer from the object alone and so run before the lookup below.
+	// This arm had none of them, and the lookup is not a soft gate here: a field typed `error` has no
+	// package, so resolving its declaring source dereferenced nil and took the whole scan down.
+	if schema.ApplyStdlibSpecials(o, typable, r.Ctx.SkipExtensions()) {
+		return nil
+	}
+
+	decl, found := r.Ctx.DeclForType(o.Type())
 	if !found {
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrResponses)
 	}
