@@ -424,6 +424,39 @@ func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.Swag
 	return false, false
 }
 
+// warnUnfixableAliasEnum reports a `swagger:enum` on an alias declaration whose right-hand side is
+// not a named type, where the annotation cannot work and never could.
+//
+// An enum is collected by finding the constants declared WITH the annotated type. A type alias is
+// erased by the type-checker, so in
+//
+//	type Unsigned = uint64
+//	const Zero Unsigned = 0
+//
+// `Zero` is a `uint64` constant indistinguishable from every other `uint64` constant in the package.
+// There is nothing to collect, and no amount of plumbing changes that — unlike `swagger:strfmt` and
+// `swagger:type`, which merely decorate the emitted schema and were fixed.
+//
+// An alias to a NAMED enum type is silent here: the named type survives the alias, so the members
+// resolve and the annotation works.
+//
+// See [§enum-values](../../scanner/README.md#enum-values).
+func (s *Builder) warnUnfixableAliasEnum(cg *ast.CommentGroup, tpe *types.Alias, pos token.Position) {
+	ann := s.findAnnotation(cg, grammar.AnnEnum)
+	if ann == nil {
+		return
+	}
+	if _, named := types.Unalias(tpe.Rhs()).(*types.Named); named {
+		return
+	}
+
+	s.RecordDiagnostic(grammar.Warnf(pos, grammar.CodeInvalidEnumOption,
+		"swagger:enum on an alias to a non-named type cannot collect any member: the type-checker "+
+			"erases the alias, so its constants are indistinguishable from any other constant of the "+
+			"underlying type. Declare it as a named type (`type %s %s`) instead",
+		tpe.Obj().Name(), tpe.Rhs().String()))
+}
+
 // classifierAliasStrfmt applies a `swagger:strfmt` carried by an ALIAS declaration.
 //
 // The implementation is shared with the parameters and responses builders, which have their own

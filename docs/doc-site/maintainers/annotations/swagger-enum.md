@@ -35,8 +35,10 @@ A type declared over another named type keeps that type's format
 (`type Kind strfmt.UUID` stays `format: uuid`).
 
 Two shapes do not work: an alias to a basic type cannot host an enum (the
-type-checker erases the alias, leaving nothing to collect), and a `rune`
+type-checker erases the alias, leaving nothing to collect — this raises a
+`parse.invalid-enum-option` warning suggesting a named type), and a `rune`
 or `byte` enum emits integers, which is what those types are on the wire.
+An alias to a *named* enum type is fine, and is not warned about.
 See [Enumerations]({{% relref "/tutorials/enumerations" %}}).
 
 - **Without `swagger:model`** (the default): the values are applied

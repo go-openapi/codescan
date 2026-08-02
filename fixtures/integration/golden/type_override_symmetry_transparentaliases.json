@@ -108,6 +108,41 @@
       ],
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/type-override-symmetry"
     },
+    "EnumEnvelope": {
+      "type": "object",
+      "title": "EnumEnvelope reaches all three.",
+      "properties": {
+        "alias": {
+          "description": "Alias is the unfixable alias-to-basic.",
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "Alias"
+        },
+        "named": {
+          "description": "Named is the control.\n1 NamedLow is the low value.\n2 NamedHigh is the high value.",
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            1,
+            2
+          ],
+          "x-go-enum-desc": "1 NamedLow is the low value.\n2 NamedHigh is the high value.",
+          "x-go-name": "Named"
+        },
+        "toNamed": {
+          "description": "ToNamed is the alias-to-named, which works.\n1 NamedLow is the low value.\n2 NamedHigh is the high value.",
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            1,
+            2
+          ],
+          "x-go-enum-desc": "1 NamedLow is the low value.\n2 NamedHigh is the high value.",
+          "x-go-name": "ToNamed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/type-override-symmetry"
+    },
     "Envelope": {
       "type": "object",
       "title": "Envelope reaches every pair from the buildFromType sites.",

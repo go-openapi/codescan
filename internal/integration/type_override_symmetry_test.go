@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -129,4 +130,51 @@ func TestTypeOverrideFileSynonym(t *testing.T) {
 	assert.Equal(t, doc.Responses["fileBodyAnnotation"].Schema.Type[0],
 		doc.Responses["fileBodyType"].Schema.Type[0],
 		"swagger:type file must be identical to swagger:file on a response body")
+}
+
+// TestAliasEnumIsUnfixableButLoud closes Q32's last piece.
+//
+// `swagger:strfmt` and `swagger:type` on an alias were fixable — both merely decorate the emitted
+// schema. `swagger:enum` is not: members are collected by finding the constants declared WITH the
+// annotated type, and a type alias is erased by the type-checker, so `const Zero Unsigned = 0` is a
+// `uint64` constant indistinguishable from every other one. There is nothing to collect.
+//
+// So the remedy is a diagnostic rather than a propagation — and it must be precise: an alias to a
+// NAMED enum type does work, because the named type survives the alias, and must stay silent.
+func TestAliasEnumIsUnfixableButLoud(t *testing.T) {
+	var diags []string
+	doc, err := codescan.Run(&codescan.Options{
+		Packages:     []string{"./enhancements/type-override-symmetry/..."},
+		WorkDir:      scantest.FixturesDir(),
+		ScanModels:   true,
+		OnDiagnostic: func(d codescan.Diagnostic) { diags = append(diags, d.String()) },
+	})
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	props := doc.Definitions["EnumEnvelope"].Properties
+
+	// The control and the alias-to-named both collect their members.
+	assert.NotEmpty(t, props["named"].Enum, "a named enum type collects its constants")
+	assert.Equal(t, props["named"].Enum, props["toNamed"].Enum,
+		"an alias to a named enum type works — the named type survives the alias")
+
+	// The alias-to-basic collects nothing, which is unavoidable...
+	assert.Empty(t, props["alias"].Enum, "an alias to a basic type has no collectable constants")
+
+	// ...but must no longer be silent about it.
+	var warned int
+	for _, d := range diags {
+		if strings.Contains(d, "swagger:enum on an alias to a non-named type") {
+			warned++
+		}
+	}
+	assert.Positive(t, warned, "the unfixable case must be reported; got %v", diags)
+
+	// Precision matters more than the warning: firing on the alias-to-named case would tell authors
+	// their working annotation is broken.
+	for _, d := range diags {
+		assert.NotContains(t, d, "AliasToNamed",
+			"an alias to a named enum type works and must not be warned about")
+	}
 }

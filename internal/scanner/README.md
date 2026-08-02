@@ -403,10 +403,20 @@ An enum cannot be hosted on an **alias to a basic type**
 (`type Unsigned = uint64`): the checker erases the alias, so
 `const Zero Unsigned = 0` is indistinguishable from any other
 `uint64` constant and there is nothing left to match on. The
-annotation is a no-op there — as it was before this change, since
-the classifier never reaches an alias decl either. An alias to a
-*named* enum type (`type Weekday2 = Weekday`) is fine: the
-underlying named type survives.
+annotation collects nothing there, and now says so: it raises
+`parse.invalid-enum-option` naming the declaration and suggesting a
+named type. It used to be silent, which left an author with a
+correct-looking annotation and no members.
+
+An alias to a *named* enum type (`type Weekday2 = Weekday`) is
+fine — the underlying named type survives — and is deliberately
+NOT warned about.
+
+This is where `swagger:enum` parts company with `swagger:strfmt`
+and `swagger:type` on aliases. Those two decorate the emitted
+schema and were made to work at alias use sites; this one has no
+data to work with, so the remedy is a diagnostic rather than
+plumbing.
 
 ### Values come from the type-checker, not from the literal
 

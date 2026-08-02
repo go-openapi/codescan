@@ -246,6 +246,57 @@ type FileBodyType struct {
 //	201: fileBodyType
 func FileHandler() {}
 
+// --- `swagger:enum` on an alias: unfixable, so it must say so ---
+
+// NamedEnum is the control: a named type over a basic, whose constants are
+// collectable because the type survives into the type-checker's view of them.
+//
+// swagger:enum NamedEnum
+type NamedEnum uint64
+
+const (
+	// NamedLow is the low value.
+	NamedLow NamedEnum = 1
+	// NamedHigh is the high value.
+	NamedHigh NamedEnum = 2
+)
+
+// AliasEnum is an alias to a BASIC type. `const AliasLow AliasEnum = 10` is a
+// `uint64` constant indistinguishable from any other, so there is nothing to
+// collect — unlike swagger:strfmt and swagger:type, which merely decorate the
+// emitted schema and were fixed. The annotation must raise a diagnostic instead
+// of silently producing no members.
+//
+// swagger:enum AliasEnum
+type AliasEnum = uint64
+
+const (
+	// AliasLow is the low value.
+	AliasLow AliasEnum = 10
+	// AliasHigh is the high value.
+	AliasHigh AliasEnum = 20
+)
+
+// AliasToNamed is an alias to a NAMED enum type, which DOES work: the named type
+// survives the alias, so the members resolve. It must stay silent.
+//
+// swagger:enum AliasToNamed
+type AliasToNamed = NamedEnum
+
+// EnumEnvelope reaches all three.
+//
+// swagger:model EnumEnvelope
+type EnumEnvelope struct {
+	// Named is the control.
+	Named NamedEnum `json:"named"`
+
+	// Alias is the unfixable alias-to-basic.
+	Alias AliasEnum `json:"alias"`
+
+	// ToNamed is the alias-to-named, which works.
+	ToNamed AliasToNamed `json:"toNamed"`
+}
+
 // TypeHandler binds the parameters and the response to an operation.
 //
 // swagger:route GET /type-override symmetry typeOverrideOp

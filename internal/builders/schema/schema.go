@@ -259,6 +259,8 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 	// `swagger:strfmt` on a Named decl is unaffected — that path is covered by
 	// `classifierNamedStructStrfmt` (struct underlying) and `classifierNamedBasic` (primitive
 	// underlying), both fired from `buildNamedType` after the underlying-kind switch.
+	s.warnUnfixableAliasEnum(s.Decl.Comments, tpe, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+
 	// Detection is symmetric with the named decl arm above: the same element-driven items-vs-whole
 	// rule, so `type ID = [16]byte` and `type ID [16]byte` publish the same definition.
 	if s.classifierAliasStrfmt(s.Decl.Comments, tpe, target) {
@@ -438,6 +440,12 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	// Not under SimpleSchema, where $ref is illegal in OAS v2 and the override must inline; and not
 	// under TransparentAliases, which never emits the $ref this defers to.
 	refModel := ok && decl.HasModelAnnotation() && !s.simpleSchema && !s.Ctx.TransparentAliases()
+
+	if ok {
+		// `swagger:enum` on an alias is unfixable rather than merely unimplemented — report it wherever
+		// the alias is reached, since that is where the members go missing.
+		s.warnUnfixableAliasEnum(decl.Comments, tpe, s.Ctx.PosOf(decl.Ident.Pos()))
+	}
 
 	if ok && !refModel {
 		// `swagger:type` first, then `swagger:strfmt` — the same precedence the named side applies at
