@@ -439,8 +439,24 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	// under TransparentAliases, which never emits the $ref this defers to.
 	refModel := ok && decl.HasModelAnnotation() && !s.simpleSchema && !s.Ctx.TransparentAliases()
 
-	if ok && !refModel && s.classifierAliasStrfmt(decl.Comments, tpe, target) {
-		return nil
+	if ok && !refModel {
+		// `swagger:type` first, then `swagger:strfmt` — the same precedence the named side applies at
+		// buildNamedType, where classifierNamedTypeOverride runs ahead of the underlying-kind classifiers
+		// and rides a co-present format as an advisory hint.
+		//
+		// ownType is the alias's right-hand side: that is what `inline` should inline.
+		if handled, recurse := s.classifierNamedTypeOverride(
+			decl.Comments, target, tpe.Rhs(), s.Ctx.PosOf(decl.Ident.Pos()),
+		); handled {
+			if recurse {
+				return s.buildFromType(tpe.Rhs(), target)
+			}
+
+			return nil
+		}
+		if s.classifierAliasStrfmt(decl.Comments, tpe, target) {
+			return nil
+		}
 	}
 
 	if s.Ctx.TransparentAliases() {

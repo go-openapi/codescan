@@ -24,6 +24,9 @@ const (
 	inHeader = "header"
 )
 
+// fileTypeName is the OAS v2 `file` type, spelled as a swagger:type argument.
+const fileTypeName = "file"
+
 // Builder constructs OAS v2 response entries for one `swagger:response` declaration.
 //
 // Embeds *common.Builder for shared state (Ctx, Decl, PostDeclarations, diagnostics, ParseBlocks
@@ -406,10 +409,23 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil
 	}
 
-	// Non-body fields are SimpleSchema targets and cannot carry $ref — always expand the alias to
-	// its unaliased target regardless of annotation. types.Unalias collapses chains in one step.
+	// Non-body fields are SimpleSchema targets and cannot carry $ref, so the alias always expands to
+	// its unaliased target regardless of annotation.
+	//
+	// Hand the ALIAS to the schema sub-builder rather than unaliasing here: it owns the classifier
+	// cascade (`swagger:type`, `swagger:strfmt`) the alias declaration may carry, and OptionFor selects
+	// SimpleSchema mode from the target's location so the legality gate applies. Unaliasing first threw
+	// the declaration away before anything could read it.
 	if typable.In() != inBody {
-		return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
+		sb := schema.NewBuilder(r.Ctx, r.Decl)
+		if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
+			return err
+		}
+		for _, d := range sb.PostDeclarations() {
+			r.AppendPostDecl(d)
+		}
+
+		return nil
 	}
 
 	if !ok {

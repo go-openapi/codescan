@@ -95,5 +95,13 @@ field-level inline form above is the behaviour *without* `swagger:model`.
 - The `array` argument is **deprecated** — use `inline`, or `[]T` for an
   explicit element type. It still works, with a `validate.deprecated`
   warning.
-- `file` as an argument is rejected with a diagnostic — use
-  [`swagger:file`]({{% relref "swagger-file" %}}).
+- `file` used to be rejected as an argument. It is now accepted, and is the
+  **preferred** spelling: `file` is an OAS v2 type name like any other, so the
+  annotation that names types names it too. It is a synonym for
+  [`swagger:file`]({{% relref "swagger-file" %}}), which is expected to be
+  deprecated as an extraneous annotation.
+
+  `file` is legal in exactly two places — a `formData` parameter and a response
+  body. Both spellings pass through the same location gate, so neither can put
+  `file` anywhere OAS 2.0 forbids it; elsewhere the override is refused with a
+  diagnostic and the Go type stands.

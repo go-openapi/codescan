@@ -21,6 +21,9 @@ import (
 
 const inBody = "body"
 
+// fileTypeName is the OAS v2 `file` type, spelled as a swagger:type argument.
+const fileTypeName = "file"
+
 // Builder constructs OAS v2 parameter entries for one `swagger:parameters` declaration and writes
 // them onto the matching operations.
 //
@@ -465,11 +468,23 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, tpe.Rhs(), ErrParameters)
 	}
 
-	// Non-body parameters are SimpleSchema targets and cannot carry $ref — always expand the alias
+	// Non-body parameters are SimpleSchema targets and cannot carry $ref, so the alias always expands
 	// to its unaliased target regardless of annotation.
-	// Walking through every alias layer (types.Unalias) dissolves chains fully in one step.
+	//
+	// Hand the ALIAS to the schema sub-builder rather than unaliasing here: it owns the classifier
+	// cascade (`swagger:type`, `swagger:strfmt`) that the alias declaration may carry, and OptionFor
+	// selects SimpleSchema mode from the target's location so the legality gate applies. Unaliasing
+	// first threw the declaration away before anything could read it.
 	if typable.In() != inBody {
-		return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
+		sb := schema.NewBuilder(p.Ctx, p.Decl)
+		if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
+			return err
+		}
+		for _, d := range sb.PostDeclarations() {
+			p.AppendPostDecl(d)
+		}
+
+		return nil
 	}
 
 	// Body field: annotation gates first-class identity at the use site.

@@ -1,0 +1,261 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/file-synonym": {
+      "post": {
+        "tags": [
+          "symmetry"
+        ],
+        "operationId": "fileSynonymOp",
+        "parameters": [
+          {
+            "type": "file",
+            "x-go-name": "ViaAnnotation",
+            "description": "ViaAnnotation uses the legacy spelling.",
+            "name": "viaAnnotation",
+            "in": "formData"
+          },
+          {
+            "type": "file",
+            "x-go-name": "ViaType",
+            "description": "ViaType uses the preferred spelling and must match it exactly.",
+            "name": "viaType",
+            "in": "formData"
+          },
+          {
+            "type": "string",
+            "x-go-name": "QueryFile",
+            "description": "QueryFile is illegal: `file` is formData-only, so the override is refused\nand the Go type stands.",
+            "name": "queryFile",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/fileBodyAnnotation"
+          },
+          "201": {
+            "$ref": "#/responses/fileBodyType"
+          }
+        }
+      }
+    },
+    "/type-override": {
+      "get": {
+        "tags": [
+          "symmetry"
+        ],
+        "operationId": "typeOverrideOp",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "QueryScalarNamed",
+            "description": "QueryScalarNamed is the scalar pair's named half in query position.",
+            "name": "queryScalarNamed",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "QueryScalarAlias",
+            "description": "QueryScalarAlias is the scalar pair's alias half in query position.",
+            "name": "queryScalarAlias",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/typeOverrideResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AllOfScalarAlias": {
+      "title": "AllOfScalarAlias composes the scalar pair's alias half as an allOf member.",
+      "allOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "description": "Note is the composing struct's own field.",
+              "type": "string",
+              "x-go-name": "Note"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/type-override-symmetry"
+    },
+    "AllOfScalarNamed": {
+      "title": "AllOfScalarNamed composes the scalar pair's named half as an allOf member.",
+      "allOf": [
+        {},
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "description": "Note is the composing struct's own field.",
+              "type": "string",
+              "x-go-name": "Note"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/type-override-symmetry"
+    },
+    "Envelope": {
+      "type": "object",
+      "title": "Envelope reaches every pair from the buildFromType sites.",
+      "properties": {
+        "fieldArrayAlias": {
+          "description": "FieldArrayAlias is the array pair, alias half.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "FieldArrayAlias"
+        },
+        "fieldArrayNamed": {
+          "description": "FieldArrayNamed is the array pair, named half.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "FieldArrayNamed"
+        },
+        "fieldFormattedAlias": {
+          "description": "FieldFormattedAlias is the type+strfmt pair, alias half.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "FieldFormattedAlias"
+        },
+        "fieldFormattedNamed": {
+          "description": "FieldFormattedNamed is the type+strfmt pair, named half.",
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "FieldFormattedNamed"
+        },
+        "fieldRefAlias": {
+          "description": "FieldRefAlias is the type-reference pair, alias half.",
+          "type": "object",
+          "properties": {
+            "left": {
+              "description": "Left is a plain field.",
+              "type": "string",
+              "x-go-name": "Left"
+            },
+            "right": {
+              "description": "Right is a plain field.",
+              "type": "integer",
+              "format": "int32",
+              "x-go-name": "Right"
+            }
+          },
+          "x-go-name": "FieldRefAlias"
+        },
+        "fieldRefNamed": {
+          "description": "FieldRefNamed is the type-reference pair, named half.",
+          "type": "object",
+          "properties": {
+            "left": {
+              "description": "Left is a plain field.",
+              "type": "string",
+              "x-go-name": "Left"
+            },
+            "right": {
+              "description": "Right is a plain field.",
+              "type": "integer",
+              "format": "int32",
+              "x-go-name": "Right"
+            }
+          },
+          "x-go-name": "FieldRefNamed"
+        },
+        "fieldScalarAlias": {
+          "description": "FieldScalarAlias is the scalar pair, alias half.",
+          "type": "string",
+          "x-go-name": "FieldScalarAlias"
+        },
+        "fieldScalarNamed": {
+          "description": "FieldScalarNamed is the scalar pair, named half.",
+          "type": "string",
+          "x-go-name": "FieldScalarNamed"
+        },
+        "mapValueScalarAlias": {
+          "description": "MapValueScalarAlias reaches the scalar pair's alias half as a map value.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "MapValueScalarAlias"
+        },
+        "mapValueScalarNamed": {
+          "description": "MapValueScalarNamed reaches the scalar pair's named half as a map value.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "MapValueScalarNamed"
+        },
+        "pointerScalarAlias": {
+          "description": "PointerScalarAlias reaches the scalar pair's alias half through a pointer.",
+          "type": "string",
+          "x-go-name": "PointerScalarAlias"
+        },
+        "pointerScalarNamed": {
+          "description": "PointerScalarNamed reaches the scalar pair's named half through a pointer.",
+          "type": "string",
+          "x-go-name": "PointerScalarNamed"
+        },
+        "sliceElemScalarAlias": {
+          "description": "SliceElemScalarAlias reaches the scalar pair's alias half as a slice element.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "SliceElemScalarAlias"
+        },
+        "sliceElemScalarNamed": {
+          "description": "SliceElemScalarNamed reaches the scalar pair's named half as a slice element.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "SliceElemScalarNamed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/type-override-symmetry"
+    }
+  },
+  "responses": {
+    "fileBodyAnnotation": {
+      "description": "FileBodyAnnotation is a file-download response, legacy spelling.",
+      "schema": {
+        "type": "file"
+      }
+    },
+    "fileBodyType": {
+      "description": "FileBodyType is the same response via the preferred spelling.",
+      "schema": {
+        "type": "file"
+      }
+    },
+    "typeOverrideResponse": {
+      "description": "TypeResponse carries the pairs on response headers.",
+      "headers": {
+        "X-Alias": {
+          "type": "string",
+          "description": "HeaderScalarAlias is the scalar pair's alias half in header position."
+        },
+        "X-Named": {
+          "type": "string",
+          "description": "HeaderScalarNamed is the scalar pair's named half in header position."
+        }
+      }
+    }
+  }
+}
