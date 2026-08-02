@@ -33,6 +33,16 @@ type ParsedPathContent struct {
 	// - the cross-ref anchor for the /paths/{path}/{method} node. Invalid when no annotation matched.
 	Pos token.Pos
 
+	// UnparsedPos / UnparsedLine record a line recognisable as a path annotation — keyword, method and
+	// a path — that did not parse as one. Both are zero unless that happened.
+	//
+	// Nothing downstream can recover this: a `swagger:route` that fails its regex leaves no trace and
+	// reads as ordinary prose, so the route goes missing with no diagnostic anywhere. Capturing it
+	// here is what lets the caller say so — but only when the group produced no route at all, since a
+	// group may legitimately hold both a good annotation and prose that resembles one.
+	UnparsedPos  token.Pos
+	UnparsedLine string
+
 	// StrippedParams names the path parameters whose inline regex constraint (gorilla/chi style, e.g.
 	// `{id:[0-9]+}`) was stripped to the bare `{id}` template form.
 	//
@@ -97,11 +107,11 @@ func stripPathParamRegex(s string) (cleaned string, stripped []string) {
 }
 
 func ParseOperationPathAnnotation(lines []*ast.Comment) (cnt ParsedPathContent) {
-	return parsePathAnnotation(rxOperation, lines)
+	return parsePathAnnotation(rxOperation, rxOperationHead, lines)
 }
 
 func ParseRoutePathAnnotation(lines []*ast.Comment) (cnt ParsedPathContent) {
-	return parsePathAnnotation(rxRoute, lines)
+	return parsePathAnnotation(rxRoute, rxRouteHead, lines)
 }
 
 // ensureCommentMarker returns line with a leading `// ` prepended unless it already starts with
@@ -159,7 +169,7 @@ func stripBlockContinuation(s string) string {
 	return s
 }
 
-func parsePathAnnotation(annotation *regexp.Regexp, lines []*ast.Comment) (cnt ParsedPathContent) {
+func parsePathAnnotation(annotation, head *regexp.Regexp, lines []*ast.Comment) (cnt ParsedPathContent) {
 	const routeTagsIndex = 3 // routeTagsIndex is the regex submatch index where route tags begin.
 	var justMatched bool
 
@@ -191,6 +201,15 @@ func parsePathAnnotation(annotation *regexp.Regexp, lines []*ast.Comment) (cnt P
 				justMatched = true
 
 				continue
+			}
+
+			// The line did not parse. If it still reads as a path annotation — keyword, method, path — it
+			// was meant to be one, and saying nothing is how a mistyped route goes missing unnoticed.
+			// Record the first such line; whether it is worth reporting depends on what the rest of the
+			// group yields, which only the caller knows.
+			if cnt.UnparsedPos == token.NoPos && head.MatchString(cleaned) {
+				cnt.UnparsedPos = cmt.Slash
+				cnt.UnparsedLine = strings.TrimSpace(rxStripComments.ReplaceAllString(line, ""))
 			}
 
 			if cnt.Method == "" {

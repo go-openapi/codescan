@@ -195,11 +195,11 @@ func (a *TypeIndex) processFile(pkg *packages.Package, file *ast.File) error {
 	}
 
 	if n&operationNode != 0 {
-		a.Operations = a.collectOperationPathAnnotations(file.Comments, a.Operations)
+		a.Operations = a.collectOperationPathAnnotations(pkg, file.Comments, a.Operations)
 	}
 
 	if n&routeNode != 0 {
-		a.Routes = a.collectRoutePathAnnotations(file.Comments, a.Routes)
+		a.Routes = a.collectRoutePathAnnotations(pkg, file.Comments, a.Routes)
 	}
 
 	a.processFileDecls(pkg, file, n)
@@ -207,10 +207,12 @@ func (a *TypeIndex) processFile(pkg *packages.Package, file *ast.File) error {
 	return nil
 }
 
-func (a *TypeIndex) collectOperationPathAnnotations(comments []*ast.CommentGroup, dst []parsers.ParsedPathContent) []parsers.ParsedPathContent {
+func (a *TypeIndex) collectOperationPathAnnotations(pkg *packages.Package, comments []*ast.CommentGroup, dst []parsers.ParsedPathContent) []parsers.ParsedPathContent {
 	for _, cmts := range comments {
 		pp := parsers.ParseOperationPathAnnotation(cmts.List)
 		if pp.Method == "" {
+			a.reportUnparsedPathAnnotation(pkg, pp, "swagger:operation")
+
 			continue
 		}
 
@@ -225,10 +227,12 @@ func (a *TypeIndex) collectOperationPathAnnotations(comments []*ast.CommentGroup
 	return dst
 }
 
-func (a *TypeIndex) collectRoutePathAnnotations(comments []*ast.CommentGroup, dst []parsers.ParsedPathContent) []parsers.ParsedPathContent {
+func (a *TypeIndex) collectRoutePathAnnotations(pkg *packages.Package, comments []*ast.CommentGroup, dst []parsers.ParsedPathContent) []parsers.ParsedPathContent {
 	for _, cmts := range comments {
 		pp := parsers.ParseRoutePathAnnotation(cmts.List)
 		if pp.Method == "" {
+			a.reportUnparsedPathAnnotation(pkg, pp, "swagger:route")
+
 			continue
 		}
 
@@ -241,6 +245,22 @@ func (a *TypeIndex) collectRoutePathAnnotations(comments []*ast.CommentGroup, ds
 	}
 
 	return dst
+}
+
+// reportUnparsedPathAnnotation warns about a comment group that opened with a path-annotation
+// keyword and yielded no annotation.
+//
+// Only reached when the group produced nothing, so a group holding a good annotation alongside prose
+// that resembles one stays quiet. Without this, the sole symptom of a mistyped `swagger:route` is a
+// path missing from the output — the annotation does not fail, it ceases to be an annotation.
+func (a *TypeIndex) reportUnparsedPathAnnotation(pkg *packages.Package, pp parsers.ParsedPathContent, keyword string) {
+	if !pp.UnparsedPos.IsValid() || pkg == nil || pkg.Fset == nil {
+		return
+	}
+
+	a.emit(grammar.Warnf(pkg.Fset.Position(pp.UnparsedPos), grammar.CodeUnparsedPathAnnotation,
+		"%s annotation does not parse and was ignored, so no path is emitted for it: %q; expected `%s METHOD /path [tags] operationID`",
+		keyword, pp.UnparsedLine, keyword))
 }
 
 func (a *TypeIndex) processFileDecls(pkg *packages.Package, file *ast.File, n node) {

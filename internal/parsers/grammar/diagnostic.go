@@ -291,6 +291,17 @@ const (
 	// Warning.
 	// (D7).
 	CodeEmptyOverride Code = "scan.empty-override"
+
+	// CodeUnparsedPathAnnotation fires when a comment line opens with `swagger:route` or
+	// `swagger:operation` but the rest of the line does not parse as one.
+	//
+	// Such a line produces NOTHING: no path, no operation, and — before this code existed — no word to
+	// the author either, because a route annotation that fails to match is indistinguishable from
+	// ordinary prose to everything downstream. The route simply is not there, and the first sign of it
+	// is a missing path in the output.
+	// Warning.
+	// (Q43).
+	CodeUnparsedPathAnnotation Code = "scan.unparsed-path-annotation"
 )
 
 // Diagnostic is one observation about a comment block.

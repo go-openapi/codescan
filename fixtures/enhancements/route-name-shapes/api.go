@@ -58,6 +58,17 @@ func HandlerShortIDNoTags() {}
 //	200: emptyResp
 func HandlerShortAmongTags() {}
 
+// HandlerUnparsed is the negative case: recognisably a route annotation — keyword,
+// method, path — with an operationId that cannot be one. It yields no path, and
+// the point of the fixture is that it now says so instead of vanishing.
+//
+// swagger:route GET /unparsed shapes 42
+//
+// Responses:
+//
+//	200: emptyResp
+func HandlerUnparsed() {}
+
 // EmptyResp is the shared response body.
 //
 // swagger:response emptyResp

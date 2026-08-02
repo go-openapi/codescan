@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -22,9 +23,13 @@ import (
 // malformed route, it is simply not a route. Nothing downstream could tell it apart from prose, so
 // there was nothing to report and the path just never appeared.
 func TestRouteNameShapes(t *testing.T) {
+	var diags []codescan.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
 		Packages: []string{"./enhancements/route-name-shapes/..."},
 		WorkDir:  scantest.FixturesDir(),
+		OnDiagnostic: func(d codescan.Diagnostic) {
+			diags = append(diags, d)
+		},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, doc)
@@ -50,6 +55,37 @@ func TestRouteNameShapes(t *testing.T) {
 		})
 	}
 
+	// The negative case: still no path — an operationId of `42` is not one — but no longer silent.
+	t.Run("unparsed annotation is reported", func(t *testing.T) {
+		_, ok := doc.Paths.Paths["/unparsed"]
+		assert.False(t, ok, "an unparsable annotation must not produce a path")
+
+		var said bool
+		for _, d := range diags {
+			if string(d.Code) == "scan.unparsed-path-annotation" && strings.Contains(d.Message, "/unparsed") {
+				said = true
+				assert.Equal(t, codescan.SeverityWarning, d.Severity)
+				assert.NotZero(t, d.Pos.Line, "the diagnostic must point at the offending line")
+
+				break
+			}
+		}
+		assert.True(t, said, "an unparsable path annotation must be reported; got %v", diags)
+	})
+
 	// The per-path assertions above say the annotations parsed; the golden says what they produced.
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_route_name_shapes.json")
+
+	// Prose is not an annotation. This package's own doc comment opens a line with `swagger:route`
+	// while describing the quirk, and warning about it would make the diagnostic useless in exactly
+	// the files most likely to discuss annotations.
+	t.Run("prose is not reported", func(t *testing.T) {
+		for _, d := range diags {
+			if string(d.Code) != "scan.unparsed-path-annotation" {
+				continue
+			}
+			assert.Contains(t, d.Message, "/unparsed",
+				"only the genuinely unparsable annotation may be reported, got: %s", d.Message)
+		}
+	})
 }
