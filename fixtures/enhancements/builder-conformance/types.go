@@ -85,6 +85,25 @@ type StampAlias = time.Time
 // RawAlias is an alias to the open "any JSON" stdlib type.
 type RawAlias = json.RawMessage
 
+// --- shape subjects: the arms of the field dispatch, rather than the classifiers ---
+//
+// The subjects above are all named or alias types, which reach only two arms of
+// `buildFromField`. These reach the rest — struct, interface, map, slice with an
+// inline element, pointer, plain basic — so that a factorization of those arms is
+// guarded in all three positions rather than by goldens alone.
+
+// Plain is a struct reached directly as a field.
+type Plain struct {
+	// Left is a plain property.
+	Left string `json:"left"`
+}
+
+// Speaker is a non-empty interface reached directly as a field.
+type Speaker interface {
+	// Say returns a word.
+	Say() string
+}
+
 // ModelHost reaches every subject as a MODEL FIELD — the schema builder's view,
 // and the control for the other two.
 //
@@ -113,6 +132,27 @@ type ModelHost struct {
 
 	// Raw is the open-schema subject.
 	Raw RawAlias `json:"raw"`
+
+	// Struct is the struct-arm subject.
+	Struct Plain `json:"struct"`
+
+	// Iface is the interface-arm subject.
+	Iface Speaker `json:"iface"`
+
+	// Mapping is the map-arm subject.
+	Mapping map[string]Plain `json:"mapping"`
+
+	// Inline is the slice arm with an inline element.
+	Inline []struct {
+		// Code is the inline element property.
+		Code string `json:"code"`
+	} `json:"inline"`
+
+	// Ptr is the pointer arm.
+	Ptr *Plain `json:"ptr"`
+
+	// Basic is the plain-basic arm.
+	Basic int32 `json:"basic"`
 }
 
 // ParamsFmt reaches FmtNamed as a body parameter.
@@ -314,3 +354,159 @@ func HandlerStamp() {}
 //
 //	200: respRaw
 func HandlerRaw() {}
+
+// ParamsStruct reaches the struct subject as a body parameter.
+//
+// swagger:parameters confStruct
+type ParamsStruct struct {
+	// in: body
+	Body Plain `json:"body"`
+}
+
+// RespStruct reaches the struct subject as a response body.
+//
+// swagger:response respStruct
+type RespStruct struct {
+	// in: body
+	Body Plain `json:"body"`
+}
+
+// HandlerStruct binds the struct subject.
+//
+// swagger:route POST /struct conf confStruct
+//
+// Responses:
+//
+//	200: respStruct
+func HandlerStruct() {}
+
+// ParamsIface reaches the iface subject as a body parameter.
+//
+// swagger:parameters confIface
+type ParamsIface struct {
+	// in: body
+	Body Speaker `json:"body"`
+}
+
+// RespIface reaches the iface subject as a response body.
+//
+// swagger:response respIface
+type RespIface struct {
+	// in: body
+	Body Speaker `json:"body"`
+}
+
+// HandlerIface binds the iface subject.
+//
+// swagger:route POST /iface conf confIface
+//
+// Responses:
+//
+//	200: respIface
+func HandlerIface() {}
+
+// ParamsMapping reaches the mapping subject as a body parameter.
+//
+// swagger:parameters confMapping
+type ParamsMapping struct {
+	// in: body
+	Body map[string]Plain `json:"body"`
+}
+
+// RespMapping reaches the mapping subject as a response body.
+//
+// swagger:response respMapping
+type RespMapping struct {
+	// in: body
+	Body map[string]Plain `json:"body"`
+}
+
+// HandlerMapping binds the mapping subject.
+//
+// swagger:route POST /mapping conf confMapping
+//
+// Responses:
+//
+//	200: respMapping
+func HandlerMapping() {}
+
+// ParamsPtr reaches the ptr subject as a body parameter.
+//
+// swagger:parameters confPtr
+type ParamsPtr struct {
+	// in: body
+	Body *Plain `json:"body"`
+}
+
+// RespPtr reaches the ptr subject as a response body.
+//
+// swagger:response respPtr
+type RespPtr struct {
+	// in: body
+	Body *Plain `json:"body"`
+}
+
+// HandlerPtr binds the ptr subject.
+//
+// swagger:route POST /ptr conf confPtr
+//
+// Responses:
+//
+//	200: respPtr
+func HandlerPtr() {}
+
+// ParamsBasic reaches the basic subject as a body parameter.
+//
+// swagger:parameters confBasic
+type ParamsBasic struct {
+	// in: body
+	Body int32 `json:"body"`
+}
+
+// RespBasic reaches the basic subject as a response body.
+//
+// swagger:response respBasic
+type RespBasic struct {
+	// in: body
+	Body int32 `json:"body"`
+}
+
+// HandlerBasic binds the basic subject.
+//
+// swagger:route POST /basic conf confBasic
+//
+// Responses:
+//
+//	200: respBasic
+func HandlerBasic() {}
+
+// ParamsInline reaches the inline-element slice as a body parameter.
+//
+// swagger:parameters confInline
+type ParamsInline struct {
+	// in: body
+	Body []struct {
+		// Code is the inline element property.
+		Code string `json:"code"`
+	} `json:"body"`
+}
+
+// RespInline reaches the inline-element slice as a response body.
+//
+// swagger:response respInline
+type RespInline struct {
+	// in: body
+	Body []struct {
+		// Code is the inline element property.
+		Code string `json:"code"`
+	} `json:"body"`
+}
+
+// HandlerInline binds the inline-slice subject.
+//
+// swagger:route POST /inline conf confInline
+//
+// Responses:
+//
+//	200: respInline
+func HandlerInline() {}

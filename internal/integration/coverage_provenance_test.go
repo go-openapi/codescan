@@ -430,6 +430,12 @@ func TestCoverage_ProvenancePatternPropertyPointer(t *testing.T) {
 // resolved only after path binding, so a body parameter's inner schema is intentionally not drilled
 // into); a response header anchors at /responses/{name}/headers/{h}; and an in:body response
 // field's inline struct anchors its properties at /responses/{name}/schema/properties/f.
+//
+// The array-bodied case is the guard for descendBody: when the responses builder peels its OWN array
+// layer, the inline element's properties must land under …/schema/items/… . That threading affects
+// cross-ref pointers only and never the emitted spec, so no golden and no schema-comparing suite can
+// see it — this anchor is its only detector, and only with an INLINE element (a named one anchors in
+// its own definition instead).
 func TestCoverage_ProvenanceParamsResponses(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
 	doc, err := codescan.Run(&codescan.Options{
@@ -444,9 +450,10 @@ func TestCoverage_ProvenanceParamsResponses(t *testing.T) {
 	require.NotNil(t, doc)
 
 	for _, ptr := range []string{
-		"/paths/~1prov/get/parameters/0",               // parameter level (stops here)
-		"/responses/provResp/headers/X-Request-Id",     // response header
-		"/responses/provResp/schema/properties/status", // inline body property
+		"/paths/~1prov/get/parameters/0",                       // parameter level (stops here)
+		"/responses/provResp/headers/X-Request-Id",             // response header
+		"/responses/provResp/schema/properties/status",         // inline body property
+		"/responses/provListResp/schema/items/properties/code", // inline element of an array body
 	} {
 		prov, ok := byPointer[ptr]
 		require.Truef(t, ok, "expected an anchor for %q; got %v", ptr, keysOf(byPointer))

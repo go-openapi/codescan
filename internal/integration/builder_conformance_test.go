@@ -61,6 +61,16 @@ func TestBuilderConformance(t *testing.T) {
 		{prop: "bytes", path: "/bytes", response: "respBytes"},
 		{prop: "stamp", path: "/stamp", response: "respStamp"},
 		{prop: "raw", path: "/raw", response: "respRaw"},
+
+		// Shape subjects: the arms of the field dispatch rather than the classifiers. The classifier
+		// subjects above reach only the Named and Alias arms; these reach the rest, so a factorization
+		// of those arms is guarded in all three positions.
+		{prop: "struct", path: "/struct", response: "respStruct"},
+		{prop: "iface", path: "/iface", response: "respIface"},
+		{prop: "mapping", path: "/mapping", response: "respMapping"},
+		{prop: "inline", path: "/inline", response: "respInline", note: "slice arm with an inline element"},
+		{prop: "ptr", path: "/ptr", response: "respPtr"},
+		{prop: "basic", path: "/basic", response: "respBasic"},
 	}
 
 	model := doc.Definitions["ModelHost"].Properties
