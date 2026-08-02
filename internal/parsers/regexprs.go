@@ -30,8 +30,20 @@ const (
 
 	rxMethod = "(\\p{L}+)"
 	rxPath   = "((?:/[\\p{L}\\p{N}\\p{Pd}\\p{Pc}{}\\-\\.\\?_~%!$&'()*+,;=:@/]*)+/?)"
-	rxOpTags = "(\\p{L}[\\p{L}\\p{N}\\p{Pd}\\.\\p{Pc}\\p{Zs}]+)"
-	rxOpID   = "((?:\\p{L}[\\p{L}\\p{N}\\p{Pd}\\p{Pc}]+)+)"
+
+	// rxOpTags and rxOpID both accept a name of a SINGLE character: a letter, then zero or more
+	// further characters.
+	//
+	// They required one further character until 2026-08-02, which silently voided the whole
+	// annotation. The failure is not local to the offending name, because the tags group is optional:
+	// on `swagger:route GET /pets e listPets` the parse does not stop at `e`, it falls back to matching
+	// with NO tags, which leaves rxOpID to swallow `e listPets` — and its alphabet has no space. The
+	// line then matches nothing, and a `swagger:route` matching nothing is not a malformed route, it is
+	// not a route at all, so there was nothing left to raise a diagnostic about.
+	//
+	// OAS 2.0 puts no such floor on either: a tag and an operationId are free-form strings.
+	rxOpTags = "(\\p{L}[\\p{L}\\p{N}\\p{Pd}\\.\\p{Pc}\\p{Zs}]*)"
+	rxOpID   = "(\\p{L}[\\p{L}\\p{N}\\p{Pd}\\p{Pc}]*)"
 )
 
 // compile-once regexes; read-only.

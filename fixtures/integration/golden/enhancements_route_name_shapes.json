@@ -1,0 +1,76 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/short-among": {
+      "get": {
+        "tags": [
+          "a",
+          "shapes"
+        ],
+        "operationId": "listAmong",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/emptyResp"
+          }
+        }
+      }
+    },
+    "/short-both": {
+      "get": {
+        "tags": [
+          "e"
+        ],
+        "operationId": "l",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/emptyResp"
+          }
+        }
+      }
+    },
+    "/short-id": {
+      "get": {
+        "tags": [
+          "shapes"
+        ],
+        "operationId": "l",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/emptyResp"
+          }
+        }
+      }
+    },
+    "/short-id-no-tags": {
+      "get": {
+        "operationId": "q",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/emptyResp"
+          }
+        }
+      }
+    },
+    "/short-tag": {
+      "get": {
+        "tags": [
+          "e"
+        ],
+        "operationId": "listOne",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/emptyResp"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "emptyResp": {
+      "description": "EmptyResp is the shared response body.",
+      "schema": {
+        "type": "string"
+      }
+    }
+  }
+}
