@@ -706,16 +706,16 @@
     "respErrAl": {
       "description": "RespErrAl reaches the aliased error as a response body.",
       "schema": {
-        "type": "string"
-      },
-      "x-go-type": "error"
+        "type": "string",
+        "x-go-type": "error"
+      }
     },
     "respErrN": {
       "description": "RespErrN reaches the predeclared error as a response body.",
       "schema": {
-        "type": "string"
-      },
-      "x-go-type": "error"
+        "type": "string",
+        "x-go-type": "error"
+      }
     },
     "respFmt": {
       "description": "RespFmt reaches FmtNamed as a response body.",
