@@ -109,7 +109,7 @@ func (s *Builder) Build(opts ...Option) error {
 		// Re-gate now that the type is known: strip validations illegal for the resolved type and warn,
 		// and re-type the value keywords that were coerced against nothing.
 		// See [§decl-shape-recheck](./README.md#decl-shape-recheck).
-		handlers.RecoerceDeclValues(&schema)
+		handlers.RecoerceDeclValues(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
 		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
 
 		s.definitions[defKey] = schema

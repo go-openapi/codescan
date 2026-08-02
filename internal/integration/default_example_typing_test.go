@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -27,10 +28,12 @@ import (
 // The three keywords are checked together on purpose: they share validations.ParseDefault and the
 // same dispatch arms, so a divergence between them is itself a defect.
 func TestDefaultExampleTyping(t *testing.T) {
+	var diags []string
 	doc, err := codescan.Run(&codescan.Options{
-		Packages:   []string{"./enhancements/default-example-typing/..."},
-		WorkDir:    scantest.FixturesDir(),
-		ScanModels: true,
+		Packages:     []string{"./enhancements/default-example-typing/..."},
+		WorkDir:      scantest.FixturesDir(),
+		ScanModels:   true,
+		OnDiagnostic: func(d codescan.Diagnostic) { diags = append(diags, d.String()) },
 	})
 	require.NoError(t, err)
 	require.NotNil(t, doc)
@@ -99,6 +102,45 @@ func TestDefaultExampleTyping(t *testing.T) {
 		require.NotNil(t, op.Responses.Default, "the default response code must produce responses.default")
 		assert.Equal(t, "#/responses/errorResponse", op.Responses.Default.Ref.String())
 		assert.Nil(t, op.Responses.Default.Schema, "the default RESPONSE carries no default VALUE")
+	})
+
+	// A value that cannot be read as the schema's type is DROPPED and reported. Emitting it at the
+	// wrong type would produce a document no validator accepts; dropping produces an incomplete one,
+	// which is the lesser harm once the author is told. Decl and field must agree on both.
+	t.Run("uncoercible values are dropped and reported", func(t *testing.T) {
+		declBad := doc.Definitions["DeclUncoercible"]
+		fieldBad := doc.Definitions["FieldUncoercible"].Properties
+
+		assert.Nil(t, declBad.Default, "an uncoercible default must not survive on a declaration")
+		assert.Nil(t, declBad.Example, "an uncoercible example must not survive on a declaration")
+		assert.Nil(t, fieldBad["port"].Default, "…nor on a field")
+		assert.Nil(t, fieldBad["port"].Example, "…nor on a field")
+
+		// The enum keeps its coercible members and loses only the bad one, at both sites. Asserted as a
+		// property — "two members, none of them a leftover string" — rather than against a hard-coded
+		// coercion result, so the test survives a change in how integers are represented.
+		require.Len(t, declBad.Enum, 2, "the two coercible members survive")
+		for _, m := range declBad.Enum {
+			_, leftoverString := m.(string)
+			assert.False(t, leftoverString, "no member may survive as an uncoerced string: %v", m)
+		}
+		assert.Equal(t, declBad.Enum, fieldBad["grade"].Enum, "decl and field must prune alike")
+
+		// Each drop is reported, and the enum warning names the offending member — dropping narrows a
+		// closed set, so a bare count would not be enough to act on.
+		var dropped int
+		var namedTheMember bool
+		for _, d := range diags {
+			if strings.Contains(d, "cannot be read as") {
+				dropped++
+			}
+			if strings.Contains(d, `"two"`) {
+				namedTheMember = true
+			}
+		}
+		assert.GreaterOrEqual(t, dropped, 6,
+			"default+example+enum member, at both decl and field sites; got %v", diags)
+		assert.True(t, namedTheMember, "the enum warning must name the dropped member; got %v", diags)
 	})
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_default_example_typing.json")

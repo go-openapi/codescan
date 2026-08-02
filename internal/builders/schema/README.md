@@ -1475,7 +1475,23 @@ enum no validator can satisfy on an integer schema — and a JSON array
 literal became a string holding JSON source.
 
 `RecoerceDeclValues` runs at the same seam as `RecheckSchemaShape` and
-re-types those three from their raw form. Re-coercion is sound precisely
+re-types those three from their raw form. A value that cannot be read as
+the schema's type is **dropped with a warning** rather than emitted at the
+wrong type: a document carrying `"notanumber"` on an integer schema is one
+no validator accepts, while a document missing a default is merely
+incomplete. Field sites always dropped such a value — but silently, which
+was the invisible half of the same defect; they now report it too, so the
+two sites agree on behaviour AND on reporting.
+
+For `enum:` the drop is per member (`pruneUncoercibleEnum`), and the
+warning names the member: dropping narrows a closed set, which is a real
+change to the author's contract, so a count would not be enough to act on.
+It fails closed, matching what the `swagger:enum` annotation already does
+when a const value does not fit.
+
+Coercion **towards** string never fails — every literal has a string form
+— so a string-typed schema is skipped outright, and no diagnostic can
+arise there. Re-coercion is sound precisely
 because the fallback preserved the author's text verbatim: a value still
 stored as a string is one that was never typed. String-typed schemas are
 skipped, since there the fallback and the correct answer coincide.

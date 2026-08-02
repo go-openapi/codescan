@@ -118,6 +118,17 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing",
       "example": "manual"
     },
+    "DeclUncoercible": {
+      "description": "The enum is partially bad: 1 and 3 survive, \"two\" is dropped. That narrows a\nclosed set, which is a real change to the author's contract, so the warning\nnames the member.",
+      "type": "integer",
+      "format": "int64",
+      "title": "DeclUncoercible carries values that cannot be read as the declared type. Each\nmust be DROPPED with a warning rather than emitted at the wrong type — a\ndocument carrying `\"notanumber\"` on an integer schema is one no validator\naccepts, whereas a document missing a default is merely incomplete.",
+      "enum": [
+        1,
+        3
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"
+    },
     "FieldControls": {
       "description": "FieldControls carries the identical literals at FIELD sites, where the Go type\nis already resolved when the keyword walk runs. Every property here is the\ncontrol for the like-named declaration above.",
       "type": "object",
@@ -181,6 +192,29 @@
           "default": 1.5,
           "x-go-name": "Ratio",
           "example": 2.5
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"
+    },
+    "FieldUncoercible": {
+      "description": "FieldUncoercible is the field-site counterpart. It always dropped the value —\nbut silently, which is the half of the defect that was invisible.",
+      "type": "object",
+      "properties": {
+        "grade": {
+          "description": "Grade has a partially uncoercible enum.",
+          "type": "integer",
+          "format": "int64",
+          "enum": [
+            1,
+            3
+          ],
+          "x-go-name": "Grade"
+        },
+        "port": {
+          "description": "Port has an uncoercible default and example.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Port"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"

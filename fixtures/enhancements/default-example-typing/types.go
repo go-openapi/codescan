@@ -76,6 +76,38 @@ type DeclIntSlice []int
 // default: 2
 type DeclEnumInt int
 
+// DeclUncoercible carries values that cannot be read as the declared type. Each
+// must be DROPPED with a warning rather than emitted at the wrong type — a
+// document carrying `"notanumber"` on an integer schema is one no validator
+// accepts, whereas a document missing a default is merely incomplete.
+//
+// The enum is partially bad: 1 and 3 survive, "two" is dropped. That narrows a
+// closed set, which is a real change to the author's contract, so the warning
+// names the member.
+//
+// swagger:model DeclUncoercible
+// default: notanumber
+// example: alsonotanumber
+// enum: 1, two, 3
+type DeclUncoercible int
+
+// FieldUncoercible is the field-site counterpart. It always dropped the value —
+// but silently, which is the half of the defect that was invisible.
+//
+// swagger:model FieldUncoercible
+type FieldUncoercible struct {
+	// Port has an uncoercible default and example.
+	//
+	// default: notanumber
+	// example: alsonotanumber
+	Port int `json:"port"`
+
+	// Grade has a partially uncoercible enum.
+	//
+	// enum: 1, two, 3
+	Grade int `json:"grade"`
+}
+
 // FieldControls carries the identical literals at FIELD sites, where the Go type
 // is already resolved when the keyword walk runs. Every property here is the
 // control for the like-named declaration above.
