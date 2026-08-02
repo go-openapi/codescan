@@ -302,6 +302,16 @@ const (
 	// Warning.
 	// (Q43).
 	CodeUnparsedPathAnnotation Code = "scan.unparsed-path-annotation"
+
+	// CodeIneffectiveAnnotation fires when an annotation is well-formed and recognised, but the
+	// position it was written in does not consult it — so it is accepted, validated, and discarded.
+	//
+	// Currently: `swagger:strfmt` / `swagger:type` in the doc comment of an EMBEDDED field. On a
+	// regular field both are honoured, which is what makes the silence misleading; an embed
+	// contributes its type's shape, and what that shape is comes from the embedded type's own
+	// declaration, never from the embedding site.
+	// Warning.
+	CodeIneffectiveAnnotation Code = "scan.ineffective-annotation"
 )
 
 // Diagnostic is one observation about a comment block.

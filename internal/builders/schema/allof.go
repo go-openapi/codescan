@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -46,6 +48,7 @@ func (s *Builder) scanEmbeddedFields(
 		if fd.Ignored {
 			continue
 		}
+		s.warnIneffectiveEmbedAnnotations(afld, fd)
 
 		_, ignore, isString, omitEmpty, err := resolvers.ParseFieldTag(afld, fld.Name(), s.Ctx.NameFromTags())
 		if err != nil {
@@ -100,6 +103,33 @@ func (s *Builder) scanEmbeddedFields(
 	}
 
 	return target, hasAllOf, nil
+}
+
+// warnIneffectiveEmbedAnnotations reports `swagger:strfmt` / `swagger:type` written in an EMBEDDED
+// field's own comment, which no embed arm consults.
+//
+// Both are honoured on a regular field, so the same annotation in the same syntactic position — a
+// field's doc comment — works one line and does nothing the next. Worse, the scanner reads that
+// comment and rejects an unknown annotation in it, so the author gets validation feedback implying
+// the annotation is meaningful and no feedback at all that it was discarded.
+//
+// An embed contributes its embedded type's shape; what that shape is comes from that type's own
+// declaration. So the annotation belongs there, and the message says so rather than merely refusing.
+func (s *Builder) warnIneffectiveEmbedAnnotations(afld *ast.Field, fd fieldDoc) {
+	var annotations []string
+	if fd.StrfmtName != "" {
+		annotations = append(annotations, "swagger:strfmt")
+	}
+	if fd.TypeOverride != "" {
+		annotations = append(annotations, "swagger:type")
+	}
+	if len(annotations) == 0 {
+		return
+	}
+
+	s.RecordDiagnostic(grammar.Warnf(s.Ctx.PosOf(afld.Pos()), grammar.CodeIneffectiveAnnotation,
+		"%s on an embedded field has no effect and is ignored; annotate the embedded type's own "+
+			"declaration instead", strings.Join(annotations, " and ")))
 }
 
 // buildPlainEmbed handles an anonymous embed that carries no `swagger:allOf` annotation, returning
