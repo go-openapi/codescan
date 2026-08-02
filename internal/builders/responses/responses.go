@@ -197,7 +197,7 @@ func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.
 	case *types.Named:
 		return r.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		return r.buildFieldAlias(ftpe, typable, fld, seen)
+		return r.buildFieldAlias(ftpe, typable)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrResponses)
 	}
@@ -374,7 +374,7 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	return nil
 }
 
-func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable, fld *types.Var, seen map[string]bool) error {
+func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
@@ -383,82 +383,11 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil // just leave an empty schema
 	}
 
-	// Look the declaration up BEFORE any dissolve, so the alias's own `swagger:strfmt` is honoured on
-	// headers as well as bodies. The lookup used to sit below both dissolve paths, so a header typed
-	// as an annotated alias lost its format.
-	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
-
-	// A body field typed as a swagger:model alias keeps its $ref identity and carries the format on
-	// the alias's own definition. A header cannot $ref at all, so the format must be applied here.
-	refModel := ok && decl.HasModelAnnotation() && typable.In() == inBody && !r.Ctx.TransparentAliases()
-
-	if ok && !refModel && r.ClassifierAliasStrfmt(decl.Comments, tpe, typable) {
-		return nil
-	}
-
-	// TransparentAliases supersedes annotation at use sites — dissolve to the unaliased target via
-	// the schema sub-builder.
-	if r.Ctx.TransparentAliases() {
-		sb := schema.NewBuilder(r.Ctx, r.Decl)
-		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-			return err
-		}
-		for _, d := range sb.PostDeclarations() {
-			r.AppendPostDecl(d)
-		}
-		return nil
-	}
-
-	// Non-body fields are SimpleSchema targets and cannot carry $ref, so the alias always expands to
-	// its unaliased target regardless of annotation.
-	//
-	// Hand the ALIAS to the schema sub-builder rather than unaliasing here: it owns the classifier
-	// cascade (`swagger:type`, `swagger:strfmt`) the alias declaration may carry, and OptionFor selects
-	// SimpleSchema mode from the target's location so the legality gate applies. Unaliasing first threw
-	// the declaration away before anything could read it.
-	if typable.In() != inBody {
-		sb := schema.NewBuilder(r.Ctx, r.Decl)
-		if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-			return err
-		}
-		for _, d := range sb.PostDeclarations() {
-			r.AppendPostDecl(d)
-		}
-
-		return nil
-	}
-
-	if !ok {
+	// Shared with the parameters builder — see schema.BuildFieldAlias. The cross-ref path is the one
+	// thing genuinely ours: a header anchors at respBase/headers/{h}, not under /schema.
+	return schema.BuildFieldAlias(r.Builder, tpe, typable, func() error {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrResponses)
-	}
-
-	// Body field: annotation gates first-class identity at the use site.
-	// See [§alias-handling](./README.md#alias-handling) for the cross-builder rule.
-	//
-	//   - annotated   alias → $ref preserves the alias name; the alias
-	//     gets its own definition via MakeRef's AppendPostDecl side
-	//     effect.
-	//   - unannotated alias → dissolve fully to the unaliased target;
-	//     the alias produces no definition entry.
-	//
-	// The mode flag (RefAliases vs Default) only affects the shape of the alias decl's OWN definition
-	// downstream — it does not change the field-site $ref target, which is gated entirely by
-	// annotation.
-	if decl.HasModelAnnotation() {
-		return r.MakeRef(decl, typable)
-	}
-
-	// Dissolve through the schema sub-builder, handing it the ALIAS — see the parameters builder's
-	// twin. Unaliasing here discarded the declaration before its classifiers could be read.
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
+	}, schema.WithPath(r.bodyPathFor(typable)))
 }
 
 func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, resp *oaispec.Response, seen map[string]bool) error {

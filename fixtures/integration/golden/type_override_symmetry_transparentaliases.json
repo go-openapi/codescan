@@ -55,8 +55,7 @@
             "in": "query"
           },
           {
-            "type": "integer",
-            "format": "int64",
+            "type": "string",
             "x-go-name": "QueryScalarAlias",
             "description": "QueryScalarAlias is the scalar pair's alias half in query position.",
             "name": "queryScalarAlias",
@@ -284,8 +283,7 @@
       "description": "TypeResponse carries the pairs on response headers.",
       "headers": {
         "X-Alias": {
-          "type": "integer",
-          "format": "int64",
+          "type": "string",
           "description": "HeaderScalarAlias is the scalar pair's alias half in header position."
         },
         "X-Named": {
