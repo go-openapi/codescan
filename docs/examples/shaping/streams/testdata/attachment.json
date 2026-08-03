@@ -1,0 +1,26 @@
+{
+  "description": "A stream says nothing about its own framing, so codescan does not invent one:\neach field renders as `{string, format: byte}` — the base64-encoded string\nSwagger 2.0 uses for arbitrary bytes.",
+  "type": "object",
+  "title": "Attachment carries opaque byte streams as model fields.",
+  "properties": {
+    "checksum": {
+      "description": "Checksum says what its bytes are, so the annotation wins over the default.",
+      "type": "string",
+      "format": "base64",
+      "x-go-name": "Checksum"
+    },
+    "content": {
+      "description": "Content is the attachment payload.",
+      "type": "string",
+      "format": "byte",
+      "x-go-name": "Content"
+    },
+    "thumbnail": {
+      "description": "Thumbnail is a closeable stream; the same answer applies.",
+      "type": "string",
+      "format": "byte",
+      "x-go-name": "Thumbnail"
+    }
+  },
+  "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/streams"
+}

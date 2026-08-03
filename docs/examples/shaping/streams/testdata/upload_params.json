@@ -1,0 +1,16 @@
+[
+  {
+    "type": "file",
+    "x-go-name": "Upload",
+    "description": "Upload is the file to store.",
+    "name": "upload",
+    "in": "formData"
+  },
+  {
+    "type": "string",
+    "x-go-name": "Caption",
+    "description": "Caption describes the upload.",
+    "name": "caption",
+    "in": "formData"
+  }
+]

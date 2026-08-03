@@ -71,6 +71,69 @@ embeds should compose; reach for the option when composition is your house style
 for every plain embed.
 {{% /notice %}}
 
+## Composition needs a marshaller you write
+
+An `allOf` says the JSON document satisfies every member at once — one flat object carrying all
+their properties. Go's **default** marshaller only produces that shape by coincidence, and the
+coincidence holds for exactly one case: a plain struct embed with no marshaller of its own, whose
+fields Go promotes.
+
+Step outside that case and the default rendering stops matching the spec:
+
+- a member that is **not a struct** — a map, a slice, a named basic — promotes nothing, so Go emits
+  it as one key named after the type instead of merging it;
+- a member with **its own `MarshalJSON`/`MarshalText`** is promoted into your type's method set, and
+  `json.Marshal` then consults it *before* reading any field — rendering the whole struct as whatever
+  that method returns.
+
+This is why go-swagger's generated models never rely on the default. A model with `allOf` embeds its
+members **and** carries a hand-written pair that flattens them, reading every member from the same
+raw document:
+
+```go
+// swagger:model WithAllOf
+type WithAllOf struct {
+	Notable                             // an allOf member
+
+	AO1 map[string]int32 `json:"-"`     // a map member — json:"-" keeps the default out of the way
+
+	WithAllOfAO2P2                      // another member
+
+	Body  string `json:"body,omitempty"`   // the model's own fields
+	Title string `json:"title,omitempty"`
+}
+
+// UnmarshalJSON reads every member from the SAME document — that is what allOf means.
+func (m *WithAllOf) UnmarshalJSON(raw []byte) error {
+	var aO0 Notable
+	if err := jsonutils.ReadJSON(raw, &aO0); err != nil {
+		return err
+	}
+	m.Notable = aO0
+
+	var aO1 map[string]int32
+	if err := jsonutils.ReadJSON(raw, &aO1); err != nil {
+		return err
+	}
+	m.AO1 = aO1
+
+	// … one block per member, then the model's own fields
+}
+```
+
+{{% notice style="warning" %}}
+If you hand-write the Go types that codescan scans, `swagger:allOf` describes your **intent**; it
+does not make `encoding/json` produce that document. Write the marshaller, or generate the model
+from the spec and let go-swagger write it for you. codescan reads declarations — it cannot tell
+whether the marshalling you need exists, so it will not warn you.
+{{% /notice %}}
+
+Because of this, codescan reads an embed as *composition* and never as an instruction about the
+default marshaller. In particular, a promoted `MarshalText`/`MarshalJSON` on an embedded type is
+**not** treated as a claim that the whole model is a scalar — see
+[Forcing a conformant format]({{% relref "forcing-a-format" %}}) if you want a type rendered as
+one.
+
 ## Annotate the embedded type, not the embed
 
 A classifier annotation in an **embedded field's** doc comment does nothing.
