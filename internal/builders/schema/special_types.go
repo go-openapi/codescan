@@ -72,6 +72,12 @@ const (
 	// Caller-gated — opt in only where the type is guaranteed to render as text.
 	// See [§special-types](./README.md#special-types).
 	recognizeUUID
+	// recognizeOpaqueStream is an identity match on the known byte-stream carriers (io.Reader and
+	// friends, multipart.File, runtime.NamedReadCloser).
+	//
+	// Safe everywhere, so it lives in the canonical set applied by [ApplyStdlibSpecials].
+	// See [§opaque-streams](./README.md#opaque-streams).
+	recognizeOpaqueStream
 )
 
 // ApplyStdlibSpecials runs the canonical safe set of identity-based recognizers (any / time.Time /
@@ -91,7 +97,8 @@ const (
 // See [§special-types](./README.md#special-types).
 func ApplyStdlibSpecials(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool) bool {
 	return applySpecialType(obj, target, skipExt,
-		recognizeAny, recognizeTime, recognizeError, recognizeRawMessage, recognizeStdUUID)
+		recognizeAny, recognizeTime, recognizeError, recognizeRawMessage, recognizeStdUUID,
+		recognizeOpaqueStream)
 }
 
 // applySpecialType iterates wanted recognizers in order and applies the first match to target,
@@ -139,6 +146,20 @@ func applySpecialType(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt
 		case recognizeStdUUID: // identity — go1.27 stdlib uuid.UUID.
 			if resolvers.IsStdUUID(obj) {
 				target.Typed("string", "uuid")
+				return true
+			}
+
+		case recognizeOpaqueStream: // identity — see [§opaque-streams](./README.md#opaque-streams).
+			if resolvers.IsOpaqueStream(obj) {
+				// The only two answers a stream can honestly take, chosen by what the position permits
+				// rather than by anything in the declaration. `file` is legal on a formData parameter and
+				// nowhere else in OAS 2.0, and it is the canonical upload shape; everywhere else the
+				// stream is base64 in a string, which is how OAS 2.0 spells "opaque bytes".
+				if target.In() == inFormData {
+					target.Typed("file", "")
+					return true
+				}
+				target.Typed("string", "byte")
 				return true
 			}
 

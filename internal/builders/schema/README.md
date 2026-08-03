@@ -20,6 +20,7 @@ trade-offs, and known quirks live here.
 - [§allof](#allof) — `buildAllOf`, `buildNamedAllOf`, `scanEmbeddedFields`
 - [§embedded](#embedded) — embed routing, struct/interface specials asymmetry
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
+- [§opaque-streams](#opaque-streams) — stream types, and the two answers a stream can take
 - [§omit](#omit) — `swagger:omit` — the author's pre-filter on promoted fields
 - [§json-dash](#json-dash) — what `json:"-"` does, and the two shapes it is confused with
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
@@ -162,9 +163,9 @@ Three layers, all in `special_types.go`:
 
 - **`applyStdlibSpecials(obj, target)`** — the canonical safe set
   `{recognizeAny, recognizeTime, recognizeError, recognizeRawMessage,
-  recognizeStdUUID}`. All five are identity-based and cannot misfire
-  on user types, so this helper is **called uniformly at every site**
-  that handles a `*types.TypeName`.
+  recognizeStdUUID, recognizeOpaqueStream}`. All six are
+  identity-based and cannot misfire on user types, so this helper is
+  **called uniformly at every site** that handles a `*types.TypeName`.
 
 The two UUID recognizers are a **certain/guessed pair**, and the
 distinction is the whole reason both exist:
@@ -638,6 +639,51 @@ phrasing differentiated struct vs interface; no test asserts on
 the text, the change is golden-neutral.
 
 ---
+
+## <a id="opaque-streams"></a>§opaque-streams — stream types, and the two answers a stream can take
+
+`resolvers.IsOpaqueStream` recognizes the named types that carry a stream of bytes:
+
+| Package | Types |
+|---------|-------|
+| `io` | `Reader`, `ReadCloser`, `ReadSeeker`, `ReadSeekCloser`, `ReadWriter`, `ReaderAt`, `ReaderFrom`, `LimitedReader`, `ByteReader`, `ByteScanner` |
+| `mime/multipart` | `File` |
+| `github.com/go-openapi/runtime` | `NamedReadCloser` |
+
+`recognizeOpaqueStream` sits in the canonical `ApplyStdlibSpecials` set, so it fires at every site
+that handles a `*types.TypeName` — model field, parameter, response body, response header — and it
+runs **before** any declaration lookup, which is the point: these types used to reach structural
+drilling, and an interface is the shape drilling handles worst.
+
+**Two answers, chosen by position rather than by the declaration:**
+
+- `In() == "formData"` → **`type: file`**. The only place OAS 2.0 permits `file`, and the canonical
+  upload shape. It also repairs a spec that was outright invalid: a formData parameter typed
+  `io.Reader` emitted **no `type` at all**, and SimpleSchema requires one.
+- everywhere else → **`{type: string, format: byte}`**. In a JSON body a raw octet sequence has no
+  representation; `byte` is the base64-encoded string OAS 2.0 defines for exactly that. `binary`
+  would claim a framing the position cannot carry.
+
+**Identity, never structure.** A rule like "anything with a `Read([]byte) (int, error)` method"
+would swallow any user interface that happens to expose one. The table is closed: a type joins it
+because it is a known stream carrier, not because its method set resembles one.
+
+**`io.Writer` is deliberately absent**, with its write-only closers. A sink the caller writes into
+does not travel on the wire, so an API type containing one is unknown territory — recognizing it
+would be inventing an intent. It keeps whatever the structural walk makes of it, and the author says
+what they meant.
+
+**This is not a guess about content.** Before the recognizers codescan already answered, and
+answered worse: `io`'s own interfaces became definitions carrying io's godoc as title/description,
+and `ReadCloser` grew a **`close` property of type `string`** out of `Close() error` (interface-method
+promotion applied to a method that is not an accessor). `{string, byte}` is the *less* presumptuous
+answer — the standard way to say "opaque bytes, framing unstated".
+
+An explicit `swagger:strfmt` / `swagger:type` / `swagger:file` still wins; the classifier runs first.
+
+Related: this closes part of [§quirks](#quirks)' degraded-graph concern for these types — a
+recognizer answers from the object alone, so a truncated package graph no longer means a hard
+`unable to find package and source file for: io.Reader`.
 
 ## <a id="embedded"></a>§embedded — embed routing, struct/interface specials asymmetry
 

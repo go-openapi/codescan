@@ -37,6 +37,7 @@
             "in": "header"
           },
           {
+            "type": "file",
             "x-go-name": "Upload",
             "name": "upload",
             "in": "formData"

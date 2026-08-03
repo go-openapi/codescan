@@ -179,6 +179,58 @@ func IsStdErrorType(t types.Type) bool {
 	return ok && IsStdError(named.Obj())
 }
 
+// opaqueStreamTypes are the named types that mean "a stream of bytes whose framing the declaration
+// does not state".
+//
+// Keyed by package path, then type name — identity, never structure. A structural rule ("anything
+// with a Read method") would swallow any user interface that happens to expose one, which is
+// exactly the over-reach that makes guessing dangerous here. This list is closed: a type joins it
+// because it is a known stream carrier, not because its method set resembles one.
+//
+// `io.Writer` and the write-only closers are deliberately absent. A sink the caller writes into is
+// not something that travels on the wire, so an API type containing one is unknown territory; it
+// keeps whatever the structural walk makes of it, and the author says what they meant with
+// `swagger:file` or `swagger:type`.
+var opaqueStreamTypes = map[string]map[string]struct{}{ //nolint:gochecknoglobals // immutable lookup table, built once
+	"io": {
+		"Reader":         {},
+		"ReadCloser":     {},
+		"ReadSeeker":     {},
+		"ReadSeekCloser": {},
+		"ReadWriter":     {},
+		"ReaderAt":       {},
+		"ReaderFrom":     {},
+		"LimitedReader":  {},
+		"ByteReader":     {},
+		"ByteScanner":    {},
+	},
+	"mime/multipart": {
+		"File": {},
+	},
+	"github.com/go-openapi/runtime": {
+		"NamedReadCloser": {},
+	},
+}
+
+// IsOpaqueStream reports whether o is one of the known byte-stream carriers.
+//
+// Identity-based, so it answers from the object alone and can run ahead of any declaration lookup —
+// which matters, because the drilling these types used to reach is what invented a `close` property
+// of type string out of `Close() error`.
+func IsOpaqueStream(o *types.TypeName) bool {
+	if o == nil || o.Pkg() == nil {
+		return false
+	}
+
+	names, found := opaqueStreamTypes[o.Pkg().Path()]
+	if !found {
+		return false
+	}
+	_, found = names[o.Name()]
+
+	return found
+}
+
 func IsStdJSONRawMessage(o *types.TypeName) bool {
 	return o.Pkg() != nil && o.Pkg().Path() == "encoding/json" && o.Name() == "RawMessage"
 }
