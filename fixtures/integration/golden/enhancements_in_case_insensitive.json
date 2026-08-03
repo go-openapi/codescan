@@ -37,7 +37,9 @@
             "in": "header"
           },
           {
+            "type": "file",
             "x-go-name": "Upload",
+            "x-go-type": "io.Reader",
             "name": "upload",
             "in": "formData"
           }

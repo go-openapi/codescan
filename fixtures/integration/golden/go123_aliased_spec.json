@@ -72,6 +72,10 @@
       "properties": {
         "EvenMore": {},
         "StillMore": {},
+        "UUID": {
+          "type": "integer",
+          "format": "int64"
+        },
         "more": {
           "type": "string",
           "x-go-name": "More"

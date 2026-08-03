@@ -20,6 +20,23 @@
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/annotation-noise"
     },
+    "EffectiveOnNamedEmbed": {
+      "description": "EffectiveOnNamedEmbed gives the embed a json name, which makes it a single\nnamed property rather than a promotion — so the classifier IS consulted,\nexactly as on a regular field. Reporting it as ineffective was a false alarm.",
+      "type": "object",
+      "properties": {
+        "nested": {
+          "type": "string",
+          "format": "uuid",
+          "x-go-name": "Target"
+        },
+        "note": {
+          "description": "Note is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Note"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/annotation-noise"
+    },
     "IneffectiveOnAllOf": {
       "title": "IneffectiveOnAllOf annotates an allOf embed with classifiers the arm ignores.",
       "allOf": [

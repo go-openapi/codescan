@@ -20,6 +20,7 @@ trade-offs, and known quirks live here.
 - [§allof](#allof) — `buildAllOf`, `buildNamedAllOf`, `scanEmbeddedFields`
 - [§embedded](#embedded) — embed routing, struct/interface specials asymmetry
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
+- [§opaque-streams](#opaque-streams) — stream types, and the two answers a stream can take
 - [§omit](#omit) — `swagger:omit` — the author's pre-filter on promoted fields
 - [§json-dash](#json-dash) — what `json:"-"` does, and the two shapes it is confused with
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
@@ -162,9 +163,9 @@ Three layers, all in `special_types.go`:
 
 - **`applyStdlibSpecials(obj, target)`** — the canonical safe set
   `{recognizeAny, recognizeTime, recognizeError, recognizeRawMessage,
-  recognizeStdUUID}`. All five are identity-based and cannot misfire
-  on user types, so this helper is **called uniformly at every site**
-  that handles a `*types.TypeName`.
+  recognizeStdUUID, recognizeOpaqueStream}`. All six are
+  identity-based and cannot misfire on user types, so this helper is
+  **called uniformly at every site** that handles a `*types.TypeName`.
 
 The two UUID recognizers are a **certain/guessed pair**, and the
 distinction is the whole reason both exist:
@@ -639,6 +640,58 @@ the text, the change is golden-neutral.
 
 ---
 
+## <a id="opaque-streams"></a>§opaque-streams — stream types, and the two answers a stream can take
+
+`resolvers.IsOpaqueStream` recognizes the named types that carry a stream of bytes:
+
+| Package | Types |
+|---------|-------|
+| `io` | `Reader`, `ReadCloser`, `ReadSeeker`, `ReadSeekCloser`, `ReadWriter`, `ReaderAt`, `ReaderFrom`, `LimitedReader`, `ByteReader`, `ByteScanner` |
+| `mime/multipart` | `File` |
+| `github.com/go-openapi/runtime` | `NamedReadCloser` |
+
+`recognizeOpaqueStream` sits in the canonical `ApplyStdlibSpecials` set, so it fires at every site
+that handles a `*types.TypeName` — model field, parameter, response body, response header — and it
+runs **before** any declaration lookup, which is the point: these types used to reach structural
+drilling, and an interface is the shape drilling handles worst.
+
+**Two answers, chosen by position rather than by the declaration:**
+
+- `In() == "formData"` → **`type: file`**. The only place OAS 2.0 permits `file`, and the canonical
+  upload shape. It also repairs a spec that was outright invalid: a formData parameter typed
+  `io.Reader` emitted **no `type` at all**, and SimpleSchema requires one.
+- everywhere else → **`{type: string, format: byte}`**. In a JSON body a raw octet sequence has no
+  representation; `byte` is the base64-encoded string OAS 2.0 defines for exactly that. `binary`
+  would claim a framing the position cannot carry.
+
+**`x-go-type` carries what neither answer can.** `byte` says base64 bytes and `file` says an upload;
+both erase *which* stream this was, and all twelve recognized types collapse onto the same schema —
+an `io.Reader` field and a `multipart.File` field become indistinguishable. So the recognizer stamps
+`x-go-type: <pkg path>.<name>`, under `skipExt` like every other extension. This is the
+`recognizeError` criterion ("the rendering erases the type"), not the `time.Time` one ("the format
+*is* the type") — see [§traceability](#traceability).
+
+**Identity, never structure.** A rule like "anything with a `Read([]byte) (int, error)` method"
+would swallow any user interface that happens to expose one. The table is closed: a type joins it
+because it is a known stream carrier, not because its method set resembles one.
+
+**`io.Writer` is deliberately absent**, with its write-only closers. A sink the caller writes into
+does not travel on the wire, so an API type containing one is unknown territory — recognizing it
+would be inventing an intent. It keeps whatever the structural walk makes of it, and the author says
+what they meant.
+
+**This is not a guess about content.** Before the recognizers codescan already answered, and
+answered worse: `io`'s own interfaces became definitions carrying io's godoc as title/description,
+and `ReadCloser` grew a **`close` property of type `string`** out of `Close() error` (interface-method
+promotion applied to a method that is not an accessor). `{string, byte}` is the *less* presumptuous
+answer — the standard way to say "opaque bytes, framing unstated".
+
+An explicit `swagger:strfmt` / `swagger:type` / `swagger:file` still wins; the classifier runs first.
+
+Related: this closes part of [§quirks](#quirks)' degraded-graph concern for these types — a
+recognizer answers from the object alone, so a truncated package graph no longer means a hard
+`unable to find package and source file for: io.Reader`.
+
 ## <a id="embedded"></a>§embedded — embed routing, struct/interface specials asymmetry
 
 `buildEmbedded` is the entry point for a struct's embedded fields
@@ -648,6 +701,57 @@ inline merge into the outer schema. It splits three ways: pointers
 peel (recurse), `*types.Named` descends into `buildNamedEmbedded`,
 `*types.Alias` goes through `buildAlias` (so alias-resolution
 honours `TransparentAliases` / `RefAliases`).
+
+### An embed that promotes nothing is an ordinary property
+
+`buildEmbedded` is only reached for an embed that actually **promotes**. Go promotes struct fields
+and interface methods; a named type over a basic, slice, array or map has no member to promote, so
+Go keeps the value as an ordinary key named after the **type**:
+
+```go
+type Count int
+type Host struct {
+    Count                       // → {"Count": 0, "label": "…"}
+    Label string `json:"label"`
+}
+```
+
+`embedPromotes` (allof.go) makes that call, and `buildPlainEmbed` routes the false branch down the
+same path as a **json-named** embed — because it is the same thing: a single named property built
+from the embedded type, classifiers included. The name is the Go field name (which for an embed *is*
+the type name), and the embed's own json tag renames or drops it exactly as on a regular field.
+
+This shape used to reach `buildNamedEmbedded`, whose switch has struct and interface arms only, and
+fall to a `default` that warned `unsupported Go type` and skipped — wording that describes a type
+codescan cannot model rather than one it silently drops. The default arm survives as a defensive
+guard; nothing on the struct path reaches it now.
+
+### <a id="embed-marshaller"></a>Why a promoted marshaller is not modelled
+
+A type reaching that false branch may implement `encoding.TextMarshaler`. Go promotes `MarshalText`
+to the embedding struct, and under the **default** marshaller that makes the whole struct render as
+a bare scalar — siblings and all:
+
+```go
+type Token [16]byte
+func (t Token) MarshalText() ([]byte, error) { return []byte("tok"), nil }
+
+type Embedder struct { Token; Name string `json:"name"` }
+json.Marshal(Embedder{}) // → "tok"   — "name" never reaches the wire
+```
+
+codescan deliberately does not model this. In the convention it describes, an embed means
+**composition**, and a composed model round-trips through a hand-written
+`MarshalJSON`/`UnmarshalJSON` rather than the default one — go-swagger's generated models embed
+their `allOf` members *and* generate the marshaller that flattens them. A promoted marshaller in
+hand-written source is therefore not evidence about the wire.
+
+Detecting it would also require answering a question a declaration cannot answer: a **pointer**
+-receiver marshaller squashes for `&v` and not for `v`, and codescan reads the type, not the use
+site.
+
+The author who does want the scalar says so on the embedded type's own declaration, with
+`swagger:strfmt` or `swagger:type` — the escape hatch that already works.
 
 ### `buildNamedEmbedded` — the two-arm specials asymmetry
 
@@ -1039,11 +1143,13 @@ filter protects against.
 
 `applySpecialType` and `applyStdlibSpecials` take a `skipExt bool`
 parameter that gates any vendor-extension writes the recognizers
-would otherwise emit. Currently only `recognizeError` writes one
-(`x-go-type: error`); the other recognizers
+would otherwise emit. Two write one: `recognizeError`
+(`x-go-type: error`) and `recognizeOpaqueStream`
+(`x-go-type: <pkg path>.<name>`). The others
 (`recognizeTime`, `recognizeAny`, `recognizeRawMessage`,
 `recognizeUUID`) are purely type / format mutations and don't
-consult `skipExt`. All eight schema-internal call sites pass
+consult `skipExt` — see [§traceability](#traceability) for why the
+split falls where it does. All eight schema-internal call sites pass
 `s.skipExtensions` so the recognizer subsystem honours the same
 `SkipExtensions` flag as the rest of the builder.
 
@@ -1105,8 +1211,13 @@ All three pass through `resolvers.AddExtension(..., s.skipExtensions)`, so
 `SkipExtensions` suppresses the whole family.
 
 `x-go-type` predates the option as a narrow type-rendering signal: the
-generic `PkgForType` fallback (`special_types.go`) and `recognizeError`
-stamp it deliberately to record an otherwise-unmodellable type. The
+generic `PkgForType` fallback (`special_types.go`), `recognizeError` and
+`recognizeOpaqueStream` stamp it deliberately to record an
+otherwise-unmodellable type. The criterion is whether the emitted schema
+still identifies the Go type: `time.Time` → `{string, date-time}` and
+`uuid.UUID` → `{string, uuid}` do, so those recognizers stay silent;
+`error` → `{string, ""}` and every stream → `{string, byte}` / `file` do
+not — the latter collapses twelve distinct types onto one schema. The
 `annotateSchema` stamp is **presence-guarded** (`if _, exists :=
 schema.Extensions["x-go-type"]; !exists`) so it never clobbers a value a
 recognizer already chose — for ordinary types the recognizer leaves it
