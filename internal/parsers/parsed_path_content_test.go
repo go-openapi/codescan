@@ -53,6 +53,52 @@ func TestParseRoutePathAnnotation(t *testing.T) {
 			wantID:     "deletePet",
 			wantTags:   []string{"pets", "admin"},
 		},
+
+		// One-character names. Both regexes used to require a letter followed by AT LEAST ONE more
+		// character, and since the tags group is optional the parse did not fail there — it fell back to
+		// matching with no tags, leaving the operationId pattern to swallow `e listPets`, which its
+		// alphabet has no space for. The line then matched nothing at all, and a `swagger:route` that
+		// matches nothing is not a malformed route but simply not a route: the whole annotation vanished
+		// without a word. Neither restriction has any basis in OAS 2.0.
+		{
+			name:       "single-character tag",
+			line:       "// swagger:route GET /pets e listPets",
+			wantMethod: "GET",
+			wantPath:   "/pets",
+			wantID:     "listPets",
+			wantTags:   []string{"e"},
+		},
+		{
+			name:       "single-character operationId",
+			line:       "// swagger:route GET /pets pets l",
+			wantMethod: "GET",
+			wantPath:   "/pets",
+			wantID:     "l",
+			wantTags:   []string{"pets"},
+		},
+		{
+			name:       "single-character operationId, no tags",
+			line:       "// swagger:route GET /pets l",
+			wantMethod: "GET",
+			wantPath:   "/pets",
+			wantID:     "l",
+		},
+		{
+			name:       "single-character tag and operationId",
+			line:       "// swagger:route GET /pets e l",
+			wantMethod: "GET",
+			wantPath:   "/pets",
+			wantID:     "l",
+			wantTags:   []string{"e"},
+		},
+		{
+			name:       "one-character tag among several",
+			line:       "// swagger:route DELETE /pets/{petId} a admin deletePet",
+			wantMethod: "DELETE",
+			wantPath:   "/pets/{petId}",
+			wantID:     "deletePet",
+			wantTags:   []string{"a", "admin"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -82,6 +128,22 @@ func TestParseOperationPathAnnotation(t *testing.T) {
 		wantID     string
 		wantTags   []string
 	}{
+		{
+			name:       "single-character tag",
+			line:       "// swagger:operation GET /v1/pets e listPets",
+			wantMethod: "GET",
+			wantPath:   "/v1/pets",
+			wantID:     "listPets",
+			wantTags:   []string{"e"},
+		},
+		{
+			name:       "single-character operationId",
+			line:       "// swagger:operation GET /v1/pets pets l",
+			wantMethod: "GET",
+			wantPath:   "/v1/pets",
+			wantID:     "l",
+			wantTags:   []string{"pets"},
+		},
 		{
 			name:       "basic operation",
 			line:       "// swagger:operation POST /v1/pets pets addPet",

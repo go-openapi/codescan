@@ -49,7 +49,7 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 	}
 
 	for _, b := range blocks {
-		switch b.AnnotationKind() { //nolint:exhaustive // only ignore/file/strfmt are relevant here
+		switch b.AnnotationKind() { //nolint:exhaustive // only ignore/file/strfmt/type are relevant here
 		case grammar.AnnIgnore:
 			pd.ignored = true
 		case grammar.AnnFile:
@@ -58,6 +58,14 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 			if arg, ok := b.AnnotationArg(); ok && !strings.ContainsAny(arg, " \t") {
 				pd.strfmt = arg
 				pd.strfmtSet = true
+			}
+		case grammar.AnnType:
+			// `swagger:type file` is a synonym for `swagger:file`, and the preferred spelling. Raising
+			// the same signal reuses the body-only gate that already governs swagger:file on a
+			// response, rather than adding a second one. Other swagger:type arguments are handled by
+			// the schema builder, not here.
+			if arg, ok := b.AnnotationArg(); ok && arg == fileTypeName {
+				pd.file = true
 			}
 		}
 	}

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package strfmt_arrays exercises strfmt handling on named array and slice
-// types, including the byte/bsonobjectid fast paths.
+// types. Whether a format describes the whole value or its items is decided by
+// the ELEMENT type: byte and rune sequences are string-like and take the format
+// on the schema, everything else takes it on the items.
 package strfmt_arrays
 
 // Hash is a 32-byte array tagged as the byte swagger strfmt.
@@ -15,7 +17,9 @@ type Hash [32]byte
 // swagger:strfmt bsonobjectid
 type ObjectID [12]byte
 
-// Signature is a named array that carries a generic strfmt tag.
+// Signature is a named byte array carrying a format that is not one of the two
+// names the old allowlist knew. It is still a byte sequence, so the format
+// describes the whole value — it used to emit an array of 64 password strings.
 //
 // swagger:strfmt password
 type Signature [64]byte

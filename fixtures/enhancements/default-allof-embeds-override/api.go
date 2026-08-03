@@ -5,10 +5,15 @@
 // field-override embed under Options.DefaultAllOfForEmbeds.
 //
 // The override idiom (go-swagger#1992): a struct embeds a shared, annotation-free
-// domain type and RE-DECLARES one of the promoted fields — either to decorate it
-// (`read only: true`, description, validations) or to drop it from the wire with
-// `json:"-"`. Go resolves this by depth: the outer field shadows the promoted one,
-// so exactly one field of that name exists at the shallowest depth.
+// domain type and RE-DECLARES one of the promoted fields to decorate it
+// (`read only: true`, description, validations). Go resolves this by depth: the
+// outer field shadows the promoted one, so exactly one field of that name exists
+// at the shallowest depth.
+//
+// `json:"-"` is NOT part of that idiom, though it looks like it. encoding/json
+// ignores a `-` field entirely — it never enters the name set, so it shadows
+// nothing and the promoted field keeps marshalling. `swagger:omit` on the embed is
+// what actually drops a promoted field.
 //
 // Inlined (the default), the schema builder mirrors that: the re-declaration wins
 // and one property is emitted. Composed into `allOf` by DefaultAllOfForEmbeds, the
@@ -36,7 +41,10 @@ type Decorated struct {
 	ID int64
 }
 
-// Muted re-declares a promoted field to drop it from the wire.
+// Muted re-declares a promoted field with `json:"-"`, INTENDING to drop it from
+// the wire — and fails to, because Go ignores such a field rather than letting it
+// shadow. Created stays on the wire and in the schema; the scan raises
+// `scan.shadowed-embed-field` pointing at swagger:omit.
 //
 // swagger:model Muted
 type Muted struct {

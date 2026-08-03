@@ -1,0 +1,24 @@
+{
+  "DashName": [
+    "-"
+  ],
+  "DashNameOmitEmpty": [
+    "-"
+  ],
+  "EmbedIgnored": [
+    "extra"
+  ],
+  "IgnoreShadow": [
+    "age",
+    "id",
+    "name"
+  ],
+  "PlainIgnore": [
+    "keep"
+  ],
+  "RenameShadow": [
+    "age",
+    "id",
+    "name"
+  ]
+}

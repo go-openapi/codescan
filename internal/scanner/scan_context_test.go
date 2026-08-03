@@ -301,6 +301,17 @@ func TestScanCtx_DeclForType(t *testing.T) {
 		_, ok := sctx.DeclForType(types.Typ[types.Int])
 		assert.False(t, ok)
 	})
+
+	t.Run("predeclared type returns false rather than panicking", func(t *testing.T) {
+		// `error` is a *types.Named declared by the language, not by a package, so its object has a nil
+		// Pkg() and there is no declaring source to find in any package graph. Reading the import path
+		// off it unguarded is a nil dereference — which a response body field typed `error` used to be.
+		errType := types.Universe.Lookup("error").Type()
+		require.IsType(t, (*types.Named)(nil), errType)
+
+		_, ok := sctx.DeclForType(errType)
+		assert.False(t, ok)
+	})
 }
 
 func TestScanCtx_DeclForType_Alias(t *testing.T) {

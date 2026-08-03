@@ -2,6 +2,13 @@
   "swagger": "2.0",
   "paths": {},
   "definitions": {
+    "Grade": {
+      "description": "It used to claim the target without writing it, publishing a typeless\nschema for the declared type and a typeless property for every field\nreferencing it.",
+      "type": "integer",
+      "format": "int64",
+      "title": "Grade is a named int tagged with the DEPRECATED swagger:default\nannotation. The annotation is an inert sink: Grade must emit exactly\nwhat it would without it — a plain named int, referenced by $ref from\nthe field site — and the scan must raise a deprecation diagnostic.",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/named-basic"
+    },
     "User": {
       "description": "User embeds the three named basic types above so that the full scan\nwalks buildNamedBasic for each field.",
       "type": "object",
@@ -19,7 +26,7 @@
           "x-go-name": "Email"
         },
         "grade": {
-          "x-go-name": "Grade"
+          "$ref": "#/definitions/Grade"
         },
         "id": {
           "type": "integer",

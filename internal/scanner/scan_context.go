@@ -816,9 +816,9 @@ func (s *ScanCtx) DeclForType(t types.Type) (*EntityDecl, bool) {
 	case *types.Pointer:
 		return s.DeclForType(tpe.Elem())
 	case *types.Named:
-		return s.FindDecl(tpe.Obj().Pkg().Path(), tpe.Obj().Name())
+		return s.declForObj(tpe.Obj())
 	case *types.Alias:
-		return s.FindDecl(tpe.Obj().Pkg().Path(), tpe.Obj().Name())
+		return s.declForObj(tpe.Obj())
 	default:
 		s.EmitDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeUnsupportedGoType,
 			"unknown Go type %[1]T (%[1]v); cannot resolve its declaring source", t))
@@ -924,6 +924,21 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 	}
 
 	return list, descList, posList, true
+}
+
+// declForObj resolves a type name's declaring source, tolerating an object that has no package.
+//
+// A predeclared object (`error`, `any`, `comparable`) is declared by the language rather than by any
+// package, so `Pkg()` is nil and there is no source to find. Reading the path off it unguarded is a
+// nil dereference, which is what a response body field typed `error` used to be: recognizing such a
+// type by identity is the caller's job, and a caller that skipped it crashed here rather than
+// degrading.
+func (s *ScanCtx) declForObj(obj *types.TypeName) (*EntityDecl, bool) {
+	if obj == nil || obj.Pkg() == nil {
+		return nil, false
+	}
+
+	return s.FindDecl(obj.Pkg().Path(), obj.Name())
 }
 
 // findEnumValue extracts one (value, description) row per name declared by a const spec whose type

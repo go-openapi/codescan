@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/codescan/internal/builders/common"
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/builders/validations"
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -346,8 +347,23 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 			"swagger:enum %s: no matching const values found; enum semantics dropped", enumName))
 	}
 
-	if _, ok := s.findAnnotationArg(cg, grammar.AnnDefaultName); ok {
-		return true
+	// swagger:default is DEPRECATED: it is now an empty sink.
+	//
+	// It never emitted a `default` into the spec in any placement or form. Worse, this arm used to
+	// return handled=true on a target it had not written, so a named basic type carrying it published
+	// a TYPELESS definition — and every property referencing it came out typeless too, silently.
+	//
+	// Every place OpenAPI 2.0 admits a default is already served: the `default:` keyword covers the
+	// Schema, Parameter, Items and Header objects (which is exactly its registered context set), and a
+	// `default` response-code head in a route's `Responses:` body covers the Responses object. That
+	// closes the surface, so the annotation has no meaning left to implement.
+	//
+	// Emit a deprecation diagnostic and fall through, exactly as the swagger:alias sink below does.
+	if def := s.findAnnotation(cg, grammar.AnnDefaultName); def != nil {
+		s.RecordDiagnostic(grammar.Warnf(def.Pos(), grammar.CodeDeprecated,
+			`swagger:default is deprecated and no longer affects output; use the "default:" keyword `+
+				`on the field, parameter, header or type declaration, or a "default:" response code `+
+				`in a route's Responses: body`))
 	}
 
 	if typeName, ok := s.findAnnotationArg(cg, grammar.AnnType); ok {
@@ -380,26 +396,19 @@ func (s *Builder) classifierNamedBasic(cg *ast.CommentGroup, pkg *packages.Packa
 // classifierNamedArrayLike is the named-type walker shared between `buildNamedArray` and
 // `buildNamedSlice`.
 //
-// Both have the same classifier surface — `swagger:strfmt` and `swagger:type` — with subtly
-// different strfmt fall-throughs (array honors a "bsonobjectid" special case the slice doesn't).
-// The boolean `forSlice` switches that arm; the rest is identical.
+// Both have the same classifier surface — `swagger:strfmt` and `swagger:type`. elem is the
+// sequence's element type, which decides whether a format describes the whole value or its items
+// (see [common.ApplyArrayLikeStrfmt]); array and slice are otherwise identical here.
 //
 // Returns:
 //   - handled=true,  err=nil   → caller returns nil
 //   - handled=true,  err!=nil  → unrecognised swagger:type → caller
 //     should fall through to inline the element type
 //   - handled=false, err=nil   → no classifier matched
-func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, forSlice bool) (handled bool, fallthroughElement bool) {
+func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, elem types.Type) (handled bool, fallthroughElement bool) {
 	if sfnm, isf := s.findAnnotationArg(cg, grammar.AnnStrfmt); isf {
-		if sfnm == "byte" {
-			tgt.Typed("string", sfnm)
-			return true, false
-		}
-		if !forSlice && sfnm == "bsonobjectid" {
-			tgt.Typed("string", sfnm)
-			return true, false
-		}
-		tgt.Items().Typed("string", sfnm)
+		common.ApplyArrayLikeStrfmt(sfnm, elem, tgt)
+
 		return true, false
 	}
 
@@ -415,10 +424,120 @@ func (s *Builder) classifierNamedArrayLike(cg *ast.CommentGroup, tgt ifaces.Swag
 	return false, false
 }
 
+// warnUnfixableAliasEnum reports a `swagger:enum` on an alias declaration whose right-hand side is
+// not a named type, where the annotation cannot work and never could.
+//
+// An enum is collected by finding the constants declared WITH the annotated type. A type alias is
+// erased by the type-checker, so in
+//
+//	type Unsigned = uint64
+//	const Zero Unsigned = 0
+//
+// `Zero` is a `uint64` constant indistinguishable from every other `uint64` constant in the package.
+// There is nothing to collect, and no amount of plumbing changes that — unlike `swagger:strfmt` and
+// `swagger:type`, which merely decorate the emitted schema and were fixed.
+//
+// An alias to a NAMED enum type is silent here: the named type survives the alias, so the members
+// resolve and the annotation works.
+//
+// See [§enum-values](../../scanner/README.md#enum-values).
+func (s *Builder) warnUnfixableAliasEnum(cg *ast.CommentGroup, tpe *types.Alias, pos token.Position) {
+	ann := s.findAnnotation(cg, grammar.AnnEnum)
+	if ann == nil {
+		return
+	}
+	if _, named := types.Unalias(tpe.Rhs()).(*types.Named); named {
+		return
+	}
+
+	s.RecordDiagnostic(grammar.Warnf(pos, grammar.CodeInvalidEnumOption,
+		"swagger:enum on an alias to a non-named type cannot collect any member: the type-checker "+
+			"erases the alias, so its constants are indistinguishable from any other constant of the "+
+			"underlying type. Declare it as a named type (`type %s %s`) instead",
+		tpe.Obj().Name(), tpe.Rhs().String()))
+}
+
+// classifierAliasStrfmt applies a `swagger:strfmt` carried by an ALIAS declaration.
+//
+// The implementation is shared with the parameters and responses builders, which have their own
+// alias dissolve paths and the same gap. See [common.Builder.ClassifierAliasStrfmt].
+//
+// # Details
+//
+// See [§aliases](./README.md#aliases) — the use-site classifier contract.
+func (s *Builder) classifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, tgt ifaces.SwaggerTypable) bool {
+	return s.ClassifierAliasStrfmt(cg, tpe, tgt)
+}
+
 // classifierAliasTargetStrfmt is the named-type walker fired from `buildNamedAllOf`'s struct branch
 // — checks the alias's target type's docstring for `swagger:strfmt`.
 //
 // On match writes `{string, <format>}` to schema and returns true.
+// applyNamedShapeClassifier runs the author's classifier annotations that depend on a named type's
+// UNDERLYING shape: `swagger:strfmt` for a struct, `swagger:strfmt` / `swagger:enum` for a basic,
+// and the element-driven `swagger:strfmt` / `swagger:type` for an array or slice.
+//
+// handled reports that the classifiers produced the schema; recurse is non-nil when one of them
+// asked for the type to be rebuilt rather than resolved here.
+//
+// This is the shape-aware half of the cascade, and the reason it is a function rather than three
+// lines inside a switch: the composition arm needs the same answers as the field dispatch, and the
+// copy it used to keep — `classifierAliasTargetStrfmt` — is shape-BLIND. That copy writes
+// `Typed("string", format)` whatever the underlying is, so a `[]string` annotated `email` composed
+// into an allOf claimed the member IS an email address rather than a list of them, and a
+// `swagger:enum` reached it not at all.
+func (s *Builder) applyNamedShapeClassifier(
+	cg *ast.CommentGroup, titpe *types.Named, tgt ifaces.SwaggerTypable,
+) (handled bool, recurse func() error) {
+	switch utitpe := titpe.Underlying().(type) {
+	case *types.Struct:
+		return s.classifierNamedStructStrfmt(cg, tgt), nil
+
+	case *types.Basic:
+		// A builtin with no Swagger form is left to the caller, which warns and skips it. The guard sits
+		// ahead of the classifier because that is the order the field dispatch has always applied, and
+		// moving it would quietly start honouring an annotation on a type that cannot carry one.
+		if resolvers.UnsupportedBuiltinType(utitpe) {
+			return false, nil
+		}
+
+		// PkgForType yields the package the enum's const values are collected from; a miss means the
+		// type cannot be anchored to a scanned package, so there is nothing to collect.
+		pkg, found := s.Ctx.PkgForType(titpe)
+		if !found {
+			return false, nil
+		}
+
+		return s.classifierNamedBasic(cg, pkg, titpe, utitpe, tgt), nil
+
+	case *types.Array:
+		return s.arrayLikeClassifier(cg, tgt, utitpe.Elem())
+
+	case *types.Slice:
+		return s.arrayLikeClassifier(cg, tgt, utitpe.Elem())
+
+	default:
+		return false, nil
+	}
+}
+
+// arrayLikeClassifier adapts classifierNamedArrayLike's (handled, fallthroughElement) pair to the
+// closure form applyNamedShapeClassifier returns.
+func (s *Builder) arrayLikeClassifier(
+	cg *ast.CommentGroup, tgt ifaces.SwaggerTypable, elem types.Type,
+) (bool, func() error) {
+	handled, fallthroughElement := s.classifierNamedArrayLike(cg, tgt, elem)
+	if !handled || !fallthroughElement {
+		return handled, nil
+	}
+
+	return true, func() error {
+		defer s.descend("items")()
+
+		return s.buildFromType(elem, tgt.Items())
+	}
+}
+
 func (s *Builder) classifierAliasTargetStrfmt(tpe types.Type, tgt ifaces.SwaggerTypable) bool {
 	decl, ok := s.Ctx.DeclForType(tpe)
 	if !ok || decl == nil {

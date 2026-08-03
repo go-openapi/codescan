@@ -34,6 +34,39 @@ type provResp struct {
 	} `json:"body"`
 }
 
+// provListResp is a response whose body is an ARRAY with an INLINE element.
+//
+// This is the only shape in which the responses builder's descendBody("items")
+// decides an anchor: it advances the body cursor as the builder peels its own
+// array layer, so the element's properties land under …/schema/items/… rather
+// than directly under …/schema/. With a NAMED element the anchor moves to that
+// element's own definition instead and descendBody is unobservable — so a
+// witness for it has to use an inline element or it proves nothing.
+//
+// descendBody affects cross-ref pointers only, never the emitted spec, so no
+// golden can guard it and neither can a schema-comparing conformance suite.
+// This anchor is its only detector.
+//
+// swagger:response provListResp
+type provListResp struct {
+	// in: body
+	Body []struct {
+		// Code is the inline element property whose anchor is at stake.
+		Code string `json:"code"`
+	} `json:"body"`
+}
+
+// provListHandler binds the array-bodied response.
+//
+// swagger:route GET /prov-list provListOp
+//
+// Prov list.
+//
+// responses:
+//
+//	200: provListResp
+func provListHandler() {}
+
 // provHandler is the route. It references provResp so the response is bound to
 // the operation, and provOp ties the parameter set to this path/method.
 //

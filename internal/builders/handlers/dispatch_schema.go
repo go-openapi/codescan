@@ -383,13 +383,18 @@ func schemaStringHandler(ps *oaispec.Schema, valid SchemaValidations,
 		case grammar.KwDefault:
 			if v, err := validations.ParseDefault(val, SchemaTypeOf(ps), ps.Format); err == nil {
 				valid.SetDefault(v)
+			} else {
+				warnUncoercible(p.Pos, diag, grammar.KwDefault, val, SchemaTypeOf(ps))
 			}
 		case grammar.KwExample:
 			if v, err := validations.ParseDefault(val, SchemaTypeOf(ps), ps.Format); err == nil {
 				valid.SetExample(v)
+			} else {
+				warnUncoercible(p.Pos, diag, grammar.KwExample, val, SchemaTypeOf(ps))
 			}
 		case grammar.KwEnum:
 			valid.SetEnum(val)
+			pruneUncoercibleEnum(ps, p.Pos, diag)
 		}
 	}
 }
@@ -412,13 +417,18 @@ func schemaRawHandler(ps *oaispec.Schema, valid SchemaValidations,
 		case grammar.KwDefault:
 			if v, err := validations.ParseDefault(p.Value, SchemaTypeOf(ps), ps.Format); err == nil {
 				valid.SetDefault(v)
+			} else {
+				warnUncoercible(p.Pos, diag, grammar.KwDefault, p.Value, SchemaTypeOf(ps))
 			}
 		case grammar.KwExample:
 			if v, err := validations.ParseDefault(p.Value, SchemaTypeOf(ps), ps.Format); err == nil {
 				valid.SetExample(v)
+			} else {
+				warnUncoercible(p.Pos, diag, grammar.KwExample, p.Value, SchemaTypeOf(ps))
 			}
 		case grammar.KwEnum:
 			valid.SetEnum(p.Value)
+			pruneUncoercibleEnum(ps, p.Pos, diag)
 		case grammar.KwExternalDocs:
 			if opts.SimpleSchemaMode {
 				if diag != nil {
@@ -503,6 +513,117 @@ func checkShape(p grammar.Property, ps *oaispec.Schema, diag func(grammar.Diagno
 //
 // uniqueItems is intentionally not rechecked: its grammar keyword (`unique`) carries no type-domain
 // rule, matching the field/items paths which likewise never shape-gate it. diag may be nil.
+// RecoerceDeclValues re-types `default`, `example` and `enum` on a declaration's schema once the Go
+// type is known.
+//
+// A declaration's comment block is dispatched BEFORE its Go type is resolved onto the schema (see
+// buildFromDecl), so these three keywords ran through ParseDefault / ParseEnumValues with an empty
+// schema type and fell back to their raw string form: `default: 8080` on a named int became the
+// string "8080", `enum: 1,2,3` became ["1","2","3"] — an enum no validator can satisfy on an
+// integer schema — and a JSON array became a string holding JSON source. The same keywords on a
+// struct field, a parameter or a header were always correct, because there the type is known when
+// the walk runs.
+//
+// Re-coercion is safe precisely because the fallback preserved the author's raw text verbatim: a
+// value still stored as a string is one that was never typed. A string-typed schema is skipped —
+// there the fallback and the correct answer coincide, so there is nothing to redo.
+//
+// Runs beside RecheckSchemaShape, at the same "the type is known now" seam.
+func RecoerceDeclValues(sch *oaispec.Schema, pos token.Position, diag func(grammar.Diagnostic)) {
+	if sch == nil || len(sch.Type) == 0 {
+		return
+	}
+	typ := sch.Type[0]
+	if typ == "string" {
+		// Coercion TOWARDS string never fails — every literal has a string form — so the fallback and
+		// the correct answer coincide here. Nothing to redo, and nothing that can be diagnosed.
+		return
+	}
+
+	if raw, ok := sch.Default.(string); ok {
+		v, err := validations.ParseDefault(raw, typ, sch.Format)
+		if err != nil {
+			warnUncoercible(pos, diag, grammar.KwDefault, raw, typ)
+			sch.Default = nil
+		} else {
+			sch.Default = v
+		}
+	}
+	if raw, ok := sch.Example.(string); ok {
+		v, err := validations.ParseDefault(raw, typ, sch.Format)
+		if err != nil {
+			warnUncoercible(pos, diag, grammar.KwExample, raw, typ)
+			sch.Example = nil
+		} else {
+			sch.Example = v
+		}
+	}
+
+	// Enum members were coerced individually against the empty type, so each is independently a
+	// string; re-coerce per member.
+	for i, member := range sch.Enum {
+		raw, ok := member.(string)
+		if !ok {
+			continue
+		}
+		if v, err := validations.CoerceValue(raw, &oaispec.SimpleSchema{Type: typ}); err == nil {
+			sch.Enum[i] = v
+		}
+	}
+	pruneUncoercibleEnum(sch, pos, diag)
+}
+
+// warnUncoercible reports a value that could not be read as the schema's type and was dropped.
+//
+// Dropping beats keeping: a value of the wrong type emits a document no validator accepts, whereas
+// dropping it emits an incomplete one — the lesser harm, now that the author is told.
+func warnUncoercible(pos token.Position, diag func(grammar.Diagnostic), keyword, raw, typ string) {
+	if diag == nil {
+		return
+	}
+	diag(grammar.Warnf(pos, grammar.CodeShapeMismatch,
+		"%s: %q cannot be read as %s; value dropped", keyword, raw, typ))
+}
+
+// pruneUncoercibleEnum drops enum members that could not be read as the schema's type, warning for
+// each one by name.
+//
+// CoerceEnum falls back to the raw string per member, so a member still stored as a string on a
+// non-string schema is one that failed — `enum: 1, two, 3` on an integer schema yields
+// [1, "two", 3], which no validator accepts.
+//
+// Dropping narrows a closed set, which is a real change to the author's contract, so the warning
+// names the member rather than merely counting. It fails closed, matching what the `swagger:enum`
+// annotation already does when a const value does not fit.
+func pruneUncoercibleEnum(sch *oaispec.Schema, pos token.Position, diag func(grammar.Diagnostic)) {
+	if sch == nil || len(sch.Enum) == 0 || len(sch.Type) == 0 {
+		return
+	}
+	typ := sch.Type[0]
+	if typ == "string" {
+		return
+	}
+
+	kept := make([]any, 0, len(sch.Enum))
+	for _, member := range sch.Enum {
+		if raw, isString := member.(string); isString {
+			warnUncoercible(pos, diag, grammar.KwEnum, raw, typ)
+
+			continue
+		}
+		kept = append(kept, member)
+	}
+	if len(kept) == len(sch.Enum) {
+		return
+	}
+	if len(kept) == 0 {
+		sch.Enum = nil
+
+		return
+	}
+	sch.Enum = kept
+}
+
 func RecheckSchemaShape(sch *oaispec.Schema, pos token.Position, diag func(grammar.Diagnostic)) {
 	if sch == nil || len(sch.Type) == 0 {
 		return

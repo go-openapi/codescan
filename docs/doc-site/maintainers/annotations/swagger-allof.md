@@ -38,6 +38,41 @@ follow on the doc comment.
 [Schema-context keywords]({{% relref "/maintainers/keywords/schema-validations-and-decorators#schema-decorators" %}}) on
 the inline-object member (the second `allOf` element).
 
+## Do not put other annotations beside it
+
+`swagger:allOf` takes no arguments, and no other classifier annotation belongs in
+an embedded field's doc comment. `swagger:strfmt` and `swagger:type` written
+there are **ignored**, and codescan reports them under
+`scan.ineffective-annotation`:
+
+```go
+type Wrong struct {
+	// swagger:allOf
+	// swagger:strfmt uuid   ← ignored, and warned about
+	Token
+}
+```
+
+The reason is that an embed contributes the shape of the type it embeds, and
+what that shape is comes from **that type's own declaration** — never from the
+site that embeds it. So the annotation belongs one level down:
+
+```go
+// Token is rendered as a formatted string wherever it appears.
+//
+// swagger:strfmt uuid
+type Token [16]byte
+
+type Right struct {
+	// swagger:allOf
+	Token
+}
+```
+
+This is not specific to `allOf`: the same annotations are ignored on a plain
+(uncomposed) embed too, and reported the same way. They are honoured on an
+ordinary — non-embedded — field, which is what makes the mistake an easy one.
+
 ## Example
 
 A struct embedding a `swagger:model` base with `swagger:allOf` on the embed

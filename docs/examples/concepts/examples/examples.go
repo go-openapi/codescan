@@ -48,16 +48,6 @@ type Settings struct {
 
 // endsnippet:default
 
-// snippet:swaggerdefault
-
-// DefaultPort is the fallback port used wherever Port is not supplied. The
-// swagger:default annotation is a narrow value-only discovery hint.
-//
-// swagger:default
-var DefaultPort = 8080 //nolint:gochecknoglobals // demo example
-
-// endsnippet:swaggerdefault
-
 // snippet:reffield
 
 // Currency is a named (defined) string type, so it earns its own definition and

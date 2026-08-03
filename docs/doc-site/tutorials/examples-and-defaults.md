@@ -47,14 +47,20 @@ is a number, `false` a boolean, `auto` a string.
 {{< example go="concepts/examples/examples.go" goregion="default"
             json="concepts/examples/testdata/default.json" jsonlabel="#/definitions/Settings" >}}
 
-## swagger:default
+## swagger:default (deprecated)
 
-`swagger:default` is a narrow, value-only classifier hint placed on a `var` or
-`const`. It does not publish a spec entity of its own — it has no standalone
-output — so most spec defaults are carried by the `default:` keyword above
-rather than this annotation.
+{{% notice style="warning" %}}
+`swagger:default` never emitted a `default` into the spec. It is now an inert
+sink that raises a `validate.deprecated` diagnostic. Use the `default:` keyword
+above.
+{{% /notice %}}
 
-{{< code file="concepts/examples/examples.go" lang="go" region="swaggerdefault" >}}
+The keyword covers every place OpenAPI 2.0 admits a default value: a model field,
+a non-body parameter, a header, and array items. The one remaining sense of
+"default" — an operation's *default response* — is not a value at all; it is
+written as a response code in a route's `responses:` body:
+
+{{< code file="concepts/routes/routes.go" lang="go" region="route" >}}
 
 ## On a defined-type field
 

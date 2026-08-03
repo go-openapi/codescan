@@ -271,16 +271,14 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 	}
 	if ignore {
 		// A `json:"-"` re-declaration does NOT shadow a promoted field in Go — encoding/json ignores the
-		// field entirely, so the embedded one keeps marshalling. Report it and point at swagger:omit,
-		// which drops it for real.
+		// field entirely, so it never enters the name set and the embedded one keeps marshalling. The
+		// schema says what goes on the wire, so the promoted property stays; the Hint points at
+		// swagger:omit, which drops it for real.
+		//
+		// This used to delete the promoted property, which understated the wire. See
+		// [§json-dash](./README.md#json-dash).
 		s.warnShadowedByJSONDash(fld, afld, target, nameByJSON)
 
-		for jsonName, prior := range nameByJSON {
-			if prior.goName == fld.Name() {
-				delete(target.Properties, jsonName)
-				break
-			}
-		}
 		return fieldCarrier{}, false, nil
 	}
 

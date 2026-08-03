@@ -4,6 +4,12 @@ weight: 60
 description: "Marks a parameter or response body as a binary file (`{type: file}`)."
 ---
 
+{{% notice style="note" %}}
+**Prefer [`swagger:type file`]({{% relref "swagger-type" %}}).** The two are exact
+synonyms — same output, same location gate. `swagger:file` is expected to be
+deprecated as an extraneous annotation; it is not deprecated yet and still works.
+{{% /notice %}}
+
 ## Usage
 
 ```goish

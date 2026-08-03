@@ -36,7 +36,12 @@ type NoModel struct {
 	// default: 11
 	ID int64 `json:"id"`
 
-	Ignored      string `json:"-"`
+	// Ignored is skipped entirely: the whole json tag is "-".
+	Ignored string `json:"-"`
+
+	// IgnoredOther is NOT ignored, despite the name it was given here long ago: the
+	// trailing comma makes "-" the field's literal wire name. encoding/json compares
+	// the whole tag to "-", so `-,omitempty` names rather than skips.
 	IgnoredOther string `json:"-,omitempty"`
 
 	// A field which has omitempty set but no name

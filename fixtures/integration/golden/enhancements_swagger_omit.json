@@ -162,6 +162,9 @@
       "description": "Shadowed re-declares a promoted field with `json:\"-\"`, which does NOT hide it in Go — the Hint\npoints at swagger:omit.",
       "type": "object",
       "properties": {
+        "Created": {
+          "type": "string"
+        },
         "ID": {
           "type": "integer",
           "format": "int64"

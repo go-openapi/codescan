@@ -79,8 +79,20 @@ func (ht responseTypable) Schema() *oaispec.Schema {
 	return ht.response.Schema
 }
 
+// AddExtension writes onto the construct the typable is currently describing — the body schema under
+// `in: body`, the header otherwise — mirroring paramTypable.
+//
+// It used to write onto the RESPONSE in every case, so an extension describing a body's Go type
+// (`x-go-type` on a field typed `error`) surfaced as a sibling of `schema` and `description` instead
+// of inside the schema it was talking about.
 func (ht responseTypable) AddExtension(key string, value any) {
-	ht.response.AddExtension(key, value)
+	if ht.in == inBody {
+		ht.Schema().AddExtension(key, value)
+
+		return
+	}
+
+	ht.header.AddExtension(key, value)
 }
 
 func (ht responseTypable) WithEnum(values ...any) {

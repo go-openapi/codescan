@@ -1,0 +1,263 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/typing": {
+      "get": {
+        "tags": [
+          "typing"
+        ],
+        "operationId": "typingOp",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "default": 8080,
+            "example": 9090,
+            "x-go-name": "QueryPort",
+            "description": "QueryPort is a non-body parameter: SimpleSchema, no $ref allowed.",
+            "name": "queryPort",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "default": false,
+            "x-go-name": "QueryFlag",
+            "description": "QueryFlag is a non-body boolean parameter.",
+            "name": "queryFlag",
+            "in": "query"
+          },
+          {
+            "x-go-name": "Body",
+            "description": "Body is a body parameter; its fields are full-schema properties.",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "retries": {
+                  "description": "Retries is a body-schema property.",
+                  "type": "integer",
+                  "format": "int64",
+                  "default": 3,
+                  "x-go-name": "Retries",
+                  "example": 5
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/typingResponse"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "DeclBool": {
+      "type": "boolean",
+      "title": "DeclBool carries a boolean value on the declaration.",
+      "default": false,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing",
+      "example": true
+    },
+    "DeclEnumInt": {
+      "description": "DeclEnumInt carries an enum alongside a default on the declaration, so the\nenum members and the default can be compared for consistent typing.",
+      "type": "integer",
+      "format": "int64",
+      "default": 2,
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"
+    },
+    "DeclInt": {
+      "type": "integer",
+      "format": "int64",
+      "title": "DeclInt carries an integer value on the declaration.",
+      "default": 8080,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing",
+      "example": 9090
+    },
+    "DeclIntSlice": {
+      "type": "array",
+      "title": "DeclIntSlice carries a JSON array on the declaration.",
+      "default": [
+        1,
+        2,
+        3
+      ],
+      "items": {
+        "type": "integer",
+        "format": "int64"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing",
+      "example": [
+        4,
+        5
+      ]
+    },
+    "DeclNumber": {
+      "type": "number",
+      "format": "double",
+      "title": "DeclNumber carries a floating-point value on the declaration.",
+      "default": 1.5,
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing",
+      "example": 2.5
+    },
+    "DeclString": {
+      "description": "DeclString carries a string value on the declaration — the one case where a\nstring fallback is indistinguishable from a correct coercion, so it is the\ncontrol for the controls.",
+      "type": "string",
+      "default": "auto",
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing",
+      "example": "manual"
+    },
+    "DeclUncoercible": {
+      "description": "The enum is partially bad: 1 and 3 survive, \"two\" is dropped. That narrows a\nclosed set, which is a real change to the author's contract, so the warning\nnames the member.",
+      "type": "integer",
+      "format": "int64",
+      "title": "DeclUncoercible carries values that cannot be read as the declared type. Each\nmust be DROPPED with a warning rather than emitted at the wrong type — a\ndocument carrying `\"notanumber\"` on an integer schema is one no validator\naccepts, whereas a document missing a default is merely incomplete.",
+      "enum": [
+        1,
+        3
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"
+    },
+    "FieldControls": {
+      "description": "FieldControls carries the identical literals at FIELD sites, where the Go type\nis already resolved when the keyword walk runs. Every property here is the\ncontrol for the like-named declaration above.",
+      "type": "object",
+      "properties": {
+        "flag": {
+          "description": "Flag is the boolean control.",
+          "type": "boolean",
+          "default": false,
+          "x-go-name": "Flag",
+          "example": true
+        },
+        "grade": {
+          "description": "Grade is the enum control.",
+          "type": "integer",
+          "format": "int64",
+          "default": 2,
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "x-go-name": "Grade"
+        },
+        "mode": {
+          "description": "Mode is the string control.",
+          "type": "string",
+          "default": "auto",
+          "x-go-name": "Mode",
+          "example": "manual"
+        },
+        "numbers": {
+          "description": "Numbers is the JSON-array control.",
+          "type": "array",
+          "default": [
+            1,
+            2,
+            3
+          ],
+          "items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "x-go-name": "Numbers",
+          "example": [
+            4,
+            5
+          ]
+        },
+        "port": {
+          "description": "Port is the integer control.",
+          "type": "integer",
+          "format": "int64",
+          "default": 8080,
+          "x-go-name": "Port",
+          "example": 9090
+        },
+        "ratio": {
+          "description": "Ratio is the floating-point control.",
+          "type": "number",
+          "format": "double",
+          "default": 1.5,
+          "x-go-name": "Ratio",
+          "example": 2.5
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"
+    },
+    "FieldUncoercible": {
+      "description": "FieldUncoercible is the field-site counterpart. It always dropped the value —\nbut silently, which is the half of the defect that was invisible.",
+      "type": "object",
+      "properties": {
+        "grade": {
+          "description": "Grade has a partially uncoercible enum.",
+          "type": "integer",
+          "format": "int64",
+          "enum": [
+            1,
+            3
+          ],
+          "x-go-name": "Grade"
+        },
+        "port": {
+          "description": "Port has an uncoercible default and example.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Port"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-example-typing"
+    }
+  },
+  "responses": {
+    "errorResponse": {
+      "description": "ErrorResponse is the operation's default response — the OTHER sense of\n\"default\", carried by a response code rather than a value.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "Message describes the failure.",
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    },
+    "typingResponse": {
+      "description": "TypingResponse carries the same literals on response HEADERS, which are\nSimpleSchema locations, and on a body property.\n\nNote there is no `default:` on the response block itself — that keyword is not\nlegal in a response context, and a default RESPONSE is expressed by the route\nbelow instead.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "retries": {
+            "description": "Retries is a response-body property.",
+            "type": "integer",
+            "format": "int64",
+            "default": 3,
+            "x-go-name": "Retries",
+            "example": 5
+          }
+        }
+      },
+      "headers": {
+        "X-Rate-Limit": {
+          "type": "integer",
+          "format": "int64",
+          "default": 60,
+          "example": 120,
+          "description": "XRateLimit is a response header: SimpleSchema."
+        }
+      }
+    }
+  }
+}

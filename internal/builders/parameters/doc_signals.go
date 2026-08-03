@@ -62,6 +62,13 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 			if arg, ok := b.AnnotationArg(); ok && !strings.ContainsAny(arg, " \t") {
 				pd.swaggerType = arg
 				pd.swTypeSet = true
+				// `swagger:type file` is a synonym for `swagger:file`, and the preferred spelling:
+				// `file` is an OAS v2 type name like any other, so the annotation that names types
+				// should be able to name it. Raising the same signal reuses the location gate that
+				// already governs swagger:file (formData only) rather than adding a second one.
+				if arg == fileTypeName {
+					pd.file = true
+				}
 			}
 		}
 	}
@@ -72,20 +79,4 @@ func scanFieldDocSignals(blocks []grammar.Block, doc *ast.CommentGroup) fieldDoc
 	}
 
 	return pd
-}
-
-// strfmtFromDoc returns the argument of a `swagger:strfmt <name>` annotation present in blocks (the
-// pre-parsed common.Builder cache slice for some CommentGroup).
-//
-// Single-word filter mirrors the schema package's `findAnnotationArg` rule.
-func strfmtFromDoc(blocks []grammar.Block) (string, bool) {
-	for _, b := range blocks {
-		if b.AnnotationKind() != grammar.AnnStrfmt {
-			continue
-		}
-		if arg, ok := b.AnnotationArg(); ok && !strings.ContainsAny(arg, " \t") {
-			return arg, true
-		}
-	}
-	return "", false
 }

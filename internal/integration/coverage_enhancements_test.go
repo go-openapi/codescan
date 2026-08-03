@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
@@ -186,13 +187,33 @@ func TestCoverage_ResponseEdges(t *testing.T) {
 }
 
 func TestCoverage_NamedBasic(t *testing.T) {
+	var diags []string
 	doc, err := codescan.Run(&codescan.Options{
-		Packages:   []string{"./enhancements/named-basic/..."},
-		WorkDir:    scantest.FixturesDir(),
-		ScanModels: true,
+		Packages:     []string{"./enhancements/named-basic/..."},
+		WorkDir:      scantest.FixturesDir(),
+		ScanModels:   true,
+		OnDiagnostic: func(d codescan.Diagnostic) { diags = append(diags, d.String()) },
 	})
 	require.NoError(t, err)
 	require.NotNil(t, doc)
+
+	// Grade carries the deprecated swagger:default. The annotation is an inert sink, so Grade emits
+	// exactly what an unannotated named int would — a real definition, referenced by $ref — and the
+	// deprecation is reported rather than silently swallowed.
+	require.Contains(t, doc.Definitions, "Grade", "the deprecated annotation must not suppress the definition")
+	assert.Equal(t, "integer", doc.Definitions["Grade"].Type[0])
+	gradeProp := doc.Definitions["User"].Properties["grade"]
+	assert.Equal(t, "#/definitions/Grade", gradeProp.Ref.String())
+
+	var sawDeprecation bool
+	for _, d := range diags {
+		if strings.Contains(d, "swagger:default is deprecated") {
+			sawDeprecation = true
+
+			break
+		}
+	}
+	assert.True(t, sawDeprecation, "swagger:default must raise a deprecation diagnostic; got %v", diags)
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_named_basic.json")
 }
@@ -448,17 +469,42 @@ func TestCoverage_AllHTTPMethods(t *testing.T) {
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_all_http_methods.json")
 }
 
-// TestCoverage_UnknownAnnotation asserts that scanning a file with an unknown swagger: annotation
-// returns a classifier error.
+// TestCoverage_UnknownAnnotation asserts that an unknown `swagger:` annotation is skipped and
+// reported rather than aborting the scan.
+//
+// It used to return a classifier error, which made one mistyped keyword in one comment enough to
+// produce nothing at all from a whole package graph — the outcome least useful to whoever typed it.
+// Skip-and-diagnose is the house rule; the author gets the name and the location, and every other
+// annotation in the tree still works.
 //
 // This exercises the default branch of typeIndex.detectNodes.
 func TestCoverage_UnknownAnnotation(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	var diags []codescan.Diagnostic
+	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./enhancements/unknown-annotation/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
+		OnDiagnostic: func(d codescan.Diagnostic) {
+			diags = append(diags, d)
+		},
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.NotNil(t, doc)
+
+	var said bool
+	for _, d := range diags {
+		if string(d.Code) == "parse.invalid-annotation" && strings.Contains(d.Message, "doesnotexist") {
+			said = true
+			assert.Equal(t, codescan.SeverityWarning, d.Severity)
+			assert.NotZero(t, d.Pos.Line, "the diagnostic must point at the offending comment")
+
+			break
+		}
+	}
+	assert.True(t, said, "the unknown annotation must be named and located; got %v", diags)
+
+	// The scan continued: the type carrying it is emitted as if the comment were prose.
+	assert.Contains(t, doc.Definitions, "Bogus")
 }
 
 func TestCoverage_NamedStructTags(t *testing.T) {

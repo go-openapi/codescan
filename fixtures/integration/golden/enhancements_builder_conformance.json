@@ -1,0 +1,904 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/anyv": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confAnyV",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respAnyV"
+          }
+        }
+      }
+    },
+    "/basic": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confBasic",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respBasic"
+          }
+        }
+      }
+    },
+    "/bytes": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confBytes",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respBytes"
+          }
+        }
+      }
+    },
+    "/codes": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confCodes",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respCodes"
+          }
+        }
+      }
+    },
+    "/emails": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confEmails",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respEmails"
+          }
+        }
+      }
+    },
+    "/enum": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confEnum",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "integer",
+              "format": "uint64",
+              "enum": [
+                1,
+                2
+              ],
+              "x-go-enum-desc": "1 EnumLow is the low member.\n2 EnumHigh is the high member."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respEnum"
+          }
+        }
+      }
+    },
+    "/err-al": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confErrAl",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respErrAl"
+          }
+        }
+      }
+    },
+    "/err-n": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confErrN",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respErrN"
+          }
+        }
+      }
+    },
+    "/fmt": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confFmt",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "format": "isbn"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respFmt"
+          }
+        }
+      }
+    },
+    "/fmt-al": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confFmtAl",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "format": "isbn"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respFmtAl"
+          }
+        }
+      }
+    },
+    "/iface": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confIface",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Speaker"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respIface"
+          }
+        }
+      }
+    },
+    "/inline": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confInline",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "description": "Code is the inline element property.",
+                    "type": "string",
+                    "x-go-name": "Code"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respInline"
+          }
+        }
+      }
+    },
+    "/mapping": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confMapping",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/Plain"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respMapping"
+          }
+        }
+      }
+    },
+    "/ptr": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confPtr",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Plain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respPtr"
+          }
+        }
+      }
+    },
+    "/raw": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confRaw",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respRaw"
+          }
+        }
+      }
+    },
+    "/raw-n": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confRawN",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respRawN"
+          }
+        }
+      }
+    },
+    "/stamp": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confStamp",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respStamp"
+          }
+        }
+      }
+    },
+    "/stamp-n": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confStampN",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respStampN"
+          }
+        }
+      }
+    },
+    "/struct": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confStruct",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Plain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respStruct"
+          }
+        }
+      }
+    },
+    "/typ": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confTyp",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respTyp"
+          }
+        }
+      }
+    },
+    "/typ-al": {
+      "post": {
+        "tags": [
+          "conf"
+        ],
+        "operationId": "confTypAl",
+        "parameters": [
+          {
+            "x-go-name": "Body",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/respTypAl"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AllOfHost": {
+      "description": "A member of an allOf is a full schema describing one type, exactly as a model\nfield is, so the two must agree. It is reached by a different arm than any of\nthe other three positions — `buildNamedAllOf` rather than the field dispatch —\nand that arm consults its own subset of the classifiers.\n\nOne allOf rather than one host per subject, deliberately: members that resolve\nside by side also witness that no member's classifier leaks into its\nneighbours, which separate hosts could not show. The composing struct's own\nfield lands in a trailing member, so member i is subject i.\n\nSubjects absent here are the ones Go cannot embed under a usable name: a map, a\nslice of an inline struct, and the pointer/basic/predeclared arms, whose\nembedded field name would either collide with another member or be unexported.",
+      "title": "AllOfHost reaches every EMBEDDABLE subject as an allOf MEMBER, one member per\nsubject, in the same order ModelHost declares them.",
+      "allOf": [
+        {
+          "type": "string",
+          "format": "isbn"
+        },
+        {
+          "type": "string",
+          "format": "isbn"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            1,
+            2
+          ],
+          "x-go-enum-desc": "1 EnumLow is the low member.\n2 EnumHigh is the high member."
+        },
+        {
+          "type": "string",
+          "format": "byte"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {},
+        {
+          "type": "object",
+          "properties": {
+            "left": {
+              "description": "Left is a plain property.",
+              "type": "string",
+              "x-go-name": "Left"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "say": {
+              "description": "Say returns a word.",
+              "type": "string",
+              "x-go-name": "Say"
+            }
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {},
+        {
+          "type": "string",
+          "x-go-type": "error"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "note": {
+              "description": "Note is the composing struct's own field, which lands in the trailing member.",
+              "type": "string",
+              "x-go-name": "Note"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/builder-conformance"
+    },
+    "ModelHost": {
+      "description": "and the control for the other two.",
+      "type": "object",
+      "title": "ModelHost reaches every subject as a MODEL FIELD — the schema builder's view,",
+      "properties": {
+        "anyv": {
+          "description": "AnyV is the predeclared any.",
+          "x-go-name": "AnyV"
+        },
+        "basic": {
+          "description": "Basic is the plain-basic arm.",
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "Basic"
+        },
+        "bytes": {
+          "description": "Bytes is the byte-sequence subject.",
+          "type": "string",
+          "format": "byte",
+          "x-go-name": "Bytes"
+        },
+        "codes": {
+          "description": "Codes is the array flavour of the same.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "x-go-name": "Codes"
+        },
+        "emails": {
+          "description": "Emails is the pinned slice+non-special-format divergence.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "x-go-name": "Emails"
+        },
+        "enum": {
+          "description": "Enum is the enum subject.\n1 EnumLow is the low member.\n2 EnumHigh is the high member.",
+          "type": "integer",
+          "format": "uint64",
+          "enum": [
+            1,
+            2
+          ],
+          "x-go-enum-desc": "1 EnumLow is the low member.\n2 EnumHigh is the high member.",
+          "x-go-name": "Enum"
+        },
+        "errAl": {
+          "description": "ErrAl names the same through an alias.",
+          "type": "string",
+          "x-go-name": "ErrAl",
+          "x-go-type": "error"
+        },
+        "errN": {
+          "description": "ErrN is the predeclared error — no package, no declaration.",
+          "type": "string",
+          "x-go-name": "ErrN",
+          "x-go-type": "error"
+        },
+        "fmt": {
+          "description": "Fmt is the named-format subject.",
+          "type": "string",
+          "format": "isbn",
+          "x-go-name": "Fmt"
+        },
+        "fmtAl": {
+          "description": "FmtAl is the alias-format subject.",
+          "type": "string",
+          "format": "isbn",
+          "x-go-name": "FmtAl"
+        },
+        "iface": {
+          "$ref": "#/definitions/Speaker"
+        },
+        "inline": {
+          "description": "Inline is the slice arm with an inline element.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "description": "Code is the inline element property.",
+                "type": "string",
+                "x-go-name": "Code"
+              }
+            }
+          },
+          "x-go-name": "Inline"
+        },
+        "mapping": {
+          "description": "Mapping is the map-arm subject.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Plain"
+          },
+          "x-go-name": "Mapping"
+        },
+        "ptr": {
+          "$ref": "#/definitions/Plain"
+        },
+        "raw": {
+          "description": "Raw is the open-schema subject.",
+          "x-go-name": "Raw"
+        },
+        "rawN": {
+          "description": "RawN is the open-schema stdlib type reached as the named type.",
+          "x-go-name": "RawN"
+        },
+        "stamp": {
+          "description": "Stamp is the stdlib-alias subject.",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Stamp"
+        },
+        "stampN": {
+          "description": "StampN is the stdlib time reached as the named type.",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "StampN"
+        },
+        "struct": {
+          "$ref": "#/definitions/Plain"
+        },
+        "typ": {
+          "description": "Typ is the named-override subject.",
+          "type": "string",
+          "x-go-name": "Typ"
+        },
+        "typAl": {
+          "description": "TypAl is the alias-override subject.",
+          "type": "string",
+          "x-go-name": "TypAl"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/builder-conformance"
+    },
+    "Plain": {
+      "type": "object",
+      "title": "Plain is a struct reached directly as a field.",
+      "properties": {
+        "left": {
+          "description": "Left is a plain property.",
+          "type": "string",
+          "x-go-name": "Left"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/builder-conformance"
+    },
+    "Speaker": {
+      "type": "object",
+      "title": "Speaker is a non-empty interface reached directly as a field.",
+      "properties": {
+        "say": {
+          "description": "Say returns a word.",
+          "type": "string",
+          "x-go-name": "Say"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/builder-conformance"
+    }
+  },
+  "responses": {
+    "respAnyV": {
+      "description": "RespAnyV reaches the predeclared any as a response body.",
+      "schema": {}
+    },
+    "respBasic": {
+      "description": "RespBasic reaches the basic subject as a response body.",
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    "respBytes": {
+      "description": "RespBytes reaches BytesNamed as a response body.",
+      "schema": {
+        "type": "string",
+        "format": "byte"
+      }
+    },
+    "respCodes": {
+      "description": "RespCodes reaches the codes subject as a response body.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      }
+    },
+    "respEmails": {
+      "description": "RespEmails reaches the emails subject as a response body.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      }
+    },
+    "respEnum": {
+      "description": "RespEnum reaches EnumNamed as a response body.",
+      "schema": {
+        "type": "integer",
+        "format": "uint64"
+      }
+    },
+    "respErrAl": {
+      "description": "RespErrAl reaches the aliased error as a response body.",
+      "schema": {
+        "type": "string",
+        "x-go-type": "error"
+      }
+    },
+    "respErrN": {
+      "description": "RespErrN reaches the predeclared error as a response body.",
+      "schema": {
+        "type": "string",
+        "x-go-type": "error"
+      }
+    },
+    "respFmt": {
+      "description": "RespFmt reaches FmtNamed as a response body.",
+      "schema": {
+        "type": "string",
+        "format": "isbn"
+      }
+    },
+    "respFmtAl": {
+      "description": "RespFmtAl reaches FmtAlias as a response body.",
+      "schema": {
+        "type": "string",
+        "format": "isbn"
+      }
+    },
+    "respIface": {
+      "description": "RespIface reaches the iface subject as a response body.",
+      "schema": {
+        "$ref": "#/definitions/Speaker"
+      }
+    },
+    "respInline": {
+      "description": "RespInline reaches the inline-element slice as a response body.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "description": "Code is the inline element property.",
+              "type": "string",
+              "x-go-name": "Code"
+            }
+          }
+        }
+      }
+    },
+    "respMapping": {
+      "description": "RespMapping reaches the mapping subject as a response body.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/definitions/Plain"
+        }
+      }
+    },
+    "respPtr": {
+      "description": "RespPtr reaches the ptr subject as a response body.",
+      "schema": {
+        "$ref": "#/definitions/Plain"
+      }
+    },
+    "respRaw": {
+      "description": "RespRaw reaches RawAlias as a response body.",
+      "schema": {}
+    },
+    "respRawN": {
+      "description": "RespRawN reaches the named open-schema type as a response body.",
+      "schema": {}
+    },
+    "respStamp": {
+      "description": "RespStamp reaches StampAlias as a response body.",
+      "schema": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "respStampN": {
+      "description": "RespStampN reaches the named stdlib time as a response body.",
+      "schema": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "respStruct": {
+      "description": "RespStruct reaches the struct subject as a response body.",
+      "schema": {
+        "$ref": "#/definitions/Plain"
+      }
+    },
+    "respTyp": {
+      "description": "RespTyp reaches TypeNamed as a response body.",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "respTypAl": {
+      "description": "RespTypAl reaches TypeAlias as a response body.",
+      "schema": {
+        "type": "string"
+      }
+    }
+  }
+}

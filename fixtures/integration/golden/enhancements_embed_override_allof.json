@@ -50,7 +50,7 @@
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/default-allof-embeds-override"
     },
     "Muted": {
-      "title": "Muted re-declares a promoted field to drop it from the wire.",
+      "description": "Muted re-declares a promoted field with `json:\"-\"`, INTENDING to drop it from\nthe wire — and fails to, because Go ignores such a field rather than letting it\nshadow. Created stays on the wire and in the schema; the scan raises\n`scan.shadowed-embed-field` pointing at swagger:omit.",
       "allOf": [
         {
           "type": "object",

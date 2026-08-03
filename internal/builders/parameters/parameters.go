@@ -21,6 +21,9 @@ import (
 
 const inBody = "body"
 
+// fileTypeName is the OAS v2 `file` type, spelled as a swagger:type argument.
+const fileTypeName = "file"
+
 // Builder constructs OAS v2 parameter entries for one `swagger:parameters` declaration and writes
 // them onto the matching operations.
 //
@@ -293,41 +296,29 @@ func (p *Builder) buildAlias(tpe *types.Alias, op *oaispec.Operation, seen map[s
 	return p.buildFromType(tpe.Rhs(), op, seen)
 }
 
-func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable) error {
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
 	case *types.Struct:
-		return p.buildFromFieldStruct(ftpe, typable)
+		return schema.Delegate(p.Builder, schema.OptionFor(ftpe, typable))
 	case *types.Pointer:
-		return p.buildFromField(fld, ftpe.Elem(), typable, seen)
+		return p.buildFromField(fld, ftpe.Elem(), typable)
 	case *types.Interface:
-		return p.buildFromFieldInterface(ftpe, typable)
+		return schema.Delegate(p.Builder, schema.OptionFor(ftpe, typable))
 	case *types.Array:
-		return p.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return p.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Slice:
-		return p.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return p.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Map:
 		return p.buildFromFieldMap(ftpe, typable)
 	case *types.Named:
 		return p.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		return p.buildFieldAlias(ftpe, typable, fld, seen)
+		return p.buildFieldAlias(ftpe, typable)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrParameters)
 	}
-}
-
-func (p *Builder) buildFromFieldStruct(tpe *types.Struct, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(p.Ctx, p.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
-		return err
-	}
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
 }
 
 func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
@@ -347,80 +338,50 @@ func (p *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 		Schema: sch,
 	}
 
-	sb := schema.NewBuilder(p.Ctx, p.Decl)
-	if err := sb.Build(schema.WithType(
+	return schema.Delegate(p.Builder, schema.WithType(
 		ftpe.Elem(),
-		schema.NewTypable(sch, typable.Level()+1, p.Ctx.SkipExtensions())),
-	); err != nil {
-		return err
-	}
-
-	// Propagate the sub-builder's PostDeclarations so a model discovered only through the map's value
-	// type (no swagger:model annotation, no other reference site) makes it into the spec's definitions
-	// section.
-	//
-	// Every sibling buildFromFieldXxx method does the same; this loop went missing in M2.5's
-	// schema-builder factor-out — see the parameters-map-postdecl fixture.
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
-}
-
-func (p *Builder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(p.Ctx, p.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable)); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
+		schema.NewTypable(sch, typable.Level()+1, p.Ctx.SkipExtensions()),
+	))
 }
 
 func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
 	o := ftpe.Obj()
-	if resolvers.IsAny(o) {
-		// e.g. Field interface{} or Field any
-		return nil
-	}
-	if resolvers.IsStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameter definition: %w", o.Name(), ErrParameters)
+	if resolvers.IsStdErrorType(ftpe) {
+		// An `error` has no meaning as a parameter, and the schema builder's rendering of it
+		// (`{type: string}`) would be a lie about what a client should send. Dropping the field is the
+		// right outcome — a struct shared between a parameter set and a response should lose it on the
+		// parameter side rather than carry it.
+		//
+		// It used to abort the whole scan. Skip-with-a-diagnostic is the house rule, and its sibling
+		// two arms down already follows it for a Go type with no SimpleSchema form (go-swagger#2804);
+		// this guard predates that and never got the same treatment.
+		//
+		// This is the ONE recognizer where a parameter must not answer as the other two builders do,
+		// so it sits above the canonical set rather than inside it.
+		return errNotAParameter
 	}
 	resolvers.MustNotBeABuiltinType(o)
+
+	// The rest of the identity recognizers answer from the object alone, so they run before the lookup
+	// rather than after it. The subset hand-rolled here was `any` only — which is unreachable in this
+	// arm, since the predeclared `any` is an alias and lands in the one below.
+	if schema.ApplyStdlibSpecials(o, typable, p.Ctx.SkipExtensions()) {
+		return nil
+	}
 
 	decl, found := p.Ctx.DeclForType(o.Type())
 	if !found {
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrParameters)
 	}
 
-	if resolvers.IsStdTime(o) {
-		typable.Typed("string", "date-time")
-		return nil
-	}
-
-	if sfnm, isf := strfmtFromDoc(p.ParseBlocks(decl.Comments)); isf {
-		typable.Typed("string", sfnm)
-		return nil
-	}
-
-	sb := schema.NewBuilder(p.Ctx, decl)
-	sb.InferNames()
-	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable)); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		p.AppendPostDecl(d)
-	}
-
-	return nil
+	// No local recognizer or format short-circuit here: the delegation below reaches the schema
+	// builder's own, which are element-aware. The shortcuts that used to sit here wrote
+	// `Typed("string", format)` unconditionally, so a format on a `[]string` landed on the whole
+	// schema instead of on its items — describing a list of email addresses as one email address.
+	return schema.DelegateAs(p.Builder, decl, schema.OptionFor(decl.ObjType(), typable))
 }
 
-func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable, fld *types.Var, seen map[string]oaispec.Parameter) error {
+func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
@@ -428,54 +389,22 @@ func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 
 		return nil // just leave an empty schema
 	}
-	if resolvers.IsStdError(o) {
-		return fmt.Errorf("%s type not supported in the context of a parameter definition: %w", o.Name(), ErrParameters)
+	if resolvers.IsStdErrorType(tpe) {
+		// Same refusal as the named arm, and it has to be spelled against the resolved type: an alias's
+		// own object is the alias name, so the object-level recognizer that used to sit here could never
+		// fire and `type Wrapped = error` was emitted as a parameter while a bare `error` was dropped.
+		//
+		// It also aborted the entire scan where its twin skips the field.
+		return errNotAParameter
 	}
 	resolvers.MustNotBeABuiltinType(o)
-	resolvers.MustHaveRightHandSide(tpe)
 
-	// TransparentAliases supersedes annotation at use sites — dissolve to the unaliased target via
-	// the schema sub-builder.
-	if p.Ctx.TransparentAliases() {
-		sb := schema.NewBuilder(p.Ctx, p.Decl)
-		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable)); err != nil {
-			return err
-		}
-		for _, d := range sb.PostDeclarations() {
-			p.AppendPostDecl(d)
-		}
-		return nil
-	}
-
-	decl, ok := p.Ctx.GetModel(o.Pkg().Path(), o.Name())
-	if !ok {
+	// The resolution itself is shared with the responses builder: every classifier an alias
+	// declaration may carry lives in the schema package, and two copies of the walk drifted apart
+	// three times before this.
+	return schema.BuildFieldAlias(p.Builder, tpe, typable, func() error {
 		return fmt.Errorf("can't find source file for aliased type: %v -> %v: %w", tpe, tpe.Rhs(), ErrParameters)
-	}
-
-	// Non-body parameters are SimpleSchema targets and cannot carry $ref — always expand the alias
-	// to its unaliased target regardless of annotation.
-	// Walking through every alias layer (types.Unalias) dissolves chains fully in one step.
-	if typable.In() != inBody {
-		return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
-	}
-
-	// Body field: annotation gates first-class identity at the use site.
-	// See [§alias-handling](./README.md#alias-handling) for the cross-builder rule.
-	//
-	//   - annotated   alias → $ref preserves the alias name; the alias
-	//     gets its own definition via MakeRef's AppendPostDecl side effect.
-	//   - unannotated alias → dissolve to the unaliased target (full
-	//     chain collapse via types.Unalias); the alias produces no
-	//     definition entry.
-	//
-	// The mode flag (RefAliases vs Default) only affects the shape of the alias decl's OWN definition
-	// downstream — it does not change the field-site $ref target, which is gated entirely by
-	// annotation.
-	if decl.HasModelAnnotation() {
-		return p.MakeRef(decl, typable)
-	}
-
-	return p.buildFromField(fld, types.Unalias(tpe), typable, seen)
+	})
 }
 
 func (p *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, op *oaispec.Operation, seen map[string]oaispec.Parameter) error {
@@ -615,7 +544,7 @@ func stripArrayPrefixes(arg string) (base string, depth int) {
 //
 // Returns skip=true (with a recorded diagnostic) when the Go type has no OAS v2 SimpleSchema
 // representation in this location and the field should be dropped.
-func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name, in string, pty ifaces.SwaggerTypable, seen map[string]oaispec.Parameter) (skip bool, err error) {
+func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name, in string, pty ifaces.SwaggerTypable) (skip bool, err error) {
 	switch {
 	case in == "formData" && signals.file:
 		pty.Typed("file", "")
@@ -625,12 +554,13 @@ func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name
 		// The override wins outright; the Go type is not consulted.
 		// A compatible swagger:strfmt then rides as a supplementary format back in processParamField.
 	default:
-		if err := p.buildFromField(fld, fld.Type(), pty, seen); err != nil {
-			if errors.Is(err, errUnrepresentableParam) {
+		if err := p.buildFromField(fld, fld.Type(), pty); err != nil {
+			// Both sentinels mean "skip the field rather than panic or fail the whole scan"; they differ
+			// only in what the author is told.
+			switch {
+			case errors.Is(err, errUnrepresentableParam):
 				// The field type has no OAS v2 SimpleSchema representation in this non-body location (e.g. a
-				// map under in=query).
-				// Record a located diagnostic and skip the field instead of panicking or failing the whole
-				// scan.
+				// map under in=query). Naming the location is the point — the same type is fine in a body.
 				//
 				// See go-swagger/go-swagger#2804.
 				p.RecordDiagnostic(grammar.Warnf(
@@ -639,8 +569,21 @@ func (p *Builder) resolveParamType(signals fieldDocSignals, fld *types.Var, name
 					"parameter %q (in=%q) has Go type %s, which has no OAS v2 SimpleSchema representation; parameter skipped",
 					name, in, fld.Type().String(),
 				))
+
+				return true, nil
+			case errors.Is(err, errNotAParameter):
+				// Meaningless in every location, so the message deliberately does NOT suggest that another
+				// `in:` would work.
+				p.RecordDiagnostic(grammar.Warnf(
+					p.Ctx.PosOf(fld.Pos()),
+					grammar.CodeUnsupportedGoType,
+					"parameter %q has Go type %s, which describes an outcome rather than a value a client can send; parameter skipped",
+					name, fld.Type().String(),
+				))
+
 				return true, nil
 			}
+
 			return false, err
 		}
 	}
@@ -726,7 +669,7 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		pty = schema.NewTypable(pty.Schema(), 0, p.Ctx.SkipExtensions())
 	}
 
-	if skip, err := p.resolveParamType(signals, fld, name, in, pty, seen); err != nil {
+	if skip, err := p.resolveParamType(signals, fld, name, in, pty); err != nil {
 		return "", err
 	} else if skip {
 		return "", nil

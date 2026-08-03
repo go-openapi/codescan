@@ -10,6 +10,14 @@ description: "Marks a named type as an enum and collects its const values."
 // swagger:enum [ IDENT_NAME ]
 ```
 
+{{% notice style="note" %}}
+Not to be confused with the [`enum:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#enum" %}}),
+which produces the same spec keyword from the opposite direction: it takes the
+members you write literally, typed from the schema it sits on, whereas this
+annotation collects them from a Go `const` block, typed from the declared Go
+type. Side-by-side in the [enumerations tutorial]({{% relref "/tutorials/enumerations" %}}).
+{{% /notice %}}
+
 ## What it does
 
 Marks a named type over a string, integer, number or boolean as an enum
@@ -27,8 +35,10 @@ A type declared over another named type keeps that type's format
 (`type Kind strfmt.UUID` stays `format: uuid`).
 
 Two shapes do not work: an alias to a basic type cannot host an enum (the
-type-checker erases the alias, leaving nothing to collect), and a `rune`
+type-checker erases the alias, leaving nothing to collect — this raises a
+`parse.invalid-enum-option` warning suggesting a named type), and a `rune`
 or `byte` enum emits integers, which is what those types are on the wire.
+An alias to a *named* enum type is fine, and is not warned about.
 See [Enumerations]({{% relref "/tutorials/enumerations" %}}).
 
 - **Without `swagger:model`** (the default): the values are applied

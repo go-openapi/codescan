@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
 )
@@ -46,6 +48,7 @@ func (s *Builder) scanEmbeddedFields(
 		if fd.Ignored {
 			continue
 		}
+		s.warnIneffectiveEmbedAnnotations(afld, fd)
 
 		_, ignore, isString, omitEmpty, err := resolvers.ParseFieldTag(afld, fld.Name(), s.Ctx.NameFromTags())
 		if err != nil {
@@ -100,6 +103,33 @@ func (s *Builder) scanEmbeddedFields(
 	}
 
 	return target, hasAllOf, nil
+}
+
+// warnIneffectiveEmbedAnnotations reports `swagger:strfmt` / `swagger:type` written in an EMBEDDED
+// field's own comment, which no embed arm consults.
+//
+// Both are honoured on a regular field, so the same annotation in the same syntactic position — a
+// field's doc comment — works one line and does nothing the next. Worse, the scanner reads that
+// comment and rejects an unknown annotation in it, so the author gets validation feedback implying
+// the annotation is meaningful and no feedback at all that it was discarded.
+//
+// An embed contributes its embedded type's shape; what that shape is comes from that type's own
+// declaration. So the annotation belongs there, and the message says so rather than merely refusing.
+func (s *Builder) warnIneffectiveEmbedAnnotations(afld *ast.Field, fd fieldDoc) {
+	var annotations []string
+	if fd.StrfmtName != "" {
+		annotations = append(annotations, "swagger:strfmt")
+	}
+	if fd.TypeOverride != "" {
+		annotations = append(annotations, "swagger:type")
+	}
+	if len(annotations) == 0 {
+		return
+	}
+
+	s.RecordDiagnostic(grammar.Warnf(s.Ctx.PosOf(afld.Pos()), grammar.CodeIneffectiveAnnotation,
+		"%s on an embedded field has no effect and is ignored; annotate the embedded type's own "+
+			"declaration instead", strings.Join(annotations, " and ")))
 }
 
 // buildPlainEmbed handles an anonymous embed that carries no `swagger:allOf` annotation, returning
@@ -202,10 +232,7 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 	tgt := NewTypable(schema, 0, s.skipExtensions)
 	tio := ftpe.Obj()
 
-	if s.classifierAliasTargetStrfmt(ftpe, tgt) {
-		return nil
-	}
-	if applyStdlibSpecials(tio, tgt, s.skipExtensions) {
+	if ApplyStdlibSpecials(tio, tgt, s.skipExtensions) {
 		return nil
 	}
 
@@ -214,10 +241,39 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 		return fmt.Errorf("can't find source for named allOf member %s: %w", ftpe.String(), ErrSchema)
 	}
 
+	// A `swagger:model` member is referenced, and its classifiers ride on its own definition — the
+	// same gate buildNamedType applies before inlining an override.
 	if decl.HasModelAnnotation() {
 		return s.MakeRef(decl, tgt)
 	}
 
+	// The author's classifiers, in the precedence the field dispatch uses: `swagger:type` decides the
+	// type axis outright, then the shape-aware classifiers.
+	//
+	// This arm used to run one shape-BLIND strfmt check and no type override at all, so a member
+	// carrying `swagger:type` or `swagger:enum` came out as an EMPTY schema (its basic underlying then
+	// fell to the warn-and-skip default below), and a format on a string sequence landed on the whole
+	// member instead of on its items.
+	if handled, recurse := s.classifierNamedTypeOverride(
+		decl.Comments, tgt, ftpe, s.Ctx.PosOf(tio.Pos()),
+	); handled {
+		if recurse {
+			return s.buildFromType(ftpe.Underlying(), tgt)
+		}
+
+		return nil
+	}
+	if handled, recurse := s.applyNamedShapeClassifier(decl.Comments, ftpe, tgt); handled {
+		if recurse != nil {
+			return recurse()
+		}
+
+		return nil
+	}
+
+	// Shape dispatch. Unlike the field arm this INLINES rather than emitting a $ref: a member that is
+	// not a `swagger:model` has no definition to point at, and publishing one would put types in the
+	// spec their author never asked to expose.
 	switch utpe := ftpe.Underlying().(type) {
 	case *types.Struct:
 		return s.buildFromStruct(decl, utpe, schema, make(map[string]propOwner))

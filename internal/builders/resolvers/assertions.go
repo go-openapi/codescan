@@ -168,6 +168,17 @@ func IsStdError(o *types.TypeName) bool {
 	return o.Pkg() == nil && o.Name() == "error"
 }
 
+// IsStdErrorType reports whether t IS the predeclared error, however it is spelled.
+//
+// [IsStdError] keys on an object, and an alias's object is the alias's own name — so
+// `type Wrapped = error` never matches it, and a rule written against the object alone applies to
+// one spelling of the same type and not the other.
+func IsStdErrorType(t types.Type) bool {
+	named, ok := types.Unalias(t).(*types.Named)
+
+	return ok && IsStdError(named.Obj())
+}
+
 func IsStdJSONRawMessage(o *types.TypeName) bool {
 	return o.Pkg() != nil && o.Pkg().Path() == "encoding/json" && o.Name() == "RawMessage"
 }

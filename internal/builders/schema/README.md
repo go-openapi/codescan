@@ -21,6 +21,7 @@ trade-offs, and known quirks live here.
 - [§embedded](#embedded) — embed routing, struct/interface specials asymmetry
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
 - [§omit](#omit) — `swagger:omit` — the author's pre-filter on promoted fields
+- [§json-dash](#json-dash) — what `json:"-"` does, and the two shapes it is confused with
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
 - [§user-overrides](#user-overrides) — explicit user-driven type/format overrides at decl-site and field-site
 - [§traceability](#traceability) — `x-go-name` / `x-go-package` / `x-go-type` origin extensions and `EmitXGoType`
@@ -65,6 +66,19 @@ exit-validator's role.
    pulls `time.Time` itself into `discovered`).
 4. Dispatch on `s.Decl.ObjType()`: `*types.Named` → `buildFromType(ti.Type, …)`;
    `*types.Alias` → `buildDeclAlias`; otherwise warn-and-skip.
+
+Inside the `*types.Named` arm, an override classifier runs first, selected by
+`Underlying()` kind — struct, basic, array and slice each have an arm. A
+`swagger:model` type carrying an override publishes the **full** override schema
+on its own definition here; field sites then `$ref` it, and
+`buildNamedType`'s `refModel` gate skips the inline classifiers precisely
+because this step is assumed to have run.
+
+That assumption is why the array and slice arms matter: while they were missing,
+a `swagger:model` sequence with a `swagger:strfmt` published a definition with
+the format silently dropped, and no later stage could recover it. `buildDeclAlias`
+applies the same rule on the alias side, so `type ID = [16]byte` and
+`type ID [16]byte` publish the same definition.
 
 ---
 
@@ -296,6 +310,86 @@ Default and Ref; the difference shows up downstream in the
 alias's own definition (Expand structural under Default vs chain
 `$ref` under Ref).
 
+#### `swagger:strfmt` on the alias runs before the dissolve
+
+Every row of the table above ends in either a `$ref` or a
+dissolve, and a dissolve forgets that an alias was involved at
+all. So a `swagger:strfmt` carried by the **alias declaration**
+has to be applied *before* that point, or it is lost — which is
+what used to happen at every use site.
+
+`ClassifierAliasStrfmt` (on `common.Builder`, shared with the
+parameters and responses builders) is that entry. It runs on the
+alias's own comments, dispatching on the alias's underlying kind
+so the format lands where the equivalent **named** declaration
+would put it:
+
+| Alias underlying | Where the format lands | Named counterpart |
+|---|---|---|
+| basic | whole schema | `classifierNamedBasic` |
+| struct | whole schema — strfmt replaces the type | `classifierNamedStructStrfmt` |
+| slice / array | by element type — see below | `classifierNamedArrayLike` |
+
+#### Items vs. whole schema, for a sequence
+
+A format on an array or slice can describe the sequence itself or each of its
+elements. The decision is made by the **element type**, in
+`common.IsStringLikeSequence`:
+
+| Element | Meaning | Result |
+|---|---|---|
+| `byte` / `uint8` | a byte sequence — string-like | format on the **whole schema** |
+| `rune` / `int32` | a rune sequence — string-like | format on the **whole schema** |
+| anything else | a collection of formatted values | format on the **items** |
+
+```go
+type ID     [16]byte  // swagger:strfmt uuid  → {string, format: uuid}
+type Emails []string  // swagger:strfmt email → {array, items: {string, format: email}}
+```
+
+This replaced a two-name allowlist (`byte`, and `bsonobjectid` for arrays only)
+that was standing in for the same question — both are formats for a byte
+sequence, `bsonobjectid` being a strfmt library type that happens to have an
+array underlying. Keying on the element generalises to every such type (`uuid`
+over `[16]byte`, `ulid`, …) with no list to extend, and it removes the
+array-vs-slice asymmetry the allowlist had.
+
+go/types cannot tell `rune` from `int32` (rune is an alias), so `[]int32` is
+treated alike — harmless, since a *string* format on integer elements was
+already a contradiction.
+
+Note this settles only the mechanical half of the question. A format on a
+sequence of some other element type is genuinely ambiguous — whether the author
+means the sequence or its members cannot be read off the Go type — and it stays
+on the items, as it always has.
+
+Two ordering constraints, both load-bearing:
+
+- **Above the `TransparentAliases` return.** The declaration
+  lookup was historically below it, so that mode dissolved
+  without ever reading the declaration. Lookup and classifier
+  both sit above it now, and a not-found declaration is only an
+  error on the paths that need it to emit a `$ref`.
+- **Before the right-hand side is reached.** For an alias over a
+  recognised stdlib type (`type Stamp = time.Time`), the dissolve
+  lands on `time.Time` itself, where `applyStdlibSpecials` answers
+  `date-time`. An author writing `swagger:strfmt date` must beat
+  that: the annotation is the escape hatch for formats the library
+  cannot infer, so a recognizer is a default for un-annotated code
+  and never an override.
+
+A `swagger:model` alias is the exception, mirroring
+`buildNamedType`'s `refModel` gate: it publishes its override on
+its own definition and is referenced here, so the inline
+classifier is skipped — except under SimpleSchema (`$ref`
+illegal) and `TransparentAliases` (no `$ref` emitted), where the
+format must inline after all.
+
+An alias that carries **no** annotation of its own is unaffected:
+it dissolves as before, and if it lands on an annotated *named*
+type the named machinery applies that type's format, exactly as
+it always did.
+
 The same applies inside allOf composition: `swagger:allOf` on an
 embed governs the *composition* shape (allOf vs flat inline);
 `swagger:model` on an embedded alias governs the *identity* of
@@ -309,6 +403,12 @@ and **cannot carry `$ref`** (OpenAPI 2.0 constraint). At those
 sites the alias always expands to the unaliased target regardless
 of annotation. The annotation gate has no effect for SimpleSchema
 because the question "$ref to what" never arises.
+
+A `swagger:strfmt` on the alias still applies, though — the
+expansion is a dissolve like any other, so `ClassifierAliasStrfmt`
+runs ahead of it in the parameters and responses builders too.
+Since `$ref` is illegal here, it runs even when the alias carries
+`swagger:model`.
 
 ### Top-level alias parameters and responses
 
@@ -442,6 +542,21 @@ and `buildNamedAllOf` (resolves a named-type allOf member through the
 same user-classifier-first precedence the rest of the builder uses).
 
 ### `scanEmbeddedFields` — embed classification
+
+**Which `fieldDoc` signals an embed consumes.** Exactly five: `Ignored`
+(`swagger:ignore`), `JSONName` (`swagger:name`, via `embedNestName`),
+`OmitTargets` (`swagger:omit`, via `embedOmitTargets`), `IsAllOfMember` /
+`AllOfClass` (`swagger:allOf`), and the `required:` inheritance hint read by
+`buildPlainEmbed`. All five describe the *embedding*.
+
+`StrfmtName` and `TypeOverride` are parsed into the same `fieldDoc` and are
+**never read here** — they describe the embedded type, whose shape comes from
+its own declaration, not from the site that embeds it. Writing either on an
+embed raises `CodeIneffectiveAnnotation` (`warnIneffectiveEmbedAnnotations`)
+rather than being dropped in silence: both ARE honoured on a regular field
+(`fields.go`), so the same annotation one field over means something, and the
+scanner rejects an *unknown* annotation in that same comment — so without the
+warning the author gets validation feedback implying it took effect.
 
 Walks `*types.Struct`'s anonymous fields. Three signals decide
 classification per embed:
@@ -618,6 +733,41 @@ zero-content interfaces invisible at the allOf seam — they don't
 contribute an `{}` entry to the outer schema.
 
 ---
+
+## <a id="json-dash"></a>§json-dash — `json:"-"` is not a way to hide a promoted field
+
+The emitted property set must match what `encoding/json` puts on the wire. Two
+readings of the `-` tag used to diverge from it.
+
+**A `-` field is ignored, not shadowing.** encoding/json drops such a field
+entirely — it never enters the name set — so re-declaring a promoted field with
+`json:"-"` does **not** hide the embedded one, which Go keeps marshalling:
+
+```go
+type Outer struct { Base; Age int32 `json:"-"` }   // Base has Age int32 `json:"age"`
+
+json.Marshal → {"id":1,"name":"n","age":42}        // age survives, from Base
+```
+
+The builder used to delete the promoted property here, which understated the
+wire. It no longer does. The intent is real, though — an author writing this
+wants the field gone — so the shape raises `scan.shadowed-embed-field`, pointing
+at [`swagger:omit`](#omit), which drops it for real. Contrast with a re-declaration
+under a *real* name, where Go's depth rule does apply and the outer field wins.
+
+Tagging the **embed itself** `json:"-"` is a different act and does drop the whole
+embed; that always worked.
+
+**The whole tag must be `-` to ignore.** encoding/json compares the entire tag,
+so `json:"-,"` and `json:"-,omitempty"` name the field literally `-`. Splitting on
+the comma first conflates the two and dropped a field Go marshals; `jsonTagIgnores`
+in `resolvers` now does the whole-tag comparison, and `-` is accepted as a name
+from the `json` tag only (no other tag type has an encoding rule to appeal to).
+
+**Witness.** `fixtures/enhancements/json-tag-fidelity` is differential: the fixture
+module marshals its own types and commits the key sets as `wire.golden.json`, and
+`TestJSONTagFidelity` asserts the emitted property sets equal them. Neither side
+hard-codes an expectation — the oracle is encoding/json itself.
 
 ## <a id="omit"></a>§omit — `swagger:omit`, the author's pre-filter on promoted fields
 
@@ -1367,6 +1517,36 @@ sees `""` ("type unknown") and accepts everything. A shape-constrained
 keyword on a mismatched scalar model (e.g. `minProperties:` on a
 `type Foo string`) would therefore be written and never flagged.
 
+The same ordering has a second consequence, on VALUES rather than on
+shape gating. `default:`, `example:` and `enum:` are coerced against
+`SchemaTypeOf(ps)`, which is `""` at dispatch time, so `ParseDefault` /
+`ParseEnumValues` fall back to the raw string: `default: 8080` on a named
+int became the string `"8080"`, `enum: 1,2,3` became `["1","2","3"]` — an
+enum no validator can satisfy on an integer schema — and a JSON array
+literal became a string holding JSON source.
+
+`RecoerceDeclValues` runs at the same seam as `RecheckSchemaShape` and
+re-types those three from their raw form. A value that cannot be read as
+the schema's type is **dropped with a warning** rather than emitted at the
+wrong type: a document carrying `"notanumber"` on an integer schema is one
+no validator accepts, while a document missing a default is merely
+incomplete. Field sites always dropped such a value — but silently, which
+was the invisible half of the same defect; they now report it too, so the
+two sites agree on behaviour AND on reporting.
+
+For `enum:` the drop is per member (`pruneUncoercibleEnum`), and the
+warning names the member: dropping narrows a closed set, which is a real
+change to the author's contract, so a count would not be enough to act on.
+It fails closed, matching what the `swagger:enum` annotation already does
+when a const value does not fit.
+
+Coercion **towards** string never fails — every literal has a string form
+— so a string-typed schema is skipped outright, and no diagnostic can
+arise there. Re-coercion is sound precisely
+because the fallback preserved the author's text verbatim: a value still
+stored as a string is one that was never typed. String-typed schemas are
+skipped, since there the fallback and the correct answer coincide.
+
 Field- and items-level dispatch don't have this problem: their target's
 type is already set when their block is dispatched, so `checkShape`
 gates correctly inline.
@@ -1453,7 +1633,7 @@ annotation of interest.
 |---|---|---|
 | `classifierTextMarshal` | `buildFromTextMarshal` end-of-pipe | `swagger:strfmt` |
 | `classifierNamedTypeOverride` | `buildFromType` named fallback, `buildFromStruct` pre-pass | `swagger:type` |
-| `classifierNamedBasic` | `buildNamedBasic` | cascade: `swagger:strfmt → swagger:enum → swagger:default → swagger:type → swagger:alias` (the alias arm doubles as the SimpleSchema-mode primitive-inline branch — see [§simple-schema-mode](#simple-schema-mode)) |
+| `classifierNamedBasic` | `buildNamedBasic` | cascade: `swagger:strfmt → swagger:enum → swagger:type`, then the SimpleSchema-mode primitive-inline branch (see [§simple-schema-mode](#simple-schema-mode)). `swagger:default` and `swagger:alias` are deprecated sinks: each raises `validate.deprecated` and falls through. `swagger:default` used to be TERMINAL here, returning handled on a target it never wrote — which published a typeless schema for the declared type |
 | `classifierNamedArrayLike` | `buildNamedArray` / `buildNamedSlice` | `swagger:strfmt`, `swagger:type` |
 | `classifierAliasTargetStrfmt` | `buildNamedAllOf` (struct + interface arms) | `swagger:strfmt` |
 | `classifierStructPreBuildType` | `buildFromStruct` top | `swagger:type` |

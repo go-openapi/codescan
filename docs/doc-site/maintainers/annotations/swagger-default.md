@@ -1,49 +1,86 @@
 ---
 title: "swagger:default"
 weight: 40
-description: "Classifier hint marking a value declaration as a spec default anchor."
+description: "Deprecated no-op — defaults are carried by the default: keyword, or a default response code."
 ---
+
+
+{{% notice style="warning" %}}
+**Deprecated.** `swagger:default` never emitted a `default` into the spec, in any
+placement or form. It is now an empty sink that only raises a
+`validate.deprecated` diagnostic. Use the
+[`default:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#default" %}}),
+or a `default` response code in a route's `Responses:` body.
+{{% /notice %}}
 
 ## Usage
 
 ```goish
-// swagger:default
+// swagger:default [ VALUE ]
 ```
 
 ## What it does
 
-Marks the surrounding declaration as the spec's default value for the
-corresponding shape.
+Nothing. It is parsed, reported as deprecated, and ignored.
 
-Used in narrow contexts where the scanner expects an explicit anchor for a
-default. This annotation is **value-only** — there's no exported entity it
-publishes; it's a classifier hint the scanner consumes during discovery.
+Previously it also **suppressed** the schema of a named basic type it was placed
+on: the classifier claimed the target without writing it, so the declared type
+published a typeless definition and every field referencing it emitted a typeless
+property, silently. That is fixed — an annotated type now emits exactly what it
+would emit unannotated.
+
+## Why it was retired
+
+Every place OpenAPI 2.0 admits a `default` is already served, so the annotation
+had no meaning left to implement:
+
+| Where a default can appear | How to write it |
+|---|---|
+| Schema object — a model field, or a type declaration | [`default:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#default" %}}) |
+| Parameter object (non-body) | `default:` keyword |
+| Items object | `default:` keyword |
+| Header object | `default:` keyword |
+| Responses object — an operation's default response | `default:` as the response code in a `Responses:` body |
+
+The keyword's context set is exactly the list of OAS 2.0 objects that carry a
+`default`; the response-code head closes the remainder.
 
 ## Where it goes
 
-On a value declaration (`var`, `const`) or a struct field.
+Anywhere it used to — the annotation is still recognised so existing source keeps
+scanning. It has no effect wherever it appears.
 
 ## Grammar (EBNF)
 
 ```ebnf
-DefaultClassifierBlock = ANN_DEFAULT , [ Title ] , [ Description ] ;
+DefaultClassifierBlock = ANN_DEFAULT , [ VALUE ] , [ Title ] , [ Description ] ;
 ```
 
-Takes no argument — an optional title/description may follow on the
-doc comment.
+The value argument is optional and unread. It used to be mandatory, which made
+the bare form this page once documented a hard parse error.
 
 ## Supported keywords
 
-None of its own. Most spec defaults are instead carried by the
-[`default:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#default" %}}) on the relevant
-field; this annotation has a narrow surface and is not commonly authored
-directly.
+None.
 
 ## Example
 
-`swagger:default` is value-only: it produces no definition, so there is no
-emitted spec to render. The source below shows the narrow classifier-hint
-form — in practice most defaults come from the
-[`default:` keyword]({{% relref "/maintainers/keywords/schema-validations-and-decorators#default" %}}) on a field.
+Replace it with the keyword:
 
-{{< code file="concepts/examples/examples.go" region="swaggerdefault" lang="go" >}}
+```go
+// Port is the listen port.
+//
+// swagger:model Port
+// default: 8080
+type Port int
+```
+
+For an operation's default response, use the response code:
+
+```go
+// swagger:route GET /things things listThings
+//
+// Responses:
+//   200: thingList
+//   default: genericError
+```

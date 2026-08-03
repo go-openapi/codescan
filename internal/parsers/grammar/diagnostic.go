@@ -291,6 +291,27 @@ const (
 	// Warning.
 	// (D7).
 	CodeEmptyOverride Code = "scan.empty-override"
+
+	// CodeUnparsedPathAnnotation fires when a comment line opens with `swagger:route` or
+	// `swagger:operation` but the rest of the line does not parse as one.
+	//
+	// Such a line produces NOTHING: no path, no operation, and — before this code existed — no word to
+	// the author either, because a route annotation that fails to match is indistinguishable from
+	// ordinary prose to everything downstream. The route simply is not there, and the first sign of it
+	// is a missing path in the output.
+	// Warning.
+	// (Q43).
+	CodeUnparsedPathAnnotation Code = "scan.unparsed-path-annotation"
+
+	// CodeIneffectiveAnnotation fires when an annotation is well-formed and recognised, but the
+	// position it was written in does not consult it — so it is accepted, validated, and discarded.
+	//
+	// Currently: `swagger:strfmt` / `swagger:type` in the doc comment of an EMBEDDED field. On a
+	// regular field both are honoured, which is what makes the silence misleading; an embed
+	// contributes its type's shape, and what that shape is comes from the embedded type's own
+	// declaration, never from the embedding site.
+	// Warning.
+	CodeIneffectiveAnnotation Code = "scan.ineffective-annotation"
 )
 
 // Diagnostic is one observation about a comment block.

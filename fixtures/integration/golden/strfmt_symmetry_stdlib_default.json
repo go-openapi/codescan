@@ -1,0 +1,37 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Envelope": {
+      "type": "object",
+      "title": "Envelope reaches both pairs from a field site.",
+      "properties": {
+        "fieldRawAlias": {
+          "description": "FieldRawAlias is the raw-message pair's alias half.",
+          "type": "string",
+          "format": "byte",
+          "x-go-name": "FieldRawAlias"
+        },
+        "fieldRawNamed": {
+          "description": "FieldRawNamed is the raw-message pair's named half.",
+          "type": "string",
+          "format": "byte",
+          "x-go-name": "FieldRawNamed"
+        },
+        "fieldTimeAlias": {
+          "description": "FieldTimeAlias is the time pair's alias half.",
+          "type": "string",
+          "format": "date",
+          "x-go-name": "FieldTimeAlias"
+        },
+        "fieldTimeNamed": {
+          "description": "FieldTimeNamed is the time pair's named half.",
+          "type": "string",
+          "format": "date",
+          "x-go-name": "FieldTimeNamed"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/strfmt-symmetry-stdlib"
+    }
+  }
+}

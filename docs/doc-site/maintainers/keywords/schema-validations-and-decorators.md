@@ -176,6 +176,11 @@ more idiomatic — it picks up the constant names + godoc and produces
 `SkipEnumDescriptions: true` to keep the const→value mapping on `x-go-enum-desc` only,
 out of the description.)
 
+Do not confuse the two: the **annotation** collects members from a Go `const` block
+and types them from the declared Go type; the **keyword** takes the members you write
+and types them from the schema it sits on. Side-by-side comparison in the
+[enumerations tutorial]({{% relref "/tutorials/enumerations" %}}).
+
 ### `required`
 
 Marks a field as required. Boolean.

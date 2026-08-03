@@ -115,20 +115,27 @@ func TestE2E_DiagnosticMarksTheOffendingKeyword(t *testing.T) {
 			"line %d: a mark past the end of the line it is on", mark.Line+1)
 	}
 
-	// `// in: formData` is reported at the keyword; after translation it must
-	// still be the keyword, not the tab that precedes it.
+	// `// maximum: 3` is a schema keyword under a prose-only classifier body, so it is reported at
+	// the keyword; after translation the mark must still be the keyword, not the tab that precedes
+	// it.
+	//
+	// The subject used to be the `// in: formData` on the same field, which warned beside
+	// `swagger:file`. That warning was spurious — `in:` is a field directive the parameters builder
+	// reads out of band, and the line it fired on is the canonical file-upload idiom — so the subject
+	// moved to a keyword that is genuinely invalid there. The tab-indent property under test is
+	// unchanged.
 	source := strings.Split(m.currentSource, "\n")
 	var checked int
 	for _, d := range m.diags {
-		if d.Pos.Filename != path || !strings.Contains(source[d.Pos.Line-1], "// in:") {
+		if d.Pos.Filename != path || !strings.Contains(source[d.Pos.Line-1], "// maximum:") {
 			continue
 		}
 		col := bufferColumn(source[d.Pos.Line-1], d.Pos.Column)
-		assert.True(t, strings.HasPrefix(string([]rune(buffer[d.Pos.Line-1])[col-1:]), "in:"),
+		assert.True(t, strings.HasPrefix(string([]rune(buffer[d.Pos.Line-1])[col-1:]), "maximum:"),
 			"line %d landed on %q", d.Pos.Line, buffer[d.Pos.Line-1])
 		checked++
 	}
-	require.Positive(t, checked, "the fixture must still contain a context-invalid `in:`")
+	require.Positive(t, checked, "the fixture must still contain a context-invalid keyword")
 }
 
 // The mark has to survive all the way to the screen, over the lexical class the

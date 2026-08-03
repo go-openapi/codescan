@@ -24,6 +24,9 @@ const (
 	inHeader = "header"
 )
 
+// fileTypeName is the OAS v2 `file` type, spelled as a swagger:type argument.
+const fileTypeName = "file"
+
 // Builder constructs OAS v2 response entries for one `swagger:response` declaration.
 //
 // Embeds *common.Builder for shared state (Ctx, Decl, PostDeclarations, diagnostics, ParseBlocks
@@ -173,44 +176,31 @@ func (r *Builder) bodyPathFor(typable ifaces.SwaggerTypable) string {
 	return ""
 }
 
-func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable, seen map[string]bool) error {
+func (r *Builder) buildFromField(fld *types.Var, tpe types.Type, typable ifaces.SwaggerTypable) error {
 	switch ftpe := tpe.(type) {
 	case *types.Basic:
 		return resolvers.SwaggerSchemaForType(ftpe.Name(), typable)
 	case *types.Struct:
-		return r.buildFromFieldStruct(ftpe, typable)
+		return schema.Delegate(r.Builder, schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable)))
 	case *types.Pointer:
-		return r.buildFromField(fld, ftpe.Elem(), typable, seen)
+		return r.buildFromField(fld, ftpe.Elem(), typable)
 	case *types.Interface:
-		return r.buildFromFieldInterface(ftpe, typable)
+		return schema.Delegate(r.Builder, schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable)))
 	case *types.Array:
 		defer r.descendBody("items")()
-		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return r.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Slice:
 		defer r.descendBody("items")()
-		return r.buildFromField(fld, ftpe.Elem(), typable.Items(), seen)
+		return r.buildFromField(fld, ftpe.Elem(), typable.Items())
 	case *types.Map:
 		return r.buildFromFieldMap(ftpe, typable)
 	case *types.Named:
 		return r.buildNamedField(ftpe, typable)
 	case *types.Alias:
-		return r.buildFieldAlias(ftpe, typable, fld, seen)
+		return r.buildFieldAlias(ftpe, typable)
 	default:
 		return fmt.Errorf("unknown type for %s: %T: %w", fld.String(), fld.Type(), ErrResponses)
 	}
-}
-
-func (r *Builder) buildFromFieldStruct(ftpe *types.Struct, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(ftpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
 }
 
 func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypable) error {
@@ -235,32 +225,10 @@ func (r *Builder) buildFromFieldMap(ftpe *types.Map, typable ifaces.SwaggerTypab
 	// value's inline props (if any) anchor there.
 	defer r.descendBody("additionalProperties")()
 	valTypable := schema.NewTypable(sch, typable.Level()+1, r.Ctx.SkipExtensions())
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(
+	return schema.Delegate(r.Builder,
 		schema.WithType(ftpe.Elem(), valTypable),
 		schema.WithPath(r.bodyPathFor(valTypable)),
-	); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
-}
-
-func (r *Builder) buildFromFieldInterface(tpe *types.Interface, typable ifaces.SwaggerTypable) error {
-	sb := schema.NewBuilder(r.Ctx, r.Decl)
-	if err := sb.Build(schema.OptionFor(tpe, typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
+	)
 }
 
 func (r *Builder) buildFromType(otpe types.Type, resp *oaispec.Response, seen map[string]bool) error {
@@ -276,12 +244,75 @@ func (r *Builder) buildFromType(otpe types.Type, resp *oaispec.Response, seen ma
 	}
 }
 
+// namedWrittenRHS reports a declaration whose written right-hand side is itself a NAMED type,
+// together with that type.
+//
+// Only a named right-hand side redirects the build: a struct literal, a slice or a basic type is
+// already the shape the response arm should build, and sending those through the sub-builder would
+// publish the response type as a definition.
+func namedWrittenRHS(ctx *scanner.ScanCtx, o *types.TypeName) (*scanner.EntityDecl, types.Type, bool) {
+	decl, found := ctx.DeclForType(o.Type())
+	if !found {
+		return nil, nil, false
+	}
+	rhs, ok := writtenRHS(decl)
+	if !ok {
+		return nil, nil, false
+	}
+	if _, isNamed := rhs.(*types.Named); !isNamed {
+		return nil, nil, false
+	}
+
+	return decl, rhs, true
+}
+
+// writtenRHS returns the type a declaration was WRITTEN over — `Stamp` in `type StampResp Stamp` —
+// as opposed to the fully peeled underlying that `types.Named.Underlying` yields.
+//
+// The distinction matters wherever a named layer carries meaning: a stdlib recognizer keys on
+// `time.Time`, which peeling discards.
+func writtenRHS(decl *scanner.EntityDecl) (types.Type, bool) {
+	if decl == nil || decl.Spec == nil || decl.Pkg == nil {
+		return nil, false
+	}
+	ti, ok := decl.Pkg.TypesInfo.Types[decl.Spec.Type]
+	if !ok || ti.Type == nil {
+		return nil, false
+	}
+
+	return ti.Type, true
+}
+
 func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen map[string]bool) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) || resolvers.IsStdError(o) {
 		return fmt.Errorf("%s type not supported in the context of a responses section definition: %w", o.Name(), ErrResponses)
 	}
 	resolvers.MustNotBeABuiltinType(o)
+
+	// Follow the declaration's WRITTEN right-hand side when that is itself a named type, before
+	// dispatching on the underlying shape.
+	//
+	// `Underlying()` peels every named layer at once, so `type Stamp time.Time` arrives here as
+	// time.Time's STRUCT — read as a response struct whose fields become headers, of which time.Time
+	// has none, so the response came out with no schema. The schema builder does not have this problem
+	// because it builds from `Spec.Type`, where the recognizer sees `time.Time` one level in.
+	//
+	// Only a NAMED right-hand side redirects: a struct literal, a slice or a basic type is already the
+	// shape this arm should build, and sending those through the sub-builder would publish the
+	// response type as a definition.
+	if decl, rhs, ok := namedWrittenRHS(r.Ctx, o); ok {
+		var sch oaispec.Schema
+		typable := schema.NewTypable(&sch, 0, r.Ctx.SkipExtensions())
+		if err := schema.DelegateAs(r.Builder, decl,
+			schema.OptionFor(rhs, typable), schema.WithPath(r.bodyPathFor(typable)),
+		); err != nil {
+			return err
+		}
+		resp.WithSchema(&sch)
+
+		return nil
+	}
 
 	switch stpe := o.Type().Underlying().(type) {
 	case *types.Struct:
@@ -295,27 +326,57 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 			var sch oaispec.Schema
 			typable := schema.NewTypable(&sch, 0, r.Ctx.SkipExtensions())
 
+			// The recognizer and the declaration's format are applied HERE rather than by the sub-build,
+			// and the sub-build is handed the UNDERLYING rather than the declared type — deliberately.
+			// A `swagger:response` declares a response, not a model: passing the named type would send
+			// it through the $ref machinery and publish it as a definition, which is the one thing this
+			// arm must not do.
+			//
+			// Both branches used to write into `sch` and return WITHOUT the resp.WithSchema below, so a
+			// response declared on a named time.Time or a named formatted type carried a description and
+			// no schema whatsoever.
 			d := decl.Obj()
 			if resolvers.IsStdTime(d) {
 				typable.Typed("string", "date-time")
+				resp.WithSchema(&sch)
+
 				return nil
 			}
 			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments)); isf {
-				typable.Typed("string", sfnm)
+				applyDeclFormat(sfnm, tpe.Underlying(), typable)
+				resp.WithSchema(&sch)
+
 				return nil
 			}
-			sb := schema.NewBuilder(r.Ctx, decl)
-			sb.InferNames()
-			if err := sb.Build(schema.OptionFor(tpe.Underlying(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
+
+			if err := schema.DelegateAs(r.Builder, decl,
+				schema.OptionFor(tpe.Underlying(), typable), schema.WithPath(r.bodyPathFor(typable)),
+			); err != nil {
 				return err
 			}
 			resp.WithSchema(&sch)
-			for _, d := range sb.PostDeclarations() {
-				r.AppendPostDecl(d)
-			}
+
 			return nil
 		}
 		return fmt.Errorf("responses can only be structs, did you mean for %s to be the response body?: %w", tpe.String(), ErrResponses)
+	}
+}
+
+// applyDeclFormat writes a declaration's `swagger:strfmt` onto target, honouring the element-driven
+// items-vs-whole rule rather than assuming the whole schema.
+//
+// A byte or rune sequence is string-like and takes the format itself; any other sequence takes it on
+// its items, so a `[]string` annotated `email` is a list of email addresses and not one of them. The
+// rule itself lives in common, shared with the schema builder's own classifier — this only picks the
+// element to hand it.
+func applyDeclFormat(format string, underlying types.Type, target ifaces.SwaggerTypable) {
+	switch u := underlying.(type) {
+	case *types.Slice:
+		common.ApplyArrayLikeStrfmt(format, u.Elem(), target)
+	case *types.Array:
+		common.ApplyArrayLikeStrfmt(format, u.Elem(), target)
+	default:
+		target.Typed("string", format)
 	}
 }
 
@@ -342,36 +403,28 @@ func (r *Builder) buildAlias(tpe *types.Alias, resp *oaispec.Response, seen map[
 }
 
 func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypable) error {
-	decl, found := r.Ctx.DeclForType(ftpe.Obj().Type())
+	o := ftpe.Obj()
+
+	// The identity recognizers answer from the object alone and so run before the lookup below.
+	// This arm had none of them, and the lookup is not a soft gate here: a field typed `error` has no
+	// package, so resolving its declaring source dereferenced nil and took the whole scan down.
+	if schema.ApplyStdlibSpecials(o, typable, r.Ctx.SkipExtensions()) {
+		return nil
+	}
+
+	decl, found := r.Ctx.DeclForType(o.Type())
 	if !found {
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrResponses)
 	}
 
-	d := decl.Obj()
-	if resolvers.IsStdTime(d) {
-		typable.Typed("string", "date-time")
-		return nil
-	}
-
-	if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments)); isf {
-		typable.Typed("string", sfnm)
-		return nil
-	}
-
-	sb := schema.NewBuilder(r.Ctx, decl)
-	sb.InferNames()
-	if err := sb.Build(schema.OptionFor(decl.ObjType(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-		return err
-	}
-
-	for _, d := range sb.PostDeclarations() {
-		r.AppendPostDecl(d)
-	}
-
-	return nil
+	// See the parameters builder's twin: the delegation reaches the schema builder's element-aware
+	// classifiers, which the local shortcuts that used to sit here were not.
+	return schema.DelegateAs(r.Builder, decl,
+		schema.OptionFor(decl.ObjType(), typable), schema.WithPath(r.bodyPathFor(typable)),
+	)
 }
 
-func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable, fld *types.Var, seen map[string]bool) error {
+func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
@@ -380,47 +433,11 @@ func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypabl
 		return nil // just leave an empty schema
 	}
 
-	// TransparentAliases supersedes annotation at use sites — dissolve to the unaliased target via
-	// the schema sub-builder.
-	if r.Ctx.TransparentAliases() {
-		sb := schema.NewBuilder(r.Ctx, r.Decl)
-		if err := sb.Build(schema.OptionFor(tpe.Rhs(), typable), schema.WithPath(r.bodyPathFor(typable))); err != nil {
-			return err
-		}
-		for _, d := range sb.PostDeclarations() {
-			r.AppendPostDecl(d)
-		}
-		return nil
-	}
-
-	// Non-body fields are SimpleSchema targets and cannot carry $ref — always expand the alias to
-	// its unaliased target regardless of annotation. types.Unalias collapses chains in one step.
-	if typable.In() != inBody {
-		return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
-	}
-
-	decl, ok := r.Ctx.GetModel(o.Pkg().Path(), o.Name())
-	if !ok {
+	// Shared with the parameters builder — see schema.BuildFieldAlias. The cross-ref path is the one
+	// thing genuinely ours: a header anchors at respBase/headers/{h}, not under /schema.
+	return schema.BuildFieldAlias(r.Builder, tpe, typable, func() error {
 		return fmt.Errorf("can't find source file for aliased type: %v: %w", tpe, ErrResponses)
-	}
-
-	// Body field: annotation gates first-class identity at the use site.
-	// See [§alias-handling](./README.md#alias-handling) for the cross-builder rule.
-	//
-	//   - annotated   alias → $ref preserves the alias name; the alias
-	//     gets its own definition via MakeRef's AppendPostDecl side
-	//     effect.
-	//   - unannotated alias → dissolve fully to the unaliased target;
-	//     the alias produces no definition entry.
-	//
-	// The mode flag (RefAliases vs Default) only affects the shape of the alias decl's OWN definition
-	// downstream — it does not change the field-site $ref target, which is gated entirely by
-	// annotation.
-	if decl.HasModelAnnotation() {
-		return r.MakeRef(decl, typable)
-	}
-
-	return r.buildFromField(fld, types.Unalias(tpe), typable, seen)
+	}, schema.WithPath(r.bodyPathFor(typable)))
 }
 
 func (r *Builder) buildFromStruct(decl *scanner.EntityDecl, tpe *types.Struct, resp *oaispec.Response, seen map[string]bool) error {
@@ -469,7 +486,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 	// single body, so per-field promotion is meaningless). go-swagger#1635. Other in: values still
 	// promote the embed's fields (#2701).
 	if r.inherited.InSet && r.inherited.In == inBody {
-		err := r.buildBodyEmbed(fld, resp, seen)
+		err := r.buildBodyEmbed(fld, resp)
 		r.inherited = saved
 		if err != nil {
 			return err
@@ -490,7 +507,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 // buildBodyEmbed renders an anonymously-embedded field marked `in: body` as the response body,
 // exactly like a named `Body Foo` field: the embedded type drives the body schema (a $ref to a
 // model, or its inline shape) instead of its members becoming response headers (go-swagger#1635).
-func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response, seen map[string]bool) error {
+func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response) error {
 	var refAttempted bool
 	header := oaispec.Header{}
 	return r.buildFromField(fld, fld.Type(), responseTypable{
@@ -499,7 +516,7 @@ func (r *Builder) buildBodyEmbed(fld *types.Var, resp *oaispec.Response, seen ma
 		response:     resp,
 		skipExt:      r.Ctx.SkipExtensions(),
 		refAttempted: &refAttempted,
-	}, seen)
+	})
 }
 
 func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl, resp *oaispec.Response, seen map[string]bool) error {
@@ -603,7 +620,7 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 			response:     resp,
 			skipExt:      r.Ctx.SkipExtensions(),
 			refAttempted: &refAttempted,
-		}, seen); err != nil {
+		}); err != nil {
 			if errors.Is(err, errUnrepresentableHeader) {
 				// The field type has no OAS v2 SimpleSchema representation in this header (non-body) location
 				// (e.g. a map).

@@ -11,6 +11,8 @@ package common
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
+	"strings"
 
 	"github.com/go-openapi/codescan/internal/builders/godoclink"
 	"github.com/go-openapi/codescan/internal/ifaces"
@@ -289,4 +291,102 @@ func (s *Builder) MakeRef(decl *scanner.EntityDecl, prop ifaces.SwaggerTypable) 
 	s.AppendPostDecl(decl)
 
 	return nil
+}
+
+// FindAnnotationArg returns the first positional argument of the first Block of the given
+// annotation kind in cg, filtered to non-empty single-word arguments and read through the
+// ParseBlocks cache.
+//
+// Shared here rather than per-builder because the alias classifier below runs from schema,
+// parameters and responses alike.
+func (s *Builder) FindAnnotationArg(cg *ast.CommentGroup, kind grammar.AnnotationKind) (string, bool) {
+	for _, b := range s.ParseBlocks(cg) {
+		if b.AnnotationKind() != kind {
+			continue
+		}
+		arg, ok := b.AnnotationArg()
+		if !ok {
+			continue
+		}
+		if strings.ContainsAny(arg, " \t") {
+			continue
+		}
+
+		return arg, true
+	}
+
+	return "", false
+}
+
+// IsStringLikeSequence reports whether an array/slice element type makes the sequence a
+// STRING-LIKE value rather than a collection — a byte sequence (`[]byte`, `[16]byte`) or a rune
+// sequence (`[]rune`).
+//
+// This is what decides whether a `swagger:strfmt` on the sequence describes the whole value or each
+// element. It replaces a two-name allowlist (`byte`, `bsonobjectid`) that was really standing in for
+// this question: both of those are formats for a byte sequence, `bsonobjectid` being a strfmt
+// library type that happens to have an array underlying. Keying on the element instead of the format
+// name generalises to every such type — `uuid` over `[16]byte`, `ulid`, and whatever comes next —
+// without anyone having to extend a list.
+//
+// go/types cannot distinguish `rune` from `int32` (rune is an alias), so `[]int32` is treated
+// alike. That is harmless: a STRING format on integer elements was already a contradiction.
+func IsStringLikeSequence(elem types.Type) bool {
+	basic, ok := elem.Underlying().(*types.Basic)
+	if !ok {
+		return false
+	}
+
+	switch basic.Kind() {
+	case types.Uint8, types.Int32: // byte, rune
+		return true
+	default:
+		return false
+	}
+}
+
+// ApplyArrayLikeStrfmt writes a `swagger:strfmt` format onto an array/slice target, choosing
+// between the whole schema and its items by the ELEMENT type — see [IsStringLikeSequence].
+//
+//	type ID [16]byte   // swagger:strfmt uuid  → {string, format: uuid}
+//	type Emails []string // swagger:strfmt email → {array, items: {string, format: email}}
+//
+// Note this settles only the mechanical half of the items-vs-whole question. A format on a sequence
+// of some OTHER element type is genuinely ambiguous — it stays on the items, as it always has.
+func ApplyArrayLikeStrfmt(format string, elem types.Type, tgt ifaces.SwaggerTypable) {
+	if IsStringLikeSequence(elem) {
+		tgt.Typed("string", format)
+
+		return
+	}
+	tgt.Items().Typed("string", format)
+}
+
+// ClassifierAliasStrfmt applies a `swagger:strfmt` carried by an ALIAS declaration, dispatching on
+// the alias's underlying kind so the format lands exactly where the equivalent NAMED declaration
+// would put it — whole-schema for a basic or struct underlying, items-or-whole for an array/slice.
+//
+// A named declaration reaches its format through the schema builder's classifier walkers, each
+// keyed off the declaration found via DeclForType. Aliases have no such entry: every builder
+// dissolves an alias to its right-hand side, and by then nothing remembers an alias was involved.
+// This is that missing entry, and it must run BEFORE the dissolve.
+//
+// Scoped to `swagger:strfmt`: the other classifier annotations have separate handling on the alias
+// path and are deliberately not swept in here.
+func (s *Builder) ClassifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, tgt ifaces.SwaggerTypable) bool {
+	format, ok := s.FindAnnotationArg(cg, grammar.AnnStrfmt)
+	if !ok {
+		return false
+	}
+
+	switch ut := tpe.Underlying().(type) {
+	case *types.Array:
+		ApplyArrayLikeStrfmt(format, ut.Elem(), tgt)
+	case *types.Slice:
+		ApplyArrayLikeStrfmt(format, ut.Elem(), tgt)
+	default:
+		tgt.Typed("string", format)
+	}
+
+	return true
 }

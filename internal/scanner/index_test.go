@@ -10,6 +10,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 	"golang.org/x/tools/go/packages"
@@ -55,6 +56,10 @@ func TestShouldAcceptPkg(t *testing.T) {
 	}
 }
 
+// An annotation nobody recognises is skipped and reported, not fatal.
+//
+// It used to abort the scan, which made one mistyped keyword in one comment enough to produce
+// nothing at all from a whole package graph — the outcome least likely to help whoever typed it.
 func TestDetectNodes_UnknownAnnotation(t *testing.T) {
 	file := &ast.File{
 		Comments: []*ast.CommentGroup{
@@ -66,10 +71,16 @@ func TestDetectNodes_UnknownAnnotation(t *testing.T) {
 		},
 	}
 
-	idx := &TypeIndex{}
-	_, err := idx.detectNodes(file)
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, ErrScanner))
+	var got []grammar.Diagnostic
+	idx := &TypeIndex{onDiagnostic: func(d grammar.Diagnostic) { got = append(got, d) }}
+	n, err := idx.detectNodes(nil, file)
+	require.NoError(t, err)
+	assert.EqualT(t, node(0), n, "an unrecognised annotation classifies as nothing")
+
+	require.Len(t, got, 1)
+	assert.EqualT(t, grammar.CodeInvalidAnnotation, got[0].Code)
+	assert.EqualT(t, grammar.SeverityWarning, got[0].Severity)
+	assert.Contains(t, got[0].Message, "bogusAnnotation")
 }
 
 func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
@@ -80,7 +91,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&metaNode != 0)
 	})
@@ -92,7 +103,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&routeNode != 0)
 	})
@@ -104,7 +115,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&operationNode != 0)
 	})
@@ -116,7 +127,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&modelNode != 0)
 	})
@@ -128,7 +139,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&parametersNode != 0)
 	})
@@ -140,7 +151,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&responseNode != 0)
 	})
@@ -152,7 +163,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		_, err := idx.detectNodes(file)
+		_, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 	})
 
@@ -163,7 +174,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		_, err := idx.detectNodes(file)
+		_, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 	})
 
@@ -175,7 +186,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 				},
 			}
 			idx := &TypeIndex{}
-			_, err := idx.detectNodes(file)
+			_, err := idx.detectNodes(nil, file)
 			require.NoError(t, err, "annotation %q should be accepted", annotation)
 		}
 	})
@@ -187,7 +198,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.EqualT(t, node(0), n)
 	})
@@ -199,7 +210,7 @@ func TestDetectNodes_AllAnnotationTypes(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&metaNode != 0)
 	})
@@ -252,7 +263,7 @@ func TestDetectNodes_StructConflict(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		_, err := idx.detectNodes(file)
+		_, err := idx.detectNodes(nil, file)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
 	})
@@ -269,7 +280,7 @@ func TestDetectNodes_StructConflict(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		_, err := idx.detectNodes(file)
+		_, err := idx.detectNodes(nil, file)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
 	})
@@ -286,7 +297,7 @@ func TestDetectNodes_StructConflict(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		_, err := idx.detectNodes(file)
+		_, err := idx.detectNodes(nil, file)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
 	})
@@ -299,7 +310,7 @@ func TestDetectNodes_StructConflict(t *testing.T) {
 			},
 		}
 		idx := &TypeIndex{}
-		n, err := idx.detectNodes(file)
+		n, err := idx.detectNodes(nil, file)
 		require.NoError(t, err)
 		assert.True(t, n&modelNode != 0)
 		assert.True(t, n&responseNode != 0)
