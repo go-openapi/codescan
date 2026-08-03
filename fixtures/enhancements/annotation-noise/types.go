@@ -45,6 +45,19 @@ type IneffectiveOnPlain struct {
 	Note string `json:"note"`
 }
 
+// EffectiveOnNamedEmbed gives the embed a json name, which makes it a single
+// named property rather than a promotion — so the classifier IS consulted,
+// exactly as on a regular field. Reporting it as ineffective was a false alarm.
+//
+// swagger:model EffectiveOnNamedEmbed
+type EffectiveOnNamedEmbed struct {
+	// swagger:strfmt uuid
+	Target `json:"nested"`
+
+	// Note is the embedding struct's own field.
+	Note string `json:"note"`
+}
+
 // EffectiveOnField is the control: the same annotations on regular fields, where
 // both are honoured.
 //

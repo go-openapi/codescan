@@ -48,8 +48,6 @@ func (s *Builder) scanEmbeddedFields(
 		if fd.Ignored {
 			continue
 		}
-		s.warnIneffectiveEmbedAnnotations(afld, fd)
-
 		_, ignore, isString, omitEmpty, err := resolvers.ParseFieldTag(afld, fld.Name(), s.Ctx.NameFromTags())
 		if err != nil {
 			return nil, false, err
@@ -86,6 +84,7 @@ func (s *Builder) scanEmbeddedFields(
 		}
 
 		hasAllOf = true
+		s.warnIneffectiveEmbedAnnotations(afld, fd)
 		if target == nil {
 			target = &oaispec.Schema{}
 		}
@@ -168,6 +167,10 @@ func (s *Builder) buildPlainEmbed(
 		}, target, nameByJSON)
 		return target, err
 	}
+
+	// Past this point the embed genuinely promotes, and no arm of the promotion walk consults the
+	// embed's own comment — so a classifier written there is dropped and must be reported.
+	s.warnIneffectiveEmbedAnnotations(afld, fd)
 
 	// A `required:` annotation on the embed applies to the properties it promotes (go-swagger#2701).
 	// Thread it through the recursion, restoring afterwards so sibling fields are unaffected.

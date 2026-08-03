@@ -61,7 +61,17 @@ func TestAnnotationNoise(t *testing.T) {
 				n++
 			}
 		}
-		assert.Equal(t, 2, n, "one report per annotated embed — the allOf one and the plain one")
+		// Three embeds in the fixture carry a classifier; only the two that discard it are reported.
+		assert.Equal(t, 2, n, "one report per DISCARDING embed — the allOf one and the promoting one")
+	})
+
+	t.Run("a json-named embed is honoured, so it is not reported", func(t *testing.T) {
+		// Naming an embed with a json tag makes it a single named property instead of a promotion, and
+		// that path DOES consult the classifier. Reporting it was a false alarm: the author was told an
+		// annotation had been dropped while it was being applied. The count above is what pins it.
+		props := doc.Definitions["EffectiveOnNamedEmbed"].Properties
+		assert.Equal(t, "string/uuid", schemaSignature(props["nested"], doc.Definitions, 0),
+			"the classifier must reach a json-named embed")
 	})
 
 	t.Run("the annotations are still ignored, not applied", func(t *testing.T) {
