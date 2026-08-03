@@ -26,20 +26,24 @@ import (
 
 // StreamModel carries every recognized stream type as a model field.
 //
+// Every field is deliberately named UNLIKE its type. The emitted `x-go-name` is the Go FIELD name
+// and `x-go-type` is the Go type; naming a field after its type would make the two extensions
+// indistinguishable in the golden and hide a regression in either.
+//
 // swagger:model StreamModel
 type StreamModel struct {
-	Reader         io.Reader               `json:"reader"`
-	ReadCloser     io.ReadCloser           `json:"readCloser"`
-	ReadSeeker     io.ReadSeeker           `json:"readSeeker"`
-	ReadSeekCloser io.ReadSeekCloser       `json:"readSeekCloser"`
-	ReadWriter     io.ReadWriter           `json:"readWriter"`
-	ReaderAt       io.ReaderAt             `json:"readerAt"`
-	ReaderFrom     io.ReaderFrom           `json:"readerFrom"`
-	LimitedReader  io.LimitedReader        `json:"limitedReader"`
-	ByteReader     io.ByteReader           `json:"byteReader"`
-	ByteScanner    io.ByteScanner          `json:"byteScanner"`
-	Named          runtime.NamedReadCloser `json:"named"`
-	MultipartFile  multipart.File          `json:"multipartFile"`
+	Payload    io.Reader               `json:"payload"`
+	Envelope   io.ReadCloser           `json:"envelope"`
+	Rewindable io.ReadSeeker           `json:"rewindable"`
+	Archive    io.ReadSeekCloser       `json:"archive"`
+	Duplex     io.ReadWriter           `json:"duplex"`
+	Chunk      io.ReaderAt             `json:"chunk"`
+	Sink       io.ReaderFrom           `json:"sink"`
+	Excerpt    io.LimitedReader        `json:"excerpt"`
+	Nibble     io.ByteReader           `json:"nibble"`
+	Peekable   io.ByteScanner          `json:"peekable"`
+	Attachment runtime.NamedReadCloser `json:"attachment"`
+	Upload     multipart.File          `json:"upload"`
 }
 
 // WriterModel holds the type deliberately left OUT of the recognized set.
@@ -61,6 +65,14 @@ type OverriddenModel struct {
 	//
 	// swagger:strfmt base64
 	Blob io.Reader `json:"blob"`
+
+	// Handle overrides the TYPE rather than the format. The two overrides differ in what they do to
+	// the recognizer's x-go-type stamp: a format override adjusts the format and the stamp survives,
+	// whereas a type override replaces the schema outright and the stamp goes with it. Witnessed
+	// rather than asserted, because the difference follows from how the two branches are written.
+	//
+	// swagger:type string
+	Handle io.ReadCloser `json:"handle"`
 }
 
 // UploadParams reaches the stream types from each parameter location.

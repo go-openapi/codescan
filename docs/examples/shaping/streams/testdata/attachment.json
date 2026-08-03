@@ -7,19 +7,22 @@
       "description": "Checksum says what its bytes are, so the annotation wins over the default.",
       "type": "string",
       "format": "base64",
-      "x-go-name": "Checksum"
+      "x-go-name": "Checksum",
+      "x-go-type": "io.Reader"
     },
     "content": {
       "description": "Content is the attachment payload.",
       "type": "string",
       "format": "byte",
-      "x-go-name": "Content"
+      "x-go-name": "Content",
+      "x-go-type": "io.Reader"
     },
     "thumbnail": {
       "description": "Thumbnail is a closeable stream; the same answer applies.",
       "type": "string",
       "format": "byte",
-      "x-go-name": "Thumbnail"
+      "x-go-name": "Thumbnail",
+      "x-go-type": "io.ReadCloser"
     }
   },
   "x-go-package": "github.com/go-openapi/codescan/docs/examples/shaping/streams"

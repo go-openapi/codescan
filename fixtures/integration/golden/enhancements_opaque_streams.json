@@ -15,6 +15,7 @@
           {
             "type": "file",
             "x-go-name": "Upload",
+            "x-go-type": "io.Reader",
             "description": "Upload is the canonical file-upload shape.",
             "name": "upload",
             "in": "formData"
@@ -22,6 +23,7 @@
           {
             "type": "file",
             "x-go-name": "Doc",
+            "x-go-type": "mime/multipart.File",
             "description": "Doc is the same shape spelled with multipart.File.",
             "name": "doc",
             "in": "formData"
@@ -33,13 +35,15 @@
             "in": "body",
             "schema": {
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "x-go-type": "io.ReadCloser"
             }
           },
           {
             "type": "string",
             "format": "byte",
             "x-go-name": "Marker",
+            "x-go-type": "io.Reader",
             "description": "Marker is a stream in a location where it makes little sense, kept so the witness records\nwhat such a declaration produces rather than leaving it undefined.",
             "name": "marker",
             "in": "query"
@@ -62,74 +66,93 @@
           "description": "Blob says what the bytes are, so the recognizer must not overrule it.",
           "type": "string",
           "format": "base64",
-          "x-go-name": "Blob"
+          "x-go-name": "Blob",
+          "x-go-type": "io.Reader"
+        },
+        "handle": {
+          "description": "Handle overrides the TYPE rather than the format. The two overrides differ in what they do to\nthe recognizer's x-go-type stamp: a format override adjusts the format and the stamp survives,\nwhereas a type override replaces the schema outright and the stamp goes with it. Witnessed\nrather than asserted, because the difference follows from how the two branches are written.",
+          "type": "string",
+          "x-go-name": "Handle"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/opaque-streams"
     },
     "StreamModel": {
+      "description": "Every field is deliberately named UNLIKE its type. The emitted `x-go-name` is the Go FIELD name\nand `x-go-type` is the Go type; naming a field after its type would make the two extensions\nindistinguishable in the golden and hide a regression in either.",
       "type": "object",
       "title": "StreamModel carries every recognized stream type as a model field.",
       "properties": {
-        "byteReader": {
+        "archive": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ByteReader"
+          "x-go-name": "Archive",
+          "x-go-type": "io.ReadSeekCloser"
         },
-        "byteScanner": {
+        "attachment": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ByteScanner"
+          "x-go-name": "Attachment",
+          "x-go-type": "github.com/go-openapi/runtime.NamedReadCloser"
         },
-        "limitedReader": {
+        "chunk": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "LimitedReader"
+          "x-go-name": "Chunk",
+          "x-go-type": "io.ReaderAt"
         },
-        "multipartFile": {
+        "duplex": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "MultipartFile"
+          "x-go-name": "Duplex",
+          "x-go-type": "io.ReadWriter"
         },
-        "named": {
+        "envelope": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "Named"
+          "x-go-name": "Envelope",
+          "x-go-type": "io.ReadCloser"
         },
-        "readCloser": {
+        "excerpt": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ReadCloser"
+          "x-go-name": "Excerpt",
+          "x-go-type": "io.LimitedReader"
         },
-        "readSeekCloser": {
+        "nibble": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ReadSeekCloser"
+          "x-go-name": "Nibble",
+          "x-go-type": "io.ByteReader"
         },
-        "readSeeker": {
+        "payload": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ReadSeeker"
+          "x-go-name": "Payload",
+          "x-go-type": "io.Reader"
         },
-        "readWriter": {
+        "peekable": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ReadWriter"
+          "x-go-name": "Peekable",
+          "x-go-type": "io.ByteScanner"
         },
-        "reader": {
+        "rewindable": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "Reader"
+          "x-go-name": "Rewindable",
+          "x-go-type": "io.ReadSeeker"
         },
-        "readerAt": {
+        "sink": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ReaderAt"
+          "x-go-name": "Sink",
+          "x-go-type": "io.ReaderFrom"
         },
-        "readerFrom": {
+        "upload": {
           "type": "string",
           "format": "byte",
-          "x-go-name": "ReaderFrom"
+          "x-go-name": "Upload",
+          "x-go-type": "mime/multipart.File"
         }
       },
       "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/opaque-streams"
@@ -157,13 +180,15 @@
       "description": "StreamResponse returns a stream as the response body.",
       "schema": {
         "type": "string",
-        "format": "byte"
+        "format": "byte",
+        "x-go-type": "io.ReadCloser"
       },
       "headers": {
         "XChecksum": {
           "type": "string",
           "format": "byte",
-          "description": "XChecksum is a stream reached through a response header."
+          "description": "XChecksum is a stream reached through a response header.",
+          "x-go-type": "io.Reader"
         }
       }
     }

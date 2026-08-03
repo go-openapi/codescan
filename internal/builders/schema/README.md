@@ -664,6 +664,13 @@ drilling, and an interface is the shape drilling handles worst.
   representation; `byte` is the base64-encoded string OAS 2.0 defines for exactly that. `binary`
   would claim a framing the position cannot carry.
 
+**`x-go-type` carries what neither answer can.** `byte` says base64 bytes and `file` says an upload;
+both erase *which* stream this was, and all twelve recognized types collapse onto the same schema —
+an `io.Reader` field and a `multipart.File` field become indistinguishable. So the recognizer stamps
+`x-go-type: <pkg path>.<name>`, under `skipExt` like every other extension. This is the
+`recognizeError` criterion ("the rendering erases the type"), not the `time.Time` one ("the format
+*is* the type") — see [§traceability](#traceability).
+
 **Identity, never structure.** A rule like "anything with a `Read([]byte) (int, error)` method"
 would swallow any user interface that happens to expose one. The table is closed: a type joins it
 because it is a known stream carrier, not because its method set resembles one.
@@ -1136,11 +1143,13 @@ filter protects against.
 
 `applySpecialType` and `applyStdlibSpecials` take a `skipExt bool`
 parameter that gates any vendor-extension writes the recognizers
-would otherwise emit. Currently only `recognizeError` writes one
-(`x-go-type: error`); the other recognizers
+would otherwise emit. Two write one: `recognizeError`
+(`x-go-type: error`) and `recognizeOpaqueStream`
+(`x-go-type: <pkg path>.<name>`). The others
 (`recognizeTime`, `recognizeAny`, `recognizeRawMessage`,
 `recognizeUUID`) are purely type / format mutations and don't
-consult `skipExt`. All eight schema-internal call sites pass
+consult `skipExt` — see [§traceability](#traceability) for why the
+split falls where it does. All eight schema-internal call sites pass
 `s.skipExtensions` so the recognizer subsystem honours the same
 `SkipExtensions` flag as the rest of the builder.
 
@@ -1202,8 +1211,13 @@ All three pass through `resolvers.AddExtension(..., s.skipExtensions)`, so
 `SkipExtensions` suppresses the whole family.
 
 `x-go-type` predates the option as a narrow type-rendering signal: the
-generic `PkgForType` fallback (`special_types.go`) and `recognizeError`
-stamp it deliberately to record an otherwise-unmodellable type. The
+generic `PkgForType` fallback (`special_types.go`), `recognizeError` and
+`recognizeOpaqueStream` stamp it deliberately to record an
+otherwise-unmodellable type. The criterion is whether the emitted schema
+still identifies the Go type: `time.Time` → `{string, date-time}` and
+`uuid.UUID` → `{string, uuid}` do, so those recognizers stay silent;
+`error` → `{string, ""}` and every stream → `{string, byte}` / `file` do
+not — the latter collapses twelve distinct types onto one schema. The
 `annotateSchema` stamp is **presence-guarded** (`if _, exists :=
 schema.Extensions["x-go-type"]; !exists`) so it never clobbers a value a
 recognizer already chose — for ordinary types the recognizer leaves it

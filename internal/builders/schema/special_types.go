@@ -151,6 +151,14 @@ func applySpecialType(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt
 
 		case recognizeOpaqueStream: // identity — see [§opaque-streams](./README.md#opaque-streams).
 			if resolvers.IsOpaqueStream(obj) {
+				// x-go-type records which stream this was, because neither answer below can: `byte` says
+				// base64 bytes and `file` says an upload, and every recognized type collapses onto the
+				// same schema either way. That is the `recognizeError` criterion — stamp when the
+				// rendering erases the type — and not the `time.Time` / uuid one, where the format IS
+				// the type. See [§traceability](./README.md#traceability).
+				if !skipExt {
+					target.AddExtension("x-go-type", obj.Pkg().Path()+"."+obj.Name())
+				}
 				// The only two answers a stream can honestly take, chosen by what the position permits
 				// rather than by anything in the declaration. `file` is legal on a formData parameter and
 				// nowhere else in OAS 2.0, and it is the canonical upload shape; everywhere else the

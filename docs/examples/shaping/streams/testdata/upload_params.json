@@ -2,6 +2,7 @@
   {
     "type": "file",
     "x-go-name": "Upload",
+    "x-go-type": "mime/multipart.File",
     "description": "Upload is the file to store.",
     "name": "upload",
     "in": "formData"

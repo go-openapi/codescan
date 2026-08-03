@@ -71,6 +71,12 @@ Recognition is by **identity** — the exact named type — never by shape. An
 interface of your own that happens to have a `Read` method is *your* type and is
 documented as you declared it.
 
+Because both renderings erase *which* stream it was — every type in the table
+produces the same schema — each one also carries an
+[`x-go-type`]({{% relref "vendor-extensions" %}}) extension naming the Go type it
+came from, so a consumer can tell an `io.Reader` field from a `multipart.File`
+one. `SkipExtensions` suppresses it along with the rest of the `x-go-*` family.
+
 {{% notice style="note" %}}
 **`io.Writer` is not recognized**, nor are the write-only closers. A sink the
 caller writes into is not something that travels on the wire, so codescan does

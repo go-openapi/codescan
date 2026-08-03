@@ -41,6 +41,43 @@ func TestOpaqueStreams(t *testing.T) {
 		}
 	})
 
+	t.Run("x-go-type records which stream it was", func(t *testing.T) {
+		// Neither answer can carry it: `byte` says base64 bytes, `file` says an upload, and all twelve
+		// types collapse onto the same schema. Without the extension a consumer cannot tell an
+		// io.Reader field from a multipart.File one — the `recognizeError` criterion exactly.
+		props := doc.Definitions["StreamModel"].Properties
+
+		for field, want := range map[string]string{
+			"payload":    "io.Reader",
+			"envelope":   "io.ReadCloser",
+			"excerpt":    "io.LimitedReader",
+			"upload":     "mime/multipart.File",
+			"attachment": "github.com/go-openapi/runtime.NamedReadCloser",
+		} {
+			assert.Equal(t, want, props[field].Extensions["x-go-type"],
+				"%s must record its Go type", field)
+		}
+
+		// x-go-name stays the FIELD name — the fixture names every field unlike its type so the two
+		// extensions can never be confused for one another.
+		assert.Equal(t, "Payload", props["payload"].Extensions["x-go-name"])
+	})
+
+	t.Run("SkipExtensions suppresses the x-go-type stamp", func(t *testing.T) {
+		bare, err := codescan.Run(&codescan.Options{
+			Packages:       []string{"./enhancements/opaque-streams/..."},
+			WorkDir:        scantest.FixturesDir(),
+			ScanModels:     true,
+			SkipExtensions: true,
+		})
+		require.NoError(t, err)
+
+		p := bare.Definitions["StreamModel"].Properties["payload"]
+		assert.NotContains(t, p.Extensions, "x-go-type")
+		assert.Equal(t, "string/byte", schemaSignature(p, bare.Definitions, 0),
+			"suppressing the extension must not change the type")
+	})
+
 	t.Run("no stdlib interface is published as a definition", func(t *testing.T) {
 		// The defect that made this visible: `io`'s own interfaces became definitions carrying io's
 		// godoc, and ReadCloser grew a `close` property of type string out of `Close() error`.
@@ -53,6 +90,15 @@ func TestOpaqueStreams(t *testing.T) {
 	t.Run("an explicit annotation still wins", func(t *testing.T) {
 		props := doc.Definitions["OverriddenModel"].Properties
 		assert.Equal(t, "string/base64", schemaSignature(props["blob"], doc.Definitions, 0))
+		assert.Equal(t, "string/", schemaSignature(props["handle"], doc.Definitions, 0))
+
+		// The two overrides treat the recognizer's stamp differently, and the difference follows from
+		// what each one means: swagger:strfmt adjusts the format, leaving the Go type it came from
+		// intact and recorded; swagger:type replaces the schema outright, so the record goes too.
+		assert.Equal(t, "io.Reader", props["blob"].Extensions["x-go-type"],
+			"a format override leaves the Go type recorded")
+		assert.NotContains(t, props["handle"].Extensions, "x-go-type",
+			"a type override replaces the schema, stamp included")
 	})
 
 	t.Run("a formData parameter is a file", func(t *testing.T) {
