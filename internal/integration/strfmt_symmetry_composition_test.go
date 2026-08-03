@@ -16,18 +16,23 @@ func TestStrfmtSymmetryComposition(t *testing.T) {
 		pkg:          "enhancements/strfmt-symmetry-composition",
 		goldenPrefix: "strfmt_symmetry_composition",
 		cells: []symmetryCell{
-			// Plain embed: SYMMETRIC, and both halves are wrong the same way. buildNamedEmbedded switches
-			// on the member's underlying shape and never consults its comments, so the format is dropped on
-			// both sides — a basic member vanishes entirely, a struct member promotes its properties. Not a
-			// Q32 asymmetry; the same shared gap Q33 describes for TextMarshaler embeds. Left unasserted
-			// because what an embed of a formatted type SHOULD produce is an open design question.
+			// Plain embed of a BASIC-underlying type: the member no longer vanishes. Such an embed
+			// promotes nothing, so it is an ordinary property keyed by the Go field name and built from
+			// the embedded type — the format included. The two halves therefore differ by the only thing
+			// that legitimately differs between them, the identifier being embedded, which is why this is
+			// an exception rather than a symmetry failure. That the format lands is asserted where the
+			// signature can show it, in TestEmbedBasicUnderlying.
 			{
 				namedProp: "EmbedBasicNamed", aliasProp: "EmbedBasicAlias",
-				note: "SHARED GAP: both halves drop the member entirely (buildNamedEmbedded reads no comments) — see Q33",
+				wantNamed: "object{FmtBasicNamed,label}",
 			},
+			// Plain embed of a STRUCT-underlying type: still symmetric, still a shared gap. This one
+			// really does promote, and no arm of the promotion walk consults the embedded type's format —
+			// left unasserted because what a formatted type SHOULD contribute when its properties are
+			// promoted is an open question, not a bug with one answer.
 			{
 				namedProp: "EmbedStructNamed", aliasProp: "EmbedStructAlias",
-				note: "SHARED GAP: both halves promote left/right and drop the format — see Q33",
+				note: "SHARED GAP: both halves promote left/right and drop the format",
 			},
 
 			// allOf member: the money row. The named arm runs classifierAliasTargetStrfmt (allof.go:205);
@@ -42,7 +47,14 @@ func TestStrfmtSymmetryComposition(t *testing.T) {
 			},
 		},
 
-		exceptions: map[string]string{},
+		// A promotes-nothing embed is keyed by the embedded IDENTIFIER, and the two halves of a pair
+		// are two different identifiers by construction. The difference is the fixture's, not the
+		// builder's.
+		exceptions: map[string]string{
+			"default/EmbedBasic":            "the property is named after the embedded identifier",
+			"refaliases/EmbedBasic":         "the property is named after the embedded identifier",
+			"transparentaliases/EmbedBasic": "the property is named after the embedded identifier",
+		},
 		// The allOf alias arm now reads the member's declaration before dissolving, matching the
 		// classifierAliasTargetStrfmt its named counterpart runs.
 		knownBroken:   map[string]string{},

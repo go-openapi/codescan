@@ -67,6 +67,10 @@ func (s *Builder) buildEmbedded(tpe types.Type, schema *oaispec.Schema, nameByJS
 // The interface arm runs `ApplyStdlibSpecials` so `error` etc. recognize cleanly; the struct arm
 // does not — the asymmetry is intentional, see README §embedded.
 //
+// Only an embed that PROMOTES reaches here: `embedPromotes` diverts a named type over a basic,
+// slice, array or map to the named-property path, since Go has no member to promote for it. The
+// default arm below is therefore a defensive guard rather than a live path.
+//
 // # Details
 //
 // See [§embedded](./README.md#embedded) — `AddDiscoveredModel` pairing, struct-vs-interface

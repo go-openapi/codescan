@@ -1,0 +1,44 @@
+{
+  "ArrayHost": {
+    "Grid": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "label": "l"
+  },
+  "BasicHost": {
+    "Count": 7,
+    "label": "l"
+  },
+  "FmtHost": {
+    "FmtBasic": 7,
+    "label": "l"
+  },
+  "MapHost": {
+    "Registry": {
+      "k": 1
+    },
+    "label": "l"
+  },
+  "MarshalHost": "tok",
+  "OmittedHost": {
+    "label": "l"
+  },
+  "PtrHost": {
+    "Count": 7,
+    "label": "l"
+  },
+  "SliceHost": {
+    "Codes": [
+      "a",
+      "b"
+    ],
+    "label": "l"
+  },
+  "TaggedHost": {
+    "count": 7,
+    "label": "l"
+  }
+}

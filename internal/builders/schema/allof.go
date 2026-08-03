@@ -155,6 +155,13 @@ func (s *Builder) buildPlainEmbed(
 	}
 
 	nestName := embedNestName(afld, fd)
+	if nestName == "" && !embedPromotes(fld.Type()) {
+		// An embed that promotes nothing is not a promotion at all: Go keeps the value as an ordinary
+		// member keyed by the TYPE name, so that is what the schema says. It takes the same path as a
+		// json-named embed because it IS the same thing — a single named property built from the
+		// embedded type, classifiers included.
+		nestName = fld.Name()
+	}
 	if nestName != "" {
 		err := s.applyFieldCarrier(fieldCarrier{
 			name:      nestName,
@@ -192,6 +199,40 @@ func embedNestName(afld *ast.Field, fd fieldDoc) string {
 		return fd.JSONName
 	}
 	return resolvers.ExplicitJSONName(afld)
+}
+
+// embedPromotes reports whether embedding tpe contributes PROMOTED members — struct fields or
+// interface methods — rather than a single member named after the type.
+//
+// Anything else (a named type over a basic, slice, array or map) has no member to promote, so Go
+// marshals it as an ordinary key named after the type. This used to reach `buildNamedEmbedded`,
+// whose switch had struct and interface arms only, and fall to a warn-and-skip default that dropped
+// the member from the schema entirely.
+//
+// # Why a promoted marshaller does not enter into it
+//
+// A type reaching the false branch may implement encoding.TextMarshaler, which Go promotes to the
+// embedding struct and which makes the WHOLE struct marshal as a bare scalar under the DEFAULT
+// marshaller — siblings and all. codescan deliberately does not model that: in the convention it
+// describes, an embed means composition, and a composed model round-trips through a hand-written
+// MarshalJSON/UnmarshalJSON (as go-swagger's generated models do) rather than the default one. A
+// promoted marshaller in the source is therefore not evidence about the wire. Detecting it would
+// also require deciding a case that is not decidable from a declaration: a POINTER-receiver
+// marshaller squashes for `&v` and not for `v`, and codescan reads the type, not the use site.
+//
+// See [§embedded](./README.md#embedded).
+func embedPromotes(tpe types.Type) bool {
+	unaliased := types.Unalias(tpe)
+	if ptr, ok := unaliased.(*types.Pointer); ok {
+		unaliased = types.Unalias(ptr.Elem())
+	}
+
+	switch unaliased.Underlying().(type) {
+	case *types.Struct, *types.Interface:
+		return true
+	default:
+		return false
+	}
 }
 
 // buildAllOf builds the schema for one allOf compound member.

@@ -86,6 +86,10 @@
       "type": "object",
       "title": "EmbedBasicAlias plainly embeds the basic pair's alias half.",
       "properties": {
+        "FmtBasicAlias": {
+          "type": "string",
+          "format": "isbn"
+        },
         "label": {
           "description": "Label is the embedding struct's own field.",
           "type": "string",
@@ -98,6 +102,10 @@
       "type": "object",
       "title": "EmbedBasicNamed plainly embeds the basic pair's named half.",
       "properties": {
+        "FmtBasicNamed": {
+          "type": "string",
+          "format": "isbn"
+        },
         "label": {
           "description": "Label is the embedding struct's own field.",
           "type": "string",

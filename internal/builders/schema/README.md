@@ -649,6 +649,57 @@ peel (recurse), `*types.Named` descends into `buildNamedEmbedded`,
 `*types.Alias` goes through `buildAlias` (so alias-resolution
 honours `TransparentAliases` / `RefAliases`).
 
+### An embed that promotes nothing is an ordinary property
+
+`buildEmbedded` is only reached for an embed that actually **promotes**. Go promotes struct fields
+and interface methods; a named type over a basic, slice, array or map has no member to promote, so
+Go keeps the value as an ordinary key named after the **type**:
+
+```go
+type Count int
+type Host struct {
+    Count                       // → {"Count": 0, "label": "…"}
+    Label string `json:"label"`
+}
+```
+
+`embedPromotes` (allof.go) makes that call, and `buildPlainEmbed` routes the false branch down the
+same path as a **json-named** embed — because it is the same thing: a single named property built
+from the embedded type, classifiers included. The name is the Go field name (which for an embed *is*
+the type name), and the embed's own json tag renames or drops it exactly as on a regular field.
+
+This shape used to reach `buildNamedEmbedded`, whose switch has struct and interface arms only, and
+fall to a `default` that warned `unsupported Go type` and skipped — wording that describes a type
+codescan cannot model rather than one it silently drops. The default arm survives as a defensive
+guard; nothing on the struct path reaches it now.
+
+### <a id="embed-marshaller"></a>Why a promoted marshaller is not modelled
+
+A type reaching that false branch may implement `encoding.TextMarshaler`. Go promotes `MarshalText`
+to the embedding struct, and under the **default** marshaller that makes the whole struct render as
+a bare scalar — siblings and all:
+
+```go
+type Token [16]byte
+func (t Token) MarshalText() ([]byte, error) { return []byte("tok"), nil }
+
+type Embedder struct { Token; Name string `json:"name"` }
+json.Marshal(Embedder{}) // → "tok"   — "name" never reaches the wire
+```
+
+codescan deliberately does not model this. In the convention it describes, an embed means
+**composition**, and a composed model round-trips through a hand-written
+`MarshalJSON`/`UnmarshalJSON` rather than the default one — go-swagger's generated models embed
+their `allOf` members *and* generate the marshaller that flattens them. A promoted marshaller in
+hand-written source is therefore not evidence about the wire.
+
+Detecting it would also require answering a question a declaration cannot answer: a **pointer**
+-receiver marshaller squashes for `&v` and not for `v`, and codescan reads the type, not the use
+site.
+
+The author who does want the scalar says so on the embedded type's own declaration, with
+`swagger:strfmt` or `swagger:type` — the escape hatch that already works.
+
 ### `buildNamedEmbedded` — the two-arm specials asymmetry
 
 The interface arm runs `applyStdlibSpecials(o, target, skipExt)`
