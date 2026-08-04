@@ -39,9 +39,9 @@ func countLine() (string, []theme.Span) {
 	}
 }
 
-// THE invariant: colouring never changes what is written, at any width. If this
-// holds under truncation then no escape was ever cut, because the visible text
-// would not survive it.
+// THE invariant: colouring never changes what is written, at any width.
+//
+// If this holds under truncation then no escape was ever cut, because the visible text would not survive it.
 func TestRenderSpans_NeverAltersTheVisibleText(t *testing.T) {
 	raw, spans := countLine()
 
@@ -89,8 +89,8 @@ func TestRenderSpans_MultiByte(t *testing.T) {
 	}
 }
 
-// An unmapped kind renders unstyled rather than wrong — SyntaxPlain is the zero
-// value precisely so a token nobody classified degrades quietly.
+// An unmapped kind renders unstyled rather than wrong — SyntaxPlain is the zero value precisely so a token nobody
+// classified degrades quietly.
 func TestRenderSpans_PlainKindIsUnstyled(t *testing.T) {
 	got := renderSpans("abc", []theme.Span{{Col: 1, Kind: theme.SyntaxPlain}}, 3)
 

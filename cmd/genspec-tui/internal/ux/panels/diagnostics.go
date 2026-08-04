@@ -10,10 +10,11 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
-// Diagnostics is the bottom diagnostics panel: a scrollable viewport whose
-// content is composed by the model from the scan's grammar.Diagnostic slice
-// (see renderDiagnostics). It stays presentation-only — the model owns the
-// diagnostic data and formatting; the panel just displays and scrolls it.
+// Diagnostics is the bottom diagnostics panel: a scrollable viewport whose content is composed by the model from the
+// scan's grammar.Diagnostic slice (see renderDiagnostics).
+//
+// It stays presentation-only — the model owns the diagnostic data and formatting; the panel just displays and scrolls
+// it.
 type Diagnostics struct {
 	vp      viewport.Model
 	w, h    int
@@ -44,10 +45,11 @@ func (p *Diagnostics) SetContent(s string) {
 // Content returns the raw (unwrapped) panel text, for clipboard copy.
 func (p *Diagnostics) Content() string { return p.content }
 
-// RevealLine scrolls the minimum distance that brings the 0-based content line
-// into view, and nothing at all when it is already visible. Stepping the
-// selection must not shift the whole list under the reader — the same rule the
-// spec pane and the source viewer follow.
+// RevealLine scrolls the minimum distance that brings the 0-based content line into view, and nothing at all when it is
+// already visible.
+//
+// Stepping the selection must not shift the whole list under the reader — the same rule the spec pane and the source
+// viewer follow.
 func (p *Diagnostics) RevealLine(line int) {
 	switch {
 	case line < p.vp.YOffset:
@@ -60,8 +62,7 @@ func (p *Diagnostics) RevealLine(line int) {
 // TopLine is the 0-based index of the top visible content line.
 func (p *Diagnostics) TopLine() int { return p.vp.YOffset }
 
-// VisibleRows is how many content lines the viewport shows, for page-sized
-// cursor moves.
+// VisibleRows is how many content lines the viewport shows, for page-sized cursor moves.
 func (p *Diagnostics) VisibleRows() int { return max(p.vp.Height, 1) }
 
 // Update forwards a message to the underlying viewport (scrolling).

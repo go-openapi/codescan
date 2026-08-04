@@ -5,16 +5,19 @@ SPDX-License-Identifier: Apache-2.0
 
 # genspec-tui
 
-An interactive terminal front-end for [codescan][codescan]: browse a Go source
-tree on the left, watch the Swagger spec it produces on the right, and see the
-scanner's diagnostics underneath — all regenerated on every save.
+An interactive terminal front-end for [codescan][codescan]:
 
-Its reason to exist is the loop: change an annotation, hit save, see the spec
-change. Beyond that it links the two sides together, so you can ask "which Go
-code produced this node?" and "what did this field turn into?" and get an
-answer by position rather than by guessing at names.
+you may browse a Go source tree on the left, watch the Swagger spec it produces on the right,
+and see the scanner's diagnostics underneath — all regenerated on every save.
 
-Audience: codescan/go-swagger maintainers and contributors.
+In either panel you may activate the "track mode": spec items point back to the source that created them,
+source line point to the spec item it generate and a diagnostic points to the source line that emitted it.
+
+> Its reason to exist is the loop: change an annotation, hit save, see the spec change.
+> Beyond that it links the two sides together, so you can ask "which Go code produced this node?"
+> and "what did this field turn into?" and get an answer by position rather than by guessing at names.
+
+Intended audience: codescan/go-swagger maintainers and contributors - but any experienced spec author could benefit from it.
 
 ## Install and run
 
@@ -31,7 +34,7 @@ genspec-tui
 genspec-tui -workdir ../my-api -packages ./internal/models/...,./internal/api/...
 ```
 
-From a checkout, the repo's `go.work` wires the module to the local library:
+When working from a checkout, the repo's `go.work` wires the module to the local library:
 
 ```sh
 go run ./cmd/genspec-tui -workdir ./fixtures -packages ./goparsing/petstore/...
@@ -265,7 +268,7 @@ document and tell you nothing. External `$ref`s are not marked either, because
 
 The gutter column only appears when there is something to mark.
 
-## Honest limits
+## Limitations
 
 These are known and deliberate; the TUI says so rather than guessing.
 

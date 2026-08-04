@@ -11,15 +11,16 @@ import (
 
 // renderSpans colours one raw line according to the lexical runs on it.
 //
-// The ORDER of operations is the whole point. Truncation happens on the raw
-// text, at rune boundaries, before any escape exists; only then is each run
-// wrapped in its style. Colour-then-truncate — what you are forced into when a
-// highlighting library hands back a finished string — cuts through escape
-// sequences and drops their resets, which is how a highlighted pane ends up
-// bleeding colour across the rest of the screen.
+// The ORDER of operations is the whole point.
+// Truncation happens on the raw text, at rune boundaries, before any escape exists; only then is each run wrapped in
+// its style.
 //
-// spans record only where each run starts, so a run extends to the next span's
-// column. width <= 0 renders nothing; no spans renders the raw (fitted) text.
+// Colour-then-truncate — what you are forced into when a highlighting library hands back a finished string — cuts
+// through escape sequences and drops their resets, which is how a highlighted pane ends up bleeding colour across the
+// rest of the screen.
+//
+// spans record only where each run starts, so a run extends to the next span's column. width <= 0 renders nothing; no
+// spans renders the raw (fitted) text.
 func renderSpans(raw string, spans []theme.Span, width int) string {
 	if width <= 0 {
 		return ""

@@ -1,15 +1,17 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Command genspec-tui is an interactive terminal front-end for the codescan
-// Swagger-spec generator: a source-tree browser (left), the generated spec
-// (right, JSON/YAML), and diagnostics (bottom). It regenerates the whole-scope
-// spec on any file change.
+// Command genspec-tui is an interactive terminal front-end for the codescan Swagger-spec generator.
 //
-// The scan is configured from two places. Boolean knobs are toggled live in the
-// options overlay (`o`), which re-runs the scan on close; the value-typed ones
-// — build tags, package and tag filters, naming — are command-line flags, since
-// a checkbox list cannot express them.
+// It provides a source-tree browser (left), the generated spec (right, JSON/YAML), and diagnostics (bottom).
+//
+// It regenerates the whole-scope spec on any file change.
+//
+// The scan is configured from two places.
+//   - Boolean knobs are toggled live in the options overlay (`o`)
+//   - build tags, package and tag filters, naming — are command-line flags (a checkbox list cannot express them)
+//
+// The knobs settings overlay re-runs the scan on close.
 package main
 
 import (
@@ -27,9 +29,10 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux"
 )
 
-// cliFlags holds the raw flag values. Registration is separated from parsing so
-// TestFlags_CoverEveryValueTypedOption can inspect the flag set without running
-// the program.
+// cliFlags holds the raw flag values.
+//
+// Registration is separated from parsing so TestFlags_CoverEveryValueTypedOption can inspect the flag set without
+// running the program.
 type cliFlags struct {
 	set *flag.FlagSet
 
@@ -47,9 +50,8 @@ type cliFlags struct {
 
 // registerFlags declares every flag on fs.
 //
-// Each value-typed field of codescan.Options belongs here; the drift guard in
-// main_test.go fails when one is added without a flag, which is how the CLI
-// came to expose three options out of ten.
+// Each value-typed field of codescan.Options belongs here; the drift guard in main_test.go fails when one is added
+// without a flag, which is how the CLI came to expose three options out of ten.
 func registerFlags(fs *flag.FlagSet) *cliFlags {
 	return &cliFlags{
 		set:        fs,
@@ -86,8 +88,7 @@ func (c *cliFlags) options(workDir string) codescan.Options {
 	}
 }
 
-// passed reports whether the named flag appeared on the command line, as
-// opposed to holding its default.
+// passed reports whether the named flag appeared on the command line, as opposed to holding its default.
 func (c *cliFlags) passed(name string) bool {
 	seen := false
 	c.set.Visit(func(f *flag.Flag) {
@@ -99,10 +100,14 @@ func (c *cliFlags) passed(name string) bool {
 	return seen
 }
 
-// resolveNameFromTags maps the flag onto NameFromTags's three-way contract:
-// nil (unset) keeps the historic ["json"] behaviour, while an empty but NON-nil
-// slice means "consult no struct tag, use the Go field name". Collapsing those
-// two would make `-name-from-tags=` silently mean the opposite of what it says.
+// resolveNameFromTags maps the flag onto NameFromTags.
+//
+// This is a three-way contract.
+//
+//   - nil (unset) keeps the historic ["json"] behaviour
+//   - an empty but NON-nil slice means "consult no struct tag, use the Go field name"
+//
+// Collapsing those two would make `-name-from-tags=` silently mean the opposite of what it says.
 func resolveNameFromTags(raw string, passed bool) []string {
 	if !passed {
 		return nil
@@ -115,12 +120,14 @@ func resolveNameFromTags(raw string, passed bool) []string {
 }
 
 func main() {
-	// Mute the scanner's logging. codescan writes warnings (unsupported type
-	// kinds, skipped builtins, …) through the standard log package, whose
-	// default sink is stderr — which paints over bubbletea's alt-screen and
-	// corrupts the TUI. Discard it globally for the lifetime of the program.
-	// (Reflection: codescan should accept an injected sink / route these
-	// through OnDiagnostic instead of the global logger — see plan.)
+	// Mute the scanner's logging. codescan writes warnings (unsupported type kinds, skipped builtins, …) through the
+	// standard log package, whose default sink is stderr — which paints over bubbletea's alt-screen and corrupts the TUI.
+	//
+	// Discard it globally for the lifetime of the program.
+	//
+	// Proposal for enhancement(maintainers): codescan should accept an injected sink and route these through
+	// OnDiagnostic instead of the global logger. This is probably already done, so this discarding is probably not
+	// useful any longer.
 	log.SetOutput(io.Discard)
 
 	if err := run(); err != nil {
@@ -129,9 +136,9 @@ func main() {
 	}
 }
 
-// run is main's body, split out so that os.Exit happens with no deferred call
-// pending: exiting from inside main skipped `defer model.Close()`, leaving the
-// file watcher running until the process died anyway.
+// run is main's body, split out so that os.Exit happens with no deferred call pending.
+//
+// Exiting from inside main skipped `defer model.Close()`, leaving the file watcher running until the process died anyway.
 func run() error {
 	cli := registerFlags(flag.CommandLine)
 	flag.Parse()
@@ -150,9 +157,9 @@ func run() error {
 	return err
 }
 
-// splitList parses a comma-separated flag into trimmed, non-empty entries,
-// returning nil when there is nothing usable — nil being what codescan reads as
-// "no filter".
+// splitList parses a comma-separated flag into trimmed, non-empty entries.
+//
+// It returns nil when there is nothing usable — nil being what codescan reads as "no filter".
 func splitList(s string) []string {
 	var out []string
 	for p := range strings.SplitSeq(s, ",") {
@@ -164,8 +171,9 @@ func splitList(s string) []string {
 	return out
 }
 
-// splitPatterns parses the comma-separated -packages flag into non-empty,
-// trimmed patterns, falling back to "./..." when nothing usable is given.
+// splitPatterns parses the comma-separated -packages flag into non-empty, trimmed patterns.
+//
+// It falls back to "./..." when nothing usable is given.
 func splitPatterns(s string) []string {
 	if out := splitList(s); len(out) > 0 {
 		return out

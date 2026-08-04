@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package gadgets holds small, self-contained TUI helpers. The clipboard
-// helper is ported from fredbi/git-janitor: it copies text reliably across
-// terminals by trying real clipboard tools first (which report success), then
-// falling back to OSC 52 escape sequences (which work over SSH and in modern
-// terminals without any external tool), with tmux passthrough wrapping.
+// Package gadgets holds small, self-contained TUI helpers.
+//
+// The clipboard helper is ported from fredbi/git-janitor: it copies text reliably across terminals by trying real
+// clipboard tools first (which report success), then falling back to OSC 52 escape sequences (which work over SSH and
+// in modern terminals without any external tool), with tmux passthrough wrapping.
 package gadgets
 
 import (
@@ -19,15 +19,15 @@ import (
 )
 
 // ErrNoClipboardTool reports that no command-line clipboard tool was found.
-// Static so a caller can tell "nothing installed" from "the tool failed" and
-// decide whether the OSC 52 fallback is worth mentioning.
+//
+// Static so a caller can tell "nothing installed" from "the tool failed" and decide whether the OSC 52 fallback is
+// worth mentioning.
 var ErrNoClipboardTool = errors.New("no clipboard tool available (tried xclip, xsel, wl-copy)")
 
 // CopyToClipboard copies text to the system clipboard.
 //
-// It tries command-line tools first — they give reliable feedback (OSC 52 is
-// fire-and-forget, so we can't tell whether the terminal honored it) — then
-// falls back to OSC 52.
+// It tries command-line tools first — they give reliable feedback (OSC 52 is fire-and-forget, so we can't tell
+// whether the terminal honored it) — then falls back to OSC 52.
 func CopyToClipboard(ctx context.Context, text string) error {
 	if err := clipboardViaTool(ctx, text); err == nil {
 		return nil
@@ -64,11 +64,12 @@ func clipboardViaTool(ctx context.Context, text string) error {
 	return ErrNoClipboardTool
 }
 
-// osc52Copy writes an OSC 52 escape sequence to stderr, instructing the
-// terminal emulator to copy text to the system clipboard. Works on kitty,
-// alacritty, wezterm, iTerm2, Windows Terminal, foot, etc.; not on
-// gnome-terminal or some older terminals. Stderr is used so the sequence
-// bypasses bubbletea's stdout render buffer.
+// osc52Copy writes an OSC 52 escape sequence to stderr, instructing the terminal emulator to copy text to the system
+// clipboard.
+//
+// Works on kitty, alacritty, wezterm, iTerm2, Windows Terminal, foot, etc.; not on gnome-terminal or some older
+// terminals.
+// Stderr is used so the sequence bypasses bubbletea's stdout render buffer.
 func osc52Copy(text string) error {
 	b64 := base64.StdEncoding.EncodeToString([]byte(text))
 

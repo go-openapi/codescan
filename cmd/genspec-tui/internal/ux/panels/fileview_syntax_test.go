@@ -12,8 +12,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// highlightedFileView loads three lines and colours the middle one, so a test
-// can tell "styled" from "not styled" without depending on the palette.
+// highlightedFileView loads three lines and colours the middle one, so a test can tell "styled" from "not styled"
+// without depending on the palette.
 func highlightedFileView() FileView {
 	fv := NewFileView()
 	fv.SetSize(40, 10)
@@ -30,9 +30,10 @@ func highlightedFileView() FileView {
 	return fv
 }
 
-// runOpener is the SGR prefix a syntax class renders with. Assertions match on
-// it rather than on a whole styled token, because the LAST run on a line also
-// absorbs the padding that fills the pane's width.
+// runOpener is the SGR prefix a syntax class renders with.
+//
+// Assertions match on it rather than on a whole styled token, because the LAST run on a line also absorbs the padding
+// that fills the pane's width.
 func runOpener(t *testing.T, kind theme.SyntaxKind) string {
 	t.Helper()
 	rendered := theme.Syntax(kind).Render("x")
@@ -43,8 +44,7 @@ func runOpener(t *testing.T, kind theme.SyntaxKind) string {
 	return prefix
 }
 
-// The invariant the spec pane is held to, asserted here too: colouring changes
-// how a line is drawn, never what it says.
+// The invariant the spec pane is held to, asserted here too: colouring changes how a line is drawn, never what it says.
 func TestFileViewSyntax_TextSurvivesHighlighting(t *testing.T) {
 	fv := highlightedFileView()
 
@@ -65,6 +65,7 @@ func TestFileViewSyntax_AppliesTheStyle(t *testing.T) {
 }
 
 // The nav line answers a question the user asked, so it takes the whole row.
+//
 // Syntax colour underneath would break the bar up with its own resets.
 func TestFileViewSyntax_NavLineWinsOverSyntax(t *testing.T) {
 	fv := highlightedFileView()
@@ -101,8 +102,8 @@ func TestFileViewSyntax_CoexistsWithTheGutter(t *testing.T) {
 	assert.Contains(t, plain, "var x = 1")
 }
 
-// Spans are keyed by line, so scrolling must not shift them: the run installed
-// for line 2 has to still land on line 2 once line 2 is drawn from an offset.
+// Spans are keyed by line, so scrolling must not shift them: the run installed for line 2 has to still land on line 2
+// once line 2 is drawn from an offset.
 func TestFileViewSyntax_SurvivesScrolling(t *testing.T) {
 	fv := NewFileView()
 	fv.SetSize(40, 7) // 4 visible rows out of 6 lines, so the window must move

@@ -30,16 +30,14 @@ func TestSpec_GutterMarksOnlyTheGivenLines(t *testing.T) {
 		"unmarked lines are padded so the text stays aligned")
 }
 
-// No gutter installed means no gutter column: the pane costs no width before a
-// scan has produced anything to mark.
+// No gutter installed means no gutter column: the pane costs no width before a scan has produced anything to mark.
 func TestSpec_NoGutterCostsNoWidth(t *testing.T) {
 	sp := NewSpec()
 	sp.SetSize(40, 12)
 	sp.SetContent("aaa\nbbb")
 
-	// The viewport pads each line to its width, so compare prefixes: the text
-	// must start in column 0, not two columns in. Line 1 is used throughout so
-	// the always-rendered cursor (line 0) does not wrap the line under test.
+	// The viewport pads each line to its width, so compare prefixes: the text must start in column 0, not two columns in.
+	// Line 1 is used throughout so the always-rendered cursor (line 0) does not wrap the line under test.
 	sp.SetCursor(0)
 	secondLine := func() string { return strings.Split(sp.vp.View(), "\n")[1] }
 
@@ -56,8 +54,8 @@ func TestSpec_NoGutterCostsNoWidth(t *testing.T) {
 		"got %q", secondLine())
 }
 
-// The gutter is prefixed after highlighting, so both survive together and the
-// styles still apply to the text rather than to the marker column.
+// The gutter is prefixed after highlighting, so both survive together and the styles still apply to the text rather
+// than to the marker column.
 func TestSpec_GutterCoexistsWithSearchAndCursor(t *testing.T) {
 	sp := NewSpec()
 	sp.SetSize(40, 12)

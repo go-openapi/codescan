@@ -15,9 +15,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// These tests check both halves of the §6.5 contract: that the panels CHOOSE
-// the right style for their role, and that the choice actually reaches the
-// rendered output. The latter needs a forced colour profile — see TestMain.
+// These tests check both halves of the §6.5 contract: that the panels CHOOSE the right style for their role, and that
+// the choice actually reaches the rendered output.
+// The latter needs a forced colour profile — see TestMain.
 
 // numberedContent returns n uniquely identifiable lines.
 func numberedContent(n int) string {
@@ -50,9 +50,8 @@ func TestSpec_XrefStyleFollowsFocus(t *testing.T) {
 		"an unfocused spec pane is mirroring, so its xref line is a follower")
 }
 
-// A focus change must actually REPAINT: the style is baked into the viewport
-// content at render time, so a missed re-render would leave the previous role's
-// colour on screen even though xrefStyle() reports the new one.
+// A focus change must actually REPAINT: the style is baked into the viewport content at render time, so a missed
+// re-render would leave the previous role's colour on screen even though xrefStyle() reports the new one.
 func TestSpec_FocusChangeRepaints(t *testing.T) {
 	sp := NewSpec()
 	sp.SetSize(40, 12)
@@ -69,18 +68,17 @@ func TestSpec_FocusChangeRepaints(t *testing.T) {
 	assert.NotEqual(t, driverView, followerView, "the two roles must render differently")
 }
 
-// stylePrefix returns the SGR escape sequence a style emits, isolated from any
-// text. Asserting on it pins WHICH style painted a line — comparing whole views
-// would not, because the border and title also change with focus and would mask
-// a nav line that never changed at all.
+// stylePrefix returns the SGR escape sequence a style emits, isolated from any text.
+//
+// Asserting on it pins WHICH style painted a line — comparing whole views would not, because the border and title
+// also change with focus and would mask a nav line that never changed at all.
 func stylePrefix(st lipgloss.Style) string {
 	const sentinel = "\x00sentinel\x00"
 	prefix, _, _ := strings.Cut(st.Render(sentinel), sentinel)
 	return prefix
 }
 
-// The same for the source viewer: the nav line's style must reach the output,
-// not merely be selected.
+// The same for the source viewer: the nav line's style must reach the output, not merely be selected.
 func TestFileView_NavStyleReachesOutput(t *testing.T) {
 	fv := NewFileView()
 	fv.SetSize(40, 10)
@@ -139,8 +137,8 @@ func TestFileView_GotoLineCenters(t *testing.T) {
 	assert.Equal(t, 50, fv.offset, "clamped at the bottom (60 lines - 10 visible)")
 }
 
-// The nav keys must NOT centre: moving the cursor one line should scroll as
-// little as possible, or the view lurches on every keypress.
+// The nav keys must NOT centre: moving the cursor one line should scroll as little as possible, or the view lurches on
+// every keypress.
 func TestFileView_NavKeysScrollMinimally(t *testing.T) {
 	fv := NewFileView()
 	fv.SetSize(40, 13) // visible = 10
