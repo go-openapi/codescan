@@ -6,7 +6,6 @@
 // wildcard target, both parameter reference channels, and a shared
 // response. Each form is documented on the declaration that exercises it.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md for the grammar
 // and the expected spec this fixture should produce.
 package shared_parameters
 

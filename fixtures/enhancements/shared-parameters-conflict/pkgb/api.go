@@ -6,7 +6,6 @@
 // ErrorResponse collide on short name with pkga's; both are dropped with
 // a keep-first warning (no rename — short-name refs must stay valid).
 //
-// See .claude/plans/features/shared-parameters-fixtures.md.
 package pkgb
 
 // TokenB collides with pkga's #/parameters/X-Token on short name, with a

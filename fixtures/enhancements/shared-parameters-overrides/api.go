@@ -10,7 +10,6 @@
 //   - C1/C2: duplicate op-id targets and duplicate reference names are
 //     deduplicated, each surplus raising a warning.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md.
 package shared_parameters_overrides
 
 // CommonHeaders registers a shared header whose spec name is OVERRIDDEN

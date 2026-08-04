@@ -7,7 +7,6 @@
 // (name, in), and exact-path application (no path hierarchy). Each form is
 // documented on the declaration that exercises it.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md for the grammar
 // and the expected spec.
 package shared_parameters_pathitem
 

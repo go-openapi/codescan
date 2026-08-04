@@ -8,7 +8,6 @@
 // header is rejected with scan.context-invalid and the description override is
 // still applied.
 //
-// See .claude/plans/features/swagger-description-override-design.md.
 package description_title_override_responses
 
 // ErrorBody is the error payload returned in the response body.

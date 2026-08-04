@@ -6,7 +6,6 @@
 // checks: a $ref into #/parameters or #/responses is validated, and a
 // dangling ref raises a diagnostic.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md.
 package shared_parameters_yaml
 
 // CommonHeaders registers #/parameters/X-Request-ID.

@@ -24,7 +24,6 @@
 // Hints); Shared NOT pruned (the prune is reachability-correct, not a naive
 // "drop everything the pruned response touched").
 //
-// See .claude/plans/features/shared-parameters-fixtures.md (§6b, step 2).
 package shared_parameters_prune_cascade
 
 // Survivor is reached from UsedResponse's body and survives the prune.

@@ -46,7 +46,6 @@ type EntityDecl struct {
 //
 // Used to resolve a same-package duplicate, where two distinct types in one package claim the same
 // override name (a user error): the first keeps the name, later ones revert to their Go name.
-// See name-identity design D-4 (.claude/plans/name-identity-cyclic-ref.md §9.1).
 func (d *EntityDecl) SuppressModelOverride() { d.modelOverrideSuppressed = true }
 
 // ModelOverrideSuppressed reports whether SuppressModelOverride was set.
@@ -98,7 +97,6 @@ func (d *EntityDecl) Names() (name, goName string) {
 // two distinct Go types that share a short name can never collide before the spec.Builder's reduce
 // stage shortens names back.
 //
-// See the name-identity / cyclic-$ref design (.claude/plans/name-identity-cyclic-ref.md §9.1,
 // §12.1).
 //
 // Universe / package-less types (no enclosing package) fall back to the bare name; in practice

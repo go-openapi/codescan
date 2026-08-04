@@ -6,7 +6,6 @@
 // INLINED as a trailing comment, so the godoc above the declaration stays
 // clean. With the option off, those annotations are inert (nothing discovered).
 //
-// See .claude/plans/features/comment-source-filtering-design.md.
 package after_decl_comments
 
 // Widget is a widget. This godoc stays clean — no swagger machinery here.

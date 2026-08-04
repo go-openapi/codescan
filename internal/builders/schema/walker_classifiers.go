@@ -82,7 +82,6 @@ func (s *Builder) classifierTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypabl
 // It is the single resolution point for `swagger:type` on a named type: it routes the argument
 // through resolveTypeOverride (always inlining — keyword scalars / Go builtins / `[]T` / `inline`
 // / `array` / type-name refs), and applies a co-present `swagger:strfmt` as a supplementary format
-// only when compatible with the resolved type (F3 — see .claude/plans/archive/quirks-F-series-fix.md).
 // ownType is the named Go type (consumed by the `inline`/`array` keywords); pos drives diagnostics.
 //
 // Reports back via the (handled, fallthrough) tuple:
@@ -469,8 +468,8 @@ func (s *Builder) classifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, 
 	return s.ClassifierAliasStrfmt(cg, tpe, tgt)
 }
 
-// classifierAliasTargetStrfmt is the named-type walker fired from `buildNamedAllOf`'s struct branch
-// — checks the alias's target type's docstring for `swagger:strfmt`.
+// The named-type walker fired from `buildNamedAllOf`'s struct branch.
+// It checks the alias's target type's docstring for `swagger:strfmt`.
 //
 // On match writes `{string, <format>}` to schema and returns true.
 // applyNamedShapeClassifier runs the author's classifier annotations that depend on a named type's
@@ -482,8 +481,8 @@ func (s *Builder) classifierAliasStrfmt(cg *ast.CommentGroup, tpe *types.Alias, 
 //
 // This is the shape-aware half of the cascade, and the reason it is a function rather than three
 // lines inside a switch: the composition arm needs the same answers as the field dispatch, and the
-// copy it used to keep — `classifierAliasTargetStrfmt` — is shape-BLIND. That copy writes
-// `Typed("string", format)` whatever the underlying is, so a `[]string` annotated `email` composed
+// copy it used to keep is shape-BLIND.
+// That copy writes `Typed("string", format)` whatever the underlying is, so a `[]string` annotated `email` composed
 // into an allOf claimed the member IS an email address rather than a list of them, and a
 // `swagger:enum` reached it not at all.
 func (s *Builder) applyNamedShapeClassifier(
@@ -536,18 +535,6 @@ func (s *Builder) arrayLikeClassifier(
 
 		return s.buildFromType(elem, tgt.Items())
 	}
-}
-
-func (s *Builder) classifierAliasTargetStrfmt(tpe types.Type, tgt ifaces.SwaggerTypable) bool {
-	decl, ok := s.Ctx.DeclForType(tpe)
-	if !ok || decl == nil {
-		return false
-	}
-	if name, ok := s.findAnnotationArg(decl.Comments, grammar.AnnStrfmt); ok {
-		tgt.Typed("string", name)
-		return true
-	}
-	return false
 }
 
 // fieldDoc is the field-level FieldWalker output: every classifier signal a struct field /

@@ -11,6 +11,7 @@ import (
 // Severity classifies a Diagnostic's seriousness.
 //
 // The parser never aborts; callers (analyzers, LSP, the CLI) decide policy by severity.
+//
 // See README §diagnostics.
 type Severity int
 
@@ -39,10 +40,10 @@ type Code string
 
 // Diagnostic codes.
 //
-// The `parse.*` prefix marks lexer/parser-level observations; `validate.*` marks
-// semantic-validation observations emitted by the builder layer (typically through the
-// internal/builders/validations package); `scan.*` marks scan-environment observations (package
-// loading, recovered panics) raised by the scanner / spec builder rather than the grammar parser.
+// The `parse.*` prefix marks lexer/parser-level observations; `validate.*` marks semantic-validation observations
+// emitted by the builder layer (typically through the internal/builders/validations package); `scan.*` marks
+// scan-environment observations (package loading, recovered panics) raised by the scanner / spec builder rather than
+// the grammar parser.
 const (
 	CodeInvalidNumber     Code = "parse.invalid-number"
 	CodeInvalidInteger    Code = "parse.invalid-integer"
@@ -61,255 +62,241 @@ const (
 	CodeMalformedOperation    Code = "parse.malformed-operation"
 	CodeMissingRequiredArg    Code = "parse.missing-required-arg"
 
-	// CodeShapeMismatch fires when a keyword is applied to a schema whose resolved Swagger type
-	// doesn't match the keyword's domain (e.g. `pattern: ^a$` on an integer field).
+	// CodeShapeMismatch fires when a keyword is applied to a schema whose resolved Swagger type doesn't match the
+	// keyword's domain (e.g. `pattern: ^a$` on an integer field).
 	//
 	// Emitted by internal/builders/validations.IsLegalForType callers.
 	CodeShapeMismatch Code = "validate.shape-mismatch"
 
-	// CodeAmbiguousEmbed fires when two embedded types of a parent struct (or struct embed-chains at
-	// the same depth) both promote a property with the same JSON name but different Go names.
+	// CodeAmbiguousEmbed fires when two embedded types of a parent struct (or struct embed-chains at the same depth) both
+	// promote a property with the same JSON name but different Go names.
 	//
-	// Go's own rule is to not promote such ambiguous fields; codescan currently emits a
-	// last-write-wins schema regardless.
+	// Go's own rule is to not promote such ambiguous fields; codescan currently emits a last-write-wins schema regardless.
 	// The diagnostic surfaces the case so authors can disambiguate.
 	CodeAmbiguousEmbed Code = "validate.ambiguous-embed"
 
-	// CodeUnsupportedInSimpleSchema fires when the schema builder running in SimpleSchema mode
-	// produces an outcome that OAS v2 does not allow on a parameter/header (object type, $ref, allOf,
-	// properties, …).
+	// CodeUnsupportedInSimpleSchema fires when the schema builder running in SimpleSchema mode produces an outcome that
+	// OAS v2 does not allow on a parameter/header (object type, $ref, allOf, properties, …).
 	//
 	// The diagnostic is emitted at exit and the target is reset to empty `{}` — honest over lossy.
-	// Reaching this code path typically means a non-body parameter or response header was typed as a
-	// struct or interface that the recognizer cascade couldn't reduce to a primitive.
+	// Reaching this code path typically means a non-body parameter or response header was typed as a struct or interface
+	// that the recognizer cascade couldn't reduce to a primitive.
 	CodeUnsupportedInSimpleSchema Code = "validate.unsupported-in-simple-schema"
 
-	// CodeUnsupportedType fires when a `swagger:type` argument cannot be resolved to an inline schema:
-	// an unknown type name, a `file` override (use swagger:file instead), or a keyword used where it
-	// is not valid (e.g. `inline`/`array` as an array element).
+	// CodeUnsupportedType fires when a `swagger:type` argument cannot be resolved to an inline schema: an unknown type
+	// name, a `file` override (use swagger:file instead), or a keyword used where it is not valid (e.g. `inline`/`array`
+	// as an array element).
 	//
 	// The override is dropped and the subject falls through to its Go type.
-	// See the F3 reconciliation in .claude/plans/archive/quirks-F-series-fix.md.
 	CodeUnsupportedType Code = "validate.unsupported-type"
 
-	// CodeDeprecated fires when an accepted-but-deprecated annotation or keyword value is used (the
-	// input is still processed).
+	// CodeDeprecated fires when an accepted-but-deprecated annotation or keyword value is used (the input is still
+	// processed).
 	//
-	// Carries a migration hint in the message — e.g. `swagger:type array` → `inline`, or the
-	// deprecated `swagger:alias` annotation.
+	// Carries a migration hint in the message — e.g. `swagger:type array` → `inline`, or the deprecated
+	// `swagger:alias` annotation.
 	CodeDeprecated Code = "validate.deprecated"
 
-	// CodeUnsupportedGoType fires when a Go type, a `go/types` kind, or a builtin cannot be translated
-	// to a Swagger 2.0 construct and is therefore dropped from the spec.
+	// CodeUnsupportedGoType fires when a Go type, a `go/types` kind, or a builtin cannot be translated to a Swagger 2.0
+	// construct and is therefore dropped from the spec.
 	//
-	// The scanner runs on arbitrary user code, so an unmodeled construct must not panic — it is
-	// skipped and surfaced as a Warning (real data loss, but the scan continues).
-	// The message names the construct (and the dispatch site) so a future go/types evolution surfaces
-	// one grep-able diagnostic instead of vanishing behind a silent default.
+	// The scanner runs on arbitrary user code, so an unmodeled construct must not panic — it is skipped and surfaced as
+	// a Warning (real data loss, but the scan continues).
+	// The message names the construct (and the dispatch site) so a future go/types evolution surfaces one grep-able
+	// diagnostic instead of vanishing behind a silent default.
 	CodeUnsupportedGoType Code = "validate.unsupported-go-type"
 
-	// CodeDuplicateModelName fires when two distinct Go types in the SAME package claim the same
-	// definition name (necessarily via a `swagger:model <name>` override, since Go type names are
-	// unique per package).
+	// CodeDuplicateModelName fires when two distinct Go types in the SAME package claim the same definition name
+	// (necessarily via a `swagger:model <name>` override, since Go type names are unique per package).
 	//
 	// The first declaration keeps the name; later ones fall back to their Go type name.
-	// See the name-identity design D-4.
 	CodeDuplicateModelName Code = "validate.duplicate-model-name"
 
 	// CodeCollidingModelName fires when the same definition name is declared across SEVERAL packages.
 	//
-	// The reduce stage keeps each distinct by qualifying the colliding ones with a PascalCase
-	// package-prefix concat (e.g. b.Test / c.Test -> BTest / CTest); the author can force a specific
-	// name with `swagger:model <name>`.
-	// See the name-identity design (D-8).
+	// The reduce stage keeps each distinct by qualifying the colliding ones with a PascalCase package-prefix concat (e.g.
+	// b.Test / c.Test -> BTest / CTest); the author can force a specific name with `swagger:model <name>`.
 	CodeCollidingModelName Code = "validate.colliding-model-name"
 
-	// CodeHierarchicalModelName fires when a colliding definition name's best flat concat exceeds the
-	// readability budget and the caller enabled EmitHierarchicalNames: the reduce stage emits nested
-	// container definitions (`#/definitions/<pkg>/<Name>`) instead of a long flat concat.
+	// CodeHierarchicalModelName fires when a colliding definition name's best flat concat exceeds the readability budget
+	// and the caller enabled EmitHierarchicalNames: the reduce stage emits nested container definitions
+	// (`#/definitions/<pkg>/<Name>`) instead of a long flat concat.
 	//
 	// The author can force a flat name with `swagger:model <name>`.
-	// See the name-identity design (rung 3 / W2).
 	CodeHierarchicalModelName Code = "validate.hierarchical-model-name"
 
-	// CodeAmbiguousTypeName fires when a type-name keyword argument (swagger:type,
-	// swagger:additionalProperties, swagger:patternProperties) names a bare leaf that, after failing
-	// to resolve in the builder's own package, matches a discovered model in SEVERAL packages.
+	// CodeAmbiguousTypeName fires when a type-name keyword argument (swagger:type, swagger:additionalProperties,
+	// swagger:patternProperties) names a bare leaf that, after failing to resolve in the builder's own package, matches a
+	// discovered model in SEVERAL packages.
 	//
-	// The reference is ambiguous so it is dropped; the author can disambiguate with a same-package
-	// type or a swagger:model override.
-	// See the name-identity leaf-resolution design.
+	// The reference is ambiguous so it is dropped; the author can disambiguate with a same-package type or a swagger:model
+	// override.
 	CodeAmbiguousTypeName Code = "validate.ambiguous-type-name"
 
 	// CodeDegradedLoad fires when `packages.Load` returns a degraded result.
 	//
-	// It is tiered by what is still recoverable: an Error (aborting) when nothing usable loaded — no
-	// packages matched, a package could not be loaded at all, or its type information (`Types` /
-	// `TypesInfo`) is unavailable (the #2874 case where swagger:allOf silently stops resolving); a
-	// Warning (non-fatal) when a package carries only parse/type errors but its type information is
-	// still usable, so a single non-building package does not sink a whole `./...` scan.
+	// It is tiered by what is still recoverable: an Error (aborting) when nothing usable loaded — no packages matched, a
+	// package could not be loaded at all, or its type information (`Types` / `TypesInfo`) is unavailable (the #2874 case
+	// where swagger:allOf silently stops resolving); a Warning (non-fatal) when a package carries only parse/type errors
+	// but its type information is still usable, so a single non-building package does not sink a whole `./...` scan.
 	//
 	// See go-swagger/go-swagger#2874.
 	CodeDegradedLoad Code = "scan.degraded-load"
 
 	// CodeInternalPanic fires when a builder panics while processing a single declaration.
 	//
-	// The scan recovers, names the offending source declaration (file:line), and aborts with a located
-	// error rather than surfacing a raw Go stack trace.
+	// The scan recovers, names the offending source declaration (file:line), and aborts with a located error rather than
+	// surfacing a raw Go stack trace.
 	// See go-swagger/go-swagger#2886.
 	CodeInternalPanic Code = "scan.internal-panic"
 
-	// CodeIgnoredByRules fires when a package is skipped because it does not pass the caller's
-	// Include/Exclude package rules.
+	// CodeIgnoredByRules fires when a package is skipped because it does not pass the caller's Include/Exclude package
+	// rules.
 	//
-	// Informational (Hint): the omission is the caller's own configuration, surfaced to aid "why is my
-	// package missing" triage.
+	// Informational (Hint): the omission is the caller's own configuration, surfaced to aid "why is my package missing"
+	// triage.
 	CodeIgnoredByRules Code = "scan.ignored-by-rules"
 
-	// CodeIgnoredByTag fires when a route or operation is skipped because its tags do not pass the
-	// caller's IncludeTags/ExcludeTags rules.
+	// CodeIgnoredByTag fires when a route or operation is skipped because its tags do not pass the caller's
+	// IncludeTags/ExcludeTags rules.
 	//
 	// Informational (Hint), like CodeIgnoredByRules.
 	CodeIgnoredByTag Code = "scan.ignored-by-tag"
 
-	// CodeDroppedRefSibling fires when SkipAllOfCompounding is set and a $ref'd struct field carries
-	// sibling decoration (description, validations, vendor extensions, externalDocs) that cannot ride
-	// a bare $ref.
+	// CodeDroppedRefSibling fires when SkipAllOfCompounding is set and a $ref'd struct field carries sibling decoration
+	// (description, validations, vendor extensions, externalDocs) that cannot ride a bare $ref.
 	//
-	// With compounding disabled the field emits as a bare $ref and each such sibling is dropped —
-	// one diagnostic per dropped keyword so the loss is never silent.
+	// With compounding disabled the field emits as a bare $ref and each such sibling is dropped — one diagnostic per
+	// dropped keyword so the loss is never silent.
 	// See scanner.Options SkipAllOfCompounding.
 	CodeDroppedRefSibling Code = "validate.dropped-ref-sibling"
 
-	// CodePrunedUnused fires when PruneUnusedModels is set and a discovered definition is dropped
-	// because it is not transitively referenced from any path, shared response, shared parameter or
-	// overlay definition.
+	// CodePrunedUnused fires when PruneUnusedModels is set and a discovered definition is dropped because it is not
+	// transitively referenced from any path, shared response, shared parameter or overlay definition.
 	//
 	// Carries the originating Go type's source position so the loss is never silent.
-	// Informational (Hint): the prune is the caller's own opt-in, surfaced to aid "why is my model
-	// missing" triage.
+	// Informational (Hint): the prune is the caller's own opt-in, surfaced to aid "why is my model missing" triage.
 	// See scanner.Options PruneUnusedModels.
 	CodePrunedUnused Code = "scan.pruned-unused"
 
-	// CodeDiscoveredSubtype fires when a definition is emitted because it is a subtype of a
-	// discriminated base that entered the reachable set — a `swagger:model` declaring that base as an
-	// `allOf` member (go-swagger#1913).
+	// CodeDiscoveredSubtype fires when a definition is emitted because it is a subtype of a discriminated base that
+	// entered the reachable set — a `swagger:model` declaring that base as an `allOf` member (go-swagger#1913).
 	//
-	// Such a subtype is unreachable top-down (it references the base, nothing references it), so it is
-	// pulled in by the reverse `swagger:allOf` index rather than by any $ref in the document.
-	// Informational (Hint); carries the subtype's own source position, so a definition that appears
-	// without ScanModels can be traced to the family that pulled it in.
+	// Such a subtype is unreachable top-down (it references the base, nothing references it), so it is pulled in by the
+	// reverse `swagger:allOf` index rather than by any $ref in the document.
+	// Informational (Hint); carries the subtype's own source position, so a definition that appears without ScanModels can
+	// be traced to the family that pulled it in.
 	CodeDiscoveredSubtype Code = "scan.discovered-subtype"
 
-	// CodeOmitUnresolved fires when a `swagger:omit` target names no field of the embedded type it is
-	// applied to — a typo, or a field renamed upstream.
+	// CodeOmitUnresolved fires when a `swagger:omit` target names no field of the embedded type it is applied to — a
+	// typo, or a field renamed upstream.
 	//
-	// `swagger:omit` is the only construct whose output depends on a hand-written name the compiler
-	// never checks (everything else is derived from types), so an unresolved target is reported rather
-	// than silently ignored: otherwise a rename upstream would make the omitted field quietly reappear.
+	// `swagger:omit` is the only construct whose output depends on a hand-written name the compiler never checks
+	// (everything else is derived from types), so an unresolved target is reported rather than silently ignored: otherwise
+	// a rename upstream would make the omitted field quietly reappear.
 	// Informational (Hint); located at the annotation.
 	CodeOmitUnresolved Code = "scan.omit-unresolved"
 
-	// CodeOmitBehindRef fires when a `swagger:omit` target resolves, but the embed carrying it is
-	// emitted as a `$ref` (the embedded type is a `swagger:model` composed with allOf).
+	// CodeOmitBehindRef fires when a `swagger:omit` target resolves, but the embed carrying it is emitted as a `$ref` (the
+	// embedded type is a `swagger:model` composed with allOf).
 	//
-	// Swagger 2.0 cannot subtract a property from a `$ref`, so the omission is dropped rather than
-	// silently forking the referenced definition.
+	// Swagger 2.0 cannot subtract a property from a `$ref`, so the omission is dropped rather than silently forking the
+	// referenced definition.
 	// Informational (Hint); located at the annotation.
 	CodeOmitBehindRef Code = "scan.omit-behind-ref"
 
-	// CodeShadowedEmbedField fires when a struct field re-declared with `json:"-"` carries the same Go
-	// name as a field promoted from an embed.
+	// CodeShadowedEmbedField fires when a struct field re-declared with `json:"-"` carries the same Go name as a field
+	// promoted from an embed.
 	//
-	// encoding/json ignores a `-` field entirely, so it never shadows the promoted one: Go keeps
-	// marshalling the embedded field. The author most likely meant `swagger:omit`.
+	// encoding/json ignores a `-` field entirely, so it never shadows the promoted one: Go keeps marshalling the embedded
+	// field.
+	// The author most likely meant `swagger:omit`.
 	// Informational (Hint); located at the re-declared field.
 	CodeShadowedEmbedField Code = "scan.shadowed-embed-field"
 
-	// CodeRenamedDefinition fires when the reduce stage renames a definition to deconflict a
-	// cross-package name collision (e.g. b.Test / c.Test -> BTest / CTest), so a consumer that tracks
-	// source <-> spec links (the genspec TUI) learns the final name a Go type landed under.
+	// CodeRenamedDefinition fires when the reduce stage renames a definition to deconflict a cross-package name collision
+	// (e.g. b.Test / c.Test -> BTest / CTest), so a consumer that tracks source <-> spec links (the genspec TUI) learns
+	// the final name a Go type landed under.
 	//
 	// Informational (Hint); carries the Go type's source position.
-	// The bare-leaf zero-churn case (a globally unique name lifted to its leaf) is NOT reported —
-	// only true renames.
+	// The bare-leaf zero-churn case (a globally unique name lifted to its leaf) is NOT reported — only true renames.
 	CodeRenamedDefinition Code = "scan.renamed-definition"
 
-	// CodeSharedParameterConflict fires when two `swagger:parameters *` declarations register the same
-	// shared parameter short name (#/parameters/{name}).
+	// CodeSharedParameterConflict fires when two `swagger:parameters *` declarations register the same shared parameter
+	// short name (#/parameters/{name}).
 	//
-	// Shared parameters are referenced only by short name, so — unlike definitions — they are
-	// never renamed: the first registration is kept, later ones are dropped.
-	// Warning, so the shadowed declaration is never lost silently.
-	// §2.
+	// Shared parameters are referenced only by short name, so — unlike definitions — they are never renamed: the first
+	// registration is kept, later ones are dropped.
+	// Warning, so the shadowed declaration is never lost silently. §2.
 	CodeSharedParameterConflict Code = "scan.shared-parameter-conflict"
 
-	// CodeSharedResponseConflict fires when two `swagger:response` declarations register the same
-	// top-level response short name (#/responses/{name}).
+	// CodeSharedResponseConflict fires when two `swagger:response` declarations register the same top-level response short
+	// name (#/responses/{name}).
 	//
-	// Like shared parameters, responses are referenced only by short name and are never renamed: the
-	// first registration is kept, later ones are dropped.
+	// Like shared parameters, responses are referenced only by short name and are never renamed: the first registration is
+	// kept, later ones are dropped.
+	//
+	// An InputSpec (overlay) response of the same name is not a conflict — a scanned struct extends it.
+	//
 	// Warning.
-	//
-	// An InputSpec (overlay) response of the same name is not a conflict — a scanned struct extends
-	// it.
 	CodeSharedResponseConflict Code = "scan.shared-response-conflict"
 
-	// CodeDanglingParameterRef fires when a `swagger:parameters` reference names a shared parameter
-	// that no `swagger:parameters *` declaration registered (#/parameters/{name} does not exist).
+	// CodeDanglingParameterRef fires when a `swagger:parameters` reference names a shared parameter that no
+	// `swagger:parameters *` declaration registered (#/parameters/{name} does not exist).
 	//
 	// The reference is dropped rather than emitting a dangling $ref.
+	//
 	// Warning.
-	// §1b.
 	CodeDanglingParameterRef Code = "scan.dangling-parameter-ref"
 
-	// CodeDanglingResponseRef fires when an operation references a shared response
-	// (#/responses/{name}) that no `swagger:response` declaration registered — e.g. a `$ref` in a
-	// swagger:operation wholesale-YAML body pointing at an unknown response.
+	// CodeDanglingResponseRef fires when an operation references a shared response (#/responses/{name}) that no
+	// `swagger:response` declaration registered — e.g. a `$ref` in a swagger:operation wholesale-YAML body pointing at
+	// an unknown response.
 	//
 	// The reference is dropped rather than emitting a dangling $ref.
+	//
 	// Warning.
 	CodeDanglingResponseRef Code = "scan.dangling-response-ref"
 
-	// CodeDuplicateTarget fires when a `swagger:parameters * opid …` marker repeats an operation id;
-	// the duplicate is dropped.
+	// CodeDuplicateTarget fires when a `swagger:parameters * opid …` marker repeats an operation id; the duplicate is
+	// dropped.
 	//
-	// Warning (C1).
+	// Warning.
 	CodeDuplicateTarget Code = "scan.duplicate-target"
 
-	// CodeDuplicateRef fires when a `swagger:parameters {target} name …` reference repeats a
-	// shared-parameter name; the duplicate is dropped.
+	// CodeDuplicateRef fires when a `swagger:parameters {target} name …` reference repeats a shared-parameter name; the
+	// duplicate is dropped.
 	//
-	// Warning (C2).
+	// Warning.
 	CodeDuplicateRef Code = "scan.duplicate-ref"
 
-	// CodeEmptyOverride fires when a `swagger:description` / `swagger:title` override annotation
-	// resolves to an empty value (bare marker, or a whitespace/blank-only body).
+	// CodeEmptyOverride fires when a `swagger:description` / `swagger:title` override annotation resolves to an empty
+	// value (bare marker, or a whitespace/blank-only body).
 	//
-	// The empty value is still applied — empty is the deliberate godoc-suppression affordance —
-	// but the case is flagged in case it was accidental (a leftover marker).
+	// The empty value is still applied — empty is the deliberate godoc-suppression affordance — but the case is
+	// flagged in case it was accidental (a leftover marker).
+	//
 	// Warning.
-	// (D7).
 	CodeEmptyOverride Code = "scan.empty-override"
 
-	// CodeUnparsedPathAnnotation fires when a comment line opens with `swagger:route` or
-	// `swagger:operation` but the rest of the line does not parse as one.
+	// CodeUnparsedPathAnnotation fires when a comment line opens with `swagger:route` or `swagger:operation` but the rest
+	// of the line does not parse as one.
 	//
-	// Such a line produces NOTHING: no path, no operation, and — before this code existed — no word to
-	// the author either, because a route annotation that fails to match is indistinguishable from
-	// ordinary prose to everything downstream. The route simply is not there, and the first sign of it
-	// is a missing path in the output.
+	// Such a line produces NOTHING: no path, no operation, and — before this code existed — no word to the author
+	// either, because a route annotation that fails to match is indistinguishable from ordinary prose to everything
+	// downstream.
+	// The route simply is not there, and the first sign of it is a missing path in the output.
+	//
 	// Warning.
-	// (Q43).
 	CodeUnparsedPathAnnotation Code = "scan.unparsed-path-annotation"
 
-	// CodeIneffectiveAnnotation fires when an annotation is well-formed and recognised, but the
-	// position it was written in does not consult it — so it is accepted, validated, and discarded.
+	// CodeIneffectiveAnnotation fires when an annotation is well-formed and recognised, but the position it was written in
+	// does not consult it — so it is accepted, validated, and discarded.
 	//
-	// Currently: `swagger:strfmt` / `swagger:type` in the doc comment of an EMBEDDED field. On a
-	// regular field both are honoured, which is what makes the silence misleading; an embed
-	// contributes its type's shape, and what that shape is comes from the embedded type's own
-	// declaration, never from the embedding site.
+	// Currently: `swagger:strfmt` / `swagger:type` in the doc comment of an EMBEDDED field.
+	// On a regular field both are honoured, which is what makes the silence misleading; an embed contributes its type's
+	// shape, and what that shape is comes from the embedded type's own declaration, never from the embedding site.
+	//
 	// Warning.
 	CodeIneffectiveAnnotation Code = "scan.ineffective-annotation"
 )

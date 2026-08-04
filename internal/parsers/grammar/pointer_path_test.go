@@ -49,8 +49,8 @@ func TestPointerPath(t *testing.T) {
 	})
 
 	t.Run("deprecated anchors on operations/routes but NOT schema", func(t *testing.T) {
-		// Lexically legal on a schema (so the lexer accepts it), but renders no schema node in OAS2 —
-		// must not be anchored there.
+		// Lexically legal on a schema (so the lexer accepts it), but renders no schema node in OAS2 — must not be anchored
+		// there.
 		require.Contains(t, kw(t, KwDeprecated).Contexts, CtxSchema)
 		_, ok := PointerPath(kw(t, KwDeprecated), CtxSchema)
 		assert.False(t, ok, "deprecated must not anchor in a schema")

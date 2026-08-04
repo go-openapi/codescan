@@ -5,7 +5,6 @@
 // conflicts). By import-path order it is the survivor of the duplicate
 // shared short names also declared in pkgb.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md.
 package pkga
 
 // TokenA registers #/parameters/X-Token (header). pkgb declares the same

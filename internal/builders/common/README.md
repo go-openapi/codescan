@@ -7,9 +7,8 @@ The source files keep godoc concise; complex invariants, design trade-offs, and 
 `common.Builder` is the shared state every per-decl builder embeds
 (`schema`, `parameters`, `responses`, `routes`, `operations`, `spec`).
 
-It owns the scanner context, the active declaration, the
-parsed-block memoisation cache, the diagnostic accumulator, and the
-post-decl queue.
+It owns the scanner context, the active declaration, the parsed-block memoisation cache, the diagnostic accumulator,
+and the post-decl queue.
 
 ---
 
@@ -152,9 +151,7 @@ shared with the parameters/responses field-signal scanners) and
 
 These are real maintenance items the package author noted; they remain open for a future pass.
 
-- **`ireturn` on `ParseBlock`.** The `nolint:ireturn` directive on
-  `ParseBlock` carries because `grammar.Block` is a polymorphic
-  interface — that's the documented return type. The lint could
-  be disabled package-wide rather than per-function; consider as
-  a `.golangci.yml` exclusion once the broader lint posture is
-  reviewed.
+- **`ireturn` on `ParseBlock`.** The `nolint:ireturn` directive on `ParseBlock` carries because `grammar.Block`
+  is a polymorphic interface — that's the documented return type.
+  The lint could be disabled package-wide rather than per-function; consider as a `.golangci.yml` exclusion
+  once the broader lint posture is reviewed.

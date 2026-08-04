@@ -11,7 +11,6 @@
 // PruneUnusedModels (the unused pair pruned) — mirroring
 // coverage_prune_unused_test.go.
 //
-// See .claude/plans/features/shared-parameters-fixtures.md (§6b).
 package shared_parameters_prune
 
 // UsedHeader registers #/parameters/X-Used and is referenced by listP →

@@ -447,7 +447,7 @@ type BaseStruct struct {
 	StructType string `json:"jsonClass"`
 }
 
-/* TODO: implement this in the scanner
+/* TO BE TESTED
 
 // A Lion is a struct that "subtypes" the BaseStruct
 //

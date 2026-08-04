@@ -145,15 +145,15 @@ func (s *Builder) ParseBlock(cg *ast.CommentGroup) grammar.Block {
 // comment group.
 //
 // Present=false → annotation absent (fall back to the godoc-derived value); Present=true with
-// Value=="" → explicit empty, the deliberate godoc-suppression affordance (design D7).
+// Value=="" → explicit empty, the deliberate godoc-suppression affordance.
 type OverrideValue struct {
 	Value   string
 	Present bool
 	Pos     token.Position
 }
 
-// HarvestOverrides scans a comment group's sibling classifier blocks for the swagger:title /
-// swagger:description override annotations.
+// HarvestOverrides scans a comment group's sibling classifier blocks
+// for the swagger:title / swagger:description override annotations.
 //
 // Last occurrence wins.
 // This is a pure harvest: the diagnostic policy — the empty-override warning, and the
@@ -176,7 +176,8 @@ func (s *Builder) HarvestOverrides(cg *ast.CommentGroup) (title, desc OverrideVa
 // WarnEmptyOverride raises scan.empty-override when an override is present with an empty value.
 //
 // The empty value is still applied by the caller — empty is the deliberate godoc-suppression
-// affordance — but the case is flagged in case the marker was left bare by mistake (design D7).
+// affordance — but the case is flagged in case the marker was left bare by mistake.
+//
 // Emitted at the consumption point rather than in the parser: sibling classifier blocks are not
 // Walk-ed, so a grammar-stored diagnostic would not reach OnDiagnostic.
 func (s *Builder) WarnEmptyOverride(kind grammar.AnnotationKind, ov OverrideValue) {

@@ -11,7 +11,6 @@
 // (regression guard); a bare swagger:description suppresses the godoc (empty
 // value applied) and raises scan.empty-override.
 //
-// See .claude/plans/features/swagger-description-override-design.md.
 package description_title_override
 
 // Widget is the Go-facing widget doc, written for Go readers.
