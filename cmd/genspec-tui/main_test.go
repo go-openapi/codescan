@@ -14,10 +14,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// optionFlags maps each value-typed codescan.Options field to the flag that
-// sets it. The drift guard checks both directions: every field listed here has
-// a registered flag, and every value-typed field is either listed here or
-// explicitly excused below.
+// optionFlags maps each value-typed codescan.Options field to the flag that sets it.
+//
+// The drift guard checks both directions: every field listed here has a registered flag,
+// and every value-typed field is either listed here or explicitly excused below.
 var optionFlags = map[string]string{ //nolint:gochecknoglobals // table for the drift guard
 	"WorkDir":          "workdir",
 	"Packages":         "packages",
@@ -37,19 +37,12 @@ var optionsNotOnCLI = map[string]string{ //nolint:gochecknoglobals // table for 
 	"OnProvenance": "wired internally to the cross-ref linker",
 }
 
-func newTestFlags(t *testing.T) *cliFlags {
-	t.Helper()
-	fs := flag.NewFlagSet("genspec-tui", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	return registerFlags(fs)
-}
-
-// The CLI exposed three of ten options for a long time, because nothing failed
-// when a new one landed. This is what fails now.
+// The CLI exposed three of ten options for a long time, because nothing failed when a new one landed.
 //
-// Booleans are excluded: they are the options overlay's job, and
-// TestOptions_OverlayCoversEveryBoolKnob guards that side.
+// This is what fails now.
+//
+// Booleans are excluded: they are the options overlay's job, and TestOptions_OverlayCoversEveryBoolKnob guards that
+// side.
 func TestFlags_CoverEveryValueTypedOption(t *testing.T) {
 	cli := newTestFlags(t)
 
@@ -71,13 +64,13 @@ func TestFlags_CoverEveryValueTypedOption(t *testing.T) {
 
 			continue
 		}
+
 		assert.NotNil(t, cli.set.Lookup(name),
 			"Options.%s claims flag -%s, which is not registered", f.Name, name)
 	}
 }
 
-// The tables must not rot: an entry naming a field that no longer exists, or
-// one that has since become a bool, is stale.
+// The tables must not rot: an entry naming a field that no longer exists, or one that has since become a bool, is stale.
 func TestFlags_TablesAreCurrent(t *testing.T) {
 	typ := reflect.TypeFor[codescan.Options]()
 
@@ -87,6 +80,7 @@ func TestFlags_TablesAreCurrent(t *testing.T) {
 		assert.NotEqual(t, reflect.Bool, f.Type.Kind(),
 			"Options.%s is a bool and belongs to the overlay, not the CLI", name)
 	}
+
 	for name, reason := range optionsNotOnCLI {
 		_, ok := typ.FieldByName(name)
 		assert.True(t, ok, "optionsNotOnCLI names Options.%s, which no longer exists", name)
@@ -137,8 +131,7 @@ func TestFlags_ParseValues(t *testing.T) {
 	assert.InDelta(t, 0.8, opts.NameConcatBudget, 1e-9)
 }
 
-// NameFromTags is three-way, and flattening it would make `-name-from-tags=`
-// mean the opposite of what it says.
+// NameFromTags is three-way, and flattening it would make `-name-from-tags=` mean the opposite of what it says.
 func TestFlags_NameFromTagsIsThreeWay(t *testing.T) {
 	for _, c := range []struct {
 		name    string
@@ -176,4 +169,12 @@ func TestSplitHelpers(t *testing.T) {
 	assert.Equal(t, []string{"./..."}, splitPatterns(""), "an empty -packages falls back")
 	assert.Equal(t, []string{"./..."}, splitPatterns(" , "))
 	assert.Equal(t, []string{"./x"}, splitPatterns("./x"))
+}
+
+func newTestFlags(t *testing.T) *cliFlags {
+	t.Helper()
+	fs := flag.NewFlagSet("genspec-tui", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	return registerFlags(fs)
 }

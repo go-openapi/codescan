@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package panels holds the three scrollable sub-panels of the genspec-tui
-// layout: the source tree (left), the generated spec (right) and the
-// diagnostics (bottom).
+// Package panels holds the three scrollable sub-panels of the genspec-tui layout: the source tree (left), the generated
+// spec (right) and the diagnostics (bottom).
 package panels
 
 import (
@@ -18,9 +17,9 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
-// node is a file or directory in the source tree. Directories list only the
-// descendants that (transitively) contain Go files; everything else is pruned
-// at build time.
+// node is a file or directory in the source tree.
+//
+// Directories list only the descendants that (transitively) contain Go files; everything else is pruned at build time.
 type node struct {
 	name     string
 	path     string
@@ -30,9 +29,10 @@ type node struct {
 	children []*node
 }
 
-// Tree is the left-hand source-tree explorer. It owns a cursor and a scroll
-// offset (the git-janitor Base idiom) and renders a flattened view of the
-// expanded nodes inside a bordered, titled box.
+// Tree is the left-hand source-tree explorer.
+//
+// It owns a cursor and a scroll offset (the git-janitor Base idiom) and renders a flattened view of the expanded nodes
+// inside a bordered, titled box.
 type Tree struct {
 	root   *node
 	flat   []*node // visible rows, recomputed on expand/collapse
@@ -54,9 +54,9 @@ func (p *Tree) SetSize(w, h int) {
 	p.clampOffset()
 }
 
-// Selection returns the path of the node under the cursor, whether it is a
-// directory, and false when the tree is empty. Used by the model to react to
-// the user's current focus (locating diagnostics, opening a file for edit).
+// Selection returns the path of the node under the cursor, whether it is a directory, and false when the tree is empty.
+//
+// Used by the model to react to the user's current focus (locating diagnostics, opening a file for edit).
 func (p *Tree) Selection() (path string, isDir bool, ok bool) {
 	n := p.current()
 	if n == nil {
@@ -88,28 +88,21 @@ func (p *Tree) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
+	if delta, ok := key.Nav(key.MsgBinding(km), p.visibleRows(), len(p.flat)); ok {
+		p.move(delta)
+
+		return nil
+	}
+
 	switch key.MsgBinding(km) {
-	case key.Up, key.K:
-		p.move(-1)
-	case key.Down, key.J:
-		p.move(1)
-	case key.PgUp:
-		p.move(-p.visibleRows())
-	case key.PgDown:
-		p.move(p.visibleRows())
-	case key.Home:
-		p.move(-len(p.flat))
-	case key.End:
-		p.move(len(p.flat))
 	case key.Right:
 		if n := p.current(); n != nil && n.isDir && !n.expanded {
 			n.expanded = true
 			p.rebuild()
 		}
 	case key.Left:
-		// Arrows only: `h`/`l` used to alias these, but `h` is now the global
-		// help key, advertised in the header. A pane may not shadow it — least
-		// of all the tree, which is where the app starts.
+		// Arrows only: `h`/`l` used to alias these, but `h` is now the global help key, advertised in the header.
+		// A pane may not shadow it — least of all the tree, which is where the app starts.
 		p.collapseOrParent()
 	case key.Enter:
 		if n := p.current(); n != nil && n.isDir {
@@ -120,8 +113,7 @@ func (p *Tree) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// View renders the bordered panel; focused brightens the border/title and
-// shows the cursor highlight.
+// View renders the bordered panel; focused brightens the border/title and shows the cursor highlight.
 func (p *Tree) View(focused bool) string {
 	title := theme.Title(focused).Render("source")
 	inner := max(p.w-2, 0)
@@ -174,15 +166,14 @@ func (p *Tree) move(d int) {
 	if len(p.flat) == 0 {
 		return
 	}
-	p.cursor = clamp(p.cursor+d, 0, len(p.flat)-1)
+	p.cursor = min(max(p.cursor+d, 0), len(p.flat)-1)
 	p.clampOffset()
 }
 
 // visibleRows is how many rows the tree body shows, for page-sized moves.
 func (p *Tree) visibleRows() int { return max(p.h-3, 1) }
 
-// collapseOrParent collapses an expanded directory, otherwise jumps to the
-// parent row.
+// collapseOrParent collapses an expanded directory, otherwise jumps to the parent row.
 func (p *Tree) collapseOrParent() {
 	n := p.current()
 	if n == nil {
@@ -215,7 +206,7 @@ func (p *Tree) rebuild() {
 	if p.root != nil {
 		flatten(p.root, &p.flat)
 	}
-	p.cursor = clamp(p.cursor, 0, max(len(p.flat)-1, 0))
+	p.cursor = min(max(p.cursor, 0), max(len(p.flat)-1, 0))
 	p.clampOffset()
 }
 
@@ -232,8 +223,9 @@ func (p *Tree) clampOffset() {
 	}
 }
 
-// buildTree walks root, returning its node with Go-bearing descendants
-// populated. The root node is always returned (expanded) even when empty.
+// buildTree walks root, returning its node with Go-bearing descendants populated.
+//
+// The root node is always returned (expanded) even when empty.
 func buildTree(root string) *node {
 	rn := &node{name: filepath.Base(root), path: root, isDir: true, expanded: true}
 	if info, err := os.Stat(root); err == nil && info.IsDir() {
@@ -242,8 +234,8 @@ func buildTree(root string) *node {
 	return rn
 }
 
-// readDir returns the directory's child nodes: subdirectories that contain Go
-// files (transitively) and *.go files, directories first, each sorted by name.
+// readDir returns the directory's child nodes: subdirectories that contain Go files (transitively) and *.go files,
+// directories first, each sorted by name.
 func readDir(dir string, depth int) []*node {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -288,8 +280,8 @@ func flatten(n *node, out *[]*node) {
 	}
 }
 
-// fit truncates s to width with an ellipsis, or right-pads it with spaces so
-// the cursor highlight spans the full inner width.
+// fit truncates s to width with an ellipsis, or right-pads it with spaces so the cursor highlight spans the full inner
+// width.
 func fit(s string, width int) string {
 	if width <= 0 {
 		return ""
@@ -302,14 +294,4 @@ func fit(s string, width int) string {
 		return string(r[:width-1]) + "…"
 	}
 	return s + strings.Repeat(" ", width-len(r))
-}
-
-func clamp(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
 }

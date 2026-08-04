@@ -15,11 +15,12 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
-// FileView is the left pane's file display. It opens READ-ONLY and navigable —
-// a highlighted line you move with the cursor keys and follow to the spec — and
-// switches to an editable textarea on demand (`i`), returning to the viewer on
-// Esc. Disk is the source of truth; saving writes back and the watcher drives
-// the rescan. A VIM/VS-Code integration is the eventual full editor.
+// FileView is the left pane's file display.
+//
+// It opens READ-ONLY and navigable — a highlighted line you move with the cursor keys and follow to the spec — and
+// switches to an editable textarea on demand (`i`), returning to the viewer on Esc.
+// Disk is the source of truth; saving writes back and the watcher drives the rescan.
+// A VIM/VS-Code integration is the eventual full editor.
 type FileView struct {
 	ta      textarea.Model
 	w, h    int
@@ -42,18 +43,18 @@ func NewFileView() FileView {
 	return FileView{ta: ta}
 }
 
-// SetAnchors installs the source lines that produced a spec node, for the
-// viewer's link gutter (design §6.5). Keyed 1-based, matching token.Position.
+// SetAnchors installs the source lines that produced a spec node, for the viewer's link gutter (design §6.5).
+//
+// Keyed 1-based, matching token.Position.
 // A nil map renders no gutter.
 func (p *FileView) SetAnchors(lines map[int]bool) { p.anchors = lines }
 
-// SetSpans installs the per-line lexical runs used to highlight the READ-ONLY
-// viewer, keyed by 0-based line. A nil map renders the text plain, which is
-// what a non-Go file gets.
+// SetSpans installs the per-line lexical runs used to highlight the READ-ONLY viewer, keyed by 0-based line.
 //
-// Edit mode is deliberately not covered: bubbles/textarea owns its own
-// rendering and emits the buffer verbatim, so highlighting there would mean
-// replacing the widget rather than styling its output.
+// A nil map renders the text plain, which is what a non-Go file gets.
+//
+// Edit mode is deliberately not covered: bubbles/textarea owns its own rendering and emits the buffer verbatim, so
+// highlighting there would mean replacing the widget rather than styling its output.
 func (p *FileView) SetSpans(spans map[int][]theme.Span) { p.spans = spans }
 
 // SetSize fits the panel to outer dimensions w×h (border + title reserved).
@@ -92,8 +93,9 @@ func (p *FileView) MarkClean() { p.loaded = p.ta.Value() }
 // Editing reports whether the pane is in editable mode (vs the read-only viewer).
 func (p *FileView) Editing() bool { return p.editing }
 
-// CurrentLine returns the 0-based "current" line: the editor cursor row while
-// editing, else the read-only nav line. Used by source→spec cross-ref nav.
+// CurrentLine returns the 0-based "current" line: the editor cursor row while editing, else the read-only nav line.
+//
+// Used by source→spec cross-ref nav.
 func (p *FileView) CurrentLine() int {
 	if p.editing {
 		return p.ta.Line()
@@ -108,25 +110,23 @@ func (p *FileView) NavDown() { p.gotoNav(p.navLine + 1) }
 // ScrollBy moves the nav line by delta (mouse wheel in read-only mode).
 func (p *FileView) ScrollBy(delta int) { p.gotoNav(p.navLine + delta) }
 
-// GotoLine parks the read-only nav line on the 0-based line and scrolls it to
-// the VERTICAL CENTRE, clamped at the edges (design §6.1). This is the JUMP
-// primitive — cross-ref landings and follow-mode mirroring — as opposed to the
-// nav keys, which move the cursor one line and scroll as little as possible.
+// GotoLine parks the read-only nav line on the 0-based line and scrolls it to the VERTICAL CENTRE, clamped at the edges
+// (design §6.1).
 //
-// The distinction matters: a follower target moves continuously as the driver
-// scrolls, and minimal scrolling would pin it to whichever edge it entered from,
-// whereas centring keeps it still while its context slides past.
+// This is the JUMP primitive — cross-ref landings and follow-mode mirroring — as opposed to the nav keys, which
+// move the cursor one line and scroll as little as possible.
 //
-// The editor cursor is synced lazily by StartEdit, so this stays cheap when
-// called on every follow-mode move.
+// The distinction matters: a follower target moves continuously as the driver scrolls, and minimal scrolling would pin
+// it to whichever edge it entered from, whereas centring keeps it still while its context slides past.
+//
+// The editor cursor is synced lazily by StartEdit, so this stays cheap when called on every follow-mode move.
 func (p *FileView) GotoLine(line int) {
-	p.navLine = clamp(line, 0, max(p.lineCount()-1, 0))
+	p.navLine = min(max(line, 0), max(p.lineCount()-1, 0))
 	visible := max(p.h-3, 1)
-	p.offset = clamp(p.navLine-visible/2, 0, max(p.lineCount()-visible, 0))
+	p.offset = min(max(p.navLine-visible/2, 0), max(p.lineCount()-visible, 0))
 }
 
-// VisibleRows is how many lines the read-only window shows, for page-sized
-// moves of the nav line.
+// VisibleRows is how many lines the read-only window shows, for page-sized moves of the nav line.
 func (p *FileView) VisibleRows() int { return max(p.h-3, 1) }
 
 // LastLine is the index of the final line.
@@ -147,8 +147,9 @@ func (p *FileView) StopEdit() {
 	p.clampOffset()
 }
 
-// Focus focuses the editor when in edit mode (the read-only viewer needs no
-// textarea focus). Retained for the model's focus plumbing.
+// Focus focuses the editor when in edit mode (the read-only viewer needs no textarea focus).
+//
+// Retained for the model's focus plumbing.
 func (p *FileView) Focus() tea.Cmd {
 	if p.editing {
 		return p.ta.Focus()
@@ -159,8 +160,7 @@ func (p *FileView) Focus() tea.Cmd {
 // Blur removes editor focus.
 func (p *FileView) Blur() { p.ta.Blur() }
 
-// Update forwards a message to the textarea (edit mode only; the read-only
-// viewer is driven by the model's nav keys).
+// Update forwards a message to the textarea (edit mode only; the read-only viewer is driven by the model's nav keys).
 func (p *FileView) Update(msg tea.Msg) tea.Cmd {
 	if !p.editing {
 		return nil
@@ -170,10 +170,11 @@ func (p *FileView) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// View renders the bordered panel: the textarea in edit mode, a line-numbered
-// read-only viewer with the nav line highlighted otherwise. A "●" marks unsaved
-// edits. focused drives the border/title brightness; navActive drives the
-// nav-line highlight (true when focused OR mirroring as a follow follower).
+// View renders the bordered panel: the textarea in edit mode, a line-numbered read-only viewer with the nav line
+// highlighted otherwise.
+//
+// A "●" marks unsaved edits. focused drives the border/title brightness; navActive drives the nav-line highlight
+// (true when focused OR mirroring as a follow follower).
 func (p *FileView) View(focused, navActive bool) string {
 	name := p.title
 	if name == "" {
@@ -192,11 +193,11 @@ func (p *FileView) View(focused, navActive bool) string {
 	return theme.Panel(p.w, p.h, focused).Render(title + "\n" + body)
 }
 
-// viewerBody renders the read-only window: a right-aligned line-number gutter
-// and the file text, with the nav line highlighted when navActive (the pane is
-// focused, or mirroring the followed line as a follow follower). The driver pane
-// keeps focus in follow mode, so focused doubles as "this is the driver line" —
-// strong bar when it is, muted tint when this pane is only mirroring (§6.5).
+// viewerBody renders the read-only window: a right-aligned line-number gutter and the file text, with the nav line
+// highlighted when navActive (the pane is focused, or mirroring the followed line as a follow follower).
+//
+// The driver pane keeps focus in follow mode, so focused doubles as "this is the driver line" — strong bar when it
+// is, muted tint when this pane is only mirroring (§6.5).
 func (p *FileView) viewerBody(focused, navActive bool) string {
 	inner := max(p.w-2, 0)
 	visible := max(p.h-3, 0)
@@ -218,9 +219,9 @@ func (p *FileView) viewerBody(focused, navActive bool) string {
 	for i := p.offset; i < end; i++ {
 		prefix := p.gutterFor(i+1, gutW) + fmt.Sprintf("%*d ", numW, i+1)
 
-		// The nav line answers a question the user asked, so it takes the whole
-		// row; syntax colour underneath it would fight the bar's background and
-		// break it up with its own resets. Same precedence as the spec pane.
+		// The nav line answers a question the user asked, so it takes the whole row; syntax colour underneath it would fight
+		// the bar's background and break it up with its own resets.
+		// Same precedence as the spec pane.
 		row := prefix + renderSpans(lines[i], p.spans[i], textW)
 		if i == p.navLine && navActive {
 			row = style.Render(prefix + fit(lines[i], textW))
@@ -233,8 +234,10 @@ func (p *FileView) viewerBody(focused, navActive bool) string {
 	return b.String()
 }
 
-// gutterFor renders the link marker for a 1-based source line, or blanks of the
-// same width to keep the line numbers aligned. Empty when the gutter is off.
+// gutterFor renders the link marker for a 1-based source line, or blanks of the same width to keep the line numbers
+// aligned.
+//
+// Empty when the gutter is off.
 func (p *FileView) gutterFor(srcLine, width int) string {
 	if width == 0 {
 		return ""
@@ -246,9 +249,8 @@ func (p *FileView) gutterFor(srcLine, width int) string {
 	return theme.Gutter().Render(string(GutterAnchor)) + " "
 }
 
-// navStyle is the whole-line style for the highlighted nav line: the strong bar
-// when this pane drives (the driver keeps focus in follow mode, design §6.1), a
-// muted tint when it is only mirroring another pane's cursor (§6.5).
+// navStyle is the whole-line style for the highlighted nav line: the strong bar when this pane drives (the driver keeps
+// focus in follow mode, design §6.1), a muted tint when it is only mirroring another pane's cursor (§6.5).
 func navStyle(focused bool) lipgloss.Style {
 	if focused {
 		return theme.Selected()
@@ -258,12 +260,12 @@ func navStyle(focused bool) lipgloss.Style {
 
 // gotoNav clamps and sets the nav line, then re-clamps the scroll offset.
 func (p *FileView) gotoNav(line int) {
-	p.navLine = clamp(line, 0, max(p.lineCount()-1, 0))
+	p.navLine = min(max(line, 0), max(p.lineCount()-1, 0))
 	p.clampOffset()
 }
 
-// syncEditorCursor steps the textarea cursor to navLine (textarea has no
-// row-setter), so toggling into edit mode keeps the line.
+// syncEditorCursor steps the textarea cursor to navLine (textarea has no row-setter), so toggling into edit mode keeps
+// the line.
 func (p *FileView) syncEditorCursor() {
 	for p.ta.Line() < p.navLine {
 		before := p.ta.Line()
