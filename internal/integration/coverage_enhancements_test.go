@@ -413,7 +413,6 @@ func TestCoverage_EnumDocs(t *testing.T) {
 //	E. `swagger:enum` + matching consts + inline on   — override question
 //	   the field
 //
-// See `.claude/plans/workshops/w2-enum.md` §2.6 and
 // `fixtures/enhancements/enum-overrides/types.go` for the fixture.
 // The golden snapshot becomes the v1-behavior contract the v2 migration either preserves or
 // consciously diverges from.

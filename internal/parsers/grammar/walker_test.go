@@ -100,8 +100,8 @@ swagger:model Pet`
 }
 
 func TestWalker_TitleNotFiredWhenEmpty(t *testing.T) {
-	// UnboundBlock with description but no title (no first-sentence terminator before the blank line
-	// — single-line docstrings become description per parser logic).
+	// UnboundBlock with description but no title (no first-sentence terminator before the blank line — single-line
+	// docstrings become description per parser logic).
 	src := `swagger:model Foo
 
 maximum: 10`
@@ -182,8 +182,8 @@ default: hello`
 }
 
 func TestProperty_IsTyped_FailedTypingIsFalse(t *testing.T) {
-	// Failed typing: lexer rejects "notanumber" as ShapeNumber, leaves Typed.Type at ShapeNone, emits
-	// a CodeInvalidNumber diagnostic.
+	// Failed typing: lexer rejects "notanumber" as ShapeNumber, leaves Typed.Type at ShapeNone, emits a CodeInvalidNumber
+	// diagnostic.
 	//
 	// IsTyped reports false, matching reality.
 	const kw = "maximum"
@@ -196,8 +196,7 @@ func TestProperty_IsTyped_FailedTypingIsFalse(t *testing.T) {
 }
 
 func TestWalker_UnknownFiresForUntabledKeyword(t *testing.T) {
-	// "fakekeyword:" lands on an UnboundBlock as a Property whose Keyword.Name is empty (no entry in
-	// the keyword table).
+	// "fakekeyword:" lands on an UnboundBlock as a Property whose Keyword.Name is empty (no entry in the keyword table).
 	src := `Some prose.
 fakekeyword: 42`
 	b := parseString(t, src)
@@ -207,10 +206,9 @@ fakekeyword: 42`
 		Unknown: func(p Property) { unknown = append(unknown, p.Value) },
 	})
 
-	// The unknown-keyword path is exercised when the lexer emits a property with an empty
-	// Keyword.Name.
-	// If the current pipeline classifies "fakekeyword:" as prose rather than a property, Unknown stays
-	// empty — which is also valid behaviour.
+	// The unknown-keyword path is exercised when the lexer emits a property with an empty Keyword.Name.
+	// If the current pipeline classifies "fakekeyword:" as prose rather than a property, Unknown stays empty — which is
+	// also valid behaviour.
 	//
 	// We assert no panic and consistent typing.
 	if len(unknown) > 0 {

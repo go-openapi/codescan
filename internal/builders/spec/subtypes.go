@@ -13,20 +13,18 @@ import (
 	oaispec "github.com/go-openapi/spec"
 )
 
-// subtypeIndex is the reverse `swagger:allOf` index: Go type identity of a base (see typeIdentity)
-// mapped to every `swagger:model` declaration that declares that base as an `allOf` member.
+// subtypeIndex is the reverse `swagger:allOf` index: Go type identity of a base (see typeIdentity) mapped to every
+// `swagger:model` declaration that declares that base as an `allOf` member.
 //
-// It is the inverse of the reference direction the spec carries: a subtype `$ref`s its base, never
-// the other way round, so a discriminated base entering the reachable closure can only pull its
-// family in by looking the relation up backwards.
-// §15 / go-swagger#1913.
+// It is the inverse of the reference direction the spec carries: a subtype `$ref`s its base, never the other way round,
+// so a discriminated base entering the reachable closure can only pull its family in by looking the relation up
+// backwards. go-swagger#1913.
 type subtypeIndex map[string][]*scanner.EntityDecl
 
 // subtypes returns the reverse `swagger:allOf` index, building it on first use.
 //
-// The source is ScanCtx.Models() — populated by classification whether or not ScanModels is set, so
-// the index sees every annotated subtype even when none of them would be built (the no-`-m` case
-// this feature exists for).
+// The source is ScanCtx.Models() — populated by classification whether or not ScanModels is set, so the index sees
+// every annotated subtype even when none of them would be built (the no-`-m` case this feature exists for).
 //
 // Entries are ordered by definition key so the pull order — and hence the order of the emitted
 // scan.discovered-subtype Hints — does not depend on map iteration.
@@ -52,22 +50,23 @@ func (s *Builder) subtypes() subtypeIndex {
 	return idx
 }
 
-// discriminatedSubtypesOf returns the declarations to pull into discovery because decl — whose
-// definition has just been built — is a discriminated base.
+// discriminatedSubtypesOf returns the declarations to pull into discovery because decl — whose definition has just
+// been built — is a discriminated base.
 //
-// The gate is the built definition's own `discriminator`, not a source-level re-derivation: it holds
-// uniformly for an interface base with a `discriminator: true` member and for a struct base with a
-// `discriminator: true` field, and it is the same fact the emitted document exposes. A base with no
-// discriminator pulls nothing: its `allOf` users are ordinary compositions, not a polymorphic
-// family, and inventing definitions for them would over-generate.
+// The gate is the built definition's own `discriminator`, not a source-level re-derivation: it holds uniformly for an
+// interface base with a `discriminator: true` member and for a struct base with a `discriminator: true` field, and it
+// is the same fact the emitted document exposes.
 //
-// Under ScanModels the pass is a no-op: buildModels already builds every annotated model, so there
-// is nothing to pull — and pulling anyway would emit Hints whose order follows the model index's map
-// iteration. The `-m` case is served by the prune reachability rule instead (subtypeKeysOf), which is
-// where a discriminated family can actually be lost.
+// A base with no discriminator pulls nothing: its `allOf` users are ordinary compositions, not a polymorphic family,
+// and inventing definitions for them would over-generate.
 //
-// Subtypes already emitted are skipped; the discovery loop dedups queued ones, and only genuinely new
-// pulls are reported as Hints.
+// Under ScanModels the pass is a no-op: buildModels already builds every annotated model, so there is nothing to pull
+// — and pulling anyway would emit Hints whose order follows the model index's map iteration.
+// The `-m` case is served by the prune reachability rule instead (subtypeKeysOf), which is where a discriminated family
+// can actually be lost.
+//
+// Subtypes already emitted are skipped; the discovery loop dedups queued ones, and only genuinely new pulls are
+// reported as Hints.
 func (s *Builder) discriminatedSubtypesOf(decl *scanner.EntityDecl) []*scanner.EntityDecl {
 	if s.scanModels {
 		return nil
@@ -100,8 +99,7 @@ func (s *Builder) discriminatedSubtypesOf(decl *scanner.EntityDecl) []*scanner.E
 	return out
 }
 
-// isDiscriminated reports whether a definition DECLARES a discriminator of its own — the gate both
-// hooks share.
+// isDiscriminated reports whether a definition DECLARES a discriminator of its own — the gate both hooks share.
 //
 // Two shapes carry one, depending on how the type is written:
 //
@@ -112,8 +110,9 @@ func (s *Builder) discriminatedSubtypesOf(decl *scanner.EntityDecl) []*scanner.E
 //     discriminator sits in its own compound member, not at the top.
 //     Multi-level hierarchies would otherwise stop at the first level.
 //
-// Only an inline discriminator counts. A leaf subtype's `$ref` member is not followed, so it does not
-// inherit its base's discriminator and does not masquerade as a base itself.
+// Only an inline discriminator counts.
+// A leaf subtype's `$ref` member is not followed, so it does not inherit its base's discriminator and does not
+// masquerade as a base itself.
 func isDiscriminated(sch *oaispec.Schema) bool {
 	if sch == nil {
 		return false
@@ -132,10 +131,10 @@ func isDiscriminated(sch *oaispec.Schema) bool {
 
 // subtypeKeysOf returns the definition keys of the subtypes of the base emitted under defKey.
 //
-// Used by the prune reachability walk, which works in definition-key space; the bridge back to Go
-// type identity is the declIdentity side table, recorded for every definition as it is built.
-// Keys are returned whether or not they are (still) present in the definitions map — marking is
-// membership-checked by the caller.
+// Used by the prune reachability walk, which works in definition-key space; the bridge back to Go type identity is the
+// declIdentity side table, recorded for every definition as it is built.
+// Keys are returned whether or not they are (still) present in the definitions map — marking is membership-checked by
+// the caller.
 func (s *Builder) subtypeKeysOf(defKey string) []string {
 	identity, known := s.declIdentity[defKey]
 	if !known {
@@ -155,16 +154,18 @@ func (s *Builder) subtypeKeysOf(defKey string) []string {
 	return out
 }
 
-// allOfBases returns the Go type identity of every base that decl declares as an `allOf` member,
-// i.e. each embedded field carrying `swagger:allOf`.
+// allOfBases returns the Go type identity of every base that decl declares as an `allOf` member, i.e. each embedded
+// field carrying `swagger:allOf`.
 //
-// Only explicit `swagger:allOf` counts. DefaultAllOfForEmbeds — which renders a plain embed AS allOf
-// composition — is deliberately not honoured: it is a rendering knob, and letting it decide which
-// definitions exist would make the emitted set depend on an unrelated option. The polymorphic idiom
-// is the explicit annotation.
+// Only explicit `swagger:allOf` counts.
+// DefaultAllOfForEmbeds — which renders a plain embed AS allOf composition — is deliberately not honoured: it is a
+// rendering knob, and letting it decide which definitions exist would make the emitted set depend on an unrelated
+// option.
 //
-// `swagger:ignore` on the embed drops it here exactly as it does in the schema builder, so the index
-// never claims a relation the document does not carry.
+// The polymorphic idiom is the explicit annotation.
+//
+// `swagger:ignore` on the embed drops it here exactly as it does in the schema builder, so the index never claims a
+// relation the document does not carry.
 // Declarations with no embeddable members (an alias, a named basic type, …) yield nothing.
 func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
 	if decl.Spec == nil || decl.Pkg == nil || decl.Pkg.TypesInfo == nil {
@@ -184,8 +185,8 @@ func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
 		if !known {
 			continue
 		}
-		// Deduped: a struct can reach one base through two embeds (the type and an alias of it), and the
-		// index must not list the same subtype twice under one base.
+		// Deduped: a struct can reach one base through two embeds (the type and an alias of it), and the index must not list
+		// the same subtype twice under one base.
 		for _, id := range baseIdentities(tv.Type) {
 			if _, dup := seen[id]; dup {
 				continue
@@ -198,13 +199,14 @@ func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
 	return out
 }
 
-// embeddableMembers returns the member list of a declaration that can hold an embed: a struct's
-// fields or an interface's method list.
+// embeddableMembers returns the member list of a declaration that can hold an embed: a struct's fields or an
+// interface's method list.
 //
-// Both matter: a struct embeds its base as an anonymous field, and an INTERFACE embeds its base as an
-// anonymous interface — which is how a mid-level type in a multi-level hierarchy is written (a
-// subtype of the root that is itself a discriminated base). In both AST shapes an embed is the entry
-// with no Names.
+// Both matter: a struct embeds its base as an anonymous field, and an INTERFACE embeds its base as an anonymous
+// interface — which is how a mid-level type in a multi-level hierarchy is written (a subtype of the root that is
+// itself a discriminated base).
+// In both AST shapes an embed is the entry with no Names.
+//
 // Returns nothing for any other type shape.
 func embeddableMembers(spec *ast.TypeSpec) []*ast.Field {
 	switch tpe := spec.Type.(type) {
@@ -225,9 +227,8 @@ func embeddableMembers(spec *ast.TypeSpec) []*ast.Field {
 
 // isAllOfEmbed reports whether an embedded field's doc marks it as an `allOf` member.
 //
-// This mirrors the `IsAllOfMember` / `Ignored` half of the schema builder's field-doc classifier
-// (schema.scanFieldDoc) — the index needs those two signals only, and the spec builder owns no
-// field-level walker to borrow them from.
+// This mirrors the `IsAllOfMember` / `Ignored` half of the schema builder's field-doc classifier (schema.scanFieldDoc)
+// — the index needs those two signals only, and the spec builder owns no field-level walker to borrow them from.
 func isAllOfEmbed(afld *ast.Field, parser grammar.Parser) bool {
 	if afld.Doc == nil {
 		return false
@@ -246,16 +247,14 @@ func isAllOfEmbed(afld *ast.Field, parser grammar.Parser) bool {
 	return isAllOf
 }
 
-// baseIdentities returns every type identity an embedded base may be indexed under: the pointer is
-// unwrapped (`*Base` composes exactly like `Base`), and an alias contributes BOTH its own identity
-// and that of the type it names.
+// baseIdentities returns every type identity an embedded base may be indexed under: the pointer is unwrapped (`*Base`
+// composes exactly like `Base`), and an alias contributes BOTH its own identity and that of the type it names.
 //
-// Both alias identities are kept because which one the emitted `allOf` member `$ref`s depends on
-// RefAliases / TransparentAliases: indexing both means the relation is found either way, and since
-// identities are unique per declaration there is no risk of matching an unrelated base.
+// Both alias identities are kept because which one the emitted `allOf` member `$ref`s depends on RefAliases /
+// TransparentAliases: indexing both means the relation is found either way, and since identities are unique per
+// declaration there is no risk of matching an unrelated base.
 //
-// Returns nothing for an unnamed type — an anonymous struct / interface embed has no declaration to
-// index against.
+// Returns nothing for an unnamed type — an anonymous struct / interface embed has no declaration to index against.
 func baseIdentities(t types.Type) []string {
 	if ptr, isPtr := t.(*types.Pointer); isPtr {
 		t = ptr.Elem()
@@ -274,12 +273,11 @@ func baseIdentities(t types.Type) []string {
 	return out
 }
 
-// typeIdentity is the index key for a base: "<pkgpath>.<Name>", the compiler's identity for the
-// declared type.
+// typeIdentity is the index key for a base: "<pkgpath>.<Name>", the compiler's identity for the declared type.
 //
-// The Go type — not the swagger definition name — is what both ends of the relation can compute
-// without knowing the other's annotations: the embed site resolves a type, the base declaration owns
-// one, while either may carry a `swagger:model <name>` override.
+// The Go type — not the swagger definition name — is what both ends of the relation can compute without knowing the
+// other's annotations: the embed site resolves a type, the base declaration owns one, while either may carry a
+// `swagger:model <name>` override.
 // A package-less (universe) type falls back to its bare name.
 func typeIdentity(obj *types.TypeName) string {
 	if obj == nil {

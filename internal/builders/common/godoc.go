@@ -15,16 +15,16 @@ import (
 
 // godocResolver builds the doc-link resolver for the declaration currently being built.
 //
-// It maps a doc-link reference — the bracket content with any leading `*` stripped, e.g.
-// "Order.CustName" or "inventory.Ledger" — to the referenced schema's fully-qualified definition
-// key plus an exposed field-chain suffix.
+// It maps a doc-link reference — the bracket content with any leading `*` stripped,
+// e.g. "Order.CustName" or "inventory.Ledger" — to the referenced schema's fully-qualified definition key
+// plus an exposed field-chain suffix.
 //
 // A reference resolves only when its leading segment(s) name a scanned model (same-package, or via
-// a file import for a `pkg.Type` qualifier); a member segment then resolves to its exposed property
-// name.
+// a file import for a `pkg.Type` qualifier); a member segment then resolves to its exposed property name.
 //
-// References that name a non-model (a func registered as an operation, an unknown identifier, a
-// non-struct field path) return ok=false, so the caller humanizes the leaf instead.
+// References that name a non-model (a func registered as an operation, an unknown identifier, a non-struct field path)
+// return ok=false, so the caller humanizes the leaf instead.
+//
 // Returns nil when there is no usable decl context.
 func (s *Builder) godocResolver() godoclink.Resolver {
 	decl := s.Decl
@@ -74,12 +74,12 @@ func (s *Builder) godocSelf() *godoclink.SelfRef {
 	return &godoclink.SelfRef{Name: goName, DefKey: decl.DefKey()}
 }
 
-// resolveFieldChain maps a member chain on decl's struct to its exposed property suffix (e.g.
-// [".customer_name"]).
+// resolveFieldChain maps a member chain on decl's struct to its exposed property suffix (e.g. [".customer_name"]).
 //
 // An empty chain is the bare-type case (suffix "").
-// Only a single member level is resolved in this phase; deeper chains, non-struct targets, ignored
-// / un-named fields return ok=false so the caller humanizes the leaf.
+//
+// Only a single member level is resolved in this phase. Deeper chains, non-struct targets, ignored or un-named fields
+// return ok=false, so the caller humanizes the leaf.
 func (s *Builder) resolveFieldChain(decl *scanner.EntityDecl, fields []string) (string, bool) {
 	if len(fields) == 0 {
 		return "", true

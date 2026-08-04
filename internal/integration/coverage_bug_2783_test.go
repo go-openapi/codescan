@@ -20,7 +20,6 @@ import (
 // Now each keeps its own identity: two distinct Test definitions (deep-keyed by package while the
 // leaf collides) plus TestResponseBody — three definitions, deterministic.
 //
-// See the name-identity / cyclic-$ref design (.claude/plans/name-identity-cyclic-ref.md).
 func TestCoverage_Bug2783(t *testing.T) {
 	doc, err := codescan.Run(&codescan.Options{
 		Packages:   []string{"./bugs/2783/..."},

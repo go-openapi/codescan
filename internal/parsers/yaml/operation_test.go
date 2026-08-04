@@ -11,11 +11,11 @@ import (
 	oaispec "github.com/go-openapi/spec"
 )
 
-// TestUnmarshalBody_RoundTrip checks the YAML → JSON → UnmarshalJSON pipeline used by the
-// swagger:operation grammar bridge.
+// TestUnmarshalBody_RoundTrip checks the YAML → JSON → UnmarshalJSON pipeline used by the swagger:operation grammar
+// bridge.
 //
-// The raw body here matches what grammar's TokenOpaqueYaml emits for a `---` fenced block (contents
-// only, no fences, no `//` markers).
+// The raw body here matches what grammar's TokenOpaqueYaml emits for a `---` fenced block (contents only, no fences, no
+// `//` markers).
 func TestUnmarshalBody_RoundTrip(t *testing.T) {
 	body := `parameters:
   - name: limit
@@ -60,8 +60,8 @@ func TestUnmarshalBody_EmptyBody(t *testing.T) {
 	}
 }
 
-// TestUnmarshalBody_TabIndent verifies the dedent step handles tab-indented godoc-style bodies (the
-// go119 fixture style).
+// TestUnmarshalBody_TabIndent verifies the dedent step handles tab-indented godoc-style bodies (the go119 fixture
+// style).
 func TestUnmarshalBody_TabIndent(t *testing.T) {
 	body := "\tparameters:\n\t  - name: limit\n\t    in: query\n\t    type: integer\n"
 	op := new(oaispec.Operation)
@@ -73,9 +73,8 @@ func TestUnmarshalBody_TabIndent(t *testing.T) {
 	}
 }
 
-// TestUnmarshalListBody_Tags checks the sequence-shaped pipeline used by the meta `Tags:` bridge: a
-// YAML list of tag objects (with a nested externalDocs mapping and a vendor extension) round-trips
-// into []spec.Tag.
+// TestUnmarshalListBody_Tags checks the sequence-shaped pipeline used by the meta `Tags:` bridge: a YAML list of tag
+// objects (with a nested externalDocs mapping and a vendor extension) round-trips into []spec.Tag.
 //
 // Tab-indented like a real godoc comment body.
 func TestUnmarshalListBody_Tags(t *testing.T) {

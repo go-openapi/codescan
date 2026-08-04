@@ -49,8 +49,8 @@ func TestCoerceValue_PrimitiveTypes(t *testing.T) {
 }
 
 func TestCoerceValue_StringStripsSurroundingQuotes(t *testing.T) {
-	// quirk F8 (go-swagger#2547 / #2899): surrounding quotes on a string-typed example/default are
-	// delimiters and must be stripped.
+	// quirk F8 (go-swagger#2547 / #2899): surrounding quotes on a string-typed example/default are delimiters and must be
+	// stripped.
 	cases := []struct {
 		name string
 		raw  string
@@ -92,8 +92,8 @@ func TestCoerceValue_InvalidJSONFallsBackToRaw(t *testing.T) {
 
 func TestCoerceValue_FormatPrecedenceQuirk(t *testing.T) {
 	// v1 quirk: SimpleSchema.TypeName() returns Format when Format is non-empty.
-	// With Type="number" and Format="float", TypeName() returns "float" — NOT in the switch — so
-	// the value falls through to default and is returned as raw string.
+	// With Type="number" and Format="float", TypeName() returns "float" — NOT in the switch — so the value falls
+	// through to default and is returned as raw string.
 	// The schema builder's schemeFromPS deliberately drops Format to avoid this.
 	//
 	// This test pins the v1-bug behaviour for parity through S1–S6; S3 introduces a corrected path.
@@ -103,8 +103,7 @@ func TestCoerceValue_FormatPrecedenceQuirk(t *testing.T) {
 }
 
 func TestCoerceJSONOrString(t *testing.T) {
-	// JSON object/array literals parse structurally (quirk G3: the $ref override arm has no Type to
-	// dispatch on).
+	// JSON object/array literals parse structurally (quirk G3: the $ref override arm has no Type to dispatch on).
 	assert.Equal(t, map[string]any{"k": "v"}, validations.CoerceJSONOrString(`{"k":"v"}`))
 	assert.Equal(t, map[string]any{"name": "Rex"}, validations.CoerceJSONOrString(`  {"name":"Rex"}  `))
 	assert.Equal(t, []any{float64(1), float64(2)}, validations.CoerceJSONOrString(`[1,2]`))
@@ -113,14 +112,13 @@ func TestCoerceJSONOrString(t *testing.T) {
 	// A malformed JSON literal falls back to the (unquoted) string.
 	assert.Equal(t, "{not json", validations.CoerceJSONOrString("{not json"))
 
-	// Non-JSON scalars are left as plain strings; surrounding double quotes are stripped (mirroring
-	// CoerceValue's string arm).
+	// Non-JSON scalars are left as plain strings; surrounding double quotes are stripped (mirroring CoerceValue's string
+	// arm).
 	assert.Equal(t, "plain-scalar", validations.CoerceJSONOrString("plain-scalar"))
 	assert.Equal(t, "quoted", validations.CoerceJSONOrString(`"quoted"`))
 	assert.Equal(t, "", validations.CoerceJSONOrString(`""`))
 
-	// Bare scalars are NOT coerced to numbers/booleans — the referenced type is unknown on the
-	// override arm.
+	// Bare scalars are NOT coerced to numbers/booleans — the referenced type is unknown on the override arm.
 	assert.Equal(t, "42", validations.CoerceJSONOrString("42"))
 	assert.Equal(t, "true", validations.CoerceJSONOrString("true"))
 }
@@ -145,8 +143,8 @@ func TestCoerceEnum_CommaListWhitespaceTrimmed(t *testing.T) {
 	assert.Equal(t, []any{"a", "b", "c"}, out)
 }
 
-// go-swagger#2396: the bracketed comma-list form has unquoted values, so it is not valid JSON and
-// falls to the comma-list path.
+// go-swagger#2396: the bracketed comma-list form has unquoted values, so it is not valid JSON and falls to the
+// comma-list path.
 //
 // The surrounding brackets are delimiters and must be stripped, matching the unbracketed form.
 func TestCoerceEnum_BracketedCommaList(t *testing.T) {

@@ -33,7 +33,7 @@ type Pet struct {
 //
 // swagger:model
 type Color struct {
-	R, G, B, A uint8 `json:",omitempty"`
+	R, G, B, A uint8 `json:",omitempty"` //nolint:tagliatelle // we precisely want to demonstrate how tags work
 }
 
 // endsnippet:multiname

@@ -6,7 +6,6 @@
 // inference. The golden output of TestCoverage_EnumOverrides is the
 // factual reference for what the v2 parser migration must preserve
 // — or consciously diverge from — under W2's override semantics
-// (`.claude/plans/workshops/w2-enum.md` §2.6).
 //
 // Five cases, one per model in this file:
 //

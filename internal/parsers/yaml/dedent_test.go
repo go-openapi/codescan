@@ -10,10 +10,9 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 )
 
-// TestRemoveIndent_LeadingBlankLine pins quirk F7: when a body starts with a blank line (the one
-// gofmt inserts under a column-0 doc-comment key), the dedent strip width must come from the first
-// non-blank line, not the blank line — otherwise the tab-indented children survive and the YAML
-// parser rejects them.
+// TestRemoveIndent_LeadingBlankLine pins another quirk: when a body starts with a blank line (the one gofmt inserts under a
+// column-0 doc-comment key), the dedent strip width must come from the first non-blank line, not the blank line —
+// otherwise the tab-indented children survive and the YAML parser rejects them.
 //
 // The fixed output dedents and retabs identically to the blank-line-free form.
 func TestRemoveIndent_LeadingBlankLine(t *testing.T) {
@@ -36,13 +35,12 @@ func TestRemoveIndent_LeadingBlankLine(t *testing.T) {
 	}
 }
 
-// TestRemoveIndent_InterleavedProseAndCodeBlocks pins the swagger:operation counterpart of F7: a
-// gofmt-canonical operation body interleaves prose-rendered top-level keys (one leading space) with
-// tab-prefixed value blocks.
+// TestRemoveIndent_InterleavedProseAndCodeBlocks pins the swagger:operation counterpart of the previous test:
+// a gofmt-canonical operation body interleaves prose-rendered top-level keys (one leading space) with tab-prefixed
+// value blocks.
 //
-// Expanding leading tabs to spaces BEFORE the first-non-blank-line strip preserves the relative
-// nesting; the previous strip-then-retab approach stripped the children's lone tab off and
-// flattened them.
+// Expanding leading tabs to spaces BEFORE the first-non-blank-line strip preserves the relative nesting; the previous
+// strip-then-retab approach stripped the children's lone tab off and flattened them.
 func TestRemoveIndent_InterleavedProseAndCodeBlocks(t *testing.T) {
 	in := []string{
 		" responses:",
@@ -74,15 +72,14 @@ func TestRemoveIndent_InterleavedProseAndCodeBlocks(t *testing.T) {
 	}
 }
 
-// TestRemoveIndent_ColumnZeroKey checks that a column-0 first non-blank line (no indent to strip)
-// leaves the body untouched.
+// TestRemoveIndent_ColumnZeroKey checks that a column-0 first non-blank line (no indent to strip) leaves the body
+// untouched.
 func TestRemoveIndent_ColumnZeroKey(t *testing.T) {
 	in := []string{"", "oauth2:", "  type: oauth2"}
 	assert.Equal(t, in, RemoveIndent(in))
 }
 
-// TestRemoveIndent_AllBlank returns the input unchanged when every line is blank (no canonical line
-// to key off).
+// TestRemoveIndent_AllBlank returns the input unchanged when every line is blank (no canonical line to key off).
 func TestRemoveIndent_AllBlank(t *testing.T) {
 	in := []string{"", "  ", "\t"}
 	assert.Equal(t, in, RemoveIndent(in))

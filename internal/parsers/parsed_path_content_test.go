@@ -54,12 +54,14 @@ func TestParseRoutePathAnnotation(t *testing.T) {
 			wantTags:   []string{"pets", "admin"},
 		},
 
-		// One-character names. Both regexes used to require a letter followed by AT LEAST ONE more
-		// character, and since the tags group is optional the parse did not fail there — it fell back to
-		// matching with no tags, leaving the operationId pattern to swallow `e listPets`, which its
-		// alphabet has no space for. The line then matched nothing at all, and a `swagger:route` that
-		// matches nothing is not a malformed route but simply not a route: the whole annotation vanished
-		// without a word. Neither restriction has any basis in OAS 2.0.
+		// One-character names.
+		// Both regexes used to require a letter followed by AT LEAST ONE more character, and since the tags group is optional
+		// the parse did not fail there — it fell back to matching with no tags, leaving the operationId pattern to swallow
+		// `e listPets`, which its alphabet has no space for.
+		//
+		// The line then matched nothing at all, and a `swagger:route` that matches nothing is not a malformed route but
+		// simply not a route: the whole annotation vanished without a word.
+		// Neither restriction has any basis in OAS 2.0.
 		{
 			name:       "single-character tag",
 			line:       "// swagger:route GET /pets e listPets",

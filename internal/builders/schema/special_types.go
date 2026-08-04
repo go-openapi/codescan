@@ -113,73 +113,81 @@ func ApplyStdlibSpecials(obj *types.TypeName, target ifaces.SwaggerTypable, skip
 // (skipExt plumbing) and [§quirks](./README.md#quirks) (per-recognizer rationale).
 func applySpecialType(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool, wanted ...recognizeType) (resolved bool) {
 	for _, typeKey := range wanted {
-		switch typeKey {
-		case recognizeTime: // special case of the "time.Time" type
-			if resolvers.IsStdTime(obj) {
-				target.Typed("string", "date-time")
-
-				return true
-			}
-
-		case recognizeAny: // e.g type X any or type X interface{}
-			if resolvers.IsAny(obj) {
-				_ = target.Schema()
-
-				return true
-			}
-
-		case recognizeError: // predeclared error; see [§quirks](./README.md#quirks) for x-go-type rationale.
-			if resolvers.IsStdError(obj) {
-				if !skipExt {
-					target.AddExtension("x-go-type", obj.Name())
-				}
-				target.Typed("string", "")
-				return true
-			}
-
-		case recognizeRawMessage: // json.RawMessage; see [§quirks](./README.md#quirks) for the "any" rationale.
-			if resolvers.IsStdJSONRawMessage(obj) {
-				_ = target.Schema()
-				return true
-			}
-
-		case recognizeStdUUID: // identity — go1.27 stdlib uuid.UUID.
-			if resolvers.IsStdUUID(obj) {
-				target.Typed("string", "uuid")
-				return true
-			}
-
-		case recognizeOpaqueStream: // identity — see [§opaque-streams](./README.md#opaque-streams).
-			if resolvers.IsOpaqueStream(obj) {
-				// x-go-type records which stream this was, because neither answer below can: `byte` says
-				// base64 bytes and `file` says an upload, and every recognized type collapses onto the
-				// same schema either way. That is the `recognizeError` criterion — stamp when the
-				// rendering erases the type — and not the `time.Time` / uuid one, where the format IS
-				// the type. See [§traceability](./README.md#traceability).
-				if !skipExt {
-					target.AddExtension("x-go-type", obj.Pkg().Path()+"."+obj.Name())
-				}
-				// The only two answers a stream can honestly take, chosen by what the position permits
-				// rather than by anything in the declaration. `file` is legal on a formData parameter and
-				// nowhere else in OAS 2.0, and it is the canonical upload shape; everywhere else the
-				// stream is base64 in a string, which is how OAS 2.0 spells "opaque bytes".
-				if target.In() == inFormData {
-					target.Typed("file", "")
-					return true
-				}
-				target.Typed("string", "byte")
-				return true
-			}
-
-		case recognizeUUID: // fuzzy — see [§special-types](./README.md#special-types).
-			if obj != nil && strings.ToLower(obj.Name()) == "uuid" {
-				target.Typed("string", "uuid")
-				return true
-			}
-
-		default:
-			// ignored
+		if resolved := applySpecialTypeForKey(obj, target, skipExt, typeKey); resolved {
+			return true
 		}
+	}
+
+	return false
+}
+
+func applySpecialTypeForKey(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool, typeKey recognizeType) (resolved bool) {
+	switch typeKey {
+	case recognizeTime: // special case of the "time.Time" type
+		if resolvers.IsStdTime(obj) {
+			target.Typed("string", "date-time")
+
+			return true
+		}
+
+	case recognizeAny: // e.g type X any or type X interface{}
+		if resolvers.IsAny(obj) {
+			_ = target.Schema()
+
+			return true
+		}
+
+	case recognizeError: // predeclared error; see [§quirks](./README.md#quirks) for x-go-type rationale.
+		if resolvers.IsStdError(obj) {
+			if !skipExt {
+				target.AddExtension("x-go-type", obj.Name())
+			}
+			target.Typed("string", "")
+			return true
+		}
+
+	case recognizeRawMessage: // json.RawMessage; see [§quirks](./README.md#quirks) for the "any" rationale.
+		if resolvers.IsStdJSONRawMessage(obj) {
+			_ = target.Schema()
+			return true
+		}
+
+	case recognizeStdUUID: // identity — go1.27 stdlib uuid.UUID.
+		if resolvers.IsStdUUID(obj) {
+			target.Typed("string", "uuid")
+			return true
+		}
+
+	case recognizeOpaqueStream: // identity — see [§opaque-streams](./README.md#opaque-streams).
+		if resolvers.IsOpaqueStream(obj) {
+			// x-go-type records which stream this was, because neither answer below can: `byte` says
+			// base64 bytes and `file` says an upload, and every recognized type collapses onto the
+			// same schema either way. That is the `recognizeError` criterion — stamp when the
+			// rendering erases the type — and not the `time.Time` / uuid one, where the format IS
+			// the type. See [§traceability](./README.md#traceability).
+			if !skipExt {
+				target.AddExtension("x-go-type", obj.Pkg().Path()+"."+obj.Name())
+			}
+			// The only two answers a stream can honestly take, chosen by what the position permits
+			// rather than by anything in the declaration. `file` is legal on a formData parameter and
+			// nowhere else in OAS 2.0, and it is the canonical upload shape; everywhere else the
+			// stream is base64 in a string, which is how OAS 2.0 spells "opaque bytes".
+			if target.In() == inFormData {
+				target.Typed("file", "")
+				return true
+			}
+			target.Typed("string", "byte")
+			return true
+		}
+
+	case recognizeUUID: // fuzzy — see [§special-types](./README.md#special-types).
+		if obj != nil && strings.ToLower(obj.Name()) == "uuid" {
+			target.Typed("string", "uuid")
+			return true
+		}
+
+	default:
+		// ignored
 	}
 
 	return false

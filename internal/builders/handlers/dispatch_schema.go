@@ -184,8 +184,7 @@ func ApplyPatternProperties(p grammar.Property, valid SchemaValidations, val str
 //
 // The keyword name is used to prefix the message so pattern and patternProperties produce parallel
 // diagnostics.
-// No-op on empty val or nil diag — the value is always preserved on the schema by the caller
-// regardless.
+// No-op on empty val or nil diag — the value is always preserved on the schema by the caller regardless.
 func warnInvalidRE2(p grammar.Property, keyword, val string, diag func(grammar.Diagnostic)) {
 	if val == "" || diag == nil {
 		return
@@ -318,8 +317,8 @@ func schemaIntegerHandler(ps *oaispec.Schema, valid SchemaValidations,
 // the property schema.
 //
 // Under SimpleSchemaMode, full-Schema-only keywords (readOnly, discriminator) emit
-// CodeUnsupportedInSimpleSchema and skip; `required:` is silently skipped — see
-// [§simple-schema-keywords](./README.md#simple-schema-keywords).
+// CodeUnsupportedInSimpleSchema and skip; `required:` is silently skipped
+// — see [§simple-schema-keywords](./README.md#simple-schema-keywords).
 func schemaBoolHandler(enclosing, ps *oaispec.Schema, name string, valid SchemaValidations,
 	diag func(grammar.Diagnostic), opts SchemaOptions,
 ) func(grammar.Property, bool) {
@@ -478,8 +477,7 @@ func ParseExternalDocs(body string) (*oaispec.ExternalDocumentation, error) {
 
 // checkShape gates a Walker callback on validations.IsLegalForType(p.Keyword, schema-type).
 //
-// On mismatch, emits a CodeShapeMismatch diagnostic and returns false so the caller drops the
-// property.
+// On mismatch, emits a CodeShapeMismatch diagnostic and returns false so the caller drops the property.
 func checkShape(p grammar.Property, ps *oaispec.Schema, diag func(grammar.Diagnostic)) bool {
 	var schemaType string
 	if ps != nil && len(ps.Type) > 0 {
@@ -500,29 +498,7 @@ func checkShape(p grammar.Property, ps *oaispec.Schema, diag func(grammar.Diagno
 	return false
 }
 
-// RecheckSchemaShape re-validates the shape-constrained validations already written onto sch
-// against sch's now-resolved type, stripping any that are illegal for that type and emitting
-// CodeShapeMismatch for each (at pos).
-//
-// This exists for the top-level model decl path only: there the doc-comment block is dispatched
-// (via DispatchSchemaLevel0) before the Go type has been built onto the schema, so the inline
-// checkShape sees an empty type and cannot gate.
-//
-// Field- and items-level dispatch already run after their target's type is set, so they don't need
-// it.
-//
-// uniqueItems is intentionally not rechecked: its grammar keyword (`unique`) carries no type-domain
-// rule, matching the field/items paths which likewise never shape-gate it. diag may be nil.
-// RecoerceDeclValues re-types `default`, `example` and `enum` on a declaration's schema once the Go
-// type is known.
-//
-// A declaration's comment block is dispatched BEFORE its Go type is resolved onto the schema (see
-// buildFromDecl), so these three keywords ran through ParseDefault / ParseEnumValues with an empty
-// schema type and fell back to their raw string form: `default: 8080` on a named int became the
-// string "8080", `enum: 1,2,3` became ["1","2","3"] — an enum no validator can satisfy on an
-// integer schema — and a JSON array became a string holding JSON source. The same keywords on a
-// struct field, a parameter or a header were always correct, because there the type is known when
-// the walk runs.
+// RecoerceDeclValues runs a value coercion.
 //
 // Re-coercion is safe precisely because the fallback preserved the author's raw text verbatim: a
 // value still stored as a string is one that was never typed. A string-typed schema is skipped —
@@ -624,6 +600,30 @@ func pruneUncoercibleEnum(sch *oaispec.Schema, pos token.Position, diag func(gra
 	sch.Enum = kept
 }
 
+// RecheckSchemaShape re-validates the shape-constrained validations already written onto sch
+// against sch's now-resolved type, stripping any that are illegal for that type and emitting
+// CodeShapeMismatch for each (at pos).
+//
+// This exists for the top-level model decl path only: there the doc-comment block is dispatched
+// (via DispatchSchemaLevel0) before the Go type has been built onto the schema, so the inline
+// checkShape sees an empty type and cannot gate.
+//
+// Field- and items-level dispatch already run after their target's type is set, so they don't need
+// it.
+//
+// uniqueItems is intentionally not rechecked: its grammar keyword (`unique`) carries no type-domain
+// rule, matching the field/items paths which likewise never shape-gate it. diag may be nil.
+// RecoerceDeclValues re-types `default`, `example` and `enum` on a declaration's schema once the Go
+// type is known.
+//
+// A declaration's comment block is dispatched BEFORE its Go type is resolved onto the schema (see
+// buildFromDecl), so these three keywords ran through ParseDefault / ParseEnumValues with an empty
+// schema type and fell back to their raw string form: `default: 8080` on a named int became the
+// string "8080", `enum: 1,2,3` became ["1","2","3"] — an enum no validator can satisfy on an
+// integer schema — and a JSON array became a string holding JSON source.
+//
+// The same keywords on a struct field, a parameter or a header were always correct,
+// because there the type is known when the walk runs.
 func RecheckSchemaShape(sch *oaispec.Schema, pos token.Position, diag func(grammar.Diagnostic)) {
 	if sch == nil || len(sch.Type) == 0 {
 		return
@@ -653,11 +653,11 @@ func RecheckSchemaShape(sch *oaispec.Schema, pos token.Position, diag func(gramm
 	drop(grammar.KwPatternProperties, len(sch.PatternProperties) > 0, func() { sch.PatternProperties = nil })
 }
 
-// clearStaleEnumDesc removes the x-go-enum-desc extension and strips the matching suffix from
-// ps.Description.
+// clearStaleEnumDesc removes the x-go-enum-desc extension and strips the matching suffix from ps.Description.
 //
-// Called from SetEnum when a field-level `enum:` overrides a type-level `swagger:enum` — see
-// [§stale-enum-desc](./README.md#stale-enum-desc).
+// Called from SetEnum when a field-level `enum:` overrides a type-level `swagger:enum`.
+//
+// See [§stale-enum-desc](./README.md#stale-enum-desc).
 func clearStaleEnumDesc(ps *oaispec.Schema) {
 	enumDesc := resolvers.GetEnumDesc(ps.Extensions)
 	if enumDesc == "" {

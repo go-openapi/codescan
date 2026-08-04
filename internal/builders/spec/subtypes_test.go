@@ -23,8 +23,8 @@ const (
 
 // newSubtypesBuilder loads the discriminated-subtypes fixture and returns a Builder over it.
 //
-// ScanModels is off on purpose: the reverse index is fed by the model index, which classification
-// populates either way — that independence is what makes the no-`-m` pull possible at all.
+// ScanModels is off on purpose: the reverse index is fed by the model index, which classification populates either way
+// — that independence is what makes the no-`-m` pull possible at all.
 func newSubtypesBuilder(t *testing.T) *Builder {
 	t.Helper()
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
@@ -60,8 +60,8 @@ func findModelDecl(t *testing.T, b *Builder, name string) *scanner.EntityDecl {
 	return nil
 }
 
-// TestSubtypeIndex locks the reverse `swagger:allOf` index: which embeds establish a subtype
-// relation, and under which base identity.
+// TestSubtypeIndex locks the reverse `swagger:allOf` index: which embeds establish a subtype relation, and under which
+// base identity.
 func TestSubtypeIndex(t *testing.T) {
 	b := newSubtypesBuilder(t)
 	idx := b.subtypes()
@@ -78,8 +78,7 @@ func TestSubtypeIndex(t *testing.T) {
 	})
 
 	t.Run("the index is built regardless of the base carrying a discriminator", func(t *testing.T) {
-		// The discriminated gate lives in discriminatedSubtypesOf, not in the index: the index is a pure
-		// source fact.
+		// The discriminated gate lives in discriminatedSubtypesOf, not in the index: the index is a pure source fact.
 		assert.Equal(t, []string{subtypesFixtureRoot + "/PlainSub"}, declKeys(idx[plainBaseIdentity]))
 	})
 
@@ -93,8 +92,8 @@ func TestSubtypeIndex(t *testing.T) {
 	})
 
 	t.Run("an alias embed is also indexed under the alias's own identity", func(t *testing.T) {
-		// Which of the two the emitted allOf member $refs depends on RefAliases / TransparentAliases, so
-		// the relation is recorded under both.
+		// Which of the two the emitted allOf member $refs depends on RefAliases / TransparentAliases, so the relation is
+		// recorded under both.
 		assert.Equal(t, []string{subtypesFixtureRoot + "/edges/Trike"}, declKeys(idx[vehicleAliasID]))
 	})
 
@@ -122,8 +121,7 @@ func TestSubtypeIndex(t *testing.T) {
 	})
 }
 
-// TestDiscriminatedSubtypesOf locks the discriminated gate and the already-emitted filter of the
-// discovery-side pull.
+// TestDiscriminatedSubtypesOf locks the discriminated gate and the already-emitted filter of the discovery-side pull.
 func TestDiscriminatedSubtypesOf(t *testing.T) {
 	b := newSubtypesBuilder(t)
 	base := findModelDecl(t, b, "TeslaCar")
@@ -153,8 +151,9 @@ func TestDiscriminatedSubtypesOf(t *testing.T) {
 	})
 
 	t.Run("under ScanModels the pull is a no-op", func(t *testing.T) {
-		// Every model is built up front there, so pulling would add nothing and would emit Hints in model-
-		// index iteration order. The -m case is served by the prune reachability rule.
+		// Every model is built up front there, so pulling would add nothing and would emit Hints in model- index iteration
+		// order.
+		// The -m case is served by the prune reachability rule.
 		withModels := NewBuilder(nil, b.ctx, true)
 		withModels.definitions[base.DefKey()] = oaispec.Schema{
 			SwaggerSchemaProps: oaispec.SwaggerSchemaProps{Discriminator: "model"},
@@ -173,8 +172,8 @@ func TestDiscriminatedSubtypesOf(t *testing.T) {
 	})
 }
 
-// TestSubtypeIndex_Nested locks the multi-level hierarchy in the index: an INTERFACE that embeds a
-// discriminated interface is a subtype too, and is itself a base for the structs below it.
+// TestSubtypeIndex_Nested locks the multi-level hierarchy in the index: an INTERFACE that embeds a discriminated
+// interface is a subtype too, and is itself a base for the structs below it.
 func TestSubtypeIndex_Nested(t *testing.T) {
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
 		Packages: []string{"./enhancements/discriminated-subtypes-nested/..."},
@@ -186,8 +185,8 @@ func TestSubtypeIndex_Nested(t *testing.T) {
 	const nested = "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes-nested"
 
 	t.Run("an interface embed establishes a subtype relation", func(t *testing.T) {
-		// A struct embeds its base as an anonymous field, an interface as an anonymous interface — the
-		// index must read both member lists, or a hierarchy stops at its first level.
+		// A struct embeds its base as an anonymous field, an interface as an anonymous interface — the index must read both
+		// member lists, or a hierarchy stops at its first level.
 		assert.Equal(t,
 			[]string{nested + "/Circle", nested + "/Polygon"},
 			declKeys(idx[nested+".Shape"]),
@@ -201,8 +200,8 @@ func TestSubtypeIndex_Nested(t *testing.T) {
 	})
 }
 
-// TestIsDiscriminated locks the gate shared by both hooks: where a definition may declare a
-// discriminator, and what must NOT count as one.
+// TestIsDiscriminated locks the gate shared by both hooks: where a definition may declare a discriminator, and what
+// must NOT count as one.
 func TestIsDiscriminated(t *testing.T) {
 	discriminated := func(name string) oaispec.Schema {
 		return oaispec.Schema{SwaggerSchemaProps: oaispec.SwaggerSchemaProps{Discriminator: name}}
@@ -224,8 +223,8 @@ func TestIsDiscriminated(t *testing.T) {
 	})
 
 	t.Run("a mid-level base declares it inside its own allOf member", func(t *testing.T) {
-		// This is the emitted shape of a subtype that is itself a base: its properties (and hence its
-		// discriminator) land in the compound member, never at the top.
+		// This is the emitted shape of a subtype that is itself a base: its properties (and hence its discriminator) land in
+		// the compound member, never at the top.
 		sch := oaispec.Schema{SchemaProps: oaispec.SchemaProps{
 			AllOf: []oaispec.Schema{refTo("#/definitions/Root"), discriminated("polygonType")},
 		}}
@@ -233,8 +232,8 @@ func TestIsDiscriminated(t *testing.T) {
 	})
 
 	t.Run("a leaf subtype does not inherit its base's discriminator", func(t *testing.T) {
-		// The $ref member is not followed, so pointing at a discriminated base does not make the leaf a
-		// base — otherwise every subtype would pull its siblings.
+		// The $ref member is not followed, so pointing at a discriminated base does not make the leaf a base — otherwise
+		// every subtype would pull its siblings.
 		sch := oaispec.Schema{SchemaProps: oaispec.SchemaProps{
 			AllOf: []oaispec.Schema{refTo("#/definitions/Root"), {}},
 		}}
@@ -242,8 +241,7 @@ func TestIsDiscriminated(t *testing.T) {
 	})
 }
 
-// TestSubtypeKeysOf locks the prune-side bridge: definition key -> Go type identity -> subtype
-// definition keys.
+// TestSubtypeKeysOf locks the prune-side bridge: definition key -> Go type identity -> subtype definition keys.
 func TestSubtypeKeysOf(t *testing.T) {
 	b := newSubtypesBuilder(t)
 	base := findModelDecl(t, b, "TeslaCar")
