@@ -108,9 +108,14 @@ func loadPackages(opts *Options) ([]*packages.Package, error) {
 			GOEXPERIMENT: opts.GOEXPERIMENT,
 		}),
 		ownpackages.WithOnSynthesized(synthesisReporter(opts)),
+		ownpackages.WithOnExportOnly(exportOnlyReporter(opts)),
 	}
 	if opts.StubStdlib {
 		loaderOpts = append(loaderOpts, ownpackages.WithStubbedStdlib())
+	}
+	if opts.CompiledDependencies {
+		loaderOpts = append(loaderOpts, ownpackages.WithCompiledDependencies())
+		reportCompiledDependencies(opts)
 	}
 	if opts.ExportData != nil {
 		loaderOpts = append(loaderOpts, ownpackages.WithExportData(opts.ExportData))
@@ -134,6 +139,41 @@ func loaderStrategy(opts *Options) ownpackages.Strategy {
 	}
 
 	return ownpackages.StrategyGoPackages
+}
+
+// reportCompiledDependencies announces that dependency source is not being read.
+//
+// The option trades a large amount of time for something that does not show up as an error anywhere:
+// a dependency's annotations are simply not there. strfmt is the case that matters — it marks its own
+// types with `swagger:strfmt`, and those marks are what turn a strfmt.DateTime field into a
+// date-time. Losing them quietly is exactly the kind of thinning this scanner reports rather than
+// leaves to be noticed.
+func reportCompiledDependencies(opts *Options) {
+	if opts.OnDiagnostic == nil {
+		return
+	}
+
+	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
+		"dependency types come from compiled export data: their source is not read, so annotations "+
+			"written in a dependency are not seen — including the swagger:strfmt marks that give "+
+			"strfmt.DateTime and friends their format"))
+}
+
+// exportOnlyReporter turns "types without source" notices into scan diagnostics.
+//
+// Export data plus source is the intended shape. This fires for the dependency where only the types
+// were available, and it is worth saying per package: the annotations that package carries — a
+// swagger:strfmt, a swagger:model — are simply not read, and nothing in the emitted spec shows a gap.
+func exportOnlyReporter(opts *Options) func(ownpackages.ExportOnly) {
+	if opts.OnDiagnostic == nil {
+		return nil
+	}
+
+	return func(e ownpackages.ExportOnly) {
+		opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
+			"types for %q came from export data but %s, so any annotation it carries is not read",
+			e.Path, e.Reason))
+	}
 }
 
 // synthesisReporter turns the loader's synthesized-import notices into scan diagnostics.

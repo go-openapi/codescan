@@ -24,6 +24,94 @@ import (
 // So read them instead. The saving is in the parsing and type-checking avoided, not in the I/O:
 // filesystem syscalls account for under 2% of a full WASI scan.
 
+// exportedPackage builds the *Package a dependency served from export data is seen as.
+//
+// Types only, and no syntax. A package reached this way is one that says nothing about its own types
+// — see carriesAnnotations — so there is nothing in its source for a scan to read.
+func (ld *loadState) exportedPackage(importPath string, tpkg *types.Package) *Package {
+	return &Package{
+		ID:      importPath,
+		Name:    tpkg.Name(),
+		PkgPath: importPath,
+		Types:   tpkg,
+		Fset:    ld.fset,
+		Imports: map[string]*Package{},
+	}
+}
+
+// carriesAnnotations reports whether a dependency's source says anything a scan would read.
+//
+// This is the whole of the export-data policy, and it is a policy rather than an optimisation. Export
+// data holds types and not comments, and there is no way to put the missing half back afterwards:
+// go/types records what a type EXPRESSION denotes in types.Info.Types, whose entries cannot be
+// constructed outside that package — the field distinguishing a type from a value is unexported. A
+// package assembled from export data plus parsed syntax therefore has declarations the builders will
+// read and no record of what those declarations denote, which is not a degraded scan but a panicking
+// one.
+//
+// So the choice is made per package and made whole: a dependency that carries annotations is loaded
+// from source like any other, and one that does not is taken from export data with no syntax at all.
+// Nothing is lost either way, and the saving survives, because it was never in the packages a scan
+// reads — it is in the closure behind them, which export data still serves.
+func (ld *loadState) carriesAnnotations(importPath string) bool {
+	if known, ok := ld.annotated[importPath]; ok {
+		return known
+	}
+
+	found := ld.scanForAnnotations(importPath)
+	ld.annotated[importPath] = found
+
+	return found
+}
+
+// annotationMarker is what every codescan annotation begins with.
+const annotationMarker = "swagger:"
+
+// scanForAnnotations looks for the marker in a package's source, without parsing it.
+func (ld *loadState) scanForAnnotations(importPath string) bool {
+	dir, _, ok := ld.res.ResolveImport(importPath)
+	if !ok {
+		// No source to consult. The types still stand; what the package said about them is out of
+		// reach, and that is worth saying because it shows up in the output as nothing at all.
+		ld.reportExportOnly(importPath, "its source is not on the filesystem")
+
+		return false
+	}
+
+	bp, err := ld.ctx.ImportDir(dir, 0)
+	if err != nil {
+		ld.reportExportOnly(importPath, "its source could not be read")
+
+		return false
+	}
+
+	names := make([]string, 0, len(bp.GoFiles)+len(bp.CgoFiles))
+	names = append(names, bp.GoFiles...)
+	names = append(names, bp.CgoFiles...)
+
+	for _, name := range names {
+		blob, readErr := ld.vfs.ReadFile(ld.vfs.Join(dir, name))
+		if readErr != nil {
+			continue
+		}
+		if bytes.Contains(blob, []byte(annotationMarker)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// reportExportOnly announces a dependency whose types were read but whose source was not.
+func (ld *loadState) reportExportOnly(importPath, why string) {
+	if ld.onExportOnly == nil || ld.exportOnlyReported[importPath] {
+		return
+	}
+	ld.exportOnlyReported[importPath] = true
+
+	ld.onExportOnly(ExportOnly{Path: importPath, Reason: why})
+}
+
 // importExported returns a package read from export data, completing anything it refers to.
 func (ld *loadState) importExported(importPath string) (*types.Package, error) {
 	if pkg, ok := ld.exported[importPath]; ok && pkg.Complete() {

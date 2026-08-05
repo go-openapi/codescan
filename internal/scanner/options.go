@@ -110,6 +110,31 @@ type Options struct {
 	// Experimental: see ToolchainFreeLoader.
 	StubStdlib bool
 
+	// CompiledDependencies takes dependency types from the compiler's export data instead of reading
+	// their source, under the go/packages loader.
+	//
+	// Parsing and type-checking dependencies is most of what a load does, and on a warm build cache
+	// this removes nearly all of it. On a cold cache it is markedly slower, since the dependencies must
+	// be compiled first.
+	//
+	// The trade is dependency SOURCE. Export data carries the full exported type surface — fields,
+	// method sets, interface identity — but no syntax and no comments, so a swagger annotation written
+	// in a DEPENDENCY is not read.
+	//
+	// For this project that is not a corner case. go-openapi's own strfmt marks its types with
+	// `swagger:strfmt date-time`, `uuid`, `email` and the rest, and those marks are the only reason a
+	// strfmt.DateTime field acquires a format. Under this option the field keeps its type and loses its
+	// format — the spec stays valid and says less. Every scan with it on raises a
+	// scan.compiled-dependencies Hint, because nothing else in the output would tell you.
+	//
+	// Worth it where dependencies are ordinary libraries whose types matter and whose comments do not.
+	// Not worth it for most codescan users, who depend on strfmt precisely for the formats.
+	//
+	// The toolchain-free loader has ExportData below, which is the same idea supplied by hand.
+	//
+	// Experimental: see ToolchainFreeLoader.
+	CompiledDependencies bool
+
 	// ExportData serves DEPENDENCIES from pre-computed export data instead of reading their source,
 	// under the toolchain-free loader.
 	//
@@ -119,8 +144,16 @@ type Options struct {
 	// dominate a full scan.
 	//
 	// The module under scan is never read this way: its comments are the annotations, and export data
-	// carries none. The data is valid only for the toolchain that produced it, and a package it does
-	// not cover falls back to source, and then to synthesis.
+	// carries none. Neither is a dependency that has something to say — one whose source carries
+	// swagger annotations is read from source in the ordinary way, so a swagger:strfmt written in a
+	// library still counts. Export data serves everything else, which is where the time goes anyway.
+	//
+	// Only where a dependency's source cannot be found at all are its annotations lost, and that raises
+	// a scan.compiled-dependencies Hint naming the package.
+	//
+	// Prepare a tree with `go run ./hack/genexportdata`. See internal/scanner/README.md#export-data.
+	// The data is valid only for the toolchain that produced it, and a package it does not cover falls
+	// back to source, and then to synthesis.
 	//
 	// Experimental: see ToolchainFreeLoader.
 	ExportData fs.FS

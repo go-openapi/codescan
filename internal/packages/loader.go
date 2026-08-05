@@ -93,7 +93,11 @@ func (l *Loader) loadFromSource(cfg *Config, patterns ...string) ([]*Package, er
 		reported:  map[string]bool{},
 
 		onSynthesize: l.opts.onSynthesize,
-		stubStdlib:   l.opts.stubStdlib,
+		onExportOnly: l.opts.onExportOnly,
+
+		exportOnlyReported: map[string]bool{},
+		annotated:          map[string]bool{},
+		stubStdlib:         l.opts.stubStdlib,
 
 		exportFS:         l.opts.exportFS,
 		exported:         map[string]*types.Package{},
@@ -296,7 +300,15 @@ type loadState struct {
 	reported map[string]bool
 
 	onSynthesize func(Synthesized)
+	onExportOnly func(ExportOnly)
 	stubStdlib   bool
+
+	// exportOnlyReported keeps the export-without-source notice to once per path.
+	exportOnlyReported map[string]bool
+
+	// annotated memoizes whether a dependency's source carries annotations, so the files behind one
+	// import are read once however many packages import it.
+	annotated map[string]bool
 
 	// exportFS serves pre-computed export data, keyed by import path with a ".export" suffix. nil
 	// when the caller supplied none, in which case every package is read from source.
@@ -498,8 +510,13 @@ func (i *importer) Import(importPath string) (*types.Package, error) {
 	// Dependencies only. The module under scan is always read from source, because its comments are
 	// the annotations and export data does not carry them.
 	if i.ld.exportFS != nil && !i.ld.res.InMainModule(importPath) {
-		if pkg, err := i.ld.importExported(importPath); err == nil {
-			return pkg, nil
+		if tpkg, err := i.ld.importExported(importPath); err == nil && !i.ld.carriesAnnotations(importPath) {
+			// Nothing in this package's source speaks to a scan, so its types are the whole of what it
+			// has to offer. One that DOES speak falls through and is read from source like any other —
+			// half-loading it would give the builders declarations with no record of what they denote.
+			i.from.Imports[importPath] = i.ld.exportedPackage(importPath, tpkg)
+
+			return tpkg, nil
 		}
 	}
 

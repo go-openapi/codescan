@@ -19,6 +19,9 @@ func (l *Loader) loadViaGoPackages(cfg *Config, patterns ...string) ([]*Package,
 	effective.Tests = false
 	if effective.Mode == 0 {
 		effective.Mode = loadMode
+		if l.opts.compiledDeps {
+			effective.Mode = compiledDepsMode
+		}
 	}
 	if env := l.pinnedEnv(cfg.Env); env != nil {
 		effective.Env = env

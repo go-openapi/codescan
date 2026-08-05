@@ -17,7 +17,7 @@ Go checkout: `go1.26.5`
 | `list_replace_absolute_windows.txt` | go list matched no package; we found 1 |
 | `list_symlink_dotdotdot.txt` | go list matched no package; we found 1 |
 | `mod_go_version.txt` | err: exit status 1: stderr: go: sub@v1.0.0: module ./sub requires go >= 1.999 (running go 1.26.5) |
-| `mod_import_vendor.txt` | err: exit status 1: stderr: go: inconsistent vendoring in /home/fred/tmp/go-loader-2932740579: |
+| `mod_import_vendor.txt` | err: exit status 1: stderr: go: inconsistent vendoring in /home/fred/tmp/go-loader-43981087: |
 | `mod_list_command_line_arguments.txt` | go list matched no package; we found 1 |
 | `work_build_no_modules.txt` | go list matched no package; we found 1 |
 | `work_goline_order.txt` | err: exit status 1: stderr: go: module . listed in go.work file requires go >= 1.21.2, but go.work lists go 1.21.1; to update it: |

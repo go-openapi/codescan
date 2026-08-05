@@ -152,6 +152,10 @@ func New(cfg *codescan.Options) Overlay {
 				groupLoading, "StubStdlib", "synthesize the stdlib, skip GOROOT",
 				&cfg.StubStdlib, &dep{&cfg.ToolchainFreeLoader, true, "ToolchainFreeLoader"},
 			},
+			{
+				groupLoading, "CompiledDependencies", "dep types from the build cache",
+				&cfg.CompiledDependencies, &dep{&cfg.ToolchainFreeLoader, false, "ToolchainFreeLoader"},
+			},
 		},
 	}
 }

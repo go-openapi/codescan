@@ -72,3 +72,11 @@ const loadMode = packages.NeedName |
 	packages.NeedTypes |
 	packages.NeedSyntax |
 	packages.NeedTypesInfo
+
+// compiledDepsMode is loadMode without NeedDeps, which is what makes go/packages ask `go list` for
+// -export and take dependency types from the compiler's own output.
+//
+// The absence of a flag doing the asking is not an oversight upstream: usesExportData is
+// `NeedExportFile != 0 || (NeedTypes != 0 && NeedDeps == 0)`, so NOT wanting the dependency graph
+// hydrated is precisely the signal that their types may come from export data.
+const compiledDepsMode = loadMode &^ packages.NeedDeps

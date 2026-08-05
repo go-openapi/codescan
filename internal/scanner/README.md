@@ -37,6 +37,8 @@ parameters, responses) consumed by the builder layer.
   of carried-over title / description prose
 - [§loader](#loader) — choosing between the go/packages loader and the
   toolchain-free one, and what the latter costs
+- [§export-data](#export-data) — preparing compiler export data offline, and
+  what it buys
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -634,7 +636,8 @@ path documents as inert (`TestLoaderChoice_SelectsTheLoader`).
   on purpose).
 - **`ExportData`** costs no fidelity — the types are the ones the compiler
   computed — but is valid only for the toolchain that produced it. A package it
-  does not cover falls back to source, and then to synthesis.
+  does not cover falls back to source, and then to synthesis. See
+  [§export-data](#export-data).
 
 ### The go environment: `GOOS` / `GOARCH` / `GOFLAGS` / `GOWORK` / `GOEXPERIMENT`
 
@@ -704,6 +707,95 @@ then guarantees an explicit require for every module providing a transitively-im
 package. Where it is not — a main module at go 1.16, or a go.mod that needs updating — the
 dependency's directory is simply absent and synthesis reports it as a warning. Known
 remaining gaps are tracked in `.claude/plans/loader-vs-gopackages.md`.
+
+## <a id="export-data"></a>§export-data — preparing it offline
+
+Parsing and type-checking dependencies is most of what a load does. The compiler
+already did that work and wrote the answers down, so the fast path is to read them
+instead.
+
+`hack/genexportdata` produces the tree:
+
+```sh
+go run ./hack/genexportdata -out ./exportdata std          # the standard library
+go run ./hack/genexportdata -out bundle.zip std ./...      # a single-file archive
+go run ./hack/genexportdata -dir hack/genexportdata/bundle -out ./exportdata std ./...
+```
+
+Point `Options.ExportData` at the result. It is read as an `io/fs`, so a WASI guest
+can be handed the tree — or the zip, since `archive/zip`'s reader is already an
+`fs.FS` — without a toolchain, a GOROOT, or a module cache anywhere in sight.
+
+Underneath it is `go list -deps -export`, which builds whatever is missing and
+reports the build-cache path per package. The tool is worth the indirection for
+three reasons: it copies out the **export section** rather than the whole compiled
+archive (the standard library is 9.3MB instead of 97MB), it can write a zip, and it
+declines to bundle a package whose meaning lives in its comments — see below.
+
+`hack/genexportdata/bundle` is a module whose only content is a list of imports. It
+names what a published archive covers, so the set is reviewable in one place and
+its versions are pinned independently of the module being scanned. It is
+deliberately outside `go.work` for that reason, which is why the tool runs
+`go list` there with `GOWORK=off`.
+
+### Annotated dependencies
+
+Export data holds types and not comments, and the two halves cannot be put back
+together afterwards: `go/types` records what a type expression *denotes* in
+`types.Info.Types`, whose entries cannot be constructed outside that package —
+the field distinguishing a type from a value is unexported. A package assembled
+from export data plus parsed syntax therefore hands the builders declarations to
+read and no record of what they denote, which is not a quieter scan but a
+panicking one.
+
+So the loader decides per dependency and decides whole: **a package whose source
+carries `swagger:` is read from source, in the ordinary way; everything else comes
+from export data and is never parsed.** Nothing is lost, and almost nothing is
+given up — the saving was never in the handful of packages a scan actually reads,
+it is in the closure behind them.
+
+`genexportdata` mirrors that, skipping annotated packages by default and saying so:
+
+```
+skipping github.com/go-openapi/strfmt: carries swagger annotations, which export
+data cannot hold — it has to be read from source
+```
+
+`-with-annotated` includes them anyway. That matters only for an archive shipped
+**without** source — the WebAssembly case — where having the types is better than
+having nothing, and the lost annotations are announced per package. Where the
+source does ship, the entry is simply unused.
+
+### What it buys, and what it does not cost
+### What it buys, and what it does not cost
+
+Full scans of `fixtures/goparsing/petstore` through the toolchain-free loader:
+
+| | scan | spec |
+|---|---|---|
+| source only | 748 ms | — |
+| bundle, `strfmt` skipped | **79 ms** | byte-identical |
+| bundle, `-with-annotated` | 81 ms | byte-identical |
+
+Identical output is not a happy accident, it is the point: a dependency that has
+anything to say is read the same way it always was. The two bundle rows differ by
+noise because `strfmt` is read from source in both — with the source present, its
+export-data entry is never consulted.
+
+Where a dependency's source cannot be found the types still stand, and a
+`scan.compiled-dependencies` Hint names the package rather than letting the spec
+quietly say less.
+
+The data is only valid for the toolchain that produced it, since the export format
+tracks the Go release. Regenerate it when the toolchain moves.
+
+### The go/packages loader benefits too
+
+`CompiledDependencies` reads the same data straight from the build cache, so its
+preparation is simply having built the project — the cold-cache penalty measured
+elsewhere is not extra work, it is the work a normal `go build ./...` already did.
+The difference is that this loader keeps the dependency's source alongside, and
+that one does not; see the option's own documentation.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 

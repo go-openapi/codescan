@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -89,7 +90,27 @@ func runCorpus(goRoot string, args []string) error {
 		fmt.Println("\nwrote hack/go-loader/ledger.md")
 	}
 
+	// Non-zero on a real disagreement, so this can sit in a release checklist without anyone having to
+	// read the output first. Skips and go-rejects are expected and do not fail the run.
+	if n := countStatus(outcomes, "differ") + countStatus(outcomes, "error"); n > 0 {
+		return fmt.Errorf("%w: %d tree(s)", errDisagreement, n)
+	}
+
 	return nil
+}
+
+// errDisagreement reports trees the two strategies do not agree on.
+var errDisagreement = errors.New("the two strategies disagree")
+
+func countStatus(outcomes []outcome, status string) int {
+	n := 0
+	for _, o := range outcomes {
+		if o.status == status {
+			n++
+		}
+	}
+
+	return n
 }
 
 // runScript materialises one script's tree and compares the two strategies over it.

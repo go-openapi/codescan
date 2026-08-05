@@ -13,10 +13,12 @@ type Option func(*options)
 
 type options struct {
 	strategy     Strategy // zero value: StrategyGoPackages
-	fsys         fs.FS    // nil: read through the real filesystem
+	compiledDeps bool
+	fsys         fs.FS // nil: read through the real filesystem
 	goEnv        GoEnv
 	stubStdlib   bool
 	onSynthesize func(Synthesized)
+	onExportOnly func(ExportOnly)
 	exportFS     fs.FS
 }
 
@@ -32,6 +34,18 @@ type options struct {
 // the compiler computed, so fields, method sets and interface identity are all real. A full scan
 // otherwise spends nearly all of its time parsing and type-checking its dependencies, and a
 // WebAssembly guest pays a five- to six-fold compute tax on top of that.
+//
+// hack/genexportdata produces the tree, as a directory or as a zip (archive/zip's reader is an fs.FS,
+// so an embedded build carries one file and still reads per package).
+//
+// It is consulted per dependency, and the decision is whole. A package whose source carries swagger
+// annotations is read from source in the ordinary way — export data holds types and not comments, and
+// the two cannot be combined after the fact, since go/types records what a type expression denotes
+// behind an unexported field. Every other package is taken from here and never parsed at all.
+//
+// Nothing is lost by that, and little is given up: the saving was never in the handful of packages a
+// scan reads, it is in the closure behind them, which this still serves. Where a dependency's source
+// cannot be found at all, [WithOnExportOnly] says so.
 //
 // The data is only valid for the toolchain that produced it, since the export format is tied to the
 // Go release. A package the tree does not cover falls back to source, and then to synthesis.
@@ -68,6 +82,26 @@ func WithOnSynthesized(fn func(Synthesized)) Option {
 	return func(o *options) { o.onSynthesize = fn }
 }
 
+// ExportOnly reports a dependency whose types were read from export data but whose source was not
+// available, so what it says about those types — its annotations — could not be read.
+type ExportOnly struct {
+	// Path is the import path.
+	Path string
+
+	// Reason says which half failed: the source was not on the filesystem, or it would not parse.
+	Reason string
+}
+
+// WithOnExportOnly registers a callback fired once per dependency whose types came from export data
+// without its source.
+//
+// Export data plus source is the intended shape — the compiler's answer for the types, the file's own
+// words for the annotations. This fires when only the first half was available, which is a real loss
+// and an invisible one: the spec comes out valid and quieter.
+func WithOnExportOnly(fn func(ExportOnly)) Option {
+	return func(o *options) { o.onExportOnly = fn }
+}
+
 // WithStubbedStdlib keeps the standard library out of the package graph.
 //
 // Standard-library imports are then synthesized from the names selected through them — opaque types
@@ -99,6 +133,25 @@ func WithOnSynthesized(fn func(Synthesized)) Option {
 // Prefer a full graph wherever GOROOT is available; reach for this where it is not.
 func WithStubbedStdlib() Option {
 	return func(o *options) { o.stubStdlib = true }
+}
+
+// WithCompiledDependencies takes dependency types from the compiler's export data instead of reading
+// their source.
+//
+// It applies to [StrategyGoPackages] only. The toolchain-free strategy has [WithExportData], which is
+// the same idea supplied by hand; here the go command produces the data itself, from its build cache.
+//
+// The speed is not marginal — parsing and type-checking dependencies is most of what a load does, and
+// on a warm cache this removes nearly all of it. On a cold one it is markedly slower, because the
+// dependencies have to be compiled before their export data exists.
+//
+// What it costs is dependency SOURCE. Export data carries the exported type surface — fields, method
+// sets and interface identity are all real — but no syntax and no comments, so anything a dependency
+// says ABOUT its types is gone. For codescan that is load-bearing rather than incidental: go-openapi's
+// strfmt annotates its own types, and those annotations are what give a strfmt.DateTime field its
+// date-time format. The caller above this one announces the trade; see Options.CompiledDependencies.
+func WithCompiledDependencies() Option {
+	return func(o *options) { o.compiledDeps = true }
 }
 
 // WithFS makes the loader read source through fsys instead of the real filesystem.
