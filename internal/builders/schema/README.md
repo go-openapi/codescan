@@ -1380,6 +1380,11 @@ behaviour byte-for-byte** — both new opt-ins off:
   wrap path — `true` preserves the description as a single-arm allOf
   (`{description, allOf:[{$ref}]}`), `false` drops it. A no-op when
   `EmitRefSiblings` is set. Prefer `EmitRefSiblings`.
+  The `false` drop raises one `CodeDroppedRefSibling` **Hint** naming the
+  field and pointing at `EmitRefSiblings` — the output is deliberate, but
+  an author whose description vanished otherwise had nothing to go on. A
+  Hint rather than a Warning: nothing is wrong, the default simply cannot
+  carry prose beside a bare `$ref`.
 - **`SkipAllOfCompounding`** (default false): when true, **no allOf
   compound is ever produced**. Validations and externalDocs are
   therefore **dropped**; description and extensions are dropped too

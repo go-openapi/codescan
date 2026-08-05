@@ -163,12 +163,18 @@ const (
 	// Informational (Hint), like CodeIgnoredByRules.
 	CodeIgnoredByTag Code = "scan.ignored-by-tag"
 
-	// CodeDroppedRefSibling fires when SkipAllOfCompounding is set and a $ref'd struct field carries sibling decoration
-	// (description, validations, vendor extensions, externalDocs) that cannot ride a bare $ref.
+	// CodeDroppedRefSibling fires when a $ref'd struct field carries sibling decoration
+	// (description, validations, vendor extensions, externalDocs) that cannot ride a bare $ref, and
+	// the configured rendering has nowhere to put it.
 	//
-	// With compounding disabled the field emits as a bare $ref and each such sibling is dropped — one diagnostic per
-	// dropped keyword so the loss is never silent.
-	// See scanner.Options SkipAllOfCompounding.
+	// Two causes, told apart by severity:
+	//
+	//   - Warning — SkipAllOfCompounding is set, so no compound is available and each sibling is
+	//     dropped, one diagnostic per keyword.
+	//   - Hint — the field carries ONLY a description and/or title. The legacy default emits a bare
+	//     {$ref} rather than compounding for prose alone; EmitRefSiblings keeps it instead.
+	//
+	// Either way the loss is never silent. See scanner.Options SkipAllOfCompounding and EmitRefSiblings.
 	CodeDroppedRefSibling Code = "validate.dropped-ref-sibling"
 
 	// CodePrunedUnused fires when PruneUnusedModels is set and a discovered definition is dropped because it is not

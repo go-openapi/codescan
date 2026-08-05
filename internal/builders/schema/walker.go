@@ -243,7 +243,24 @@ func (s *Builder) applyToRefField(block grammar.Block, enclosing, ps *oaispec.Sc
 	}
 
 	if !c.anyCollected() && !s.Ctx.DescWithRef() {
-		return // description/title-only, not preserved → bare {$ref}
+		// Description/title-only: the legacy default emits a bare {$ref} rather than wrapping a lone
+		// reference in a compound just to carry prose. That is deliberate (§ref-override), but it is
+		// still a dropped sibling, and every other drop on this path is reported — an author whose
+		// description silently vanished has nothing else to tell them EmitRefSiblings would keep it.
+		//
+		// A Hint, not a Warning: nothing is wrong, the default simply cannot carry it.
+		dropped := "description"
+		switch {
+		case description == "":
+			dropped = "title"
+		case title != "":
+			dropped = "description and title"
+		}
+		s.RecordDiagnostic(grammar.Hintf(block.Pos(), grammar.CodeDroppedRefSibling,
+			"field %q: %s dropped — a bare $ref carries no siblings; set EmitRefSiblings to keep it",
+			name, dropped))
+
+		return
 	}
 
 	// Lift x-* siblings onto the outer compound (see §ref-override).
