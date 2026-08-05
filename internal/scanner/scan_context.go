@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	ownpackages "github.com/go-openapi/codescan/internal/packages"
 	"github.com/go-openapi/codescan/internal/parsers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/swag/mangling"
@@ -25,8 +26,6 @@ import (
 //
 // It is wrapped with the per-package detail and, at the public API boundary, with ErrCodeScan.
 var ErrDegradedLoad = errors.New("degraded package load")
-
-const pkgLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
 type node uint32
 
@@ -93,17 +92,87 @@ type ScanCtx struct {
 	mangler *mangling.NameMangler
 }
 
-func NewScanCtx(opts *Options) (*ScanCtx, error) {
-	cfg := &packages.Config{
-		Dir:   opts.WorkDir,
-		Mode:  pkgLoadMode,
-		Tests: false,
+// loadPackages resolves a scan's patterns into loaded, type-checked packages.
+//
+// Which loading strategy runs is the loader's decision, not this one's: Options carries the caller's
+// preference and the loader reconciles it with what the build and the filesystem allow.
+func loadPackages(opts *Options) ([]*packages.Package, error) {
+	loaderOpts := []ownpackages.Option{
+		ownpackages.WithStrategy(loaderStrategy(opts)),
+		ownpackages.WithFS(opts.FS),
+		ownpackages.WithGoEnv(ownpackages.GoEnv{
+			GOOS:         opts.GOOS,
+			GOARCH:       opts.GOARCH,
+			GOFLAGS:      opts.GOFLAGS,
+			GOWORK:       opts.GOWORK,
+			GOEXPERIMENT: opts.GOEXPERIMENT,
+		}),
+		ownpackages.WithOnSynthesized(synthesisReporter(opts)),
 	}
+	if opts.StubStdlib {
+		loaderOpts = append(loaderOpts, ownpackages.WithStubbedStdlib())
+	}
+	if opts.ExportData != nil {
+		loaderOpts = append(loaderOpts, ownpackages.WithExportData(opts.ExportData))
+	}
+
+	cfg := &packages.Config{Dir: opts.WorkDir}
 	if opts.BuildTags != "" {
 		cfg.BuildFlags = []string{"-tags", opts.BuildTags}
 	}
 
-	pkgs, err := packages.Load(cfg, opts.Packages...)
+	return ownpackages.NewLoader(loaderOpts...).Load(cfg, opts.Packages...)
+}
+
+// loaderStrategy maps the caller's preference onto the loader's vocabulary.
+//
+// Options.FS needs no mention here: the loader already treats a virtual filesystem as a statement
+// about which strategy has to run, and saying it twice would be a second place to get it wrong.
+func loaderStrategy(opts *Options) ownpackages.Strategy {
+	if opts.ToolchainFreeLoader {
+		return ownpackages.StrategyToolchainFree
+	}
+
+	return ownpackages.StrategyGoPackages
+}
+
+// synthesisReporter turns the loader's synthesized-import notices into scan diagnostics.
+//
+// This is the only place the fidelity loss becomes visible. A synthesized type used in a field
+// position type-checks perfectly well and simply yields a thinner spec; what reaches the caller
+// otherwise is the downstream wreckage of a value-position use, which reads as an error in the
+// scanned code rather than as a dependency that was never there.
+func synthesisReporter(opts *Options) func(ownpackages.Synthesized) {
+	if opts.OnDiagnostic == nil {
+		return nil
+	}
+
+	return func(s ownpackages.Synthesized) {
+		// cgo is its own case. The C pseudo-package has no source to find anywhere, so reporting it as
+		// unresolved sends the reader looking for something that never existed; and it is inherent
+		// rather than a mistake, so it is a Hint. The scan still produces a spec — C-typed fields simply
+		// come out untyped.
+		if s.Cgo {
+			opts.OnDiagnostic(grammar.Hintf(s.Pos, grammar.CodeSynthesizedImport,
+				"package uses cgo: C declarations are opaque here because the cgo tool is not run, "+
+					"so a C-typed field is emitted without a type"))
+
+			return
+		}
+
+		ctor, why := grammar.Warnf, "could not be resolved"
+		if s.Deliberate {
+			ctor, why = grammar.Hintf, "was withheld"
+		}
+
+		opts.OnDiagnostic(ctor(s.Pos, grammar.CodeSynthesizedImport,
+			"import %q %s: its types are synthesized from usage, so they carry no fields and no methods",
+			s.Path, why))
+	}
+}
+
+func NewScanCtx(opts *Options) (*ScanCtx, error) {
+	pkgs, err := loadPackages(opts)
 	if err != nil {
 		return nil, err
 	}

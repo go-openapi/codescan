@@ -194,6 +194,19 @@ const (
 	// be traced to the family that pulled it in.
 	CodeDiscoveredSubtype Code = "scan.discovered-subtype"
 
+	// CodeSynthesizedImport fires when an import could not be loaded from source and its types were fabricated from the
+	// names the scanned code selects through it.
+	//
+	// A synthesized type carries the right package path and name, so recognition by identity still works (time.Time
+	// remains a date-time), but it has no fields and no methods — so drilling into it, or asking whether it implements an
+	// interface, silently yields less than a real scan would.
+	//
+	// Warning when the import was simply not found, since that is usually a mounting or module-cache problem the caller
+	// wants to fix. Informational (Hint) when the caller withheld the standard library on purpose via StubStdlib: the loss
+	// is then intended, but still worth seeing.
+	// Carries the position of the import that triggered it, once per import path.
+	CodeSynthesizedImport Code = "scan.synthesized-import"
+
 	// CodeOmitUnresolved fires when a `swagger:omit` target names no field of the embedded type it is applied to — a
 	// typo, or a field renamed upstream.
 	//

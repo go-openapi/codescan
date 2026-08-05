@@ -55,7 +55,16 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      # Copied verbatim from the Go distribution (BSD-3-Clause) so it stays
+      # diffable against upstream. Reformatting it to our house style would
+      # make every future re-sync a manual merge.
+      - internal/packages/list/pkgpattern.*\.go$
     rules:
+      # hack/ holds developer tools, not library code: printing a report to
+      # stdout is what they are for.
+      - path: hack/
+        linters:
+          - forbidigo
       # cmd/genspec-tui is a bubbletea front-end. These four disagree with the
       # shape of TUI code rather than with the code itself, and each fires often
       # enough (102 between them) that //nolint would be the scattering this
@@ -86,6 +95,8 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      # As above: derived from the Go distribution, kept byte-comparable.
+      - internal/packages/list/pkgpattern.*\.go$
 issues:
   # Maximum issues count per one linter.
   # Set to 0 to disable.

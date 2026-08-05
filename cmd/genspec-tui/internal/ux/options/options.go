@@ -26,14 +26,15 @@ import (
 // These are the same divisions the docs already uses to describe the knobs, so the overlay and the docs agree on where
 // a setting lives.
 const (
-	groupScope  = "discovery & scope"
-	groupRefs   = "$ref & composition"
-	groupNaming = "naming"
-	groupDocs   = "docs & comments"
-	groupTypes  = "types & extensions"
+	groupScope   = "discovery & scope"
+	groupRefs    = "$ref & composition"
+	groupNaming  = "naming"
+	groupDocs    = "docs & comments"
+	groupTypes   = "types & extensions"
+	groupLoading = "package loading"
 
 	// groupCount is how many of the above appear, for sizing only.
-	groupCount = 5
+	groupCount = 6
 )
 
 // dep records that a toggle only bites when another one holds a particular value.
@@ -139,6 +140,17 @@ func New(cfg *codescan.Options) Overlay {
 			{
 				groupTypes, "EmitXGoType", "stamp x-go-type on definitions", &cfg.EmitXGoType,
 				&dep{depSkipExtensions, false, "SkipExtensions"},
+			},
+
+			// Package loading. Last because it is experimental and rarely touched: the cursor opens on the
+			// row people actually came for.
+			{
+				groupLoading, "ToolchainFreeLoader", "load packages without the go command",
+				&cfg.ToolchainFreeLoader, nil,
+			},
+			{
+				groupLoading, "StubStdlib", "synthesize the stdlib, skip GOROOT",
+				&cfg.StubStdlib, &dep{&cfg.ToolchainFreeLoader, true, "ToolchainFreeLoader"},
 			},
 		},
 	}

@@ -35,6 +35,8 @@ parameters, responses) consumed by the builder layer.
   come from, and what the degraded reading can still see
 - [§clean-godoc](#clean-godoc) — `CleanGoDoc` — filtering godoc syntax out
   of carried-over title / description prose
+- [§loader](#loader) — choosing between the go/packages loader and the
+  toolchain-free one, and what the latter costs
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -57,6 +59,8 @@ warrant the inline godoc and the deeper notes below:
   [§diagnostics](#diagnostics).
 - `PruneUnusedModels` — drop discovered definitions unreachable from
   any root, on top of `ScanModels`. See [§prune](#prune).
+- `ToolchainFreeLoader` / `FS` — select codescan's own package loader,
+  optionally over a virtual filesystem. See [§loader](#loader).
 
 ## <a id="descwithref"></a>§descwithref — description-only-decoration $ref shape
 
@@ -568,6 +572,138 @@ Like `swagger:title` / `swagger:description` (overrides) and `AfterDeclComments`
 this is part of the **clean-godoc cluster**: keep the Go-facing doc clean while
 the API spec carries curated text. Crucially it touches **only godoc-derived
 prose** — author-written overrides (harvested separately) are never filtered.
+
+## <a id="loader"></a>§loader — choosing the package loader
+
+**Experimental.** Leaving `ToolchainFreeLoader` false and `FS` nil keeps the
+historic `go/packages` behaviour unchanged; everything below applies only once
+one of them is set.
+
+### Choosing
+
+Both strategies live behind one `internal/packages.Loader`; the scanner states a
+preference and the loader reconciles it with what the build and the filesystem
+allow:
+
+| `ToolchainFreeLoader` | `FS` | strategy | needs a toolchain |
+|---|---|--------|-------------------|
+| false (default) | nil | `StrategyGoPackages` (`go list`) | yes |
+| **true** | nil | `StrategyToolchainFree`, real filesystem | no |
+| either | non-nil | `StrategyToolchainFree`, reading `FS` | no |
+
+`FS` forces the toolchain-free strategy without being asked, because `packages.Load`
+reaches the filesystem by running `go list` against the real one — a virtual
+filesystem is not something it could honour. So there is no coherent
+configuration being overridden, and no way for the two settings to contradict
+each other. That override lives in the loader, not here, so there is one place
+to get it wrong rather than two.
+
+The flag exists separately because the interesting case is the middle row: running
+codescan's own strategy over an ordinary tree on disk. Before it, the only way to
+reach it was to hand it a virtual filesystem.
+
+Putting the switch inside the loader is also what keeps the options honest. `GOOS`
+/ `GOARCH` are the example: the go command reads the target from the environment
+and nowhere else, so a target that is merely stored applies under one strategy and
+vanishes under the other. The loader pushes it into the child environment itself
+(`golist.go`), and `TestGoPackagesStrategyHonoursTarget` fails if it stops.
+
+### What the two loaders agree on
+
+Across the fixture corpus the two produce **byte-identical specs** — 378 package
+trees, mounted at `/` so `GOROOT` and the module cache stay reachable. That
+equivalence is the point: the loader is a substitution, not a second dialect.
+
+Mount narrower than the dependencies reach and the agreement stops, because
+unreachable imports get synthesized rather than read. That is not a loader bug,
+it is `StubStdlib`'s failure mode arriving uninvited — see below.
+
+Note that agreement alone never proves the *choice* was honoured: with a no-op
+flag both sides run the same loader and agree trivially. What witnesses the
+routing is a behaviour only one loader has — `StubStdlib`, which the go/packages
+path documents as inert (`TestLoaderChoice_SelectsTheLoader`).
+
+### What it costs
+
+- **`StubStdlib`** trades fidelity for reach: a synthesized type has the right
+  package path and name (so `time.Time` is still a date-time) but no fields and
+  no method set — so `json.RawMessage` stops rendering as a byte array, and no
+  type is seen to implement `encoding.TextMarshaler`. Quiet by nature: the spec
+  comes out thinner rather than erroring, which is why every synthesized import
+  raises `scan.synthesized-import` (Warning when unresolved, Hint when withheld
+  on purpose).
+- **`ExportData`** costs no fidelity — the types are the ones the compiler
+  computed — but is valid only for the toolchain that produced it. A package it
+  does not cover falls back to source, and then to synthesis.
+
+### The go environment: `GOOS` / `GOARCH` / `GOFLAGS` / `GOWORK` / `GOEXPERIMENT`
+
+Not loader-specific: both strategies honour all five, `go list` through the
+child environment. Each decides *what* gets built rather than where the output
+goes, so each changes the emitted spec exactly as `BuildTags` does.
+
+They are options rather than inherited state on purpose. A scan that picks them
+up from whatever shell it started in is not reproducible, and — as `GOOS` proved
+before `3294669` — an inherited value is easy to apply on one code path and
+forget on another. Empty still means "whatever the environment says", which is
+what the go command would do.
+
+- `GOOS`/`GOARCH` — the platform. Inside a WASI guest the default is `wasip1`,
+  which drops every `_linux.go` file without a word.
+- `GOFLAGS` — default command-line flags (`-tags=integration`). `BuildTags` wins,
+  as an explicit flag does for the go command.
+- `GOWORK` — `off`, a path to a `go.work`, or empty to search upwards. Inside a
+  workspace a sibling module resolves to the copy being worked on rather than to
+  the module cache. Missing that does not fail: the import is looked up in the
+  cache, missed, and **synthesized**, so the sibling arrives with no fields and
+  no method set.
+- `GOEXPERIMENT` — each enabled experiment contributes a `goexperiment.<name>`
+  build tag. The baseline is what the codescan binary was itself built with,
+  since `go/build` computes `ToolTags` at init from its own configuration and
+  cannot be asked about another toolchain — exact when both come from the same
+  Go release, approximate otherwise.
+
+### Pattern resolution
+
+`...` stops at a module boundary, as it does for the go command: a nested `go.mod`
+is a different module and its packages are not part of the pattern. Import paths
+are derived from the module that actually **contains** the directory, not from the
+main module — on this repo, deriving them from the main module turned 25 packages
+into 468 and labelled fixture corpora, sibling modules and a vendored theme as
+belonging to `github.com/go-openapi/codescan`.
+
+Naming a nested module's package explicitly (`./sub/pkg`) is refused by the go
+command and allowed here, with the nested module's own path. Scanning a
+subdirectory module directly is a reasonable thing to ask of a scanner; answering
+with a well-formed path that names a package which does not exist is not.
+
+Vendoring follows the go command's own test — `vendor/modules.txt`, not the directory —
+so a tree that merely contains a `vendor/` folder is not treated as a vendored build, and
+`-mod=mod` opts out. A wildcard reaches the directory named `vendor` but never inside it.
+
+A bare pattern (no `./`) is an import path, never a directory, which is what `go list`
+means by it. `...` is a wildcard anywhere in the pattern, not only as a trailing element.
+
+Two differences run in codescan's favour and are kept on purpose: a tree with **no module**
+still scans (the go command refuses one outright), and another module's **`internal/`**
+packages are readable (the go command rejects the import, which makes a scan fail
+altogether). A module-less tree names its packages relative to the scan directory, never by
+absolute path — a package path reaches the output through `x-go-package`.
+
+An unreadable `go.mod` is fatal rather than degraded. The alternative places no requirement
+at all, so every dependency falls through to synthesis and the real fault disappears behind
+a wall of `scan.synthesized-import` warnings.
+
+A dependency is placeable when the main `go.mod` names it — a `require`, a `replace`, a
+workspace `use`, or the vendor tree. The module graph is never walked, and no dependency's
+own `go.mod` is consulted for requirements, so what any dependency declares as its minimum
+Go version does not enter into resolution: one set of rules applies across the board.
+
+That list is complete when the main module is at go ≥ 1.17 and tidy, since the go command
+then guarantees an explicit require for every module providing a transitively-imported
+package. Where it is not — a main module at go 1.16, or a go.mod that needs updating — the
+dependency's directory is simply absent and synthesis reports it as a warning. Known
+remaining gaps are tracked in `.claude/plans/loader-vs-gopackages.md`.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 
