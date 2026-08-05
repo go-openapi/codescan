@@ -77,10 +77,9 @@ func walkPathItemProse(pi *oaispec.PathItem, subst func(string) string) {
 		walkSchemaProse(pi.Parameters[i].Schema, subst)
 	}
 
+	// operationsByMethod yields only the methods the path item actually defines, so there is no nil
+	// operation to guard against here.
 	for _, op := range operationsByMethod(pi) {
-		if op == nil {
-			continue
-		}
 		op.Summary = subst(op.Summary)
 		op.Description = subst(op.Description)
 		for i := range op.Parameters {
@@ -112,6 +111,10 @@ func walkResponseProse(r *oaispec.Response, subst func(string) string) {
 
 // walkSchemaProse applies subst to a schema's title / description and recurses through every nested schema
 // (properties, composition arms, items, maps).
+//
+// The anyOf / oneOf arms and the tuple form of items (Items.Schemas) are unreachable while the
+// output is Swagger 2.0, which has none of those constructs: they are kept because this walk must
+// stay total over the schema type, and they become live the day the emitter targets OAS 3.x.
 func walkSchemaProse(sch *oaispec.Schema, subst func(string) string) {
 	if sch == nil {
 		return

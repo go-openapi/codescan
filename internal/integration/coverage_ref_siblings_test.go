@@ -4,9 +4,11 @@
 package integration_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scantest"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
@@ -21,10 +23,12 @@ import (
 // The existing coverage only ever wrote an extension and an example, so four of those six arms were
 // never entered.
 func TestCoverage_RefSiblingValidations(t *testing.T) {
+	var diags []codescan.Diagnostic
 	doc, err := codescan.Run(&codescan.Options{
-		Packages:   []string{"./enhancements/ref-sibling-validations/..."},
-		WorkDir:    scantest.FixturesDir(),
-		ScanModels: true,
+		Packages:     []string{"./enhancements/ref-sibling-validations/..."},
+		WorkDir:      scantest.FixturesDir(),
+		ScanModels:   true,
+		OnDiagnostic: func(d codescan.Diagnostic) { diags = append(diags, d) },
 	})
 	require.NoError(t, err)
 
@@ -122,16 +126,29 @@ func TestCoverage_RefSiblingValidations(t *testing.T) {
 		assert.NotEmpty(t, p.Description)
 	})
 
-	// QUIRK, pinned rather than endorsed: an extension written WITHOUT the `Extensions:` block is
-	// not recognised as one, and the comment carrying it is dropped whole — the field loses its
-	// description too, with no diagnostic. A reader of the spec sees a bare $ref and no hint that
-	// anything was ignored.
-	t.Run("an extension outside the Extensions block is silently dropped", func(t *testing.T) {
+	// A bare `x-foo:` line is not the extension grammar — it is prose. On a $ref'd field that
+	// leaves only a description, and the legacy default emits a bare {$ref} rather than compounding
+	// for prose alone (§ref-override). The output is deliberate; what was missing was any word of
+	// it, so the drop now raises a Hint naming the option that would keep it.
+	t.Run("a description-only $ref reports what it drops", func(t *testing.T) {
 		p := bag.Properties["bareExt"]
 
-		assert.Equal(t, "#/definitions/Item", p.Ref.String())
-		assert.Empty(t, p.Description, "the prose goes with it")
+		assert.Equal(t, "#/definitions/Item", p.Ref.String(), "still a bare $ref")
+		assert.Empty(t, p.Description)
 		assert.Empty(t, p.Extensions)
+
+		var hint *codescan.Diagnostic
+		for i, d := range diags {
+			if d.Code == grammar.CodeDroppedRefSibling && strings.Contains(d.Message, "bareExt") {
+				hint = &diags[i]
+
+				break
+			}
+		}
+		require.NotNil(t, hint, "the drop must be reported, not silent")
+		assert.Equal(t, codescan.SeverityHint, hint.Severity,
+			"nothing is wrong — the default simply cannot carry prose beside a $ref")
+		assert.Contains(t, hint.Message, "EmitRefSiblings", "and it names the way to keep it")
 	})
 
 	scantest.CompareOrDumpJSON(t, doc, "enhancements_ref_sibling_validations.json")
