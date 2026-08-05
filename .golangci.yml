@@ -92,6 +92,7 @@ formatters:
     generated: lax
     paths:
       - fixtures
+      - testdata
       - third_party$
       - builtin$
       - examples$
