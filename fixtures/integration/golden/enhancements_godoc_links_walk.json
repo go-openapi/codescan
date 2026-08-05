@@ -1,0 +1,155 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Every gadget fitted to a widget is reachable from here.",
+    "title": "serves widget resources.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/widgets": {
+      "get": {
+        "description": "The listing names each gadget fitted to it.",
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Lists every widget on offer.",
+        "operationId": "listWidgets",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "only list a [Widget] created after this time",
+            "name": "since",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/widgetOK"
+          },
+          "default": {
+            "$ref": "#/responses/WidgetError"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "x-go-name": "Tenant",
+          "description": "Tenant scopes the Widget listing.",
+          "name": "X-Tenant",
+          "in": "header"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "Assembly": {
+      "description": "Assembly composes a Widget with fields of its own, so the finished schema is an allOf whose\nsibling arm carries prose.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Widget"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "serial": {
+              "description": "Serial identifies this Assembly on the line.",
+              "type": "string",
+              "x-go-name": "Serial"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links-walk"
+    },
+    "Catalogue": {
+      "type": "object",
+      "title": "Catalogue keys vendor entries off a pattern, each one a Gadget.",
+      "properties": {
+        "known": {
+          "description": "Known is the one named property beside the patterned ones.",
+          "type": "string",
+          "x-go-name": "Known"
+        }
+      },
+      "patternProperties": {
+        "^x-": {
+          "$ref": "#/definitions/Gadget"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links-walk"
+    },
+    "Gadget": {
+      "type": "object",
+      "title": "Gadget is a small component.",
+      "properties": {
+        "name": {
+          "description": "Name labels this Gadget.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links-walk"
+    },
+    "Widget": {
+      "description": "Each nested shape below puts a doc-link somewhere the document walk has to reach on its own:\ncomposition arms, array items, map values and pattern properties are all schemas of their own.\n\nThis also links to the Catalogue, which nothing references — so under PruneUnusedModels the\nlink resolves to a definition that is no longer in the document.",
+      "type": "object",
+      "title": "Widget holds a Gadget.",
+      "properties": {
+        "index": {
+          "description": "Index maps a code to the Gadget it selects.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Gadget"
+          },
+          "x-go-name": "Index"
+        },
+        "parts": {
+          "description": "Parts lists every Gadget fitted.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Gadget"
+          },
+          "x-go-name": "Parts"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/godoc-links-walk"
+    }
+  },
+  "parameters": {
+    "X-Trace-ID": {
+      "type": "string",
+      "x-go-name": "TraceID",
+      "description": "TraceID correlates a request touching a Widget.",
+      "name": "X-Trace-ID",
+      "in": "header"
+    }
+  },
+  "responses": {
+    "WidgetError": {
+      "description": "WidgetError is force-registered at #/responses, so its prose lives in the spec-level response\nnamespace.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "description": "Message explains why the Widget could not be served.",
+            "type": "string",
+            "x-go-name": "Message"
+          }
+        }
+      }
+    },
+    "widgetOK": {
+      "description": "WidgetOK returns a Widget, and carries a header whose prose has to be walked too.",
+      "schema": {
+        "$ref": "#/definitions/Widget"
+      },
+      "headers": {
+        "ETag": {
+          "type": "string",
+          "description": "ETag versions the returned Widget."
+        }
+      }
+    }
+  }
+}

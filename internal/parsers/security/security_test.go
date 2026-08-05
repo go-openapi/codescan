@@ -122,4 +122,31 @@ func TestParse(t *testing.T) {
 	t.Run("malformed YAML yields nil (no panic)", func(t *testing.T) {
 		assert.Nil(t, Parse("\t- : : ::\n  bad: ["))
 	})
+
+	// --- a bare scheme name, with no list and no mapping -------------------
+
+	// The terse form an author reaches for when one scheme guards everything and it takes no
+	// scopes: `Security: api_key` on one line, which YAML sees as a plain scalar rather than a
+	// sequence or a mapping.
+	t.Run("bare scalar names one scheme with no scopes", func(t *testing.T) {
+		got := Parse("api_key")
+
+		require.Len(t, got, 1)
+		require.Contains(t, got[0], "api_key")
+		assert.Empty(t, got[0]["api_key"], "no scopes, but the scheme is required")
+		assert.NotNil(t, got[0]["api_key"], "an empty scope list, not a missing one")
+	})
+
+	t.Run("bare scalar tolerates surrounding space", func(t *testing.T) {
+		got := Parse("  api_key  ")
+
+		require.Len(t, got, 1)
+		assert.Contains(t, got[0], "api_key")
+	})
+
+	// A quoted empty scalar parses as a document whose only node names nothing — there is no
+	// requirement to make of it, and inventing one would silently secure an endpoint.
+	t.Run("an empty scalar names nothing", func(t *testing.T) {
+		assert.Nil(t, Parse(`""`))
+	})
 }
