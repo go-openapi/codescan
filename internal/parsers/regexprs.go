@@ -5,6 +5,12 @@ package parsers
 
 import "regexp"
 
+// The path annotations — `swagger:route` and `swagger:operation` — are the only regexes left in the
+// scanner. They match four things in sequence (method, path, optional tags, operationId) and the
+// path's alphabet is the bulk of the pattern; the parse reads the result back by submatch index.
+// The other classifiers, which only ever asked where a keyword sat on a line, are string searches
+// in annotation_line.go.
+
 const (
 	// rxCommentPrefix matches the leading comment noise that precedes an annotation keyword on a raw comment line:
 	// whitespace, tabs, slashes, asterisks, dashes, optional markdown table pipe, then trailing spaces.
@@ -46,46 +52,6 @@ const (
 
 // compile-once regexes; read-only.
 var (
-	// rxSwaggerAnnotation matches `swagger:<name>` anywhere on a comment line where it is preceded by whitespace, `/`, or
-	// start-of-line.
-	//
-	// Kept loose because it is the classification regex consumed by scanner.index.ExtractAnnotation; `swagger:route` is
-	// allowed to follow a godoc-style identifier per rxRoutePrefix.
-	//
-	// Do NOT use this regex as a block terminator — it triggers on mid-prose mentions and would truncate descriptions.
-	rxSwaggerAnnotation = regexp.MustCompile(`(?:^|[\s/])swagger:([\p{L}\p{N}\p{Pd}\p{Pc}]+)`)
-
-	rxModelOverride = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}*(\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	// rxResponseOverride is the scanner's classification gate for `swagger:response`.
-	//
-	// The argument is optional (bare marker → name inferred from the type), an identifier name, or the shared-namespace
-	// wildcard `*` (a synonym for the bare form — `swagger:response *` and `swagger:response` both register a shared
-	// response keyed by the type name).
-	//
-	// A malformed name (e.g. a package-qualified `utils.Error`) still fails the match, so MalformedResponseName can flag
-	// it.
-	// The response NAME itself is resolved from the grammar (grammar.ResponseBlock), not from this capture.
-	rxResponseOverride = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}*(\*|\p{L}[\p{L}\p{N}\p{Pd}\p{Pc}]+)?(?:\.)?$`)
-	// rxParametersOverride is the scanner's PERMISSIVE classification gate for `swagger:parameters`: it matches the
-	// keyword followed by any non-empty argument and captures it.
-	//
-	// The capture is required by the shared comment matcher (commentMultipleSubMatcher), but its CONTENT is unused — the
-	// argument tokens are parsed and validated by the grammar (grammar.ParametersBlock), which emits diagnostics for
-	// malformed forms.
-	//
-	// The scanner does not re-validate arg shapes: a malformed-but-non-empty argument is classified and passed on so the
-	// grammar can diagnose it, rather than being silently skipped here.
-	rxParametersOverride = regexp.MustCompile(rxCommentPrefix + `swagger:parameters\p{Zs}+(\S.*?)\p{Zs}*$`)
-
-	// rxModelArg / rxResponseArg loosely capture the raw name argument following a single-name struct marker, regardless
-	// of whether it is a well-formed identifier.
-	//
-	// They back the malformed-name detection that warns instead of silently dropping a marker whose name the strict
-	// rxModelOverride / rxResponseOverride rejects (e.g. a package-qualified `utils.Error`).
-	// See parsers.MalformedModelName / MalformedResponseName.
-	rxModelArg    = regexp.MustCompile(rxCommentPrefix + `swagger:model\p{Zs}+(\S.*?)\p{Zs}*$`)
-	rxResponseArg = regexp.MustCompile(rxCommentPrefix + `swagger:response\p{Zs}+(\S.*?)\p{Zs}*$`)
-
 	// rxRouteHead / rxOperationHead match the HEAD of a path annotation — its full regex up to and including the path,
 	// with the tags and operationId left off.
 	//

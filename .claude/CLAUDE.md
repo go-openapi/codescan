@@ -53,7 +53,8 @@ for the grammar parser and its satellite helpers.
 | File | Contents |
 |------|----------|
 | `matchers.go` | `ExtractAnnotation`, `ModelOverride`, `ResponseOverride`, `ParametersOverride` — the scanner-level annotation classifiers |
-| `regexprs.go` | Regex definitions backing the matchers + `rxRoute` / `rxOperation` for the path-annotation parsers |
+| `annotation_line.go` | The string-scanning primitives behind the matchers — comment-prefix stripping, keyword and argument extraction. No regexes |
+| `regexprs.go` | `rxRoute` / `rxOperation` (+ their heads) for the path-annotation parsers — the only regexes left in the codebase |
 | `parsed_path_content.go` | `ParsedPathContent` + `ParseOperationPathAnnotation` / `ParseRoutePathAnnotation` |
 
 **Subpackages**

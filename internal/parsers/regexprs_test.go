@@ -4,7 +4,6 @@
 package parsers
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 
@@ -52,11 +51,11 @@ func TestSchemaValueExtractors(t *testing.T) {
 		"blah*",
 	}
 
-	verifySwaggerOneArgSwaggerTag(t, rxModelOverride, models, append(validParams, "", "  ", " "), invalidParams)
+	verifySwaggerOneArgSwaggerTag(t, keywordModel, models, append(validParams, "", "  ", " "), invalidParams)
 }
 
-// TestParametersClassificationGate verifies that rxParametersOverride is a PERMISSIVE presence gate: it matches
-// `swagger:parameters` plus any non-empty argument and captures it verbatim, leaving shape validation to the grammar.
+// TestParametersClassificationGate verifies that the `swagger:parameters` classifier is a PERMISSIVE presence gate: it
+// matches the marker plus any non-empty argument and captures it verbatim, leaving shape validation to the grammar.
 //
 // Forms the strict model matcher rejects (a leading `*`, a `/path`, malformed idents) are accepted here so the grammar
 // can parse and diagnose them.
@@ -81,31 +80,33 @@ func TestParametersClassificationGate(t *testing.T) {
 	for _, pref := range prefixes {
 		for _, arg := range accepted {
 			line := pref + arg
-			m := rxParametersOverride.FindStringSubmatch(line)
-			if !assert.Len(t, m, 2) {
+			got, ok := annotationArgument(line, keywordParameters)
+			if !assert.TrueT(t, ok) {
 				t.Logf("expected %q to be classified", line)
+
 				continue
 			}
-			assert.EqualT(t, strings.TrimSpace(arg), m[1])
+			assert.EqualT(t, strings.TrimSpace(arg), got)
 		}
 	}
 
 	// A bare keyword with no argument is not classified (the grammar's missing-target diagnostic fires only once a node is
 	// classified).
 	for _, line := range []string{"swagger:parameters", "swagger:parameters ", "// swagger:parameters   "} {
-		assert.Empty(t, rxParametersOverride.FindStringSubmatch(line), "bare keyword must not classify")
+		_, ok := annotationArgument(line, keywordParameters)
+		assert.FalseT(t, ok, "bare keyword must not classify")
 	}
 }
 
-func verifySwaggerOneArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefixes, validParams, invalidParams []string) {
+func verifySwaggerOneArgSwaggerTag(t *testing.T, keyword string, prefixes, validParams, invalidParams []string) {
 	t.Helper()
 
 	for _, pref := range prefixes {
 		for _, param := range validParams {
 			line := pref + param
-			matches := matcher.FindStringSubmatch(line)
-			if assert.Len(t, matches, 2) {
-				assert.EqualT(t, strings.TrimSpace(param), matches[1])
+			name, ok := overrideName(line, keyword, false)
+			if assert.TrueT(t, ok, "expected %q to classify", line) {
+				assert.EqualT(t, strings.TrimSpace(param), name)
 			}
 		}
 	}
@@ -113,8 +114,8 @@ func verifySwaggerOneArgSwaggerTag(t *testing.T, matcher *regexp.Regexp, prefixe
 	for _, pref := range prefixes {
 		for _, param := range invalidParams {
 			line := pref + param
-			matches := matcher.FindStringSubmatch(line)
-			assert.Empty(t, matches)
+			_, ok := overrideName(line, keyword, false)
+			assert.FalseT(t, ok, "expected %q not to classify", line)
 		}
 	}
 }
