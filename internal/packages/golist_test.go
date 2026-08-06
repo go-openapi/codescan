@@ -49,9 +49,9 @@ func loadedVia(t *testing.T, root string, opts ...packages.Option) []string {
 
 // TestGoPackagesStrategyHonoursTarget is the asymmetry this file exists to prevent.
 //
-// The go command takes GOOS/GOARCH from the environment and nowhere else, so a loader that merely
-// stores the pinned target would apply it under one strategy and silently ignore it under the other — the
-// same Loader answering two different questions depending on how it resolves the graph.
+// The go command takes GOOS/GOARCH from the environment and nowhere else, so a loader that merely stores the pinned
+// target would apply it under one strategy and silently ignore it under the other — the same Loader answering two
+// different questions depending on how it resolves the graph.
 func TestGoPackagesStrategyHonoursTarget(t *testing.T) {
 	t.Parallel()
 
@@ -63,8 +63,8 @@ func TestGoPackagesStrategyHonoursTarget(t *testing.T) {
 	assert.NotContains(t, got, "impl_linux.go", "and drops the one for another platform")
 }
 
-// TestGoPackagesStrategyIsTheDefault pins the zero value: a Loader asked for nothing must behave as
-// codescan always has.
+// TestGoPackagesStrategyIsTheDefault pins the zero value: a Loader asked for nothing must behave as codescan always
+// has.
 func TestGoPackagesStrategyIsTheDefault(t *testing.T) {
 	t.Parallel()
 
@@ -75,8 +75,10 @@ func TestGoPackagesStrategyIsTheDefault(t *testing.T) {
 		loadedVia(t, root, packages.WithGoEnv(packages.GoEnv{GOOS: "windows", GOARCH: "amd64"})))
 }
 
-// TestStrategiesAgreeOnTheSameTree runs one tree through both strategies. They resolve the graph in
-// completely different ways, so agreeing on which files a package is made of is the whole contract.
+// TestStrategiesAgreeOnTheSameTree runs one tree through both strategies.
+//
+// They resolve the graph in completely different ways, so agreeing on which files a package is made of is the whole
+// contract.
 func TestStrategiesAgreeOnTheSameTree(t *testing.T) {
 	t.Parallel()
 
@@ -89,8 +91,8 @@ func TestStrategiesAgreeOnTheSameTree(t *testing.T) {
 		"the two strategies must build the same package from the same tree")
 }
 
-// TestWithFSOverridesTheStrategy: asking for the go command while handing over a virtual filesystem
-// is not a configuration to honour, it is one to correct — `go list` cannot read fsys at all.
+// TestWithFSOverridesTheStrategy: asking for the go command while handing over a virtual filesystem is not a
+// configuration to honour, it is one to correct — `go list` cannot read fsys at all.
 func TestWithFSOverridesTheStrategy(t *testing.T) {
 	t.Parallel()
 

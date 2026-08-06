@@ -21,8 +21,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// exportFor type-checks src and writes it out the way the compiler would, so these tests need no
-// toolchain and no GOROOT.
+// exportFor type-checks src and writes it out the way the compiler would, so these tests need no toolchain and no
+// GOROOT.
 func exportFor(t *testing.T, pkgPath, src string) []byte {
 	t.Helper()
 
@@ -39,15 +39,17 @@ func exportFor(t *testing.T, pkgPath, src string) []byte {
 	return blob.Bytes()
 }
 
-// Export data answers what the types are. It cannot answer what the package SAYS about them, because
-// there are no comments in it — and for codescan that second answer is load-bearing: strfmt marks its
-// own types, and those marks are what give a field its format.
+// Export data answers what the types are.
 //
-// The two halves cannot be combined after the fact: go/types records what a type expression denotes
-// behind an unexported field, so a package assembled from export data plus parsed syntax has
-// declarations the builders read and no record of what they denote. So the choice is per package and
-// whole — a dependency that says something is read from source, and the export data behind it still
-// serves everything it in turn imports, which is where the saving was all along.
+// It cannot answer what the package SAYS about them, because there are no comments in it — and for codescan that
+// second answer is load-bearing: strfmt marks its own types, and those marks are what give a field its format.
+//
+// The two halves cannot be combined after the fact: go/types records what a type expression denotes behind an
+// unexported field, so a package assembled from export data plus parsed syntax has declarations the builders read and
+// no record of what they denote.
+//
+// So the choice is per package and whole — a dependency that says something is read from source, and the export data
+// behind it still serves everything it in turn imports, which is where the saving was all along.
 func TestExportData_KeepsDependencyComments(t *testing.T) {
 	t.Parallel()
 

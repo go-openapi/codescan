@@ -19,10 +19,9 @@ import (
 
 // Resolver turns patterns and import paths into directories.
 //
-// This is the half of `go list` we have to own: mapping "./..." or "example.com/x/y" onto a place on
-// the filesystem. It is deliberately narrow — main module, workspace members, the module cache, a
-// vendor directory, and GOROOT — because those are the trees whose layout is knowable without running
-// the go command.
+// This is the half of `go list` we have to own: mapping "./..." or "example.com/x/y" onto a place on the filesystem.
+// It is deliberately narrow — main module, workspace members, the module cache, a vendor directory, and GOROOT —
+// because those are the trees whose layout is knowable without running the go command.
 type Resolver struct {
 	vfs *vfs.FS
 	ctx *build.Context
@@ -32,8 +31,8 @@ type Resolver struct {
 	// gowork is the caller's GOWORK setting: "off", a path to a go.work, or "" to search upwards.
 	gowork string
 
-	// modFlag is the caller's -mod setting ("mod", "vendor", "readonly" or ""), which decides whether a
-	// vendor directory is authoritative.
+	// modFlag is the caller's -mod setting ("mod", "vendor", "readonly" or ""), which decides whether a vendor directory
+	// is authoritative.
 	modFlag string
 
 	// stubStdlib withholds the standard library from resolution: its imports are synthesized instead.
@@ -44,19 +43,21 @@ type Resolver struct {
 	vendor  string // <modRoot>/vendor when it is authoritative (see vendorMode), else ""
 	srcRoot string // GOROOT/src
 
-	// modDirs maps a required module path to the directory holding its source: the module cache for
-	// an ordinary requirement, an arbitrary directory for a `replace` target.
+	// modDirs maps a required module path to the directory holding its source: the module cache for an ordinary
+	// requirement, an arbitrary directory for a `replace` target.
 	//
-	// Since Go 1.17 the main module's go.mod lists every relevant dependency, direct and indirect, so
-	// reading it is enough to place imports without walking the whole module graph.
+	// Since Go 1.17 the main module's go.mod lists every relevant dependency, direct and indirect, so reading it is enough
+	// to place imports without walking the whole module graph.
 	modDirs map[string]string
 
-	// ws is the governing go.work, or nil. Its `use` directives place sibling modules at their working
-	// copies, which is the only reason a workspace changes what a scan sees.
+	// ws is the governing go.work, or nil.
+	//
+	// Its `use` directives place sibling modules at their working copies, which is the only reason a workspace changes
+	// what a scan sees.
 	ws *workspace
 
-	// nearestMod memoizes directory -> enclosing module, so deriving an import path does not re-walk
-	// the tree once per package.
+	// nearestMod memoizes directory -> enclosing module, so deriving an import path does not re-walk the tree once per
+	// package.
 	nearestMod map[string]moduleAt
 }
 
@@ -101,8 +102,8 @@ type Config struct {
 
 // NewResolver builds a Resolver and reads the module context around Config.Dir.
 //
-// It fails only when go.mod exists and cannot be read: with no requirement placed, every dependency
-// would fall through to synthesis and the real fault would vanish behind a wall of warnings.
+// It fails only when go.mod exists and cannot be read: with no requirement placed, every dependency would fall through
+// to synthesis and the real fault would vanish behind a wall of warnings.
 func NewResolver(cfg Config) (*Resolver, error) {
 	r := &Resolver{
 		vfs: cfg.FS, ctx: cfg.Context, dir: cfg.Dir, env: cfg.Env,
@@ -117,8 +118,8 @@ func NewResolver(cfg Config) (*Resolver, error) {
 
 // ResolvePatterns expands the caller's patterns into concrete package directories.
 //
-// Supported: "./dir", "./dir/...", "dir", "all"-free import paths, and bare "...". Anything the go
-// command supports beyond that (query syntax, "std", test patterns) is out of scope.
+// Supported: "./dir", "./dir/...", "dir", "all"-free import paths, and bare "...".
+// Anything the go command supports beyond that (query syntax, "std", test patterns) is out of scope.
 func (r *Resolver) ResolvePatterns(patterns []string) ([]Target, error) {
 	if len(patterns) == 0 {
 		patterns = []string{"."}
@@ -134,9 +135,9 @@ func (r *Resolver) ResolvePatterns(patterns []string) ([]Target, error) {
 			return nil, fmt.Errorf("%w %q relative to %q", ErrUnresolvedPattern, pat, r.dir)
 		}
 
-		// A wildcard is matched against the name the caller wrote in: a filesystem pattern against the
-		// directory path relative to the walk, an import-path pattern against the import path. Mixing
-		// the two would make ./... and example.com/... behave differently for the same tree.
+		// A wildcard is matched against the name the caller wrote in: a filesystem pattern against the directory path
+		// relative to the walk, an import-path pattern against the import path.
+		// Mixing the two would make ./... and example.com/... behave differently for the same tree.
 		match := matchPattern(pat)
 		relative := isRelativePattern(base)
 
@@ -149,9 +150,9 @@ func (r *Resolver) ResolvePatterns(patterns []string) ([]Target, error) {
 		}
 
 		err := r.vfs.WalkDirs(dir, func(d string) error {
-			// `...` stops at a module boundary, as it does for the go command: a nested module is a
-			// different module, and its packages are not part of this pattern. Without this the walk
-			// swallows vendored trees and sibling modules, and — worse — labels them with import paths
+			// `...` stops at a module boundary, as it does for the go command: a nested module is a different module, and its
+			// packages are not part of this pattern.
+			// Without this the walk swallows vendored trees and sibling modules, and — worse — labels them with import paths
 			// derived from the wrong module.
 			if d != dir && r.isModuleRoot(d) {
 				return fs.SkipDir
@@ -167,10 +168,10 @@ func (r *Resolver) ResolvePatterns(patterns []string) ([]Target, error) {
 				out = append(out, Target{Dir: d, PkgPath: candidate})
 			}
 
-			// A wildcard never reaches INSIDE a vendor directory — "./..." is documented not to match
-			// packages under ./vendor or ./mycode/vendor. The directory itself is not special though: a
-			// package that merely happens to be called vendor is an ordinary match, which is why this
-			// prunes the children rather than the node.
+			// A wildcard never reaches INSIDE a vendor directory — "./..." is documented not to match packages under ./vendor
+			// or ./mycode/vendor.
+			// The directory itself is not special though: a package that merely happens to be called vendor is an ordinary
+			// match, which is why this prunes the children rather than the node.
 			if d != dir && path.Base(d) == "vendor" {
 				return fs.SkipDir
 			}
@@ -197,9 +198,9 @@ func (r *Resolver) ResolveImport(importPath string) (dir, pkgPath string, ok boo
 			return d, importPath, true
 		}
 	}
-	// A workspace member, placed by go.work. This comes before the module cache on purpose: the point
-	// of a workspace is that a sibling resolves to the copy being worked on, and reading the cached
-	// release instead is exactly the staleness `use` exists to prevent.
+	// A workspace member, placed by go.work.
+	// This comes before the module cache on purpose: the point of a workspace is that a sibling resolves to the copy being
+	// worked on, and reading the cached release instead is exactly the staleness `use` exists to prevent.
 	if modPath, modDir, found := r.ws.lookup(importPath); found {
 		rel := strings.TrimPrefix(strings.TrimPrefix(importPath, modPath), "/")
 		if d := r.vfs.Join(modDir, rel); r.vfs.IsDir(d) {
@@ -215,9 +216,11 @@ func (r *Resolver) ResolveImport(importPath string) (dir, pkgPath string, ok boo
 			return d, importPath, true
 		}
 	}
-	// A vendored dependency. Before the module cache, not after: a vendored build is meant to read what
-	// is in the tree, and that is usually the whole reason it was vendored. The cache stays as a
-	// fallback for a package vendoring missed, where the go command refuses the build outright — a
+	// A vendored dependency.
+	// Before the module cache, not after: a vendored build is meant to read what is in the tree, and that is usually the
+	// whole reason it was vendored.
+	//
+	// The cache stays as a fallback for a package vendoring missed, where the go command refuses the build outright — a
 	// scanner is more useful degrading than failing.
 	if r.vendor != "" {
 		if d := r.vfs.Join(r.vendor, importPath); r.vfs.IsDir(d) {
@@ -240,9 +243,9 @@ func (r *Resolver) ResolveImport(importPath string) (dir, pkgPath string, ok boo
 
 // InMainModule reports whether an import path names a package of the module being scanned.
 //
-// It decides where a package's types may come from. The code under scan must always be read from
-// source: its comments are the annotations, and export data carries none. Everything else is a
-// dependency, whose types are all that is wanted from it.
+// It decides where a package's types may come from.
+// The code under scan must always be read from source: its comments are the annotations, and export data carries none.
+// Everything else is a dependency, whose types are all that is wanted from it.
 func (r *Resolver) InMainModule(importPath string) bool {
 	if r.modPath == "" {
 		return false
@@ -262,11 +265,12 @@ func (r *Resolver) init() error {
 	return r.findModule()
 }
 
-// findModule walks up from Dir looking for go.mod. Without it, import paths inside the tree under
-// scan cannot be mapped to directories at all.
+// findModule walks up from Dir looking for go.mod.
 //
-// Finding none is not an error: the go command refuses a tree with no module, but a scanner that can
-// still read the declarations in front of it is more useful than one that cannot.
+// Without it, import paths inside the tree under scan cannot be mapped to directories at all.
+//
+// Finding none is not an error: the go command refuses a tree with no module, but a scanner that can still read the
+// declarations in front of it is more useful than one that cannot.
 func (r *Resolver) findModule() error {
 	dir := r.dir
 	for range maxParentWalk {
@@ -293,10 +297,10 @@ func (r *Resolver) findModule() error {
 
 // vendorMode reports whether dir is a vendor directory the build must actually use.
 //
-// The go command's test is vendor/modules.txt, not the directory: `go mod vendor` writes that file,
-// and without it the tree is not a vendored build — it is a directory that happens to be called
-// vendor, and may even be an ordinary package. Reading it anyway is how a stale copy silently
-// replaced the real dependency.
+// The go command's test is vendor/modules.txt, not the directory: `go mod vendor` writes that file, and without it the
+// tree is not a vendored build — it is a directory that happens to be called vendor, and may even be an ordinary
+// package.
+// Reading it anyway is how a stale copy silently replaced the real dependency.
 //
 // -mod=mod is the explicit "ignore the vendor directory" switch, and wins.
 func (r *Resolver) vendorMode(dir string) bool {
@@ -310,18 +314,16 @@ func (r *Resolver) vendorMode(dir string) bool {
 
 // readRequirements places every module the main go.mod names, so imports into them resolve.
 //
-// A vendored tree needs none of this; it matters for the ordinary case where dependencies live in the
-// module cache.
+// A vendored tree needs none of this; it matters for the ordinary case where dependencies live in the module cache.
 func (r *Resolver) readRequirements(gomod string, blob []byte) error {
-	// Strict Parse, despite the forward-compatibility cost: ParseLax exists for reading a DEPENDENCY's
-	// go.mod and deliberately ignores replace, which is exactly the directive that decides where a
-	// dependency is read from. Losing replaces silently would be worse than failing on a go.mod that
-	// names a directive this x/mod has not heard of — and that failure is loud and fixed by a bump.
+	// Strict Parse, despite the forward-compatibility cost: ParseLax exists for reading a DEPENDENCY's go.mod and
+	// deliberately ignores replace, which is exactly the directive that decides where a dependency is read from.
+	// Losing replaces silently would be worse than failing on a go.mod that names a directive this x/mod has not heard of
+	// — and that failure is loud and fixed by a bump.
 	f, err := modfile.Parse(gomod, blob, nil)
 	if err != nil {
-		// Degrading here is what makes this worth failing over: with no requirements placed, every
-		// dependency falls through to synthesis, and the scan reports a wall of synthesized-import
-		// warnings that say nothing about the actual fault.
+		// Degrading here is what makes this worth failing over: with no requirements placed, every dependency falls through
+		// to synthesis, and the scan reports a wall of synthesized-import warnings that say nothing about the actual fault.
 		return fmt.Errorf("%w: %w", ErrInvalidGoMod, err)
 	}
 
@@ -341,8 +343,8 @@ func (r *Resolver) readRequirements(gomod string, blob []byte) error {
 
 	// `replace` wins over the cache, and a directory target may sit anywhere.
 	for _, rep := range f.Replace {
-		// A replace pinned to a version applies to that version and no other. Applying it regardless
-		// silently swaps in a substitute the build never asked for — and the two forms are easy to
+		// A replace pinned to a version applies to that version and no other.
+		// Applying it regardless silently swaps in a substitute the build never asked for — and the two forms are easy to
 		// confuse, since the unversioned one, which does apply to every version, looks almost the same.
 		if v := rep.Old.Version; v != "" && v != selected[rep.Old.Path] {
 			continue
@@ -384,15 +386,14 @@ func (r *Resolver) moduleCache() string {
 	return r.vfs.Join(gopath, "pkg", "mod")
 }
 
-// isRelativePattern reports whether a pattern names a place on the filesystem rather than an import
-// path.
+// isRelativePattern reports whether a pattern names a place on the filesystem rather than an import path.
 func isRelativePattern(pat string) bool {
 	return pat == "." || pat == ".." ||
 		strings.HasPrefix(pat, "./") || strings.HasPrefix(pat, "../") || strings.HasPrefix(pat, "/")
 }
 
-// relPatternName renders a walked directory in the same shape as the pattern that is matching it, so
-// "./internal/..." can be compared with "./internal/packages".
+// relPatternName renders a walked directory in the same shape as the pattern that is matching it, so "./internal/..."
+// can be compared with "./internal/packages".
 func relPatternName(base, walkRoot, dir string, v *vfs.FS) string {
 	rel, ok := v.HasSubdir(walkRoot, dir)
 	if !ok {
@@ -417,10 +418,10 @@ func (r *Resolver) locate(pat string) (dir, pkgPath string, ok bool) {
 		}
 		return dir, r.pkgPathFor(dir), true
 	}
-	// A bare pattern is an import path, as it is for the go command — never a directory. Falling back
-	// to a directory read looks generous, but it means the same pattern names different packages under
-	// the two strategies: `go list internal/foo` reports "not in std", while a directory read quietly
-	// succeeds with a different identity.
+	// A bare pattern is an import path, as it is for the go command — never a directory.
+	// Falling back to a directory read looks generous, but it means the same pattern names different packages under the
+	// two strategies: `go list internal/foo` reports "not in std", while a directory read quietly succeeds with a
+	// different identity.
 	if d, p, found := r.ResolveImport(pat); found {
 		return d, p, true
 	}
@@ -430,10 +431,10 @@ func (r *Resolver) locate(pat string) (dir, pkgPath string, ok bool) {
 
 // pkgPathFor derives an import path for a directory, from the module that actually contains it.
 //
-// Deriving it from the main module instead is wrong the moment a directory belongs to a nested or
-// workspace module: the path comes out well-formed but names a package that does not exist. Since
-// codescan keys definitions, provenance and x-go-package on the import path, a plausible-looking
-// wrong one is worse than an obviously wrong one.
+// Deriving it from the main module instead is wrong the moment a directory belongs to a nested or workspace module: the
+// path comes out well-formed but names a package that does not exist.
+// Since codescan keys definitions, provenance and x-go-package on the import path, a plausible-looking wrong one is
+// worse than an obviously wrong one.
 func (r *Resolver) pkgPathFor(dir string) string {
 	mod := r.nearestModule(dir)
 	if mod.root == "" || mod.path == "" {
@@ -450,10 +451,10 @@ func (r *Resolver) pkgPathFor(dir string) string {
 
 // pathlessID names a package in a tree that has no module.
 //
-// The go command simply refuses such a tree, so there is nothing to be faithful to; what matters is
-// that the answer is not an absolute path. A package path ends up in x-go-package and in the
-// collision-naming machinery, and "/home/someone/scratch/api" in a published spec describes the
-// machine that produced it rather than the code it documents.
+// The go command simply refuses such a tree, so there is nothing to be faithful to; what matters is that the answer is
+// not an absolute path.
+// A package path ends up in x-go-package and in the collision-naming machinery, and "/home/someone/scratch/api" in a
+// published spec describes the machine that produced it rather than the code it documents.
 func (r *Resolver) pathlessID(dir string) string {
 	rel, ok := r.vfs.HasSubdir(r.dir, dir)
 	if !ok || rel == "." || rel == "" {
@@ -471,16 +472,16 @@ func (r *Resolver) nearestModule(dir string) moduleAt {
 
 	d, found := dir, moduleAt{}
 	for range maxParentWalk {
-		// Stop at the boundary, whether or not the go.mod there names a module: a directory under an
-		// unreadable go.mod belongs to that module, not to the one further up, so borrowing the enclosing
-		// module's path would invent an import path rather than admit there is none.
+		// Stop at the boundary, whether or not the go.mod there names a module: a directory under an unreadable go.mod
+		// belongs to that module, not to the one further up, so borrowing the enclosing module's path would invent an import
+		// path rather than admit there is none.
 		if r.isModuleRoot(d) {
 			found = moduleAt{root: d, path: r.modulePathAt(d)}
 
 			break
 		}
-		// The main module is the backstop: its root may sit above the bounded walk, and stopping there
-		// keeps a directory inside it from being reported as module-less.
+		// The main module is the backstop: its root may sit above the bounded walk, and stopping there keeps a directory
+		// inside it from being reported as module-less.
 		if d == r.modRoot {
 			found = moduleAt{root: r.modRoot, path: r.modPath}
 
@@ -501,10 +502,10 @@ func (r *Resolver) nearestModule(dir string) moduleAt {
 
 // isModuleRoot reports whether dir is a module boundary.
 //
-// The test is the existence of a go.mod file, not whether it parses: cmd/go stops a walk on the stat
-// alone (modload/search.go, "Stop at module boundaries"). An empty or broken go.mod still marks a
-// different module, and treating it as ordinary meant walking into it and labelling its packages with
-// the enclosing module's path.
+// The test is the existence of a go.mod file, not whether it parses: cmd/go stops a walk on the stat alone
+// (modload/search.go, "Stop at module boundaries").
+// An empty or broken go.mod still marks a different module, and treating it as ordinary meant walking into it and
+// labelling its packages with the enclosing module's path.
 func (r *Resolver) isModuleRoot(dir string) bool {
 	_, err := r.vfs.ReadFile(r.vfs.Join(dir, "go.mod"))
 
@@ -534,8 +535,8 @@ func joinPkgPath(base, rel string) string {
 	return path.Join(base, rel)
 }
 
-// IsStdlibPath reports whether an import path names a standard-library package: its first segment
-// carries no dot, so it can never be a module path.
+// IsStdlibPath reports whether an import path names a standard-library package: its first segment carries no dot, so it
+// can never be a module path.
 func IsStdlibPath(importPath string) bool {
 	return !strings.Contains(firstSegment(importPath), ".")
 }

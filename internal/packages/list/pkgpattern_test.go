@@ -4,12 +4,12 @@
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
-// Derived from cmd/internal/pkgpattern/pat_test.go at go1.26.5: the MatchPattern table and the little
-// interpreter that reads it, with the tables for the entry points codescan does not use removed.
+// Derived from cmd/internal/pkgpattern/pat_test.go at go1.26.5: the MatchPattern table and the little interpreter that
+// reads it, with the tables for the entry points codescan does not use removed.
 //
-// This is the reason the matcher itself was copied. The table is the specification written down —
-// every clause of "go help packages" that anyone has ever got wrong, including the three deep-vendor
-// cases our own matcher failed before it was replaced.
+// This is the reason the matcher itself was copied.
+// The table is the specification written down — every clause of "go help packages" that anyone has ever got wrong,
+// including the three deep-vendor cases our own matcher failed before it was replaced.
 
 package list
 

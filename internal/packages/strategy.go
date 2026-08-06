@@ -11,22 +11,24 @@ import (
 
 // Strategy names a way of resolving a package graph.
 //
-// Both strategies answer the same question and, across codescan's fixture corpus, give the same
-// answer. They differ in what they need to run, which is the only reason a caller picks one.
+// Both strategies answer the same question and, across codescan's fixture corpus, give the same answer.
+// They differ in what they need to run, which is the only reason a caller picks one.
 type Strategy int
 
 const (
-	// StrategyGoPackages delegates to golang.org/x/tools/go/packages, which resolves the graph by
-	// running `go list`. Authoritative — it is the go command's own answer — at the price of needing an
-	// installed toolchain and the ability to start a process.
+	// StrategyGoPackages delegates to golang.org/x/tools/go/packages, which resolves the graph by running `go list`.
+	//
+	// Authoritative — it is the go command's own answer — at the price of needing an installed toolchain and the
+	// ability to start a process.
 	//
 	// The zero value, so a Loader that is asked for nothing behaves as codescan always has.
 	StrategyGoPackages Strategy = iota
 
-	// StrategyToolchainFree resolves the graph in pure Go: patterns to directories, build-constraint
-	// selection through go/build, parse, type-check. Needs no toolchain, no GOROOT beyond the source it
-	// reads, and no exec — which is what makes it the only strategy available inside a WebAssembly
-	// guest, or against a virtual filesystem.
+	// StrategyToolchainFree resolves the graph in pure Go: patterns to directories, build-constraint selection through
+	// go/build, parse, type-check.
+	//
+	// Needs no toolchain, no GOROOT beyond the source it reads, and no exec — which is what makes it the only strategy
+	// available inside a WebAssembly guest, or against a virtual filesystem.
 	StrategyToolchainFree
 )
 
@@ -44,9 +46,9 @@ func (s Strategy) String() string {
 
 // WithStrategy selects how the package graph is resolved.
 //
-// The default is [StrategyGoPackages]. [WithFS] overrides this to [StrategyToolchainFree]: `go list`
-// runs against the real filesystem, so it could not honour a virtual one even if asked, which means
-// there is no coherent configuration being overridden.
+// The default is [StrategyGoPackages].
+// [WithFS] overrides this to [StrategyToolchainFree]: `go list` runs against the real filesystem, so it could not
+// honour a virtual one even if asked, which means there is no coherent configuration being overridden.
 func WithStrategy(s Strategy) Option {
 	return func(o *options) { o.strategy = s }
 }
@@ -60,11 +62,11 @@ func (l *Loader) strategy() Strategy {
 	return l.opts.strategy
 }
 
-// loadMode is the shape codescan needs, and what both strategies are contracted to deliver: named
-// packages with their files, their transitive imports, and full syntax plus type information.
+// loadMode is the shape codescan needs, and what both strategies are contracted to deliver: named packages with their
+// files, their transitive imports, and full syntax plus type information.
 //
-// The toolchain-free strategy produces this unconditionally — it has no cheaper mode to offer — so it
-// is only the go/packages strategy that has to be told.
+// The toolchain-free strategy produces this unconditionally — it has no cheaper mode to offer — so it is only the
+// go/packages strategy that has to be told.
 const loadMode = packages.NeedName |
 	packages.NeedFiles |
 	packages.NeedImports |
@@ -73,10 +75,10 @@ const loadMode = packages.NeedName |
 	packages.NeedSyntax |
 	packages.NeedTypesInfo
 
-// compiledDepsMode is loadMode without NeedDeps, which is what makes go/packages ask `go list` for
-// -export and take dependency types from the compiler's own output.
+// compiledDepsMode is loadMode without NeedDeps, which is what makes go/packages ask `go list` for -export and take
+// dependency types from the compiler's own output.
 //
-// The absence of a flag doing the asking is not an oversight upstream: usesExportData is
-// `NeedExportFile != 0 || (NeedTypes != 0 && NeedDeps == 0)`, so NOT wanting the dependency graph
-// hydrated is precisely the signal that their types may come from export data.
+// The absence of a flag doing the asking is not an oversight upstream: usesExportData is `NeedExportFile != 0 ||
+// (NeedTypes != 0 && NeedDeps == 0)`, so NOT wanting the dependency graph hydrated is precisely the signal that their
+// types may come from export data.
 const compiledDepsMode = loadMode &^ packages.NeedDeps

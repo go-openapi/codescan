@@ -23,11 +23,11 @@ import (
 	"golang.org/x/tools/go/gcexportdata"
 )
 
-// tagTree is a module whose files are selected by build constraints in every way go/build supports:
-// a //go:build expression, its negation, a conjunction, and GOOS filename suffixes.
+// tagTree is a module whose files are selected by build constraints in every way go/build supports: a //go:build
+// expression, its negation, a conjunction, and GOOS filename suffixes.
 //
-// It is an fstest.MapFS rather than testdata on disk so the test says something about WithFS at the
-// same time — nothing here is reachable through the os package.
+// It is an fstest.MapFS rather than testdata on disk so the test says something about WithFS at the same time —
+// nothing here is reachable through the os package.
 func tagTree() fstest.MapFS {
 	return fstest.MapFS{
 		"go.mod": &fstest.MapFile{Data: []byte("module example.com/tagtree\n\ngo 1.25.0\n")},
@@ -48,8 +48,8 @@ func tagTree() fstest.MapFS {
 
 // loadedFiles returns the base names of the files the loader decided the package is made of.
 //
-// Every fixture in this file puts its package in ./pkg, so the pattern is fixed rather than a
-// parameter: what varies between cases is the config, which is the thing under test.
+// Every fixture in this file puts its package in ./pkg, so the pattern is fixed rather than a parameter: what varies
+// between cases is the config, which is the thing under test.
 func loadedFiles(t *testing.T, loader *packages.Loader, cfg *packages.Config) []string {
 	t.Helper()
 
@@ -104,8 +104,8 @@ func TestLoadBuildTags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Pinned to linux/amd64 so the expectations describe the build constraints under test and
-			// not the platform the test happens to run on.
+			// Pinned to linux/amd64 so the expectations describe the build constraints under test and not the platform the test
+			// happens to run on.
 			loader := packages.NewLoader(packages.WithFS(tagTree()), packages.WithGoEnv(packages.GoEnv{GOOS: "linux", GOARCH: "amd64"}))
 			got := loadedFiles(t, loader, &packages.Config{BuildFlags: tt.flags})
 
@@ -134,8 +134,8 @@ func TestLoadTarget(t *testing.T) {
 			want: []string{"always.go", "impl_windows.go", "negated.go"},
 		},
 		{
-			// The case the option exists for: a platform that matches no suffix in the tree drops both
-			// implementation files. Running inside a WASI guest, this is what the default would do.
+			// The case the option exists for: a platform that matches no suffix in the tree drops both implementation files.
+			// Running inside a WASI guest, this is what the default would do.
 			name: "a platform with no matching file drops both",
 			goos: "wasip1", goarch: "wasm",
 			want: []string{"always.go", "negated.go"},
@@ -248,8 +248,8 @@ func TestLoadResolvesIntraModuleImports(t *testing.T) {
 	assert.Contains(t, obj.Type().Underlying().String(), "example.com/m/b.B")
 }
 
-// TestLoadChecksFunctionBodies guards a regression that the fixture corpus caught: codescan discovers
-// annotated types declared inside function bodies, so the type-checker must not skip them.
+// TestLoadChecksFunctionBodies guards a regression that the fixture corpus caught: codescan discovers annotated types
+// declared inside function bodies, so the type-checker must not skip them.
 func TestLoadChecksFunctionBodies(t *testing.T) {
 	t.Parallel()
 
@@ -299,8 +299,8 @@ func TestLoadReportsSynthesizedImports(t *testing.T) {
 		byPath[s.Path] = s
 	}
 
-	// The standard library was withheld on purpose; the other import simply does not exist. The
-	// caller needs to tell those apart, because only one of them is a mistake.
+	// The standard library was withheld on purpose; the other import simply does not exist.
+	// The caller needs to tell those apart, because only one of them is a mistake.
 	stdlib, ok := byPath["time"]
 	require.True(t, ok, "expected a report for the withheld standard library, got %v", byPath)
 	assert.True(t, stdlib.Deliberate)
@@ -313,9 +313,9 @@ func TestLoadReportsSynthesizedImports(t *testing.T) {
 	assert.Positive(t, missing.Pos.Line)
 }
 
-// TestLoadKeepsRootedPathsUnderRecursivePatterns guards the boundary between the caller's paths and
-// io/fs's own rooted namespace: a walk must hand back paths in the form it was given, or every
-// token.Position the scan reports comes out unresolvable.
+// TestLoadKeepsRootedPathsUnderRecursivePatterns guards the boundary between the caller's paths and io/fs's own rooted
+// namespace: a walk must hand back paths in the form it was given, or every token.Position the scan reports comes out
+// unresolvable.
 func TestLoadKeepsRootedPathsUnderRecursivePatterns(t *testing.T) {
 	t.Parallel()
 
@@ -339,16 +339,14 @@ func TestLoadKeepsRootedPathsUnderRecursivePatterns(t *testing.T) {
 	}
 }
 
-// TestLoadReadsFromExportData feeds the loader export data it generated itself, so the test needs no
-// toolchain and no GOROOT.
+// TestLoadReadsFromExportData feeds the loader export data it generated itself, so the test needs no toolchain and no
+// GOROOT.
 //
-// The package stands in for any dependency: export data applies to everything outside the module
-// being scanned.
+// The package stands in for any dependency: export data applies to everything outside the module being scanned.
 func TestLoadReadsFromExportData(t *testing.T) {
 	t.Parallel()
 
-	// Type-check a stand-in for a standard-library package, then write it out the way the compiler
-	// would have.
+	// Type-check a stand-in for a standard-library package, then write it out the way the compiler would have.
 	fset := token.NewFileSet()
 	src := "package faketime\n\ntype Moment struct{ Seconds int64 }\n\nfunc (Moment) Marshal() string { return \"\" }\n"
 	f, err := parser.ParseFile(fset, "faketime.go", src, 0)
@@ -386,8 +384,9 @@ func TestLoadReadsFromExportData(t *testing.T) {
 	obj := pkgs[0].Types.Scope().Lookup("T")
 	require.NotNil(t, obj)
 
-	// The decisive check: the imported type carries real structure. A synthesized stand-in would have
-	// no fields and no methods, which is exactly the fidelity export data exists to restore.
+	// The decisive check: the imported type carries real structure.
+	// A synthesized stand-in would have no fields and no methods, which is exactly the fidelity export data exists to
+	// restore.
 	outer, ok := obj.Type().Underlying().(*types.Struct)
 	require.True(t, ok, "expected a struct, got %T", obj.Type().Underlying())
 

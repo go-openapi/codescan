@@ -14,12 +14,12 @@ import (
 
 // FS is the loader's single point of filesystem contact.
 //
-// It exists so that every read — build-constraint matching inside go/build, directory walking during
-// pattern resolution, and source reading before parsing — goes through one place that can be pointed
-// at either the real filesystem or an fs.FS.
+// It exists so that every read — build-constraint matching inside go/build, directory walking during pattern
+// resolution, and source reading before parsing — goes through one place that can be pointed at either the real
+// filesystem or an fs.FS.
 //
-// It is its own package because both halves of the loader need it and neither owns it: resolution
-// walks directories, and the loader reads the files resolution found.
+// It is its own package because both halves of the loader need it and neither owns it: resolution walks directories,
+// and the loader reads the files resolution found.
 type FS struct {
 	fsys fs.FS // nil: real filesystem
 }
@@ -31,9 +31,8 @@ func (v *FS) Virtual() bool { return v.fsys != nil }
 
 // Clean maps a caller-supplied path onto the convention of the active backend.
 //
-// io/fs requires slash-separated, unrooted paths, while callers naturally write OS paths and
-// sometimes absolute ones. Normalising here (rather than rejecting) keeps the same patterns working
-// against both backends.
+// io/fs requires slash-separated, unrooted paths, while callers naturally write OS paths and sometimes absolute ones.
+// Normalising here (rather than rejecting) keeps the same patterns working against both backends.
 func (v *FS) Clean(p string) string {
 	if !v.Virtual() {
 		return p
@@ -142,9 +141,9 @@ func (v *FS) WalkDirs(root string, yield func(string) error) error {
 			return yield(p)
 		})
 	}
-	// io/fs walks in its own rooted namespace, so every result has to be mapped back onto the form the
-	// caller uses. Yielding the fs-internal path instead would leak into file names, and from there
-	// into every token.Position the scan reports — a position an editor cannot resolve.
+	// io/fs walks in its own rooted namespace, so every result has to be mapped back onto the form the caller uses.
+	// Yielding the fs-internal path instead would leak into file names, and from there into every token.Position the scan
+	// reports — a position an editor cannot resolve.
 	inner := v.Clean(root)
 
 	return fs.WalkDir(v.fsys, inner, func(p string, d fs.DirEntry, err error) error {
@@ -175,9 +174,9 @@ func rebase(root, inner, p string) string {
 
 // skipDir reports directories the go tool itself never treats as packages.
 //
-// "vendor" is deliberately absent: it is not universally excluded, only unreachable THROUGH a
-// wildcard, and a directory named vendor can be an ordinary package. That rule needs to know whether
-// it is walking a wildcard, so the resolver applies it rather than this list.
+// "vendor" is deliberately absent: it is not universally excluded, only unreachable THROUGH a wildcard, and a directory
+// named vendor can be an ordinary package.
+// That rule needs to know whether it is walking a wildcard, so the resolver applies it rather than this list.
 func skipDir(name string) bool {
 	return name == "testdata" ||
 		strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_")

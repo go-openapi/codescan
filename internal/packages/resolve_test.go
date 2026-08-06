@@ -18,8 +18,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// These cover pattern resolution, which the corpus A/B structurally cannot: every fixture scan is a
-// single module scanned with ".", so nothing there exercises what a pattern *means*.
+// These cover pattern resolution, which the corpus A/B structurally cannot: every fixture scan is a single module
+// scanned with ".", so nothing there exercises what a pattern *means*.
 
 // writeTree materialises a map of path -> content under a fresh directory.
 func writeTree(t *testing.T, files map[string]string) string {
@@ -51,9 +51,10 @@ func pkgPaths(t *testing.T, dir, pattern string, opts ...packages.Option) []stri
 	return out
 }
 
-// nestedTree is a main module with an unrelated module nested inside it. The nested module's path
-// deliberately shares no prefix with the main one, so an import path derived from the wrong module is
-// unmistakable rather than plausible.
+// nestedTree is a main module with an unrelated module nested inside it.
+//
+// The nested module's path deliberately shares no prefix with the main one, so an import path derived from the wrong
+// module is unmistakable rather than plausible.
 func nestedTree(t *testing.T) string {
 	t.Helper()
 
@@ -68,9 +69,9 @@ func nestedTree(t *testing.T) string {
 
 // A `...` pattern stops at a module boundary, as it does for the go command.
 //
-// Before this, the walk descended into every nested module it found — vendored trees, fixture
-// corpora, sibling modules — and reported them all as packages of the main module. On this repo that
-// turned 25 packages into 468.
+// Before this, the walk descended into every nested module it found — vendored trees, fixture corpora, sibling
+// modules — and reported them all as packages of the main module.
+// On this repo that turned 25 packages into 468.
 func TestResolvePatterns_StopsAtNestedModule(t *testing.T) {
 	t.Parallel()
 
@@ -87,10 +88,9 @@ func TestResolvePatterns_StopsAtNestedModule(t *testing.T) {
 
 // An import path is derived from the module that actually contains the directory.
 //
-// Naming a nested module's package explicitly is something the go command refuses ("directory is
-// outside main module"); we allow it, because scanning a subdirectory module directly is a reasonable
-// thing to ask of a scanner. What must not happen is answering with a well-formed path that names a
-// package which does not exist.
+// Naming a nested module's package explicitly is something the go command refuses ("directory is outside main module");
+// we allow it, because scanning a subdirectory module directly is a reasonable thing to ask of a scanner.
+// What must not happen is answering with a well-formed path that names a package which does not exist.
 func TestResolvePatterns_ImportPathComesFromTheContainingModule(t *testing.T) {
 	t.Parallel()
 
@@ -103,8 +103,8 @@ func TestResolvePatterns_ImportPathComesFromTheContainingModule(t *testing.T) {
 
 // A workspace makes a sibling module resolve to the copy being worked on.
 //
-// Missing this does not fail: the import is looked up in the module cache, missed, and synthesized,
-// so the sibling's types arrive with no fields at all and the spec quietly thins out.
+// Missing this does not fail: the import is looked up in the module cache, missed, and synthesized, so the sibling's
+// types arrive with no fields at all and the spec quietly thins out.
 func TestResolveImport_WorkspaceSibling(t *testing.T) {
 	t.Parallel()
 
@@ -146,8 +146,8 @@ func TestResolveImport_WorkspaceSibling(t *testing.T) {
 		"GOWORK=off is the caller disabling the workspace, so the sibling falls back to synthesis")
 }
 
-// GOWORK naming a file explicitly is honoured, so a caller can point at a workspace that does not sit
-// above the directory being scanned.
+// GOWORK naming a file explicitly is honoured, so a caller can point at a workspace that does not sit above the
+// directory being scanned.
 func TestResolveImport_ExplicitGoWorkPath(t *testing.T) {
 	t.Parallel()
 
@@ -173,8 +173,10 @@ func TestResolveImport_ExplicitGoWorkPath(t *testing.T) {
 		"a go.work outside the scanned tree still governs it when named")
 }
 
-// A wildcard never reaches inside a vendor directory, but a package that merely happens to be called
-// vendor is an ordinary match. The rule is about the wildcard, not about the name.
+// A wildcard never reaches inside a vendor directory, but a package that merely happens to be called vendor is an
+// ordinary match.
+//
+// The rule is about the wildcard, not about the name.
 func TestResolvePatterns_VendorAndWildcards(t *testing.T) {
 	t.Parallel()
 
@@ -196,8 +198,9 @@ func TestResolvePatterns_VendorAndWildcards(t *testing.T) {
 	assert.NotContains(t, got, "example.com/main/sub/vendor/x", "at any depth")
 }
 
-// `...` is a wildcard anywhere, not only as a whole trailing path element. Both of these used to be
-// rejected outright.
+// `...` is a wildcard anywhere, not only as a whole trailing path element.
+//
+// Both of these used to be rejected outright.
 func TestResolvePatterns_WildcardForms(t *testing.T) {
 	t.Parallel()
 
@@ -221,9 +224,9 @@ func TestResolvePatterns_WildcardForms(t *testing.T) {
 	}
 }
 
-// A vendor directory is authoritative only when `go mod vendor` wrote modules.txt, and -mod=mod turns
-// it off again. Reading it on the strength of the directory alone is how a stale copy silently
-// replaced the real dependency.
+// A vendor directory is authoritative only when `go mod vendor` wrote modules.txt, and -mod=mod turns it off again.
+//
+// Reading it on the strength of the directory alone is how a stale copy silently replaced the real dependency.
 func TestResolveImport_VendorIsAuthoritativeOnlyWithModulesTxt(t *testing.T) {
 	t.Parallel()
 
@@ -250,8 +253,8 @@ func TestResolveImport_VendorIsAuthoritativeOnlyWithModulesTxt(t *testing.T) {
 	}), "-mod=mod ignores the vendor directory")
 }
 
-// readsVendoredSentinel reports whether ./a's dependency resolved to the vendored copy, which is the
-// only copy carrying Sentinel.
+// readsVendoredSentinel reports whether ./a's dependency resolved to the vendored copy, which is the only copy carrying
+// Sentinel.
 func readsVendoredSentinel(t *testing.T, cfg *packages.Config) bool {
 	t.Helper()
 
@@ -269,8 +272,8 @@ func readsVendoredSentinel(t *testing.T, cfg *packages.Config) bool {
 
 // A version-pinned replace applies to that version and no other.
 //
-// The two forms look almost identical, and applying the pinned one regardless swaps in a substitute
-// the build never asked for — quietly, since the substitute usually compiles.
+// The two forms look almost identical, and applying the pinned one regardless swaps in a substitute the build never
+// asked for — quietly, since the substitute usually compiles.
 func TestReadRequirements_ReplaceRespectsVersions(t *testing.T) {
 	t.Parallel()
 
@@ -305,9 +308,8 @@ func TestReadRequirements_ReplaceRespectsVersions(t *testing.T) {
 
 // A go.mod that cannot be read fails the load.
 //
-// Degrading was worse than it sounds: with no requirement placed, every dependency in the module
-// falls through to synthesis, so the caller gets a wall of synthesized-import warnings and no
-// mention of the one line that caused them.
+// Degrading was worse than it sounds: with no requirement placed, every dependency in the module falls through to
+// synthesis, so the caller gets a wall of synthesized-import warnings and no mention of the one line that caused them.
 func TestReadRequirements_InvalidGoModIsFatal(t *testing.T) {
 	t.Parallel()
 
@@ -325,8 +327,8 @@ func TestReadRequirements_InvalidGoModIsFatal(t *testing.T) {
 	assert.Contains(t, err.Error(), "go.mod", "the message names the file at fault")
 }
 
-// A tree with no module at all still scans, and must not name its packages after the machine that
-// scanned them: a package path reaches the emitted spec through x-go-package.
+// A tree with no module at all still scans, and must not name its packages after the machine that scanned them: a
+// package path reaches the emitted spec through x-go-package.
 func TestPkgPath_NoModuleDoesNotLeakAbsolutePaths(t *testing.T) {
 	t.Parallel()
 

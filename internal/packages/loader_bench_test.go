@@ -12,10 +12,11 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// Loading is where a scan spends its time, and under WebAssembly — no threads, no `go list` to hand
-// the work to — it is the only place it can spend it. These exist so that cost stays visible:
-// allocation is the thing to watch, since the profile is dominated by the collector rather than by
-// any computation of ours.
+// Loading is where a scan spends its time, and under WebAssembly — no threads, no `go list` to hand the work to —
+// it is the only place it can spend it.
+//
+// These exist so that cost stays visible: allocation is the thing to watch, since the profile is dominated by the
+// collector rather than by any computation of ours.
 //
 //	go test -run '^$' -bench Load -benchmem ./internal/packages/
 func benchmarkLoad(b *testing.B, strategy packages.Strategy) {
