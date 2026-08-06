@@ -53,8 +53,13 @@ func WithStrategy(s Strategy) Option {
 	return func(o *options) { o.strategy = s }
 }
 
-// strategy reports which strategy this Loader will actually use, resolving the [WithFS] override.
-func (l *Loader) strategy() Strategy {
+// Strategy reports which strategy this Loader will actually use, resolving the [WithFS] override.
+//
+// Exported because the caller's preference is not the answer: a virtual filesystem forces the toolchain-free
+// strategy whatever was asked for, and options that only one strategy can honour ([WithCompiledDependencies])
+// are quietly dropped on the other. Anyone announcing what a load is about to do has to ask here rather than
+// re-deriving it from the options, which is how such an announcement came to contradict the load.
+func (l *Loader) Strategy() Strategy {
 	if l.opts.fsys != nil {
 		return StrategyToolchainFree
 	}

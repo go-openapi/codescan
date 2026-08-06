@@ -740,19 +740,39 @@ deliberately outside `go.work` for that reason, which is why the tool runs
 
 ### Annotated dependencies
 
-Export data holds types and not comments, and the two halves cannot be put back
-together afterwards: `go/types` records what a type expression *denotes* in
-`types.Info.Types`, whose entries cannot be constructed outside that package —
-the field distinguishing a type from a value is unexported. A package assembled
-from export data plus parsed syntax therefore hands the builders declarations to
-read and no record of what they denote, which is not a quieter scan but a
-panicking one.
+Export data holds types and not comments, so the loader decides per dependency and
+decides whole: **a package whose source carries `swagger:` is read from source, in
+the ordinary way; everything else comes from export data and is never parsed.**
+Nothing is lost, and almost nothing is given up — the saving was never in the
+handful of packages a scan actually reads, it is in the closure behind them.
 
-So the loader decides per dependency and decides whole: **a package whose source
-carries `swagger:` is read from source, in the ordinary way; everything else comes
-from export data and is never parsed.** Nothing is lost, and almost nothing is
-given up — the saving was never in the handful of packages a scan actually reads,
-it is in the closure behind them.
+Putting the two halves back together — export-data types with parsed syntax
+bolted on beside them — was once impossible, and that is no longer why the loader
+avoids it. The builders used to read `types.Info.Types`, whose entries cannot be
+constructed outside `go/types` (the field distinguishing a type from a value is
+unexported), so a package assembled that way handed them declarations to read and
+no record of what those declarations denote: not a quieter scan but a panicking
+one. They have since been taken off that map — see
+[§Not `types.Info.Types`](#not-typesinfotypes) — and a spec builds identically
+with `types.Info` reduced to `Defs` alone.
+
+That is what the go/packages strategy runs on, because it has no per-dependency
+lever at all: a `LoadMode` is one value for the whole load, with no hook to say
+"except this one". So it takes every dependency from export data and then hands
+the source back to the few that were worth reading — the same policy reached from
+the other end, after the load rather than during it. The cheap load still says
+where the source *is* (`compiledDepsMode` keeps `NeedFiles`), so this is parsing
+on known paths and nothing is type-checked twice.
+
+The toolchain-free strategy has no use for the assembled form: it already has the
+source, and reading an annotated dependency in full costs one type-check of a
+small package.
+
+**What both give up is the same thing**, and it is not the annotations: a type
+declared in a dependency that says nothing about itself. Nothing marks such a
+package as worth reading, so a model declared in one collapses to its name alone.
+Reading it would mean reading a dependency because a scan *reaches* it, which is a
+different rule from reading one because it has something to say.
 
 `genexportdata` mirrors that, skipping annotated packages by default and saying so:
 

@@ -47,18 +47,24 @@ func (ld *loadState) exportedPackage(importPath string, tpkg *types.Package) *Pa
 //
 // This is the whole of the export-data policy, and it is a policy rather than an optimisation.
 //
-// Export data holds types and not comments, and there is no way to put the missing half back afterwards: go/types
-// records what a type EXPRESSION denotes in types.Info.Types, whose entries cannot be constructed outside that package.
-// The field distinguishing a type from a value is unexported.
-//
-// A package assembled from export data plus parsed syntax therefore has declarations the builders will read and no
-// record of what those declarations denote, which is not a degraded scan but a panicking one.
-//
-// So the choice is made per package and made whole: a dependency that carries annotations is loaded from source like
-// any other, and one that does not is taken from export data with no syntax at all.
+// Export data holds types and not comments, so the choice is made per package and made whole: a dependency that
+// carries annotations is loaded from source like any other, and one that does not is taken from export data with no
+// syntax at all.
 //
 // Nothing is lost either way, and the saving survives, because it was never in the packages a scan reads — it is in
 // the closure behind them, which export data still serves.
+//
+// The middle option — export-data types with parsed syntax bolted on beside them — was once impossible, and that is
+// no longer why we avoid it. The builders used to read types.Info.Types, whose entries cannot be constructed outside
+// go/types (the field distinguishing a type from a value is unexported), so a package assembled that way handed them
+// declarations with no record of what those declarations denote: not a quieter scan but a panicking one. They have
+// since been taken off that map — the one reader left is a documented fallback — and a spec now builds identically
+// with types.Info reduced to Defs alone.
+//
+// So the hybrid is merely unbuilt here, and it stays that way because this strategy already has the source in hand:
+// reading an annotated dependency in full costs one type-check of a package small enough not to matter, and a fully
+// checked package is the simpler thing to hand on. Where it would earn its keep is the go/packages strategy, which
+// has no per-dependency lever at all — a LoadMode is one value for the whole load.
 func (ld *loadState) carriesAnnotations(importPath string) bool {
 	if known, ok := ld.annotated[importPath]; ok {
 		return known
@@ -72,6 +78,21 @@ func (ld *loadState) carriesAnnotations(importPath string) bool {
 
 // annotationMarker is what every codescan annotation begins with.
 const annotationMarker = "swagger:"
+
+// annotationChunk is how much of a file the marker scan reads at a time.
+//
+// Measured over the standard library, this repository's dependencies and a generated client: the median Go source file
+// is under 6 KB and 85–92% of them are under 16 KB, so one read usually covers a whole file. The tail is why there is
+// a bound at all — the standard library carries a single 2.9 MB generated file, and holding that in memory to look for
+// eight bytes is the cost this avoids.
+const annotationChunk = 16 << 10
+
+// markerCarryOver is how much of one chunk the next one starts with.
+//
+// A marker split across a read boundary is invisible to both halves, and missing one is not a degraded read: the
+// package would be served from export data and everything its source said about its own types would go unread, leaving
+// a spec that is valid and quieter. So each read keeps the tail a marker could still be starting in.
+const markerCarryOver = len(annotationMarker) - 1
 
 // scanForAnnotations looks for the marker in a package's source, without parsing it.
 //
@@ -99,17 +120,57 @@ func (ld *loadState) scanForAnnotations(importPath string) bool {
 	names = append(names, bp.GoFiles...)
 	names = append(names, bp.CgoFiles...)
 
+	// One buffer for every file in the package. The scan holds nothing else, so a 2.9 MB source file costs what a
+	// 2 KB one does.
+	var buf [annotationChunk]byte
+
 	for _, name := range names {
-		blob, readErr := ld.vfs.ReadFile(ld.vfs.Join(dir, name))
-		if readErr != nil {
-			continue
-		}
-		if bytes.Contains(blob, []byte(annotationMarker)) {
+		if fileCarriesMarker(ld.vfs.Open, ld.vfs.Join(dir, name), buf[:]) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// fileCarriesMarker reports whether the file at path contains the annotation marker, reading it a chunk at a time and
+// stopping at the first hit.
+//
+// buf belongs to the caller and is reused across a package's files, so the scan allocates once per package rather than
+// once per file, and never in proportion to what it is reading. It does not escape analysis — Read is an interface
+// method, so the buffer is heap-allocated — which is why it is hoisted to the caller instead of declared here.
+//
+// open is the caller's, because the two strategies read through different filesystems: the toolchain-free one honours
+// a virtual tree, while go/packages hands over paths that only ever exist on the real one.
+//
+// A file that cannot be read is skipped, as reading it whole used to do: the package keeps whatever its other files
+// say.
+func fileCarriesMarker(open func(string) (io.ReadCloser, error), path string, buf []byte) bool {
+	f, err := open(path)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = f.Close() }()
+
+	marker := []byte(annotationMarker)
+	carried := 0
+
+	for {
+		n, readErr := f.Read(buf[carried:])
+		if n > 0 {
+			window := buf[:carried+n]
+			if bytes.Contains(window, marker) {
+				return true
+			}
+
+			// Keep only the tail a marker could still be starting in. copy handles the overlap, since source and
+			// destination are the same buffer.
+			carried = copy(buf, window[max(0, len(window)-markerCarryOver):])
+		}
+		if readErr != nil {
+			return false
+		}
+	}
 }
 
 // reportExportOnly announces a dependency whose types were read but whose source was not.

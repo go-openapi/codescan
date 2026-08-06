@@ -28,7 +28,16 @@ func (l *Loader) loadViaGoPackages(cfg *Config, patterns ...string) ([]*Package,
 		effective.Env = env
 	}
 
-	return packages.Load(&effective, patterns...)
+	pkgs, err := packages.Load(&effective, patterns...)
+	if err != nil || !l.opts.compiledDeps {
+		return pkgs, err
+	}
+
+	// The load could not be told to spare the annotated dependencies, so they are given their source back now.
+	// See attachAnnotatedDependencies for why the choice lands here rather than during the load.
+	attachAnnotatedDependencies(pkgs, l.opts.onExportOnly)
+
+	return pkgs, nil
 }
 
 // pinnedEnv renders the loader's GoEnv as environment assignments over base, or nil when nothing is pinned.

@@ -7,10 +7,12 @@ package packages_test
 
 import (
 	"bytes"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"go/types"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -135,4 +137,56 @@ func commentsOf(files []*ast.File) string {
 	}
 
 	return b.String()
+}
+
+// A marker that straddles the scan's read boundary must still be seen.
+//
+// The scan reads a file in fixed-size chunks rather than whole, so `swagger:` can land with some of its bytes in one
+// read and the rest in the next. Neither half contains it. Getting that wrong fails in the quietest way this loader
+// has: the dependency is served from export data, its annotations are never read, and the spec comes out valid and
+// saying less — no error, no diagnostic, and no golden moves unless a fixture happens to land a marker on the
+// boundary.
+//
+// So the marker is placed at every offset that puts part of it either side of the boundary.
+func TestExportData_MarkerAcrossReadBoundary(t *testing.T) {
+	t.Parallel()
+
+	for split := 1; split < len("swagger:"); split++ {
+		t.Run(fmt.Sprintf("%d bytes before the boundary", split), func(t *testing.T) {
+			t.Parallel()
+
+			const (
+				head = "package fakefmt\n\n// "
+				tail = "strfmt date-time\ntype Stamp struct{ Seconds int64 }\n"
+			)
+			// Pad so that exactly `split` bytes of the marker fall in the first chunk.
+			pad := packages.AnnotationChunk - len(head) - split
+			require.Positive(t, pad, "the padding has to reach the boundary")
+			src := head + strings.Repeat("x", pad) + "swagger:" + tail
+
+			require.Equal(t, packages.AnnotationChunk-split, strings.Index(src, "swagger:"),
+				"the marker must straddle the boundary for this test to test anything")
+
+			tree := fstest.MapFS{
+				"go.mod":          &fstest.MapFile{Data: []byte("module example.com/m\n\ngo 1.25.0\n\nrequire fakefmt v1.0.0\n\nreplace fakefmt => ./vendored\n")},
+				"vendored/go.mod": &fstest.MapFile{Data: []byte("module fakefmt\n\ngo 1.25.0\n")},
+				"vendored/f.go":   &fstest.MapFile{Data: []byte(src)},
+				"p/p.go":          &fstest.MapFile{Data: []byte("package p\n\nimport \"fakefmt\"\n\ntype T struct{ At fakefmt.Stamp }\n")},
+			}
+			exports := fstest.MapFS{"fakefmt.export": &fstest.MapFile{Data: exportFor(t, "fakefmt", src)}}
+
+			pkgs, err := packages.NewLoader(
+				packages.WithFS(tree),
+				packages.WithGoEnv(packages.GoEnv{GOOS: "linux", GOARCH: "amd64"}),
+				packages.WithExportData(exports),
+			).Load(&packages.Config{}, "./p")
+			require.NoError(t, err)
+			require.Len(t, pkgs, 1)
+
+			dep := pkgs[0].Imports["fakefmt"]
+			require.NotNil(t, dep)
+			assert.NotEmpty(t, dep.Syntax,
+				"the marker straddles the boundary, so a scan that drops the carry-over reads this package from export data and loses what it says")
+		})
+	}
 }

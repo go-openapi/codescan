@@ -84,6 +84,13 @@ type ScanCtx struct {
 	// EmitDiagnostic).
 	seenDiags map[diagKey]struct{}
 
+	// exportOnly records, per import path, why a dependency's types arrived without its source.
+	//
+	// Collected during the load and held rather than announced: at load time nothing knows which of
+	// these packages the API surface will touch, and most of them it never will. The notice is raised
+	// from the lookup that actually wanted a declaration out of one. See exportOnlyCollector.
+	exportOnly map[string]string
+
 	// mangler is the shared name mangler used for godoc humanization (the CleanGoDoc option) and
 	// reusable by any builder needing swag-style name transforms.
 	//
@@ -96,7 +103,7 @@ type ScanCtx struct {
 //
 // Which loading strategy runs is the loader's decision, not this one's: Options carries the caller's
 // preference and the loader reconciles it with what the build and the filesystem allow.
-func loadPackages(opts *Options) ([]*packages.Package, error) {
+func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Package, error) {
 	loaderOpts := []ownpackages.Option{
 		ownpackages.WithStrategy(loaderStrategy(opts)),
 		ownpackages.WithFS(opts.FS),
@@ -108,14 +115,13 @@ func loadPackages(opts *Options) ([]*packages.Package, error) {
 			GOEXPERIMENT: opts.GOEXPERIMENT,
 		}),
 		ownpackages.WithOnSynthesized(synthesisReporter(opts)),
-		ownpackages.WithOnExportOnly(exportOnlyReporter(opts)),
+		ownpackages.WithOnExportOnly(exportOnlyCollector(exportOnly)),
 	}
 	if opts.StubStdlib {
 		loaderOpts = append(loaderOpts, ownpackages.WithStubbedStdlib())
 	}
 	if opts.CompiledDependencies {
 		loaderOpts = append(loaderOpts, ownpackages.WithCompiledDependencies())
-		reportCompiledDependencies(opts)
 	}
 	if opts.ExportData != nil {
 		loaderOpts = append(loaderOpts, ownpackages.WithExportData(opts.ExportData))
@@ -126,7 +132,12 @@ func loadPackages(opts *Options) ([]*packages.Package, error) {
 		cfg.BuildFlags = []string{"-tags", opts.BuildTags}
 	}
 
-	return ownpackages.NewLoader(loaderOpts...).Load(cfg, opts.Packages...)
+	loader := ownpackages.NewLoader(loaderOpts...)
+	// Announced from the resolved strategy, not from the request. Only one strategy can take dependency
+	// types from the compiler, and Options.FS forces the other one whatever was asked for.
+	reportCompiledDependencies(opts, loader.Strategy())
+
+	return loader.Load(cfg, opts.Packages...)
 }
 
 // loaderStrategy maps the caller's preference onto the loader's vocabulary.
@@ -141,38 +152,60 @@ func loaderStrategy(opts *Options) ownpackages.Strategy {
 	return ownpackages.StrategyGoPackages
 }
 
-// reportCompiledDependencies announces that dependency source is not being read.
+// reportCompiledDependencies announces which dependencies are read and which are not.
 //
-// The option trades a large amount of time for something that does not show up as an error anywhere:
-// a dependency's annotations are simply not there. strfmt is the case that matters — it marks its own
-// types with `swagger:strfmt`, and those marks are what turn a strfmt.DateTime field into a
-// date-time. Losing them quietly is exactly the kind of thinning this scanner reports rather than
-// leaves to be noticed.
-func reportCompiledDependencies(opts *Options) {
-	if opts.OnDiagnostic == nil {
+// This used to announce a loss: dependency source went unread wholesale, so a dependency's own
+// annotations were simply not there — strfmt being the case that mattered, since its `swagger:strfmt`
+// marks are what turn a strfmt.DateTime field into a date-time. That is no longer what happens; a
+// dependency whose source carries annotations is read back after the load.
+//
+// So this says what the load did rather than what it cost. What it can still cost is announced where
+// it lands, by the lookup that wanted a declaration and did not find one — see reportSourcelessLookup.
+//
+// It takes the RESOLVED strategy rather than reading the request off Options, because the two can
+// disagree: only the go/packages strategy can ask the compiler for dependency types, and a virtual
+// filesystem forces the other one whatever the caller asked for. Announcing from the request meant
+// telling a toolchain-free scan that its dependency types came from export data while it was reading
+// every one of them from source — a diagnostic contradicting the load it describes.
+func reportCompiledDependencies(opts *Options, strategy ownpackages.Strategy) {
+	if !opts.CompiledDependencies || opts.OnDiagnostic == nil {
+		return
+	}
+
+	// Asked for and not delivered. Worth more than silence: the caller chose this for the speed-up and
+	// did not get it, and nothing else in the output would say so.
+	if strategy != ownpackages.StrategyGoPackages {
+		opts.OnDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeCompiledDependencies,
+			"CompiledDependencies is ignored under the %s loader, which resolves imports itself and "+
+				"already decides per dependency whether to read its source; every dependency here is "+
+				"loaded as usual", strategy))
+
 		return
 	}
 
 	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
-		"dependency types come from compiled export data: their source is not read, so annotations "+
-			"written in a dependency are not seen — including the swagger:strfmt marks that give "+
-			"strfmt.DateTime and friends their format"))
+		"dependency types come from compiled export data: only the dependencies whose source carries "+
+			"swagger annotations are read, so a type declared in one that carries none — and whatever "+
+			"its doc comment said — is not in the spec"))
 }
 
-// exportOnlyReporter turns "types without source" notices into scan diagnostics.
+// exportOnlyCollector records "types without source" notices instead of announcing them.
 //
-// Export data plus source is the intended shape. This fires for the dependency where only the types
-// were available, and it is worth saying per package: the annotations that package carries — a
-// swagger:strfmt, a swagger:model — are simply not read, and nothing in the emitted spec shows a gap.
-func exportOnlyReporter(opts *Options) func(ownpackages.ExportOnly) {
-	if opts.OnDiagnostic == nil {
-		return nil
-	}
-
+// The loader reports a fact — this package's types arrived without its source — at the only moment it
+// can know why. Whether that fact matters is a different question, and one nothing knows yet at load
+// time: a closure holds every package the roots reach, including the ones reached only from inside a
+// function body. Under a WebAssembly guest, where the whole standard library arrives this way, saying
+// it per package buries the reader in hundreds of notices about packages such as `strconv` that no
+// part of the API surface will ever touch.
+//
+// So the reason is kept here and the diagnostic is raised where relevance is decidable: at the
+// lookup that wanted the declaration and did not get it. See [ScanCtx.FindDecl].
+func exportOnlyCollector(into map[string]string) func(ownpackages.ExportOnly) {
 	return func(e ownpackages.ExportOnly) {
-		opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
-			"types for %q came from export data but %s, so any annotation it carries is not read",
-			e.Path, e.Reason))
+		if _, seen := into[e.Path]; seen {
+			return
+		}
+		into[e.Path] = e.Reason
 	}
 }
 
@@ -212,7 +245,8 @@ func synthesisReporter(opts *Options) func(ownpackages.Synthesized) {
 }
 
 func NewScanCtx(opts *Options) (*ScanCtx, error) {
-	pkgs, err := loadPackages(opts)
+	exportOnly := make(map[string]string)
+	pkgs, err := loadPackages(opts, exportOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -239,10 +273,11 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 	mangler := mangling.NewNameMangler()
 
 	return &ScanCtx{
-		pkgs:    pkgs,
-		app:     app,
-		opts:    opts,
-		mangler: &mangler,
+		pkgs:       pkgs,
+		app:        app,
+		exportOnly: exportOnly,
+		opts:       opts,
+		mangler:    &mangler,
 	}, nil
 }
 
@@ -773,6 +808,8 @@ func (s *ScanCtx) MoveExtraToModel(k *ast.Ident) {
 func (s *ScanCtx) FindDecl(pkgPath, name string) (*EntityDecl, bool) {
 	pkg, ok := s.app.AllPackages[pkgPath]
 	if !ok {
+		s.reportSourcelessLookup(pkgPath, name)
+
 		return nil, false
 	}
 
@@ -817,6 +854,8 @@ func (s *ScanCtx) FindDecl(pkgPath, name string) (*EntityDecl, bool) {
 			}
 		}
 	}
+
+	s.reportSourcelessLookup(pkgPath, name)
 
 	return nil, false
 }
@@ -1033,6 +1072,33 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 	}
 
 	return list, descList, posList, true
+}
+
+// reportSourcelessLookup announces that a declaration was wanted from a package whose types arrived
+// without its source.
+//
+// This is where "types came from export data" stops being a fact about the load and becomes a fact
+// about the spec: something in the API surface reached into this package and found nothing to read.
+// Whatever that declaration said about itself — a swagger:strfmt, a swagger:model, its godoc — is
+// absent from the output, and nothing else in the document shows the gap.
+//
+// The lookups that never happen are the point. A type the recognizers answer for (time.Time,
+// io.Reader and the rest of the canonical set) is resolved from its identity alone, ahead of any
+// declaration lookup, so nothing was lost and nothing is said. What reaches here is the complement:
+// the types codescan consumes and does not recognize, where the author has to decide what they meant
+// — which for time.Duration is precisely why go-openapi offers strfmt.Duration.
+//
+// No-op for a package whose source was read, which is every package under an ordinary scan.
+func (s *ScanCtx) reportSourcelessLookup(pkgPath, name string) {
+	reason, sourceless := s.exportOnly[pkgPath]
+	if !sourceless {
+		return
+	}
+
+	s.EmitDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
+		"the declaration of %s.%s could not be read: this package's types came from export data but %s, "+
+			"so whatever it says about that type is not in the spec",
+		pkgPath, name, reason))
 }
 
 // declForObj resolves a type name's declaring source, tolerating an object that has no package.

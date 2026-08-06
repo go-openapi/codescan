@@ -117,18 +117,17 @@ type Options struct {
 	// this removes nearly all of it. On a cold cache it is markedly slower, since the dependencies must
 	// be compiled first.
 	//
-	// The trade is dependency SOURCE. Export data carries the full exported type surface — fields,
-	// method sets, interface identity — but no syntax and no comments, so a swagger annotation written
-	// in a DEPENDENCY is not read.
+	// Export data carries the full exported type surface — fields, method sets, interface identity —
+	// but no syntax and no comments. A dependency whose source carries swagger annotations is therefore
+	// read back from source after the load, since those annotations are not optional: go-openapi's own
+	// strfmt marks its types with `swagger:strfmt date-time`, `uuid`, `email` and the rest, and those
+	// marks are the only reason a strfmt.DateTime field acquires a format.
 	//
-	// For this project that is not a corner case. go-openapi's own strfmt marks its types with
-	// `swagger:strfmt date-time`, `uuid`, `email` and the rest, and those marks are the only reason a
-	// strfmt.DateTime field acquires a format. Under this option the field keeps its type and loses its
-	// format — the spec stays valid and says less. Every scan with it on raises a
-	// scan.compiled-dependencies Hint, because nothing else in the output would tell you.
-	//
-	// Worth it where dependencies are ordinary libraries whose types matter and whose comments do not.
-	// Not worth it for most codescan users, who depend on strfmt precisely for the formats.
+	// What remains given up is a type declared in a dependency that says nothing about itself. Nothing
+	// marks such a package as worth reading, so its declarations — and their doc comments — are not
+	// there, and a model declared in one collapses to its name alone. Every scan with this on raises a
+	// scan.compiled-dependencies Hint saying so, and any declaration a builder then wanted and could
+	// not find is reported individually, naming the type.
 	//
 	// The toolchain-free loader has ExportData below, which is the same idea supplied by hand.
 	//

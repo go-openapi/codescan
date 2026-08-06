@@ -58,7 +58,7 @@ func (l *Loader) Load(cfg *Config, patterns ...string) ([]*Package, error) {
 		cfg = &Config{}
 	}
 
-	if l.strategy() == StrategyGoPackages {
+	if l.Strategy() == StrategyGoPackages {
 		return l.loadViaGoPackages(cfg, patterns...)
 	}
 
