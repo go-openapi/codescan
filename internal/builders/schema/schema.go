@@ -224,9 +224,16 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 				return nil
 			}
 		}
-		ti := s.Decl.Pkg.TypesInfo.Types[s.Decl.Spec.Type]
-		resolvers.MustBeAType(ti) // invariant
-		return s.buildFromType(ti.Type, NewTypable(schema, 0, s.skipExtensions))
+		// Build over what the declaration was WRITTEN over, not over the peeled underlying: the named
+		// layer in `type Stamp time.Time` is what the stdlib recognizers key on, and peeling discards
+		// it. Underlying is the honest fallback when the right-hand side cannot be named — it is what
+		// the written form denotes for every shape but a named one.
+		rhs, ok := s.Decl.WrittenRHS()
+		if !ok {
+			rhs = tpe.Underlying()
+		}
+
+		return s.buildFromType(rhs, NewTypable(schema, 0, s.skipExtensions))
 	case *types.Alias:
 		if s.guardDecl(tpe) {
 			return nil

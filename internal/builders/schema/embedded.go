@@ -4,7 +4,6 @@
 package schema
 
 import (
-	"go/ast"
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -127,7 +126,7 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 //
 // See [§embedded](./README.md#embedded) — interface-side allOf composition rules and the
 // `Ref.String() != "" || Properties >0 || AllOf >0` non-empty guard rationale.
-func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *scanner.EntityDecl, schema *oaispec.Schema,
+func (s *Builder) processEmbeddedType(fld types.Type, embeds []resolvers.Embed, decl *scanner.EntityDecl, schema *oaispec.Schema,
 	nameByJSON map[string]propOwner,
 ) (fieldHasAllOf bool, err error) {
 	// Cross-ref linkage: interface-side embeds compose into allOf members (/allOf/{k}/…), an
@@ -142,7 +141,7 @@ func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *
 		if ApplyStdlibSpecials(o, ps, s.skipExtensions) {
 			return false, nil
 		}
-		return s.buildNamedInterface(ftpe, flist, decl, schema, nameByJSON)
+		return s.buildNamedInterface(ftpe, embeds, schema, nameByJSON)
 	case *types.Interface:
 		var aliasedSchema oaispec.Schema
 		ps := NewTypable(&aliasedSchema, 0, s.skipExtensions)

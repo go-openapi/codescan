@@ -8,6 +8,7 @@ import (
 	"go/types"
 	"sort"
 
+	"github.com/go-openapi/codescan/internal/builders/resolvers"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	oaispec "github.com/go-openapi/spec"
@@ -168,26 +169,22 @@ func (s *Builder) subtypeKeysOf(defKey string) []string {
 // relation the document does not carry.
 // Declarations with no embeddable members (an alias, a named basic type, …) yield nothing.
 func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
-	if decl.Spec == nil || decl.Pkg == nil || decl.Pkg.TypesInfo == nil {
+	if decl.Spec == nil {
 		return nil
 	}
 
 	var out []string
 	seen := make(map[string]struct{})
-	for _, afld := range embeddableMembers(decl.Spec) {
-		if len(afld.Names) != 0 { // named field: never an embed
-			continue
-		}
-		if !isAllOfEmbed(afld, parser) {
-			continue
-		}
-		tv, known := decl.Pkg.TypesInfo.Types[afld.Type]
-		if !known {
+	// The two halves of an embed are read from different places and neither can stand in for the
+	// other: the annotation lives in the AST field's doc comment, the base it names lives in the
+	// declared type's underlying.
+	for _, embed := range resolvers.Embeds(embeddableMembers(decl.Spec), decl.ObjType().Underlying()) {
+		if !isAllOfEmbed(embed.Field, parser) {
 			continue
 		}
 		// Deduped: a struct can reach one base through two embeds (the type and an alias of it), and the index must not list
 		// the same subtype twice under one base.
-		for _, id := range baseIdentities(tv.Type) {
+		for _, id := range baseIdentities(embed.Type) {
 			if _, dup := seen[id]; dup {
 				continue
 			}

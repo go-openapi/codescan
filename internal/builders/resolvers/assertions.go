@@ -48,14 +48,6 @@ func MustHaveRightHandSide(a *types.Alias) {
 	panic(fmt.Errorf("type alias %q expected to declare a right-hand-side: %w", a.Obj().Name(), ErrInternal))
 }
 
-func MustBeAType(tpe types.TypeAndValue) {
-	if tpe.IsType() {
-		return
-	}
-
-	panic(fmt.Errorf("declaration is not a type: %v: %w", tpe, ErrInternal))
-}
-
 // IsFieldStringable check if the field type is a scalar.
 //
 // If the field type is *ast.StarExpr and is pointer type, check if it refers to a scalar.

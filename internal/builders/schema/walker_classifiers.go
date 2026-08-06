@@ -281,7 +281,7 @@ func (s *Builder) inheritedStrfmt(declared *types.Named) (string, bool) {
 		seen[current] = struct{}{}
 
 		decl, ok := s.Ctx.DeclForType(current)
-		if !ok || decl == nil || decl.Spec == nil || decl.Pkg == nil {
+		if !ok || decl == nil {
 			return "", false
 		}
 
@@ -293,14 +293,14 @@ func (s *Builder) inheritedStrfmt(declared *types.Named) (string, bool) {
 			}
 		}
 
-		rhs, ok := decl.Pkg.TypesInfo.Types[decl.Spec.Type]
+		rhs, ok := decl.WrittenRHS()
 		if !ok {
 			return "", false
 		}
 
-		switch rhs.Type.(type) {
+		switch rhs.(type) {
 		case *types.Named, *types.Alias:
-			current = rhs.Type
+			current = rhs
 		default:
 			return "", false
 		}

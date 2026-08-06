@@ -16,6 +16,8 @@ parameters, responses) consumed by the builder layer.
 - [§options](#options) — `Options.DescWithRef` shape and rationale
 - [§descwithref](#descwithref) — the description-only-decoration
   $ref shape and why it has a flag
+- [§declaration](#declaration) — `EntityDecl`'s two halves: what is
+  always available and what needs parsed source
 - [§diagnostics](#diagnostics) — `OnDiagnostic` contract and
   experimental-API caveat
 - [§prune](#prune) — `PruneUnusedModels` reachability and why it
@@ -78,6 +80,67 @@ When the field also carries validation overrides (pattern, enum,
 example, etc.) or user-authored vendor extensions, the `allOf`
 compound is mandatory regardless of `DescWithRef` — the override
 would be lost otherwise.
+
+## <a id="declaration"></a>§declaration — the two halves of `EntityDecl`
+
+A declaration is made of two halves that come from different places and are
+not equally available.
+
+The **type half** — `Type` / `Alias`, and the `Obj`, `ObjType`, `Name`,
+`Pos`, `PkgPath`, `IsAlias` accessors built on them — comes from the
+type-checker. A package whose types were read from compiled export data
+carries it in full, positions included: `time.Duration` reports
+`$GOROOT/src/time/time.go`.
+
+The **syntax half** — `Comments`, `Ident`, `Spec`, `File`, `Pkg` — comes
+from parsed source, which a package need not have. Nothing that the type
+half can answer may be read from it: a name, a position and a package path
+all come from the object, or the declaration stops working the moment its
+source is not read.
+
+### What genuinely needs source
+
+Three things, and only three:
+
+1. **The annotations** (`Comments`, and a field's `Doc`). A comment exists
+   nowhere but in source.
+2. **The written right-hand side** — `Stamp` in `type StampResp Stamp`.
+   `go/types` keeps no record of it on a defined type: `Underlying` peels
+   every named layer at once, and the named layer is what a stdlib
+   recognizer keys on and what a `swagger:strfmt` one declaration to the
+   right sits on. `WrittenRHS` reads it from `Spec.Type`.
+3. **A file's imports**, for resolving a godoc doc-link.
+
+### Not `types.Info.Types`
+
+`WrittenRHS` and the embed pairing (`builders/resolvers.Embeds`) both
+resolve a source expression to a type. Neither goes through
+`types.Info.Types`, and that restraint is load-bearing rather than
+stylistic: that map records what each type *expression* denotes, only a
+source type-check produces it, and it cannot be rebuilt by hand because the
+field distinguishing a type from a value is unexported. A package served
+from export data therefore cannot be handed to the builders with its source
+attached for as long as anything downstream reads it.
+
+So the two resolve without it:
+
+- `WrittenRHS` prefers the checker's record when there is one, and
+  otherwise resolves the right-hand side expression against the scopes
+  `go/types` exposes — a package scope is complete whether its types were
+  checked from source or read from export data. It declines a generic
+  instantiation rather than guessing at one.
+- `Embeds` pairs each anonymous entry of a struct's field list or an
+  interface's method list with its type positionally, read from the
+  declared type's underlying. The pairing is exact in both shapes: a
+  struct's fields are built in source order (an entry with N names
+  contributing N fields), and an interface's embedded types are recorded in
+  source order.
+
+Both are checked against the type-checker's own answer over the whole
+fixture corpus rather than argued from the emitted spec, because a
+mispairing produces a plausible wrong answer instead of a failure. The
+end-to-end witness builds each corpus twice, once with `types.Info.Types`
+dropped, and compares the documents.
 
 ## <a id="diagnostics"></a>§diagnostics — `OnDiagnostic` callback
 

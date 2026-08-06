@@ -265,15 +265,11 @@ func namedWrittenRHS(ctx *scanner.ScanCtx, o *types.TypeName) (*scanner.EntityDe
 // The distinction matters wherever a named layer carries meaning: a stdlib recognizer keys on `time.Time`, which
 // peeling discards.
 func writtenRHS(decl *scanner.EntityDecl) (types.Type, bool) {
-	if decl == nil || decl.Spec == nil || decl.Pkg == nil {
-		return nil, false
-	}
-	ti, ok := decl.Pkg.TypesInfo.Types[decl.Spec.Type]
-	if !ok || ti.Type == nil {
+	if decl == nil {
 		return nil, false
 	}
 
-	return ti.Type, true
+	return decl.WrittenRHS()
 }
 
 func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen map[string]bool) error {

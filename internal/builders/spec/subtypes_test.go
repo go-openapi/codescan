@@ -11,6 +11,7 @@ import (
 	oaispec "github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
+	"golang.org/x/tools/go/packages"
 )
 
 const (
@@ -263,4 +264,29 @@ func TestSubtypeKeysOf(t *testing.T) {
 			},
 			keys)
 	})
+}
+
+// TestSubtypeIndex_WithoutExpressionTypes is the A/B behind reading an embed's base from the
+// declaring type rather than from types.Info.Types.
+//
+// It reproduces the state a dependency served from compiled export data is in — complete types, no
+// record of what any expression denotes — and asserts the reverse index comes out the same. It is
+// the failure mode the index is most exposed to: a base it cannot resolve is skipped, so the
+// polymorphic family silently shrinks instead of erroring.
+func TestSubtypeIndex_WithoutExpressionTypes(t *testing.T) {
+	want := newSubtypesBuilder(t).subtypes()
+
+	stripped := newSubtypesBuilder(t)
+	for _, decl := range stripped.ctx.Models() {
+		decl.Pkg = &packages.Package{PkgPath: decl.PkgPath()} // syntax and types, no TypesInfo
+	}
+	got := stripped.subtypes()
+
+	require.Len(t, got, len(want))
+	for identity, decls := range want {
+		assert.Equal(t, declKeys(decls), declKeys(got[identity]),
+			"the subtypes of %q are not the ones resolved with the checker's records", identity)
+	}
+	// The fixture has to actually exercise the walk, or the comparison above is two empty maps.
+	assert.NotEmpty(t, want[teslaCarIdentity])
 }
