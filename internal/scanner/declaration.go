@@ -5,6 +5,7 @@ package scanner
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/parsers"
@@ -27,6 +28,16 @@ type ParameterRef struct {
 	Pkg      *packages.Package
 }
 
+// EntityDecl is a type declaration the scanner classified, in two halves.
+//
+// The TYPE half — Type / Alias, and the Obj, ObjType, Name, Pos, PkgPath accessors built on them —
+// is always available: it comes from the type-checker, and a package served from compiled export
+// data carries it in full (positions included: time.Duration reports $GOROOT/src/time/time.go).
+//
+// The SYNTAX half — Comments, Ident, Spec, File, Pkg — comes from parsed source, which a package
+// need not have. Reach for it only for what genuinely needs source; a name, a position or a
+// package path must come from the type half, or the declaration stops working the moment its
+// source is not read.
 type EntityDecl struct {
 	Comments                *ast.CommentGroup
 	Type                    *types.Named
@@ -74,8 +85,39 @@ func (d *EntityDecl) ObjType() types.Type {
 	panic("invalid EntityDecl: Type and Alias are both nil")
 }
 
+// Name returns the Go name of the declared type.
+//
+// It reads the type-checker's object rather than the declaring identifier, so it answers for a
+// declaration whose source was never parsed.
+func (d *EntityDecl) Name() string { return d.Obj().Name() }
+
+// Pos returns the position of the declared type's name.
+//
+// Obj().Pos() is the position the type-checker recorded, which compiled export data carries too —
+// so this is the position accessor to reach for, never Ident.Pos() / Spec.Pos(). For a package
+// loaded from source the three are the same token: ast.TypeSpec.Pos() is its Name.Pos(), and that
+// identifier is what Defs maps to the object.
+func (d *EntityDecl) Pos() token.Pos { return d.Obj().Pos() }
+
+// PkgPath returns the import path of the package declaring the type, or "" for a package-less
+// (universe) type.
+func (d *EntityDecl) PkgPath() string {
+	pkg := d.Obj().Pkg()
+	if pkg == nil {
+		return ""
+	}
+
+	return pkg.Path()
+}
+
+// IsAlias reports whether the declaration was written with alias syntax (`type X = Y`).
+//
+// The type-checker's answer to what the source spells `Spec.Assign.IsValid()`: since go1.22 an
+// alias declaration defines a *types.Alias, so the shape is readable without the source.
+func (d *EntityDecl) IsAlias() bool { return d.Alias != nil }
+
 func (d *EntityDecl) Names() (name, goName string) {
-	goName = d.Ident.Name
+	goName = d.Name()
 	model, ok := parsers.ModelOverride(d.Comments)
 	if !ok {
 		return goName, goName
@@ -103,9 +145,10 @@ func (d *EntityDecl) Names() (name, goName string) {
 // those are intercepted as stdlib specials before they ever reach a definition key.
 func (d *EntityDecl) DefKey() string {
 	name, _ := d.Names()
-	if pkg := d.Obj().Pkg(); pkg != nil {
-		return pkg.Path() + "/" + name
+	if pkgPath := d.PkgPath(); pkgPath != "" {
+		return pkgPath + "/" + name
 	}
+
 	return name
 }
 

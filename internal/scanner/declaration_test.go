@@ -119,6 +119,44 @@ func TestEntityDecl(t *testing.T) {
 		})
 	})
 
+	t.Run("the type half answers without the syntax half", func(t *testing.T) {
+		// A package served from compiled export data has types and positions but no parsed source.
+		// Blanking the syntax half reproduces that state: everything the type half promises must
+		// still answer, and none of it may panic.
+		const modelsPkg = "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+
+		found, ok := sctx.FindDecl(modelsPkg, "BaseStruct")
+		require.True(t, ok)
+		wantPos := sctx.PosOf(found.Ident.Pos())
+
+		decl := &EntityDecl{Type: found.Type, Alias: found.Alias}
+
+		assert.EqualT(t, "BaseStruct", decl.Name())
+		assert.EqualT(t, modelsPkg, decl.PkgPath())
+		assert.EqualT(t, wantPos, sctx.PosOf(decl.Pos()))
+		assert.EqualT(t, modelsPkg+"/BaseStruct", decl.DefKey())
+
+		name, goName := decl.Names()
+		assert.EqualT(t, "BaseStruct", goName)
+		// The swagger:model override lives in the comments, so without them the name falls back to
+		// the Go name — the one thing on this surface that genuinely needs source.
+		assert.EqualT(t, "BaseStruct", name)
+	})
+
+	t.Run("Pos agrees with the declaring identifier", func(t *testing.T) {
+		for _, name := range []string{"User", "BaseStruct", "SomeStringType", "SomeStringTypeAlias"} {
+			decl, ok := sctx.FindDecl(
+				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				name,
+			)
+			require.True(t, ok)
+
+			assert.EqualT(t, decl.Ident.Pos(), decl.Pos())
+			assert.EqualT(t, decl.Spec.Pos(), decl.Pos())
+			assert.EqualT(t, decl.Ident.Name, decl.Name())
+		}
+	})
+
 	// Response name resolution moved to the grammar (grammar.ResponseBlock →
 	// responses.Builder.ResponseName); the scanner no longer parses the swagger:response argument.
 	// See the grammar parser tests and the shared-parameters response coverage.

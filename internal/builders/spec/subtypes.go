@@ -90,7 +90,7 @@ func (s *Builder) discriminatedSubtypesOf(decl *scanner.EntityDecl) []*scanner.E
 		}
 		out = append(out, sub)
 		if onDiag != nil {
-			onDiag(grammar.Hintf(s.ctx.PosOf(sub.Ident.Pos()), grammar.CodeDiscoveredSubtype,
+			onDiag(grammar.Hintf(s.ctx.PosOf(sub.Pos()), grammar.CodeDiscoveredSubtype,
 				"definition %q discovered as a subtype of discriminated base %q",
 				leafName(sub.DefKey()), leafName(decl.DefKey())))
 		}

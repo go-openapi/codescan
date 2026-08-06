@@ -35,7 +35,7 @@ func (s *Builder) inferNames() {
 		return
 	}
 
-	goName := s.Decl.Ident.Name
+	goName := s.Decl.Name()
 	s.GoName = goName
 	s.Name = goName
 

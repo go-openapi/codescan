@@ -101,16 +101,16 @@ func (s *Builder) Build(opts ...Option) error {
 		// schema, or warn-and-drop on a non-object.
 		//
 		// See classifierAdditionalProperties.
-		s.classifierAdditionalProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
-		s.classifierPatternProperties(&schema, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+		s.classifierAdditionalProperties(&schema, s.Ctx.PosOf(s.Decl.Pos()))
+		s.classifierPatternProperties(&schema, s.Ctx.PosOf(s.Decl.Pos()))
 
 		// The decl-comment block is dispatched before the Go type is resolved onto the schema (see
 		// buildFromDecl), so the inline checkShape ran against an empty type.
 		// Re-gate now that the type is known: strip validations illegal for the resolved type and warn,
 		// and re-type the value keywords that were coerced against nothing.
 		// See [§decl-shape-recheck](./README.md#decl-shape-recheck).
-		handlers.RecoerceDeclValues(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
-		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Spec.Pos()), s.RecordDiagnostic)
+		handlers.RecoerceDeclValues(&schema, s.Ctx.PosOf(s.Decl.Pos()), s.RecordDiagnostic)
+		handlers.RecheckSchemaShape(&schema, s.Ctx.PosOf(s.Decl.Pos()), s.RecordDiagnostic)
 
 		s.definitions[defKey] = schema
 
@@ -136,11 +136,11 @@ func (s *Builder) SetDiscovered(discovered []*scanner.EntityDecl) {
 //
 // Returns the zero Position when unavailable.
 func (s *Builder) declPos() token.Position {
-	if s.Decl == nil || s.Decl.Ident == nil {
+	if s.Decl == nil {
 		return token.Position{}
 	}
 
-	return s.Ctx.PosOf(s.Decl.Ident.Pos())
+	return s.Ctx.PosOf(s.Decl.Pos())
 }
 
 // warnUnsupportedGoType records a [grammar.CodeUnsupportedGoType] Warning that tpe could not be
@@ -179,7 +179,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 	// Decl-site swagger:type override wins over type-driven default.
 	// See [§user-overrides](./README.md#user-overrides) for the (handled, recurse) contract and the
 	// Underlying() fallback rationale.
-	if handled, recurse := s.classifierNamedTypeOverride(s.Decl.Comments, ps, s.Decl.ObjType(), s.Ctx.PosOf(s.Decl.Ident.Pos())); handled {
+	if handled, recurse := s.classifierNamedTypeOverride(s.Decl.Comments, ps, s.Decl.ObjType(), s.Ctx.PosOf(s.Decl.Pos())); handled {
 		if !recurse {
 			return nil
 		}
@@ -259,7 +259,7 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 	// `swagger:strfmt` on a Named decl is unaffected — that path is covered by
 	// `classifierNamedStructStrfmt` (struct underlying) and `classifierNamedBasic` (primitive
 	// underlying), both fired from `buildNamedType` after the underlying-kind switch.
-	s.warnUnfixableAliasEnum(s.Decl.Comments, tpe, s.Ctx.PosOf(s.Decl.Ident.Pos()))
+	s.warnUnfixableAliasEnum(s.Decl.Comments, tpe, s.Ctx.PosOf(s.Decl.Pos()))
 
 	// Detection is symmetric with the named decl arm above: the same element-driven items-vs-whole
 	// rule, so `type ID = [16]byte` and `type ID [16]byte` publish the same definition.
@@ -444,7 +444,7 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 	if ok {
 		// `swagger:enum` on an alias is unfixable rather than merely unimplemented — report it wherever
 		// the alias is reached, since that is where the members go missing.
-		s.warnUnfixableAliasEnum(decl.Comments, tpe, s.Ctx.PosOf(decl.Ident.Pos()))
+		s.warnUnfixableAliasEnum(decl.Comments, tpe, s.Ctx.PosOf(decl.Pos()))
 	}
 
 	if ok && !refModel {
@@ -454,7 +454,7 @@ func (s *Builder) buildAlias(tpe *types.Alias, target ifaces.SwaggerTypable) err
 		//
 		// ownType is the alias's right-hand side: that is what `inline` should inline.
 		if handled, recurse := s.classifierNamedTypeOverride(
-			decl.Comments, target, tpe.Rhs(), s.Ctx.PosOf(decl.Ident.Pos()),
+			decl.Comments, target, tpe.Rhs(), s.Ctx.PosOf(decl.Pos()),
 		); handled {
 			if recurse {
 				return s.buildFromType(tpe.Rhs(), target)
@@ -544,7 +544,7 @@ func (s *Builder) buildNamedType(titpe *types.Named, target ifaces.SwaggerTypabl
 	//   - generic instantiation (Underlying carries substituted args).
 	//
 	// See [§dissolve-named](./README.md#dissolve-named).
-	if s.Decl.Spec.Assign.IsValid() || (titpe.TypeArgs() != nil && titpe.TypeArgs().Len() > 0) {
+	if s.Decl.IsAlias() || (titpe.TypeArgs() != nil && titpe.TypeArgs().Len() > 0) {
 		return s.buildFromType(titpe.Underlying(), target)
 	}
 
@@ -622,7 +622,7 @@ func (s *Builder) buildFromMap(titpe *types.Map, tgt ifaces.SwaggerTypable) erro
 	key := titpe.Key()
 	if !resolvers.IsJSONMapKey(key) {
 		s.RecordDiagnostic(grammar.Warnf(
-			s.Ctx.PosOf(s.Decl.Spec.Pos()),
+			s.Ctx.PosOf(s.Decl.Pos()),
 			grammar.CodeUnsupportedType,
 			"map key type %s does not marshal to a JSON object key "+
 				"(encoding/json supports string, integer kinds, or encoding.TextMarshaler); "+

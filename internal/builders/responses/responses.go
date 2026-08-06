@@ -75,7 +75,7 @@ func (r *Builder) ResponseName() string {
 			break
 		}
 	}
-	return r.Decl.Ident.Name
+	return r.Decl.Name()
 }
 
 func (r *Builder) Build(responses map[string]oaispec.Response) error {
