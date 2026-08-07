@@ -87,7 +87,7 @@ type Model struct {
 	// What an accepted confirmation will do. The overlay records the answer; naming the action is the model's job.
 	pendingConfirm confirmAction
 
-	// The diagnostics pane's two views: the scan's own findings, and the spec validation `v` produces on demand.
+	// The diagnostics pane's two views: the scan's own findings, and the spec validation v produces on demand.
 	diagTab    diagTab
 	validation ValidationState
 }
@@ -111,7 +111,7 @@ const (
 
 // The split geometry: where the dividers start, how far a keypress moves them, and how far they may travel.
 //
-// The bounds are what stop a divider being driven onto a pane's edge — a pane you cannot see is a pane you cannot
+// The bounds are what stop a divider being driven onto a pane's edge - a pane you cannot see is a pane you cannot
 // drag back, since the keys that would restore it are advertised in a status line the collapsed pane no longer has
 // room to explain. They are asymmetric because the panes are: the diagnostics strip is a list you glance at, so it
 // earns less of the screen than the two it sits under.
@@ -136,11 +136,11 @@ const (
 
 // New builds the root model around a ready-made scan config; the source tree browses cfg.WorkDir.
 //
-// Taking the whole Options rather than a handful of arguments means a new CLI flag needs no signature change here —
-// and the boolean knobs the overlay drives are the same struct the caller filled in.
+// Taking the whole Options rather than a handful of arguments means a new CLI flag needs no signature change here
+// - and the boolean knobs the overlay drives are the same struct the caller filled in.
 //
-// A file watcher is started best-effort — if it can't initialize, live reload is simply unavailable and the user
-// falls back to `r` (manual rescan).
+// A file watcher is started best-effort - if it can't initialize, live reload is simply unavailable and the user
+// falls back to r (manual rescan).
 func New(cfg codescan.Options) *Model {
 	m := &Model{
 		cfg:       cfg,
@@ -170,8 +170,9 @@ func New(cfg codescan.Options) *Model {
 // Call after the program exits.
 func (m *Model) Close() { m.watch.Close() }
 
-// Init implements tea.Model: kick off the initial whole-scope scan and, if a watcher is available, begin listening for
-// source changes.
+// Init implements tea.Model.
+//
+// It kicks off the initial whole-scope scan and, when a watcher is available, begins listening for source changes.
 func (m *Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{m.startScan()}
 	if m.watch.Listening() {
@@ -259,8 +260,9 @@ func (m *Model) View() string {
 		m.statusLine()
 }
 
-// copyFocused copies the focused panel's raw content to the clipboard, asynchronously (the clipboard tool exec must not
-// block the event loop).
+// copyFocused copies the focused panel's raw content to the clipboard.
+//
+// Asynchronously: the clipboard tool exec must not block the event loop.
 //
 // Returns nil when the focused panel has nothing to copy.
 func (m *Model) copyFocused() tea.Cmd {
@@ -289,8 +291,9 @@ func (m *Model) focusedContent() string {
 	return ""
 }
 
-// updateFocused forwards a message to the currently focused panel (the left pane is the tree or the file viewer
-// depending on leftMode).
+// updateFocused forwards a message to the currently focused panel.
+//
+// The left pane is the tree or the file viewer, depending on leftMode.
 func (m *Model) updateFocused(msg tea.Msg) tea.Cmd {
 	switch m.focused {
 	case paneTree:
@@ -317,7 +320,7 @@ func (m *Model) moveVSplit(steps int) {
 
 // moveHSplit moves the horizontal divider above the diagnostics strip, in whole steps, and relays out.
 //
-// Positive grows the strip — the divider moving UP — so that here too the divider follows the arrow.
+// Positive grows the strip - the divider moving UP - so that here too the divider follows the arrow.
 func (m *Model) moveHSplit(steps int) {
 	m.diagPct = clampPct(m.diagPct+steps*splitStep, minDiagPct, maxDiagPct)
 	m.recalcLayout()
@@ -326,8 +329,9 @@ func (m *Model) moveHSplit(steps int) {
 // clampPct holds a divider inside its travel.
 func clampPct(pct, lo, hi int) int { return min(max(pct, lo), hi) }
 
-// recalcLayout distributes the terminal size: a header line, a top row with the source tree beside the spec, a
-// diagnostics strip, and a status line.
+// recalcLayout distributes the terminal size across the chrome and the panes.
+//
+// A header line, a top row with the source tree beside the spec, a diagnostics strip, and a status line.
 //
 // The two dividers are placed by PERCENTAGE rather than by cell count, so resizing the terminal keeps the proportions
 // the user chose instead of leaving one pane fixed while the other absorbs everything.

@@ -12,8 +12,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// highlightedFileView loads three lines and colours the middle one, so a test can tell "styled" from "not styled"
-// without depending on the palette.
+// highlightedFileView loads three lines and colours the middle one.
+//
+// A test can then tell styled from not styled without depending on the palette.
 func highlightedFileView() FileView {
 	fv := NewFileView()
 	fv.SetSize(40, 10)
@@ -102,8 +103,9 @@ func TestFileViewSyntax_CoexistsWithTheGutter(t *testing.T) {
 	assert.Contains(t, plain, "var x = 1")
 }
 
-// Spans are keyed by line, so scrolling must not shift them: the run installed for line 2 has to still land on line 2
-// once line 2 is drawn from an offset.
+// Spans are keyed by line, so scrolling must not shift them.
+//
+// The run installed for line 2 has to still land on line 2 once line 2 is drawn from an offset.
 func TestFileViewSyntax_SurvivesScrolling(t *testing.T) {
 	fv := NewFileView()
 	fv.SetSize(40, 7) // 4 visible rows out of 6 lines, so the window must move

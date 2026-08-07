@@ -1,11 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package gadgets holds small, self-contained TUI helpers.
-//
-// The clipboard helper is ported from fredbi/git-janitor: it copies text reliably across terminals by trying real
-// clipboard tools first (which report success), then falling back to OSC 52 escape sequences (which work over SSH and
-// in modern terminals without any external tool), with tmux passthrough wrapping.
 package gadgets
 
 import (
@@ -26,8 +21,8 @@ var ErrNoClipboardTool = errors.New("no clipboard tool available (tried xclip, x
 
 // CopyToClipboard copies text to the system clipboard.
 //
-// It tries command-line tools first — they give reliable feedback (OSC 52 is fire-and-forget, so we can't tell
-// whether the terminal honored it) — then falls back to OSC 52.
+// It tries command-line tools first - they give reliable feedback (OSC 52 is fire-and-forget, so we can't tell
+// whether the terminal honored it) - then falls back to OSC 52.
 func CopyToClipboard(ctx context.Context, text string) error {
 	if err := clipboardViaTool(ctx, text); err == nil {
 		return nil
@@ -64,8 +59,9 @@ func clipboardViaTool(ctx context.Context, text string) error {
 	return ErrNoClipboardTool
 }
 
-// osc52Copy writes an OSC 52 escape sequence to stderr, instructing the terminal emulator to copy text to the system
-// clipboard.
+// osc52Copy writes an OSC 52 escape sequence to stderr.
+//
+// That instructs the terminal emulator to copy the text to the system clipboard.
 //
 // Works on kitty, alacritty, wezterm, iTerm2, Windows Terminal, foot, etc.; not on gnome-terminal or some older
 // terminals.

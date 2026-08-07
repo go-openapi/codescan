@@ -18,7 +18,7 @@ import (
 
 // bufferTabWidth is how many spaces bubbles/textarea substitutes for a tab when a file is loaded into it.
 //
-// Not a preference of ours — a property of the widget that every file coordinate has to be translated through.
+// Not a preference of ours - a property of the widget that every file coordinate has to be translated through.
 const bufferTabWidth = 4
 
 // leftMode is what the left pane shows: the source tree or a file's content.
@@ -29,8 +29,9 @@ const (
 	modeView
 )
 
-// loadFileQuietly loads path into the read-only viewer and switches the left pane to view mode WITHOUT changing focus
-// — used by spec-driven follow, where the spec keeps focus while the source pane mirrors.
+// loadFileQuietly loads path into the read-only viewer and switches the left pane to view mode.
+//
+// Focus does not change. Used by spec-driven follow, where the spec keeps focus while the source pane mirrors.
 //
 // A read error is shown in the buffer.
 func (m *Model) loadFileQuietly(path string) {
@@ -57,7 +58,7 @@ func (m *Model) loadFileQuietly(path string) {
 // The editor widget treats a CR as a line break of its own, so a file with Windows endings loads as twice as many lines
 // with a blank between each.
 //
-// Line numbers below the first CR are then wrong in the buffer while right in the file — and the line number is the
+// Line numbers below the first CR are then wrong in the buffer while right in the file - and the line number is the
 // coordinate the whole cross-reference layer is keyed on: provenance anchors, follow mode, go-to-definition, diagnostic
 // marks.
 // Normalising on the way in gives the file, the buffer, the indexes and the marks one shared notion of what a line is.
@@ -72,11 +73,12 @@ func normalizeNewlines(s string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
 }
 
-// refreshSource re-derives everything the source pane knows about the open file: its lexical runs, the diagnostics
-// landing in it, and the provenance anchors in its gutter.
+// refreshSource re-derives everything the source pane knows about the open file.
+//
+// That is its lexical runs, the diagnostics landing in it, and the provenance anchors in its gutter.
 //
 // It runs on load, on leaving the editor, and after every rescan.
-// The last is what this function exists for — a rescan replaces both the anchors and the diagnostics, and before it
+// The last is what this function exists for - a rescan replaces both the anchors and the diagnostics, and before it
 // was wired the open file kept showing the previous scan's marks while the pane below it listed the new ones.
 func (m *Model) refreshSource() {
 	if m.currentFile == "" {
@@ -89,8 +91,9 @@ func (m *Model) refreshSource() {
 	m.fileView.SetAnchors(m.srcIndex.AnchorLines(m.currentFile))
 }
 
-// bufferColumn converts a 1-based BYTE column in a file line — what go/token reports — into the 1-based RUNE column
-// of the same character as displayed.
+// bufferColumn converts a 1-based BYTE column in a file line into a 1-based RUNE column.
+//
+// A byte column is what go/token reports; a rune column is where the character is displayed.
 //
 // Two conversions in one, and both are needed: multi-byte runes make a byte column drift from a rune column, and
 // textarea substitutes four spaces for every tab, so leading indentation is wider on screen than in the file.
@@ -125,8 +128,10 @@ func diagKind(severity grammar.Severity) theme.SyntaxKind {
 	}
 }
 
-// goSpans returns the syntax runs for a Go source file, and nil for anything else — the tree happily opens go.mod, a
-// golden JSON fixture or a README, and a Go tokenizer has nothing true to say about those.
+// goSpans returns the syntax runs for a Go source file, and nil for anything else.
+//
+// The tree happily opens go.mod, a golden JSON fixture or a README,
+// and a Go tokenizer has nothing true to say about those.
 func goSpans(path string, content []byte) map[int][]theme.Span {
 	if filepath.Ext(path) != ".go" {
 		return nil
@@ -159,7 +164,7 @@ func (m *Model) sourceMarks() []index.DiagMark {
 
 // openFile loads path into the read-only viewer and focuses it.
 //
-// The viewer is navigable immediately; `i` enters the editor.
+// The viewer is navigable immediately; i enters the editor.
 func (m *Model) openFile(path string) tea.Cmd {
 	m.loadFileQuietly(path)
 	m.focused = paneTree
@@ -169,7 +174,7 @@ func (m *Model) openFile(path string) tea.Cmd {
 // requestReload re-reads the open file from disk, asking first when that would throw away unsaved edits.
 //
 // The auto-reload this replaces fired on every watcher event and silently clobbered whatever was in the buffer. A
-// manual reload is the useful half of that — the file changed underneath you, or you want your edits gone — and the
+// manual reload is the useful half of that - the file changed underneath you, or you want your edits gone - and the
 // guard is what makes it safe to offer.
 func (m *Model) requestReload() tea.Cmd {
 	if m.currentFile == "" {
@@ -187,8 +192,8 @@ func (m *Model) requestReload() tea.Cmd {
 
 // reloadFile re-reads the open file from disk, keeping the reader roughly where they were.
 //
-// The nav line is restored by NUMBER, which is the only anchor available: unlike a rescan — where the spec cursor is
-// restored by node — nothing indexes a line of Go source to something stable across an external edit. So the line is
+// The nav line is restored by NUMBER, which is the only anchor available: unlike a rescan - where the spec cursor is
+// restored by node - nothing indexes a line of Go source to something stable across an external edit. So the line is
 // honest about being approximate rather than pretending to track content.
 //
 // Reload always lands in the READ-ONLY viewer, even when it interrupted an edit: the buffer has just been replaced with
@@ -237,8 +242,8 @@ func (s annotationSite) covers(col int) bool { return col >= s.Start && col < s.
 
 // showAnnotationReference opens the reference popup for the annotation on the viewer's current line.
 //
-// Reading the BUFFER rather than the file on disk is what makes this work while you are still typing the annotation —
-// which is when you want it.
+// Reading the BUFFER rather than the file on disk is what makes this work while you are still typing the annotation
+// - which is when you want it.
 func (m *Model) showAnnotationReference() tea.Cmd {
 	site, ok := annotationOnLine(m.currentLineText())
 	if !ok {
@@ -273,8 +278,8 @@ func (m *Model) currentLineText() string {
 
 // annotationOnLine finds the swagger: directive in one line of Go source, and where its header token sits.
 //
-// Scoped to what follows a `//`, so the prefix appearing inside a string literal — a fixture builder, a test table, this
-// very scanner's own source — is not offered as an annotation to look up.
+// Scoped to what follows a //, so the prefix appearing inside a string literal - a fixture builder, a test table, this
+// very scanner's own source - is not offered as an annotation to look up.
 func annotationOnLine(line string) (annotationSite, bool) {
 	before, comment, ok := strings.Cut(line, "//")
 	if !ok {

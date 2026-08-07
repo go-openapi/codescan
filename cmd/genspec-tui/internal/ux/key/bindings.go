@@ -1,10 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package key normalizes tea.KeyMsg values into a small enum of named bindings, so the model dispatches on a plain
-// string switch rather than a key-binding library.
-//
-// Mirrors the convention in fredbi/git-janitor.
 package key
 
 import (
@@ -52,7 +48,7 @@ const (
 	// CtrlUp / CtrlDown / CtrlLeft / CtrlRight move the pane dividers, each in the arrow's own direction.
 	//
 	// Terminal-dependent, like ShiftF3: the xterm family reports these as CSI 1;5<A-D> and most modern emulators follow,
-	// but a terminal that sends a bare arrow instead simply has no resize keys — nothing else misfires, because a bare
+	// but a terminal that sends a bare arrow instead simply has no resize keys - nothing else misfires, because a bare
 	// arrow is already a navigation key.
 	CtrlUp    Binding = "ctrl+up"
 	CtrlDown  Binding = "ctrl+down"
@@ -70,7 +66,7 @@ const (
 
 	// ShiftF3 steps to the PREVIOUS reference.
 	//
-	// bubbletea v1's Key carries no Shift modifier, and the xterm family maps shift+F1..F12 onto F13..F24 — so shift+F3
+	// bubbletea v1's Key carries no Shift modifier, and the xterm family maps shift+F1..F12 onto F13..F24 - so shift+F3
 	// reaches us as F15. This is terminal-dependent: a terminal that emits nothing distinguishable for shift+F3 simply has
 	// no prev key.
 	ShiftF3 Binding = "f15"
@@ -90,7 +86,7 @@ func (b Binding) Quit() bool { return b == CtrlC || b == CtrlQ }
 
 // Nav maps a movement binding to a signed delta.
 //
-// page is how far a page key travels; span is the full extent of whatever is being moved over — which is what lets
+// page is how far a page key travels; span is the full extent of whatever is being moved over - which is what lets
 // Home and End be plain deltas too. Every caller already clamps, so ∓span lands exactly on the ends, and one rule
 // then covers a scroll offset, a list index and a line cursor alike. Six panes had each spelled this out on their
 // own, and had drifted into three different ways of saying "go to the top".

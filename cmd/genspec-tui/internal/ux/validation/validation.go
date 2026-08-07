@@ -1,12 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package validation runs the produced spec through go-openapi/validate and normalises what comes back into findings
-// the TUI can list and navigate to.
-//
-// This asks a different question from the scanner's own diagnostics. Those say whether the ANNOTATIONS were understood;
-// these say whether the DOCUMENT they produced is a legal Swagger 2.0 spec. A scan can be perfectly clean and still
-// emit something a consumer will reject, which is the gap this closes.
 package validation
 
 import (
@@ -30,7 +24,7 @@ import (
 type Finding struct {
 	Severity grammar.Severity
 
-	// Path is the location the validator reported, in its own dotted notation (`paths./pets.get.parameters.type`).
+	// Path is the location the validator reported, in its own dotted notation (paths./pets.get.parameters.type).
 	// Shown verbatim, because it is what the validator would print and what a reader will search the spec for.
 	Path string
 
@@ -43,7 +37,7 @@ type Finding struct {
 // Run validates a rendered JSON spec.
 //
 // Takes the rendered bytes rather than the *spec.Swagger the scan produced, so what is checked is exactly the document
-// on screen — including whatever the JSON round-trip did to it.
+// on screen - including whatever the JSON round-trip did to it.
 func Run(specJSON []byte) ([]Finding, error) {
 	if len(specJSON) == 0 {
 		return nil, nil
@@ -81,9 +75,9 @@ func finding(severity grammar.Severity, err error) Finding {
 
 // locationOf extracts the location a validator error names.
 //
-// A *errors.Validation carries it as a field, which is exact. Everything else only has it inside the message, where the
-// validator writes it in double quotes at the front ("paths./pets.get.responses.200" must validate…) — so that is read
-// back rather than guessed at, and anything not in that shape simply has no location.
+// A *errors.Validation carries it as a field, which is exact. Everything else only has it inside the message,
+// where the validator writes it in double quotes at the front ("paths./pets.get.responses.200" must validate...) - so
+// that is read back rather than guessed at, and anything not in that shape simply has no location.
 func locationOf(err error) string {
 	var v *errors.Validation
 	if stderrors.As(err, &v) {
@@ -106,9 +100,9 @@ func locationOf(err error) string {
 // Exact for an ordinary object path. Two things it cannot recover, both properties of the notation rather than of this
 // conversion, and both measured rather than assumed (see TestValidation_PointerResolutionAccuracy):
 //
-//   - the validator omits ARRAY INDICES, reporting `paths./pets.get.parameters.type` for a node that lives at
-//     `…/parameters/0/type`. Since parameter lists are always arrays, this is the common case, not an edge one;
-//   - a `required` finding names the very node that is missing, so there is nothing to point at.
+//   - the validator omits ARRAY INDICES, reporting paths./pets.get.parameters.type for a node that lives at
+//     .../parameters/0/type. Since parameter lists are always arrays, this is the common case, not an edge one;
+//   - a required finding names the very node that is missing, so there is nothing to point at.
 //
 // A path template containing a dot would split wrongly too, though that has not been seen in practice.
 //

@@ -14,7 +14,7 @@ import (
 // diagTab is which view the diagnostics pane is showing.
 //
 // The validation tab EXISTS only once a validation has run: an empty tab sitting there permanently would advertise a
-// mode nobody asked for, and there is nothing truthful to put in it before `v` is pressed.
+// mode nobody asked for, and there is nothing truthful to put in it before v is pressed.
 type diagTab int
 
 const (
@@ -25,7 +25,7 @@ const (
 // ValidationState is the last validation's outcome.
 //
 // Held apart from ScanState because it has a different lifetime: a scan happens on its own, whereas a validation only
-// happens when asked for — and is retired the moment the spec it judged is replaced.
+// happens when asked for - and is retired the moment the spec it judged is replaced.
 type ValidationState struct {
 	Findings []validation.Finding
 	Err      error
@@ -42,7 +42,7 @@ type validationMsg struct {
 // startValidation validates the rendered spec off the event loop.
 //
 // It judges the JSON body as rendered rather than the *spec.Swagger behind it, so what is reported is what is on
-// screen — and what a consumer would actually be handed.
+// screen - and what a consumer would actually be handed.
 func (m *Model) startValidation() tea.Cmd {
 	body := m.scan.JSON
 	if body == "" {
@@ -79,7 +79,7 @@ func (m *Model) absorbValidation(msg validationMsg) tea.Cmd {
 //
 // Called when a rescan lands. The findings judged the PREVIOUS document, and a list of complaints about a spec that no
 // longer exists is worse than no list: every line of it invites navigating to a node that may have moved or gone.
-// Pressing `v` again is a keystroke; a stale verdict silently believed is a bug hunt.
+// Pressing v again is a keystroke; a stale verdict silently believed is a bug hunt.
 func (m *Model) retireValidation() {
 	m.validation = ValidationState{}
 	m.diagTab = tabScan
@@ -149,8 +149,9 @@ func (m *Model) driveValidationToSpec() string {
 	return target
 }
 
-// validationTarget moves the spec cursor to the selected finding's node, reporting where it landed — or why it could
-// not.
+// validationTarget moves the spec cursor to the selected finding's node.
+//
+// It reports where it landed, or why it could not.
 //
 // Resolution walks UP the pointer to the nearest ancestor that is actually rendered, the same fallback the rescan
 // cursor restore uses. That is what makes the validator's ambiguous dotted paths usable: a mis-split path costs

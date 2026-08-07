@@ -10,7 +10,7 @@ import (
 )
 
 func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
-	// Quitting is app policy, so it is decided here rather than in each mode that captures keys — which is what let
+	// Quitting is app policy, so it is decided here rather than in each mode that captures keys - which is what let
 	// ctrl+q mean "quit" in the help overlay, "apply and close" in the options popup, and nothing at all in the search
 	// input, while the keymap advertised it under "anywhere".
 	if key.MsgBinding(msg).Quit() {
@@ -90,7 +90,7 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.Enter:
 		// Enter on a file (in browse mode) opens it in the editor.
-		// Dirs fall through to the tree (expand/collapse).
+		// Dirs fall through to the tree (expand or collapse).
 		if m.focused == paneTree && m.leftMode == modeBrowse {
 			if path, isDir, ok := m.tree.Selection(); ok && !isDir {
 				return m.openFile(path)
@@ -125,8 +125,10 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 	return m.updateFocused(msg)
 }
 
-// handleSearchControl handles the case-sensitive search keys (`/` opens search, `n`/`N` step matches) that MsgBinding
-// would lowercase.
+// handleSearchControl handles the case-sensitive search keys.
+//
+// / opens the search; n and N step through matches. They are handled apart from the rest
+// because MsgBinding lowercases, which would make N indistinguishable from n.
 //
 // Returns handled=false for anything else.
 func (m *Model) handleSearchControl(msg tea.KeyMsg) (tea.Cmd, bool) {
@@ -173,8 +175,8 @@ func (m *Model) handleSplitKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 
 // routePaneKey offers a key to the focused pane's own handler before the global bindings see it.
 //
-// Each handler reports handled=false for keys it does not own, so a pane shadows only what it genuinely needs — the
-// alternative, swallowing everything, is what used to make `/`, `o` and `r` dead while a file was open.
+// Each handler reports handled=false for keys it does not own, so a pane shadows only what it genuinely needs - the
+// alternative, swallowing everything, is what used to make /, o and r dead while a file was open.
 func (m *Model) routePaneKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if m.leftMode == modeView && m.focused == paneTree {
 		return m.handleViewerKey(msg)
@@ -191,7 +193,7 @@ func (m *Model) routePaneKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 
 // handleSpecNav moves the spec pane's line cursor.
 //
-// The pane is navigable in its own right now, so scrolling and "where the user is" are the same thing — paging moves
+// The pane is navigable in its own right now, so scrolling and "where the user is" are the same thing - paging moves
 // the cursor with the view rather than leaving it behind off screen, where F3 or Enter would act on a node nobody can
 // see.
 func (m *Model) handleSpecNav(msg tea.KeyMsg) (tea.Cmd, bool) {
@@ -209,8 +211,9 @@ func (m *Model) handleSpecNav(msg tea.KeyMsg) (tea.Cmd, bool) {
 	return nil, true
 }
 
-// handleRefNav handles the Phase-D navigation keys, which belong to the spec pane: F3 / shift+F3 cycle the references
-// of the node under the cursor, Enter follows the $ref under it.
+// handleRefNav handles the reference-navigation keys, which belong to the spec pane.
+//
+// F3 and shift+F3 cycle the references of the node under the cursor; Enter follows the $ref under it.
 //
 // Returns handled=false for every other pane, so their own bindings (notably Enter opening a file in the tree) still
 // apply.
@@ -262,7 +265,7 @@ func (m *Model) handleDiagNav(msg tea.KeyMsg) (tea.Cmd, bool) {
 // handleValidationNav is handleDiagNav for the validation tab.
 //
 // The same keys mean the same things, pointed at the other end of the link: a validation finding names a node in the
-// DOCUMENT, so `f` and Enter drive the spec pane where the scan tab's drive the source.
+// DOCUMENT, so f and Enter drive the spec pane where the scan tab's drive the source.
 func (m *Model) handleValidationNav(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if delta, ok := key.Nav(key.MsgBinding(msg), m.diag.VisibleRows(), len(m.validation.Findings)); ok {
 		m.moveValidationCursor(delta)
@@ -282,8 +285,9 @@ func (m *Model) handleValidationNav(msg tea.KeyMsg) (tea.Cmd, bool) {
 	return nil, true
 }
 
-// moveDiagCursor moves the diagnostics selection by delta (clamped) and re-renders the pane to highlight and scroll to
-// it.
+// moveDiagCursor moves the diagnostics selection by delta, clamped.
+//
+// The pane re-renders, so the selection is highlighted and scrolled into view.
 //
 // In follow mode the Update loop re-mirrors the source pane afterward (syncFollowIfActive).
 func (m *Model) moveDiagCursor(delta int) {
@@ -294,13 +298,15 @@ func (m *Model) moveDiagCursor(delta int) {
 	m.refreshDiagnostics()
 }
 
-// handleViewerKey drives the read-only file viewer: move the highlighted nav line, follow it to the spec node it
-// produced (`f`), enter the editor (`i`/ Enter), or leave back to the tree (Esc).
+// handleViewerKey drives the read-only file viewer.
+//
+// It moves the highlighted nav line, follows it to the spec node it produced (f), enters the editor (i or Enter),
+// or leaves back to the tree (Esc).
 func (m *Model) handleViewerKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	// Checked on the RAW spelling and before the nav keys, because MsgBinding lowercases: `K` would otherwise arrive as
 	// `k` and move the cursor up. Same reason `N` is handled apart from `n` for search.
 	//
-	// `K` is vim's own "look up what is under the cursor", and what LSP clients bind hover to — so it collides with `k`
+	// `K` is vim's own "look up what is under the cursor", and what LSP clients bind hover to - so it collides with `k`
 	// for exactly the reason it is the discoverable choice here.
 	if msg.String() == "K" {
 		return m.showAnnotationReference(), true
@@ -351,8 +357,8 @@ func (m *Model) handleEditKey(msg tea.KeyMsg) tea.Cmd {
 		return m.requestReload()
 	case "esc":
 		m.fileView.StopEdit()
-		// The buffer may have moved under the runs computed when it was loaded, and stale spans colour by the OLD columns —
-		// re-derive from what is now there rather than show a plausible lie.
+		// The buffer may have moved under the runs computed when it was loaded, and stale spans colour by the OLD columns
+		// - re-derive from what is now there rather than show a plausible lie.
 		m.refreshSource()
 		return nil
 	case "ctrl+f":
@@ -378,8 +384,9 @@ func (m *Model) handleEditKey(msg tea.KeyMsg) tea.Cmd {
 	return m.fileView.Update(msg)
 }
 
-// syncEditFocus focuses the editor only when the left pane is focused in view mode AND editing; the read-only viewer
-// needs no textarea focus.
+// syncEditFocus focuses the editor only when the left pane is focused in view mode AND editing.
+//
+// The read-only viewer needs no textarea focus.
 //
 // Blurs it otherwise so a backgrounded editor doesn't keep capturing input.
 func (m *Model) syncEditFocus() tea.Cmd {

@@ -22,7 +22,7 @@ const annotationPrefix = "swagger:"
 
 // goToken is one token of the scan, retained rather than emitted on the spot.
 //
-// Comments cannot be classified in a single forward pass: whether a `required:` line is grammar or prose depends on
+// Comments cannot be classified in a single forward pass: whether a required: line is grammar or prose depends on
 // whether the FILE carries annotations at all, which is only known once the last line has been read.
 type goToken struct {
 	line, col int // 0-based line, 1-based rune column
@@ -30,11 +30,12 @@ type goToken struct {
 	lit       string
 }
 
-// BuildGoHighlight classifies Go source into the same per-line lexical runs the spec pane uses, so both panes share one
-// renderer and one palette.
+// BuildGoHighlight classifies Go source into per-line lexical runs.
+//
+// They are the same runs the spec pane uses, so both panes share one renderer and one palette.
 //
 // The classifier is the standard library's own scanner: it is the definition of how Go tokenizes, it costs no
-// dependency, and it is deliberately error TOLERANT — a buffer the user is halfway through editing still yields a
+// dependency, and it is deliberately error TOLERANT - a buffer the user is halfway through editing still yields a
 // usable token stream instead of nothing.
 //
 // Scan errors are therefore discarded rather than reported; a highlighter that gives up on a syntactically incomplete
@@ -42,10 +43,10 @@ type goToken struct {
 //
 // Comments get three classes rather than one, because in a spec generator a comment is not uniformly commentary:
 //
-//   - a `swagger:` line is the annotation that declares the thing, and reads as
-//     a spec key — the input that produced the pane next to it;
-//   - a leading `<keyword>:` inside an annotated block is grammar, and reads as
-//     a keyword, so `// required: true` looks the way `"required": true` does on
+//   - a swagger: line is the annotation that declares the thing, and reads as
+//     a spec key - the input that produced the pane next to it;
+//   - a leading <keyword>: inside an annotated block is grammar, and reads as
+//     a keyword, so // required: true looks the way "required": true does on
 //     the spec side;
 //   - everything else is prose, and is dimmed.
 func BuildGoHighlight(src []byte) *HighlightIndex {
@@ -96,16 +97,16 @@ func scanGo(src []byte) []goToken {
 // hasAnnotation reports whether the file carries any annotation at all, which is what scopes keyword highlighting.
 //
 // The FILE is the right unit, and the comment group is not.
-// A field's doc comment holds the validation keywords while the `swagger:model` that makes them meaningful sits on the
-// enclosing TYPE — so scoping per group lights up route and parameter bodies but misses every field constraint, which
+// A field's doc comment holds the validation keywords while the swagger:model that makes them meaningful sits on the
+// enclosing TYPE - so scoping per group lights up route and parameter bodies but misses every field constraint, which
 // is most of them.
 //
-// Scoping per file follows the convention instead: `name`, `in` and `example` are ordinary English words, but in a file
+// Scoping per file follows the convention instead: name, in and example are ordinary English words, but in a file
 // that already declares annotations a comment leading with one is the keyword far more often than not.
 //
 // What this cannot know is which declarations the scanner actually visits, so a keyword-shaped line in an unrelated
 // comment of an annotated file still lights up.
-// That needs the AST, and the AST needs a file that parses — which the buffer being edited may not.
+// That needs the AST, and the AST needs a file that parses - which the buffer being edited may not.
 func hasAnnotation(tokens []goToken) bool {
 	for _, t := range tokens {
 		if t.tok != gotoken.COMMENT {
@@ -185,13 +186,13 @@ func addCommentSpans(byLine map[int][]theme.Span, line, col int, segment string,
 	add(col+end, theme.SyntaxComment)
 }
 
-// grammarKeyword locates a leading `<keyword>:` in a comment line and returns the keyword's rune offsets within it.
+// grammarKeyword locates a leading <keyword>: in a comment line and returns the keyword's rune offsets within it.
 //
 // Only the text before the FIRST colon is considered, because that is the only place the grammar reads a keyword: prose
 // that merely contains a colon does not match, and neither does a word the keyword table does not know.
 //
 // The table is the parser's own, so what lights up is exactly what the parser will act on, with keyword aliases
-// (e.g. `min` → minimum, `min length` → minLength) and letter case included.
+// (e.g. min → minimum, min length → minLength) and letter case included.
 func grammarKeyword(segment string) (start, end int, ok bool) {
 	body := strings.TrimLeft(segment, " \t/*")
 	lead := len([]rune(segment)) - len([]rune(body))
@@ -212,7 +213,7 @@ func grammarKeyword(segment string) (start, end int, ok bool) {
 
 // goSyntaxKind maps a Go token onto the shared, language-neutral classes.
 //
-// Anything unclassified stays SyntaxPlain — identifiers are the bulk of Go source, and colouring them would leave
+// Anything unclassified stays SyntaxPlain - identifiers are the bulk of Go source, and colouring them would leave
 // nothing uncoloured to contrast against.
 func goSyntaxKind(tok gotoken.Token, lit string) theme.SyntaxKind {
 	switch {
@@ -233,7 +234,7 @@ func goSyntaxKind(tok gotoken.Token, lit string) theme.SyntaxKind {
 
 // isPredeclaredConst reports whether an identifier is one Go treats as a constant rather than a keyword.
 //
-// Colouring them as keywords is what every editor does, and `nil` is far too common to read as an ordinary name.
+// Colouring them as keywords is what every editor does, and nil is far too common to read as an ordinary name.
 func isPredeclaredConst(lit string) bool {
 	switch lit {
 	case "nil", "true", "false", "iota":
@@ -243,8 +244,9 @@ func isPredeclaredConst(lit string) bool {
 	}
 }
 
-// isAnnotationComment reports whether a comment line leads with a swagger annotation, ignoring the comment markers and
-// indentation around it.
+// isAnnotationComment reports whether a comment line leads with a swagger annotation.
+//
+// The comment markers and the indentation around it are ignored.
 func isAnnotationComment(segment string) bool {
 	return strings.HasPrefix(strings.TrimLeft(segment, " \t/*"), annotationPrefix)
 }
@@ -261,9 +263,10 @@ func lineStarts(src []byte) []int {
 	return starts
 }
 
-// runeColumn converts a byte offset into the 1-based RUNE column the renderer slices on. go/token reports columns in
-// bytes, so any multi-byte character earlier on the line — an accent in a comment, a symbol in a string — would
-// otherwise shift every run after it.
+// runeColumn converts a byte offset into the 1-based RUNE column the renderer slices on.
+//
+// go/token reports columns in bytes. So any multi-byte character earlier on the line, an accent in a comment
+// or a symbol in a string, would otherwise shift every run after it.
 //
 // Returns 0 for an offset off the line.
 func runeColumn(src []byte, starts []int, line, off int) int {

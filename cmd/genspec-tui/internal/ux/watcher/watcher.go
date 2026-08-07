@@ -13,7 +13,7 @@ import (
 
 // Watcher reports Go-source changes under a directory tree as a coalesced stream of signals.
 //
-// It watches every (non-vendored, non-hidden) directory in the tree — fsnotify is not recursive — and re-adds
+// It watches every (non-vendored, non-hidden) directory in the tree - fsnotify is not recursive - and re-adds
 // directories created at runtime so new packages are picked up.
 // Bursts collapse into a single pending signal; the model debounces further before rescanning.
 type Watcher struct {
@@ -37,8 +37,9 @@ func (w *Watcher) Close() error { return w.fs.Close() }
 
 func (w *Watcher) Events() <-chan struct{} { return w.events }
 
-// addRecursive adds every directory under root to the watch set, pruning the same noise the source tree prunes (hidden
-// dirs, vendor, node_modules).
+// addRecursive adds every directory under root to the watch set.
+//
+// It prunes the same noise the source tree prunes: hidden directories, vendor and node_modules.
 func (w *Watcher) addRecursive(root string) {
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
@@ -72,8 +73,9 @@ func (w *Watcher) loop() {
 	}
 }
 
-// relevant reports whether an event should trigger a rescan: any *.go change, or a directory create/remove/rename
-// (which can add or drop packages).
+// relevant reports whether an event should trigger a rescan.
+//
+// Any *.go change qualifies, as does creating, removing or renaming a directory, which can add or drop packages.
 //
 // Newly created directories are added to the watch set so their files are seen.
 func (w *Watcher) relevant(ev fsnotify.Event) bool {

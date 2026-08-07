@@ -31,13 +31,15 @@ func (m *Model) leftView(focused bool) string {
 	return m.tree.View(focused)
 }
 
-// headerLine shows the app name, the (shortened) workdir, the active format, spec stats, and a scan spinner / ready
-// indicator.
+// headerLine renders the top chrome line.
+//
+// It shows the app name, the shortened work dir, the active format, the spec stats, and a scan spinner
+// or a ready indicator.
 //
 // The work dir is the only elastic field, so it is given whatever the others leave rather than a fixed allowance. It
 // used to have a constant one, which every other field could outgrow: the stats widen with the spec, the tail gains a
 // duration once a scan has finished, and the match counter appears only while a search is active. Past that constant,
-// the right-hand end of the line simply ran off the screen — and the fields that vanished were the ones reporting
+// the right-hand end of the line simply ran off the screen - and the fields that vanished were the ones reporting
 // whether the scan had even finished.
 func (m *Model) headerLine() string {
 	stats := fmt.Sprintf("%d paths · %d defs", m.scan.NumPaths, m.scan.NumDefs)
@@ -92,8 +94,8 @@ func humanDuration(d time.Duration) string {
 
 // statusLine renders the bottom line, clipped to the terminal.
 //
-// Same reasoning as the header: several of its variants embed something unbounded — a JSON pointer, a follow target, a
-// file path — and a status line that wrapped would push the layout it sits under off by a row.
+// Same reasoning as the header: several of its variants embed something unbounded - a JSON pointer, a follow target, a
+// file path - and a status line that wrapped would push the layout it sits under off by a row.
 func (m *Model) statusLine() string {
 	return lipgloss.NewStyle().MaxWidth(m.width).Render(m.statusContent())
 }
@@ -193,7 +195,7 @@ func (m *Model) followBadge() string {
 // can land N lines off until Ctrl-S → watcher → rescan refreshes the index.
 //
 // The design leaves the choice open between suppressing reverse-nav and badging it; a badge is the non-destructive read
-// — nav keeps working, it just stops pretending to be exact.
+// - nav keeps working, it just stops pretending to be exact.
 func (m *Model) stale() bool { return m.fileView.Dirty() }
 
 // shortenPath trims a path from the left with an ellipsis so it fits maxLen.

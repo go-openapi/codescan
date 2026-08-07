@@ -104,8 +104,10 @@ func TestSplit_DividersStopShortOfTheEdge(t *testing.T) {
 	})
 }
 
-// TestSplit_ProportionSurvivesAResize is why the dividers are held as percentages rather than cell counts: a terminal
-// resize must keep the layout the user chose, not hand the difference to whichever pane was measured in cells.
+// TestSplit_ProportionSurvivesAResize is why the dividers are percentages, not cell counts.
+//
+// A terminal resize must keep the layout the user chose,
+// rather than hand the difference to whichever pane was measured in cells.
 func TestSplit_ProportionSurvivesAResize(t *testing.T) {
 	m := testModel(t, sized(100, 40))
 	m.moveVSplit(+2) // 33% → 43%
@@ -119,8 +121,9 @@ func TestSplit_ProportionSurvivesAResize(t *testing.T) {
 	assert.Equal(t, 86, m.leftW, "and it is what the new width is divided by")
 }
 
-// TestSplit_DefaultsMatchTheHistoricLayout guards the starting geometry: this is a chrome feature, so a fresh session
-// must look exactly as it did before the dividers could move.
+// TestSplit_DefaultsMatchTheHistoricLayout guards the starting geometry.
+//
+// This is a chrome feature, so a fresh session must look exactly as it did before the dividers could move.
 func TestSplit_DefaultsMatchTheHistoricLayout(t *testing.T) {
 	m := testModel(t, sized(120, 40))
 

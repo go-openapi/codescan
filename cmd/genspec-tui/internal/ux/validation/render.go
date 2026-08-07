@@ -13,11 +13,12 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
-// Render composes the validation tab's body and reports the 0-based content line of the selected finding (-1 when
-// none).
+// Render composes the validation tab's body.
 //
-// Laid out like the scan tab and coloured by the same rule — label and message in the severity's hue, the selected row
-// taking the whole line over RAW text — so the two tabs read as two views of one pane rather than two widgets.
+// It also reports the 0-based content line of the selected finding, or -1 when there is none.
+//
+// Laid out like the scan tab and coloured by the same rule - label and message in the severity's hue, the selected row
+// taking the whole line over RAW text - so the two tabs read as two views of one pane rather than two widgets.
 func Render(findings []Finding, ran bool, runErr error, selected int, focused bool) (string, int) {
 	if runErr != nil {
 		return theme.SevError().Render("validation failed: ") + runErr.Error(), -1
@@ -87,7 +88,7 @@ func styledRow(f Finding) string {
 // plainRow is styledRow's unstyled twin, for the selected line's whole-row highlight.
 //
 // Built from the same pieces in the same order so the two can never show different text depending on where the cursor
-// is — the same pairing the scan tab uses, and for the same reason.
+// is - the same pairing the scan tab uses, and for the same reason.
 func plainRow(f Finding) string {
 	return fmt.Sprintf("%s %s: %s", location(f), f.Severity, f.Message)
 }

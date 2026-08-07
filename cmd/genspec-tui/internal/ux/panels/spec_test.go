@@ -47,8 +47,9 @@ func TestSpec_CursorClamps(t *testing.T) {
 	assert.Equal(t, 0, sp.CursorLine())
 }
 
-// Searching parks the cursor ON the match, so that follow, find-references and go-to-definition all act on what was
-// just searched for.
+// Searching parks the cursor ON the match.
+//
+// Follow, find-references and go-to-definition then all act on what was just searched for.
 func TestSpec_SearchMovesTheCursorToTheMatch(t *testing.T) {
 	sp := newLoadedSpec()
 
@@ -57,8 +58,10 @@ func TestSpec_SearchMovesTheCursorToTheMatch(t *testing.T) {
 	assert.Equal(t, 2, sp.CursorLine(), `the line holding "b": 2`)
 }
 
-// New content CLAMPS the cursor rather than resetting it: a rescan re-renders nearly the same document, and dropping to
-// line 0 on every save would make the live-reload loop unusable.
+// New content CLAMPS the cursor rather than resetting it.
+//
+// A rescan re-renders nearly the same document,
+// and dropping to line 0 on every save would make the live-reload loop unusable.
 //
 // Restoring the same NODE is the caller's job.
 func TestSpec_SetContentClampsRatherThanResets(t *testing.T) {

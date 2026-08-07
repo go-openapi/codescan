@@ -23,7 +23,7 @@ func TestPaging_TreeArrowsAreDocumented(t *testing.T) {
 
 // The overlay is the only in-app record of the keymap, so a binding that gets dispatched but never listed is invisible.
 //
-// This is a coarse guard — it cannot prove completeness — but it fails if a documented key is dropped.
+// This is a coarse guard - it cannot prove completeness - but it fails if a documented key is dropped.
 func TestHelp_ListsTheDispatchedBindings(t *testing.T) {
 	body := testutils.StripANSI(strings.Join(helpLines(), "\n"))
 
@@ -39,7 +39,7 @@ func TestHelp_ListsTheDispatchedBindings(t *testing.T) {
 
 // Every navigable pane pages.
 //
-// Stated as one test so a pane added later has an obvious place to be listed — and an obvious reason to support it.
+// Stated as one test so a pane added later has an obvious place to be listed - and an obvious reason to support it.
 func TestPaging_EveryNavigablePaneSupportsIt(t *testing.T) {
 	body := testutils.StripANSI(strings.Join(helpLines(), "\n"))
 
@@ -155,7 +155,7 @@ func TestHelp_ShortTerminalStillReachesTheEnd(t *testing.T) {
 // TestHelp_WidthIsStableWhileScrolling pins the frame against the whole keymap rather than the visible slice.
 //
 // A modal that sizes itself to what is currently on screen changes width at every scroll step, because the widest line
-// in the window keeps changing. It reads as the box twitching while the content moves — a rendering fault, not
+// in the window keeps changing. It reads as the box twitching while the content moves - a rendering fault, not
 // scrolling.
 func TestHelp_WidthIsStableWhileScrolling(t *testing.T) {
 	o := newOverlay(20)
@@ -171,9 +171,11 @@ func TestHelp_WidthIsStableWhileScrolling(t *testing.T) {
 	assert.Len(t, seen, 1, "the frame changed width while scrolling; widths seen: %v", seen)
 }
 
-// TestHelp_FrameFitsItsWidestLine guards the other direction: pinning a width must not CLIP the content it was measured
-// from. lipgloss counts padding inside the width it is given, so a frame pinned to the measured text width wraps its
-// longest lines by exactly the padding.
+// TestHelp_FrameFitsItsWidestLine guards the other direction.
+//
+// Pinning a width must not CLIP the content it was measured from.
+// lipgloss counts padding inside the width it is given,
+// so a frame pinned to the measured text width wraps its longest lines by exactly the padding.
 func TestHelp_FrameFitsItsWidestLine(t *testing.T) {
 	o := newOverlay(200) // tall enough that nothing scrolls out of view
 	o.Open()

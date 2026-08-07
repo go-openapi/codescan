@@ -28,7 +28,7 @@ const invalidSpecJSON = `{
   }
 }`
 
-// runValidation drives `v` through the real dispatch and delivers the resulting message, as the event loop would.
+// runValidation drives v through the real dispatch and delivers the resulting message, as the event loop would.
 func runValidation(t *testing.T, m *Model) {
 	t.Helper()
 
@@ -48,8 +48,9 @@ func validationModel(t *testing.T) *Model {
 	return testModel(t, sized(120, 40), diagSize(120, 10), withSpecJSON(invalidSpecJSON))
 }
 
-// TestValidation_TabAppearsOnlyOnceRun pins the tab's lifetime: it is not a permanent mode advertising itself before
-// anybody asked for it.
+// TestValidation_TabAppearsOnlyOnceRun pins the tab's lifetime.
+//
+// It is not a permanent mode advertising itself before anybody asked for it.
 func TestValidation_TabAppearsOnlyOnceRun(t *testing.T) {
 	m := validationModel(t)
 
@@ -75,8 +76,10 @@ func TestValidation_FindingsAreShown(t *testing.T) {
 	assert.Contains(t, body, "description", "the missing-description error is listed")
 }
 
-// TestValidation_RescanRetiresTheTab is the staleness rule: findings judged a document that no longer exists, and every
-// row of such a list invites navigating to a node that may have moved or gone.
+// TestValidation_RescanRetiresTheTab is the staleness rule.
+//
+// The findings judged a document that no longer exists, and every row of such a list invites navigating to a node
+// that may have moved or gone.
 func TestValidation_RescanRetiresTheTab(t *testing.T) {
 	m := validationModel(t)
 	runValidation(t, m)
@@ -89,7 +92,7 @@ func TestValidation_RescanRetiresTheTab(t *testing.T) {
 	assert.Equal(t, "diagnostics", m.diagTabTitle())
 }
 
-// TestValidation_TabToggle pins `V`, and that it cannot switch to a tab that does not exist.
+// TestValidation_TabToggle pins V, and that it cannot switch to a tab that does not exist.
 func TestValidation_TabToggle(t *testing.T) {
 	m := validationModel(t)
 
@@ -106,8 +109,9 @@ func TestValidation_TabToggle(t *testing.T) {
 	assert.Equal(t, tabValidation, m.diagTab)
 }
 
-// TestValidation_LowercaseVDoesNotSwitchTabs is the case-collision guard: bindings are matched case-insensitively, so
-// `V` would otherwise revalidate instead of switching view.
+// TestValidation_LowercaseVDoesNotSwitchTabs is the case-collision guard.
+//
+// Bindings are matched case-insensitively, so V would otherwise revalidate instead of switching view.
 func TestValidation_LowercaseVDoesNotSwitchTabs(t *testing.T) {
 	m := validationModel(t)
 	runValidation(t, m)
@@ -119,8 +123,9 @@ func TestValidation_LowercaseVDoesNotSwitchTabs(t *testing.T) {
 	assert.Equal(t, tabScan, m.diagTab, "and does not toggle the tab on its way")
 }
 
-// TestValidation_EnterGoesToTheNode pins the tab's own tracking: a finding names a JSON pointer, so it drives the SPEC
-// pane — not the source pane the scan tab drives.
+// TestValidation_EnterGoesToTheNode pins the tab's own tracking.
+//
+// A finding names a JSON pointer, so it drives the SPEC pane, not the source pane the scan tab drives.
 func TestValidation_EnterGoesToTheNode(t *testing.T) {
 	m := validationModel(t)
 	runValidation(t, m)
@@ -145,7 +150,7 @@ func TestValidation_EnterGoesToTheNode(t *testing.T) {
 	assert.Contains(t, m.notice, "→ /", "and reports the pointer it landed on")
 }
 
-// TestValidation_FollowDrivesTheSpec pins `f` on this tab.
+// TestValidation_FollowDrivesTheSpec pins f on this tab.
 func TestValidation_FollowDrivesTheSpec(t *testing.T) {
 	m := validationModel(t)
 	runValidation(t, m)
@@ -159,8 +164,9 @@ func TestValidation_FollowDrivesTheSpec(t *testing.T) {
 	assert.Contains(t, testutils.StripANSI(m.followBadge()), "VALIDATION ▸ SPEC")
 }
 
-// TestValidation_FollowExitsWithTheTab pins that leaving the tab leaves the mode: a follower mirroring a selection the
-// user can no longer see is worse than no follower.
+// TestValidation_FollowExitsWithTheTab pins that leaving the tab leaves the mode.
+//
+// A follower mirroring a selection the user can no longer see is worse than no follower.
 func TestValidation_FollowExitsWithTheTab(t *testing.T) {
 	m := validationModel(t)
 	runValidation(t, m)
@@ -201,14 +207,15 @@ func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
 	assert.Equal(t, before, m.spec.CursorLine(), "the spec follower stays put rather than guessing")
 }
 
-// TestValidation_PointerResolutionAccuracy records how precisely findings actually locate, measured against the
-// validator rather than reasoned about.
+// TestValidation_PointerResolutionAccuracy records how precisely findings actually locate.
 //
-// The conversion from the validator's dotted notation is exact in the ordinary case — a deep definition path lands on
+// Measured against the validator rather than reasoned about.
+//
+// The conversion from the validator's dotted notation is exact in the ordinary case - a deep definition path lands on
 // the node itself. Two things cost precision, and neither is the notation:
 //
-//   - the validator omits ARRAY INDICES, so a finding about one parameter reports `…parameters.type` where the node is
-//     at `…/parameters/0/type`. It therefore lands on the array;
+//   - the validator omits ARRAY INDICES, so a finding about one parameter reports ...parameters.type where the node is
+//     at .../parameters/0/type. It therefore lands on the array;
 //   - a "required but missing" finding names a node that by definition is not there, so its parent is the only honest
 //     landing.
 //
@@ -261,7 +268,7 @@ func TestValidation_PointerResolutionAccuracy(t *testing.T) {
 	assert.Positive(t, exact, "no finding located exactly; the conversion would be useless")
 	t.Logf("exact=%d via-ancestor=%d unlocated=%d", exact, viaAncestor, unlocated)
 
-	// The deep definition path is the one that must be exact — nothing about it is array-shaped or absent.
+	// The deep definition path is the one that must be exact - nothing about it is array-shaped or absent.
 	m.validation = ValidationState{Ran: true, Findings: findings}
 	for i, f := range findings {
 		if f.Pointer != "/definitions/User/properties/email/type" {

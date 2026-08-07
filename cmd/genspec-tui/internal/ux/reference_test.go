@@ -86,8 +86,9 @@ func TestReference_NoAnnotationOnTheLine(t *testing.T) {
 	assert.Contains(t, m.notice, "no swagger annotation")
 }
 
-// TestReference_KDoesNotMoveTheCursor is the collision guard: bindings are matched case-insensitively, so `K` would
-// otherwise be read as `k` and scroll the viewer.
+// TestReference_KDoesNotMoveTheCursor is the collision guard.
+//
+// Bindings are matched case-insensitively, so K would otherwise be read as k and scroll the viewer.
 func TestReference_KDoesNotMoveTheCursor(t *testing.T) {
 	m := refModel(t, 4)
 
@@ -96,8 +97,9 @@ func TestReference_KDoesNotMoveTheCursor(t *testing.T) {
 	assert.Equal(t, 4, m.fileView.CurrentLine(), "K is a lookup, not a movement")
 }
 
-// TestReference_ReadsTheBuffer pins that the lookup works on an annotation still being typed, which is when it is most
-// wanted — the file on disk does not have it yet.
+// TestReference_ReadsTheBuffer pins that the lookup works on an annotation still being typed.
+//
+// That is when it is most wanted, the file on disk not having it yet.
 func TestReference_ReadsTheBuffer(t *testing.T) {
 	m := testModel(t, sized(120, 40), viewing("models.go", "package p\n// x\n"), focusedOn(paneTree))
 	m.fileView.StartEdit()
@@ -128,8 +130,9 @@ func TestReference_DismissKeys(t *testing.T) {
 	}
 }
 
-// TestReference_EveryDocumentedAnnotationIsReachable ties the TUI's lookup to the grammar's table: every annotation the
-// grammar documents must be findable from the text a user actually types.
+// TestReference_EveryDocumentedAnnotationIsReachable ties the TUI's lookup to the grammar's table.
+//
+// Every annotation the grammar documents must be findable from the text a user actually types.
 func TestReference_EveryDocumentedAnnotationIsReachable(t *testing.T) {
 	for a := grammar.AnnModel; a <= grammar.AnnDescription; a++ {
 		line := "// " + grammar.AnnotationPrefix + a.String() + " something"
@@ -139,7 +142,7 @@ func TestReference_EveryDocumentedAnnotationIsReachable(t *testing.T) {
 		require.True(t, ok, "%q is not recognised as an annotation", line)
 		assert.Equal(t, a, site.Kind)
 
-		// The token range must cover exactly `swagger:<name>` — the click target.
+		// The token range must cover exactly `swagger:<name>` - the click target.
 		assert.Equal(t, 4, site.Start, "the directive starts after `// `")
 		assert.Equal(t, 4+len(grammar.AnnotationPrefix+a.String()), site.End)
 		assert.True(t, site.covers(site.Start) && site.covers(site.End-1))
@@ -148,8 +151,10 @@ func TestReference_EveryDocumentedAnnotationIsReachable(t *testing.T) {
 	}
 }
 
-// TestAnnotationSite_ColumnsAreRunes pins the token range against a comment carrying multi-byte text before the
-// directive, where a byte offset would place the click target several columns to the right of what is drawn.
+// TestAnnotationSite_ColumnsAreRunes pins the token range against multi-byte prose.
+//
+// With non-ASCII text before the directive,
+// a byte offset would place the click target several columns to the right of what is drawn.
 func TestAnnotationSite_ColumnsAreRunes(t *testing.T) {
 	site, ok := annotationOnLine("// é—çà " + grammar.AnnotationPrefix + "model User")
 
@@ -158,8 +163,9 @@ func TestAnnotationSite_ColumnsAreRunes(t *testing.T) {
 	assert.Equal(t, 9+len("swagger:model"), site.End)
 }
 
-// TestAnnotationSite_RejectsASpaceAfterThePrefix pins that the name must be adjacent, as the grammar requires — and
-// that a near-miss does not produce a token range with a hole in it.
+// TestAnnotationSite_RejectsASpaceAfterThePrefix pins that the name must be adjacent.
+//
+// That is what the grammar requires, and it keeps a near-miss from producing a token range with a hole in it.
 func TestAnnotationSite_RejectsASpaceAfterThePrefix(t *testing.T) {
 	_, ok := annotationOnLine("// " + grammar.AnnotationPrefix + " model")
 
@@ -171,8 +177,9 @@ func clickAt(m *Model, x, y int) tea.Cmd {
 	return m.handleMouse(tea.MouseMsg{X: x, Y: y, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress})
 }
 
-// annotationPoint locates the on-screen position of a run of text on a given buffer line, so a click can be aimed at
-// what is DRAWN rather than at coordinates guessed from the source.
+// annotationPoint locates the on-screen position of a run of text on a buffer line.
+//
+// A click can then be aimed at what is DRAWN, rather than at coordinates guessed from the source.
 func annotationPoint(t *testing.T, m *Model, line int, needle string) (x, y int) {
 	t.Helper()
 
@@ -205,8 +212,9 @@ func TestReference_ClickOnAnAnnotationOpensIt(t *testing.T) {
 	assert.Contains(t, testutils.StripANSI(m.reference.View()), "swagger:model")
 }
 
-// TestReference_ClickElsewhereJustFocuses is the guard against the popup becoming a nuisance: clicking a pane to focus
-// it is the most ordinary thing a user does, and it must not throw a modal up.
+// TestReference_ClickElsewhereJustFocuses guards against the popup becoming a nuisance.
+//
+// Clicking a pane to focus it is the most ordinary thing a user does, and it must not throw a modal up.
 func TestReference_ClickElsewhereJustFocuses(t *testing.T) {
 	m := refModel(t, 0)
 	m.focused = paneSpec
@@ -232,7 +240,7 @@ func TestReference_ClickDoesNotMoveTheNavLine(t *testing.T) {
 // TestFileView_LineColAtAgreesWithWhatIsDrawn is the geometry pin for click targeting.
 //
 // LineColAt reproduces a layout computed by the renderer. If the two drift by a column, a click near the edge of a
-// token resolves to the wrong thing — and it stays plausible, because the middle of every token still works. So this
+// token resolves to the wrong thing - and it stays plausible, because the middle of every token still works. So this
 // checks the mapping against the actual frame rather than against the arithmetic that produced it.
 func TestFileView_LineColAtAgreesWithWhatIsDrawn(t *testing.T) {
 	m := refModel(t, 0)

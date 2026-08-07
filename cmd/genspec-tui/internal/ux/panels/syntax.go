@@ -15,7 +15,7 @@ import (
 // Truncation happens on the raw text, at rune boundaries, before any escape exists; only then is each run wrapped in
 // its style.
 //
-// Colour-then-truncate — what you are forced into when a highlighting library hands back a finished string — cuts
+// Colour-then-truncate - what you are forced into when a highlighting library hands back a finished string - cuts
 // through escape sequences and drops their resets, which is how a highlighted pane ends up bleeding colour across the
 // rest of the screen.
 //
@@ -29,7 +29,7 @@ func renderSpans(raw string, spans []theme.Span, width int) string {
 		return fit(raw, width)
 	}
 
-	text := fit(raw, width) // raw, still — the ellipsis is plain by design
+	text := fit(raw, width) // raw, still - the ellipsis is plain by design
 	runes := []rune(text)
 
 	var b strings.Builder

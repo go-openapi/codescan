@@ -5,8 +5,9 @@ package index
 
 import "testing"
 
-// specJSON is a small rendered-spec sample exercising the cases that matter: nested objects, an array element, and a
-// key needing RFC 6901 escaping (`/pets` → `~1pets`).
+// specJSON is a small rendered-spec sample exercising the cases that matter.
+//
+// Nested objects, an array element, and a key needing RFC 6901 escaping.
 //
 // Indented exactly as json.MarshalIndent renders.
 const specJSON = `{
@@ -71,8 +72,9 @@ func TestBuildJSONIndex(t *testing.T) {
 	}
 }
 
-// specYAML mirrors specJSON's shape (keys in a fixed order so line numbers are stable); the index must produce the same
-// pointers as the JSON side.
+// specYAML mirrors specJSON's shape, with keys in a fixed order so line numbers are stable.
+//
+// The index must produce the same pointers as the JSON side.
 const specYAML = `definitions:
   User:
     properties:

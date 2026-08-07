@@ -10,10 +10,11 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
-// Diagnostics is the bottom diagnostics panel: a scrollable viewport whose content is composed by the model from the
-// scan's grammar.Diagnostic slice (see renderDiagnostics).
+// Diagnostics is the bottom diagnostics panel.
 //
-// It stays presentation-only — the model owns the diagnostic data and formatting; the panel just displays and scrolls
+// A scrollable viewport whose content the model composes from the findings of the active tab.
+//
+// It stays presentation-only - the model owns the diagnostic data and formatting; the panel just displays and scrolls
 // it.
 type Diagnostics struct {
 	vp      viewport.Model
@@ -52,10 +53,11 @@ func (p *Diagnostics) SetContent(s string) {
 // Content returns the raw (unwrapped) panel text, for clipboard copy.
 func (p *Diagnostics) Content() string { return p.content }
 
-// RevealLine scrolls the minimum distance that brings the 0-based content line into view, and nothing at all when it is
-// already visible.
+// RevealLine scrolls the minimum distance that brings a 0-based content line into view.
 //
-// Stepping the selection must not shift the whole list under the reader — the same rule the spec pane and the source
+// It does nothing at all when the line is already visible.
+//
+// Stepping the selection must not shift the whole list under the reader - the same rule the spec pane and the source
 // viewer follow.
 func (p *Diagnostics) RevealLine(line int) {
 	switch {
@@ -79,7 +81,7 @@ func (p *Diagnostics) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// View renders the bordered panel; focused brightens the border/title.
+// View renders the bordered panel; focused brightens the border and title.
 func (p *Diagnostics) View(focused bool) string {
 	name := p.title
 	if name == "" {

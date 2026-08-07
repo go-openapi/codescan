@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package panels holds the three scrollable sub-panels of the genspec-tui layout: the source tree (left), the generated
-// spec (right) and the diagnostics (bottom).
 package panels
 
 import (
@@ -81,7 +79,7 @@ func (p *Tree) Content() string {
 	return b.String()
 }
 
-// Update handles cursor movement and expand/collapse.
+// Update handles cursor movement and expand or collapse.
 func (p *Tree) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)
 	if !ok {
@@ -102,7 +100,7 @@ func (p *Tree) Update(msg tea.Msg) tea.Cmd {
 		}
 	case key.Left:
 		// Arrows only: `h`/`l` used to alias these, but `h` is now the global help key, advertised in the header.
-		// A pane may not shadow it — least of all the tree, which is where the app starts.
+		// A pane may not shadow it - least of all the tree, which is where the app starts.
 		p.collapseOrParent()
 	case key.Enter:
 		if n := p.current(); n != nil && n.isDir {
@@ -113,7 +111,7 @@ func (p *Tree) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// View renders the bordered panel; focused brightens the border/title and shows the cursor highlight.
+// View renders the bordered panel; focused brightens the border and title and shows the cursor highlight.
 func (p *Tree) View(focused bool) string {
 	title := theme.Title(focused).Render("source")
 	inner := max(p.w-2, 0)
@@ -234,8 +232,10 @@ func buildTree(root string) *node {
 	return rn
 }
 
-// readDir returns the directory's child nodes: subdirectories that contain Go files (transitively) and *.go files,
-// directories first, each sorted by name.
+// readDir returns the directory's child nodes.
+//
+// Subdirectories that contain Go files, transitively, and the *.go files themselves. Directories come first,
+// each group sorted by name.
 func readDir(dir string, depth int) []*node {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -280,8 +280,9 @@ func flatten(n *node, out *[]*node) {
 	}
 }
 
-// fit truncates s to width with an ellipsis, or right-pads it with spaces so the cursor highlight spans the full inner
-// width.
+// fit truncates s to width with an ellipsis, or right-pads it with spaces.
+//
+// Padding is what makes the cursor highlight span the full inner width.
 func fit(s string, width int) string {
 	if width <= 0 {
 		return ""

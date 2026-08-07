@@ -97,8 +97,9 @@ func TestOverlay_DismissKeys(t *testing.T) {
 	}
 }
 
-// TestOverlay_SwallowsOtherKeys pins that the popup stays put rather than acting on a key whose effect is hidden behind
-// it, matching the other overlays.
+// TestOverlay_SwallowsOtherKeys pins that the popup stays put.
+//
+// It must not act on a key whose effect is hidden behind it, matching the other overlays.
 func TestOverlay_SwallowsOtherKeys(t *testing.T) {
 	o := shown(t)
 
@@ -112,8 +113,10 @@ func TestOverlay_SwallowsOtherKeys(t *testing.T) {
 	}
 }
 
-// TestOverlay_WrapsRatherThanStretching is why this overlay pins a width at all: Keywords is a sentence or two, and a
-// modal sized to hold it unbroken would run most of the way across a wide terminal.
+// TestOverlay_WrapsRatherThanStretching is why this overlay pins a width at all.
+//
+// Keywords is a sentence or two,
+// and a modal sized to hold it unbroken would run most of the way across a wide terminal.
 func TestOverlay_WrapsRatherThanStretching(t *testing.T) {
 	o := New()
 	o.SetSize(300, 40)

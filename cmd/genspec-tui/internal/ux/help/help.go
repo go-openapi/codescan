@@ -1,11 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package help is the keymap overlay: a scrollable modal listing every binding, grouped by the context it applies in.
-//
-// It follows the same contract as the panels — a concrete type the root model owns and drives, never a tea.Model. An
-// overlay that took the root model as a parameter would only be handing it straight back, and deciding app policy
-// (quitting) on its behalf.
 package help
 
 import (
@@ -42,15 +37,16 @@ type helpEntry struct {
 
 // helpSection groups bindings by the context they apply in.
 //
-// The binding surface is context-dependent — `f` follows from three different panes, `Enter` opens a file in the tree
-// but follows a $ref in the spec — so a flat list would be actively misleading.
+// The binding surface is context-dependent - f follows from three different panes, Enter opens a file in the tree
+// but follows a $ref in the spec - so a flat list would be actively misleading.
 type helpSection struct {
 	title   string
 	entries []helpEntry
 }
 
-// helpSections is the whole keymap, in the order the overlay shows it. It is the
-// single source of truth for the overlay; the README table mirrors it by hand.
+// helpSections is the whole keymap, in the order the overlay shows it.
+//
+// It is the single source of truth for the overlay. The README table mirrors it by hand.
 //
 //nolint:gochecknoglobals // static content, read-only
 var helpSections = []helpSection{
@@ -153,7 +149,7 @@ func (o *Overlay) Close() {
 
 // HandleKey drives the overlay: scroll, or dismiss.
 //
-// It swallows everything else — the overlay covers the UI, so acting on a key the user cannot see the effect of would
+// It swallows everything else - the overlay covers the UI, so acting on a key the user cannot see the effect of would
 // be worse than ignoring it. Quitting is the one exception, and it belongs to the root model, which checks for it
 // before the overlay ever sees the key.
 func (o *Overlay) HandleKey(msg tea.KeyMsg) tea.Cmd {
@@ -198,28 +194,31 @@ func (o *Overlay) View() string {
 	return theme.ModalAt(o.contentWidth()).Render(b.String())
 }
 
-// contentWidth is the width to pin the frame at: the widest line the overlay can EVER show, not the widest one
-// currently on screen.
+// contentWidth is the width to pin the frame at.
 //
-// Sizing to the visible window is what makes the box change width as the keymap scrolls under it — the frame appears
+// It is the widest line the overlay can EVER show, not the widest one currently on screen.
+//
+// Sizing to the visible window is what makes the box change width as the keymap scrolls under it - the frame appears
 // to twitch while the content moves, which reads as a rendering fault rather than as scrolling.
 //
-// Deliberately not capped to the terminal. A cap makes lipgloss WRAP the rows that overflow, which breaks the key/action
-// columns apart; a modal wider than a narrow terminal is simply clipped, which is what it already did.
+// Deliberately not capped to the terminal. A cap makes lipgloss WRAP the rows that overflow,
+// which breaks the key/action columns apart; a modal wider than a narrow terminal is simply clipped,
+// which is what it already did.
 func (o *Overlay) contentWidth() int {
 	return max(
 		lipgloss.Width(strings.Join(helpLines(), "\n")),
 		lipgloss.Width(helpTitle),
 		// Measured at the LAST page, where the counter carries its largest numbers. Measuring the current page instead
-		// would put a digit's worth of width back under the scroll — the very thing this frame is pinned to prevent.
+		// would put a digit's worth of width back under the scroll - the very thing this frame is pinned to prevent.
 		lipgloss.Width(o.footer(max(len(helpLines())-o.visibleRows(), 0))),
 	)
 }
 
-// footer renders the bottom line for a window starting at line `top`.
+// footer renders the bottom line for a window starting at line top.
 //
-// It states the range as well as the keys, because the keymap no longer fits a screen: a section below the fold is a
-// binding nobody knows exists, and hiding one on the very screen whose job is discoverability is the worst place for it.
+// It states the range as well as the keys, because the keymap no longer fits a screen:
+// a section below the fold is a binding nobody knows exists,
+// and hiding one on the very screen whose job is discoverability is the worst place for it.
 func (o *Overlay) footer(top int) string {
 	total := len(helpLines())
 	visible := o.visibleRows()

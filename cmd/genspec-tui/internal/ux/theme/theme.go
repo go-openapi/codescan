@@ -1,10 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package theme holds the lipgloss styles shared by the model and its panels: a rounded-border panel box (bright when
-// focused, dim otherwise), a panel title, and the status line.
-//
-// Kept tiny and dependency-free so both ux and panels can import it without a cycle.
 package theme
 
 import "github.com/charmbracelet/lipgloss"
@@ -32,8 +28,8 @@ const (
 
 // SyntaxKind classifies a lexical run for highlighting.
 //
-// It is deliberately source-language-neutral: the JSON/YAML lexers and go/scanner both map onto it, so the renderer and
-// the palette are shared rather than duplicated per pane.
+// It is deliberately source-language-neutral: the JSON or YAML lexers and go/scanner both map onto it, so the renderer
+// and the palette are shared rather than duplicated per pane.
 type SyntaxKind uint8
 
 // The syntax classes.
@@ -42,8 +38,8 @@ type SyntaxKind uint8
 //
 // The Diag* classes are the exception to "lexical": they are not what a token IS but what the scanner said ABOUT it,
 // overlaid on the run the diagnostic points at.
-// They ride the same span mechanism because a diagnostic and a token address the same thing — a (line, column) run
-// — and giving them a second mechanism would mean two ways to paint one line.
+// They ride the same span mechanism because a diagnostic and a token address the same thing - a (line, column) run
+// - and giving them a second mechanism would mean two ways to paint one line.
 const (
 	SyntaxPlain SyntaxKind = iota
 	SyntaxKey
@@ -60,7 +56,7 @@ const (
 // Span is one lexical run on a rendered line, identified by where it STARTS.
 //
 // A run extends to the next span's column (or the end of the line), which is what lets the renderer slice raw text at
-// known boundaries instead of truncating already-coloured output — the operation that corrupts escapes.
+// known boundaries instead of truncating already-coloured output - the operation that corrupts escapes.
 type Span struct {
 	Col  int // 1-based column of the run's first character
 	Kind SyntaxKind
@@ -120,13 +116,14 @@ func Title(focused bool) lipgloss.Style {
 	return s.Foreground(colorDim)
 }
 
-// Status styles the bottom status/help line.
+// Status styles the bottom status and help line.
 func Status() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(colorDim)
 }
 
-// Dim styles secondary text that should recede — currently a diagnostic's trailing [code], which is a lookup key
-// rather than something read on every row.
+// Dim styles secondary text that should recede.
+//
+// Currently a diagnostic's trailing code, which is a lookup key rather than something read on every row.
 //
 // Shares its colour with Status; they are separate functions because they are separate decisions, and a status line
 // that stopped being dim should not drag the diagnostics pane with it.
@@ -149,11 +146,12 @@ func Match() lipgloss.Style {
 // modalPadH is the modal's horizontal padding, per side.
 const modalPadH = 3
 
-// ModalChromeW is how many columns a modal's frame costs on top of its text: the padding on both sides plus a border
-// column on each.
+// ModalChromeW is how many columns a modal's frame costs on top of its text.
+//
+// The padding on both sides, plus a border column on each.
 //
 // For an overlay whose text WRAPS, and which therefore has to choose a width the terminal can hold. An overlay whose
-// lines cannot be broken should not use this to clip itself — wrapping a laid-out table is worse than letting it run
+// lines cannot be broken should not use this to clip itself - wrapping a laid-out table is worse than letting it run
 // off the edge.
 const ModalChromeW = 2 + 2*modalPadH
 
@@ -172,14 +170,16 @@ func Modal() lipgloss.Style {
 // ModalAt is Modal pinned to a fixed width of textW columns of TEXT.
 //
 // The padding is added back on top, because lipgloss counts padding INSIDE the width it is given: a caller passing the
-// width it measured its own text at would otherwise have its longest lines wrapped by exactly the padding — which is
+// width it measured its own text at would otherwise have its longest lines wrapped by exactly the padding - which is
 // both wrong and hard to see, since it only bites the widest line.
 func ModalAt(textW int) lipgloss.Style {
 	return Modal().Width(textW + 2*modalPadH)
 }
 
-// SevError, SevWarn, and SevHint style a diagnostic's severity label in the diagnostics pane (red / amber / blue),
-// matching grammar.Severity order.
+// SevError styles an error-severity diagnostic label.
+//
+// SevError, SevWarn and SevHint colour the severity label in the diagnostics pane red, amber and blue,
+// matching the order of the severities themselves.
 func SevError() lipgloss.Style { return lipgloss.NewStyle().Foreground(colorError).Bold(true) }
 
 // SevWarn styles a warning-severity diagnostic label.
@@ -193,9 +193,9 @@ func Dir() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(colorTitle)
 }
 
-// Selected styles the cursor row in a navigable panel — the DRIVER line, i.e. the one the user is actually moving.
+// Selected styles the cursor row in a navigable panel - the DRIVER line, i.e. the one the user is actually moving.
 //
-// Strong reverse-video bar (design §6.5).
+// Strong reverse-video bar.
 func Selected() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(lipgloss.Color("231")).
@@ -204,16 +204,18 @@ func Selected() lipgloss.Style {
 
 // Follower styles a cross-ref line in the pane that is MIRRORING the driver.
 //
-// A muted tint of Selected, so at a glance it is obvious which pane leads and which one is being dragged along (design
-// §6.5).
+// A muted tint of Selected, so at a glance it is obvious which pane leads
+// and which one is being dragged along.
 func Follower() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(lipgloss.Color("252")).
 		Background(colorFollower)
 }
 
-// Chip styles a small standing badge in the header — currently the "h: help" hint, which has to survive a crowded
-// header line without being mistaken for one more status field.
+// Chip styles a small standing badge in the header.
+//
+// Currently the h: help hint,
+// which has to survive a crowded header line without being mistaken for one more status field.
 func Chip() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(lipgloss.Color("16")).
@@ -228,8 +230,9 @@ func Gutter() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(colorHint)
 }
 
-// Stale styles the follow-mode badge shown while the source buffer has unsaved edits, i.e. while cross-ref positions
-// are older than what is on screen.
+// Stale styles the follow-mode badge shown while the source buffer has unsaved edits.
+//
+// That is the state in which the cross-ref positions are older than what is on screen.
 func Stale() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(lipgloss.Color("16")).

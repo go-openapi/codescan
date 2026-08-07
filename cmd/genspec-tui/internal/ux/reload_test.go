@@ -14,8 +14,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// reloadFixture writes a file, opens it in the viewer, and hands back the path so a test can rewrite it behind the
-// TUI's back — which is the whole situation reload exists for.
+// reloadFixture writes a file and opens it in the viewer.
+//
+// It hands back the path so a test can rewrite it behind the TUI's back,
+// which is the whole situation reload exists for.
 type reloadFixture struct {
 	m    *Model
 	path string
@@ -81,8 +83,9 @@ func TestReload_DirtyBufferAsksFirst(t *testing.T) {
 	assert.Contains(t, f.m.fileView.Value(), "zzz", "the edit is still there")
 }
 
-// TestReload_DeclineChangesNothing pins that "no" is a true no-op — the edit survives and the action does not stay
-// armed for the next keypress.
+// TestReload_DeclineChangesNothing pins that no is a true no-op.
+//
+// The edit survives, and the action does not stay armed for the next keypress.
 func TestReload_DeclineChangesNothing(t *testing.T) {
 	f := newReloadFixture(t, reloadBefore)
 	f.m.fileView.StartEdit()

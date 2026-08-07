@@ -14,10 +14,11 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
-// Render composes the diagnostics-pane body for one scan outcome and reports the 0-based content line of the
-// selected diagnostic (-1 when none).
+// Render composes the diagnostics-pane body for one scan outcome.
 //
-// A hard error from codescan.Run is shown first — it aborts the whole spec, so it dwarfs everything else.
+// It also reports the 0-based content line of the selected diagnostic, or -1 when there is none.
+//
+// A hard error from codescan.Run is shown first - it aborts the whole spec, so it dwarfs everything else.
 //
 // Soft diagnostics follow a one-line severity tally, one per row in source order, with the severity label and the
 // message carrying the severity's colour so the pane can be read for red at a glance; the selected row instead gets the
@@ -52,7 +53,7 @@ func Render(workdir string, scanErr error, diags []grammar.Diagnostic, selected 
 			selectedLine = strings.Count(b.String(), "\n") // 0-based line of this row
 			// Precedence is the same as the spec pane and the source viewer: the cursor wins the whole line, so the
 			// highlight is laid over the RAW text rather than over the severity-coloured one.
-			// Wrapping already-styled text would not merely look busy — the inner style's reset terminates the outer
+			// Wrapping already-styled text would not merely look busy - the inner style's reset terminates the outer
 			// background mid-row, and lipgloss does not re-open it, so the bar would visibly stop at the severity label.
 			//
 			// The strong bar means "you are driving this", the muted tint means "this is where you were": two strong
@@ -72,8 +73,9 @@ func Render(workdir string, scanErr error, diags []grammar.Diagnostic, selected 
 	return b.String(), selectedLine
 }
 
-// diagnosticTally summarizes a diagnostic slice as "N diagnostics (E errors, W warnings, H hints)", omitting any zero
-// buckets.
+// diagnosticTally summarizes a diagnostic slice as a one-line count by severity.
+//
+// Zero buckets are omitted, so a clean warning-only scan does not advertise nought errors.
 func diagnosticTally(diags []grammar.Diagnostic) string {
 	var e, w, h int
 	for _, d := range diags {
@@ -106,7 +108,7 @@ func diagnosticTally(diags []grammar.Diagnostic) string {
 
 // formatDiagnostic renders one diagnostic as "path:line:col severity: message [code]", coloured by severity.
 //
-// The label and the message both take the severity's colour — the label alone is too small a target to scan a pane
+// The label and the message both take the severity's colour - the label alone is too small a target to scan a pane
 // for, and the message is the part being read. Only the label is bold, so a wall of errors does not become a wall of
 // bold. The trailing [code] is dimmed: it is a lookup key, not prose.
 func formatDiagnostic(workdir string, d grammar.Diagnostic) string {
@@ -121,8 +123,9 @@ func formatDiagnostic(workdir string, d grammar.Diagnostic) string {
 	)
 }
 
-// plainDiagnostic renders the same row as formatDiagnostic with no styling at all, for the selected row to be
-// highlighted as a whole.
+// plainDiagnostic renders the same row as formatDiagnostic, with no styling at all.
+//
+// That is what lets the selected row be highlighted as a whole.
 //
 // Kept beside its styled twin, and built from the same pieces in the same order, so the two can never drift into
 // showing different text depending on where the cursor is.
@@ -130,8 +133,10 @@ func plainDiagnostic(workdir string, d grammar.Diagnostic) string {
 	return fmt.Sprintf("%s %s: %s [%s]", diagnosticLoc(workdir, d), d.Severity, d.Message, d.Code)
 }
 
-// diagnosticLoc renders a diagnostic's position as "path:line:col", made relative to workdir when it sits inside the
-// scanned tree (absolute, or "-" when unknown, otherwise).
+// diagnosticLoc renders a diagnostic's position as path:line:col.
+//
+// The path is made relative to workdir when it sits inside the scanned tree, and stays absolute otherwise.
+// An unknown position renders as a dash.
 func diagnosticLoc(workdir string, d grammar.Diagnostic) string {
 	if rel, err := filepath.Rel(workdir, d.Pos.Filename); err == nil && !strings.HasPrefix(rel, "..") {
 		return fmt.Sprintf("%s:%d:%d", rel, d.Pos.Line, d.Pos.Column)

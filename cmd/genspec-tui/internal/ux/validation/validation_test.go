@@ -11,8 +11,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// brokenSpec carries one fault per validator behaviour worth covering: a bad parameter type, a duplicate operationId,
-// and a response missing its required description.
+// brokenSpec carries one fault per validator behaviour worth covering.
+//
+// A bad parameter type, a duplicate operationId, and a response missing its required description.
 const brokenSpec = `{
   "swagger": "2.0",
   "info": {"title": "t", "version": "1"},
@@ -50,8 +51,9 @@ func TestRun_ReportsFindings(t *testing.T) {
 	}
 }
 
-// TestRun_LocatesFindings pins that findings carry somewhere to go, which is what makes the tab navigable rather than
-// merely readable.
+// TestRun_LocatesFindings pins that findings carry somewhere to go.
+//
+// That is what makes the tab navigable rather than merely readable.
 func TestRun_LocatesFindings(t *testing.T) {
 	findings, err := Run([]byte(brokenSpec))
 	require.NoError(t, err)
@@ -88,8 +90,9 @@ func TestRun_UnloadableSpec(t *testing.T) {
 	require.Error(t, err, "a document that cannot even be loaded is reported, not silently valid")
 }
 
-// TestPointerFor covers the conversion from the validator's dotted notation to RFC 6901, including the escaping that
-// every path template needs.
+// TestPointerFor covers the conversion from the validator's dotted notation to RFC 6901.
+//
+// Including the escaping that every path template needs.
 func TestPointerFor(t *testing.T) {
 	for _, tc := range []struct {
 		in, want string
@@ -106,10 +109,11 @@ func TestPointerFor(t *testing.T) {
 	}
 }
 
-// TestPointerFor_AmbiguousPathTemplate documents one known limit of the notation: it cannot express a path template
-// containing a dot, so the conversion splits it.
+// TestPointerFor_AmbiguousPathTemplate documents one known limit of the notation.
 //
-// Recorded for completeness, but it is NOT the limitation that bites in practice — see
+// It cannot express a path template containing a dot, so the conversion splits it.
+//
+// Recorded for completeness, but it is NOT the limitation that bites in practice - see
 // TestValidation_PointerResolutionAccuracy for the two that do, both about what the validator omits rather than about
 // what this splits.
 func TestPointerFor_AmbiguousPathTemplate(t *testing.T) {

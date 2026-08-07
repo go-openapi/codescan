@@ -1,11 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package reference is the annotation-reference popup: what the swagger: directive on this line means, and what may be
-// written under it, without leaving the file to go and look it up.
-//
-// It follows the same contract as the other overlays — a concrete type the root model owns and drives, never a
-// tea.Model. Unlike them it records nothing: there is no answer to collect, only something to read and dismiss.
 package reference
 
 import (
@@ -62,7 +57,7 @@ func (o *Overlay) Close() { o.isOpen = false }
 
 // HandleKey dismisses the popup.
 //
-// There is nothing to navigate — it is a few lines of reference text — so every key that plausibly means "done" closes
+// There is nothing to navigate - it is a few lines of reference text - so every key that plausibly means "done" closes
 // it, including the key that opened it. Everything else is swallowed, as with the other overlays: acting on a key whose
 // effect is hidden behind the modal is worse than ignoring it.
 func (o *Overlay) HandleKey(msg tea.KeyMsg) tea.Cmd {

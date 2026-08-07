@@ -52,7 +52,7 @@ func MarkDiagnostics(spans map[int][]theme.Span, marks []DiagMark) map[int][]the
 // markRun restyles the run that BEGINS at the mark's column, or opens one there when the mark falls inside a run.
 //
 // The exact hit is the common case rather than a lucky one: a diagnostic and a lexical run both address a token, so
-// they agree on where it starts — a keyword-level diagnostic lands on the keyword's run, a declaration-level one on
+// they agree on where it starts - a keyword-level diagnostic lands on the keyword's run, a declaration-level one on
 // the identifier's. Opening a run mid-token is the honest fallback: it paints from the reported column to the next run,
 // which over-reaches rather than pointing somewhere false.
 func markRun(runs []theme.Span, mark DiagMark) []theme.Span {

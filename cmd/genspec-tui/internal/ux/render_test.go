@@ -18,7 +18,7 @@ import (
 )
 
 // The rest of the suite drives handleKey directly, which is the right altitude for testing what a
-// key does — but it means the render path never runs. These call View and the lines it composes, so
+// key does - but it means the render path never runs. These call View and the lines it composes, so
 // a panic or an empty pane in any state is caught here rather than by a user.
 
 // view renders and strips the styling, leaving the text a user reads.
@@ -230,7 +230,7 @@ func TestHeaderLine(t *testing.T) {
 	})
 
 	// The work dir used to be given a fixed allowance and every other field a hand-tuned constant to fit inside. The
-	// stats widen with the spec, the tail gains a duration, the match counter appears mid-search — so past that constant
+	// stats widen with the spec, the tail gains a duration, the match counter appears mid-search - so past that constant
 	// the line simply ran off the right of the screen.
 	//
 	// Driven at several widths with every field at its longest, since the failure is a function of their sum.
@@ -264,8 +264,9 @@ func TestHeaderLine(t *testing.T) {
 	})
 }
 
-// TestStatusLineFits covers the other unbounded line: several of its variants embed a JSON pointer, a follow target or
-// a file path, none of which have a length limit.
+// TestStatusLineFits covers the other unbounded line.
+//
+// Several of its variants embed a JSON pointer, a follow target or a file path, none of which have a length limit.
 func TestStatusLineFits(t *testing.T) {
 	for _, w := range []int{40, 80, 120} {
 		m := testModel(t, sized(w, 40), withSpecJSON(refSpecJSON), focusedOn(paneSpec))
@@ -346,8 +347,9 @@ func TestFocusedContent(t *testing.T) {
 	assert.Contains(t, m.focusedContent(), "package p")
 }
 
-// Nothing to copy must not enqueue a clipboard command — the command shells out, so an empty one
-// would be a pointless subprocess.
+// Nothing to copy must not enqueue a clipboard command.
+//
+// The command shells out, so an empty one would be a pointless subprocess.
 //
 // An empty open file is the reachable case: the spec pane always holds at least its placeholder,
 // and the tree always holds its root row.

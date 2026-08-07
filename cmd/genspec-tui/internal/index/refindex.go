@@ -13,7 +13,7 @@ import (
 
 // refSuffix is the pointer tail a $ref member carries.
 //
-// Both lexers report the member's own pointer (…/boss/$ref) for the key AND for its value token.
+// Both lexers report the member's own pointer (.../boss/$ref) for the key AND for its value token.
 const refSuffix = "/$ref"
 
 // RefTarget is a parsed $ref value.
@@ -39,13 +39,13 @@ type RefSite struct {
 // This is the "find references" half: a decl is anchored to its own field, never to the type it references,
 // so answering "where is this definition used?" means resolving $refs at RENDER time.
 //
-// That makes the index per-render, exactly like SpecIndex — and it is built in the same lexer pass, so it costs no
+// That makes the index per-render, exactly like SpecIndex - and it is built in the same lexer pass, so it costs no
 // extra walk.
 //
 // Scope, deliberately: this is a SITE index, not a JSON-Schema resolver.
 // It records where each $ref token sits and what string it holds.
 // It does not follow ref-to-ref chains, does not reason about $refs nested in allOf, and does not apply the "sibling
-// keywords are ignored" rule — $ref quirks stay documented but are not chased here.
+// keywords are ignored" rule - $ref quirks stay documented but are not chased here.
 type RefIndex struct {
 	byTarget map[string][]RefSite // local target pointer → sites, ordered by line
 	byLine   map[int]RefSite      // rendered line → the $ref on it
@@ -56,7 +56,7 @@ type RefIndex struct {
 //
 // A local ref is a bare fragment ("#/definitions/User").
 // The fragment is percent-DECODED, because go-openapi/spec marshals refs through net/url and will escape a definition
-// name containing e.g. a space — while the SpecIndex keys on the document's own key text, which is not escaped.
+// name containing e.g. a space - while the SpecIndex keys on the document's own key text, which is not escaped.
 // Decoding here is what makes the two sides comparable.
 //
 // A malformed escape falls back to the verbatim fragment rather than dropping the ref.
@@ -67,7 +67,7 @@ func ParseRefTarget(raw string) RefTarget {
 	}
 	frag := strings.TrimPrefix(raw, "#")
 	if frag != "" && !strings.HasPrefix(frag, "/") {
-		return t // "#Foo" — a plain-name fragment, not a JSON pointer
+		return t // "#Foo" - a plain-name fragment, not a JSON pointer
 	}
 	decoded, err := url.PathUnescape(frag)
 	if err != nil {
@@ -81,7 +81,8 @@ func ParseRefTarget(raw string) RefTarget {
 // RefsToPointer returns every site referencing the node at ptr, ordered by rendered line.
 //
 // ptr is a plain JSON pointer as the SpecIndex reports it (e.g. "/definitions/User").
-// The leading "#" of the $ref is not included: generated specs only produce $ref's as fragments rooted in the same document.
+// The leading "#" of the $ref is not included:
+// generated specs only produce $ref's as fragments rooted in the same document.
 func (x *RefIndex) RefsToPointer(ptr string) []RefSite {
 	if x == nil {
 		return nil
@@ -90,13 +91,15 @@ func (x *RefIndex) RefsToPointer(ptr string) []RefSite {
 	return x.byTarget[ptr]
 }
 
-// RefsNear returns the sites referencing ptr — or, when nothing references ptr itself, the sites referencing its
-// nearest referenced ANCESTOR, along with the pointer that actually matched.
+// RefsNear returns the sites referencing ptr.
+//
+// When nothing references ptr itself, it returns the sites referencing its nearest referenced ANCESTOR,
+// along with the pointer that actually matched.
 //
 // The segment-trim walk mirrors SourceIndex.PositionFor, and for the same reason: the user's cursor is rarely on the
 // definition line itself.
 //
-// Asking for the references of `/definitions/User/properties/name` should find the uses of `User`, not report nothing.
+// Asking for the references of /definitions/User/properties/name should find the uses of User, not report nothing.
 func (x *RefIndex) RefsNear(ptr string) (string, []RefSite) {
 	if x == nil {
 		return "", nil
@@ -176,8 +179,10 @@ func newIndexAccum() *indexAccum {
 	}
 }
 
-// add folds one token into both indexes. ptr is the token's JSON pointer, line its 0-based rendered line, isKey whether
-// it is an object key, and value its raw scalar text (empty for delimiters).
+// add folds one token into both indexes.
+//
+// ptr is the token's JSON pointer and line its 0-based rendered line. isKey says whether it is an object key,
+// and value carries its raw scalar text, empty for a delimiter.
 func (a *indexAccum) add(ptr string, line int, isKey bool, value []byte) {
 	if ptr == "" {
 		return
@@ -190,7 +195,7 @@ func (a *indexAccum) add(ptr string, line int, isKey bool, value []byte) {
 		a.line2ptr[line] = ptr
 	}
 
-	// Ref index: the VALUE token under a …/$ref pointer carries the target.
+	// Ref index: the VALUE token under a .../$ref pointer carries the target.
 	// The key token shares that pointer, hence the isKey guard.
 	if isKey || len(value) == 0 || !strings.HasSuffix(ptr, refSuffix) {
 		return

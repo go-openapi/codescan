@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Tests for the cross-reference layer as the model drives it: follow modes, the JSON/YAML toggle, what a re-render
+// Tests for the cross-reference layer as the model drives it: follow modes, the JSON or YAML toggle, what a re-render
 // does to the cursor, and the spans a render installs. The resolution underneath is tested purely in
 // crossref_resolve_test.go.
 
@@ -42,7 +42,7 @@ func TestFollow(t *testing.T) {
 		assert.Equal(t, followSource, m.follow, "f enters source-driven follow")
 		assert.Equal(t, "/definitions/User/properties/email", m.followTarget)
 
-		// A line with no anchor at or above reports honestly — and names the cause, rather than flattening every miss into
+		// A line with no anchor at or above reports honestly - and names the cause, rather than flattening every miss into
 		// one opaque message.
 		m.fileView.GotoLine(0) // source line 1, before the first anchor (line 5)
 		m.syncFollowIfActive()
@@ -97,8 +97,9 @@ func TestFollow(t *testing.T) {
 	})
 }
 
-// The two renders of the same spec, indexing the same pointers at DIFFERENT lines — the whole point of preserving the
-// pointer rather than the line across a format toggle.
+// The two renders of the same spec index the same pointers at DIFFERENT lines.
+//
+// That is the whole point of preserving the pointer rather than the line across a format toggle.
 //
 // Both renders are deliberately taller than the test viewport (below) so neither clamps: YAML is roughly half the
 // height of JSON, which is exactly why carrying the raw line number across is wrong.
@@ -144,14 +145,14 @@ const (
 `
 )
 
-// The email property's line in each render — the node the toggle must preserve.
+// The email property's line in each render - the node the toggle must preserve.
 const (
 	emailPtr      = "/definitions/User/properties/email"
 	emailJSONLine = 14
 	emailYAMLLine = 9
 )
 
-// The JSON/YAML toggle keeps the cursor on the same NODE, never the same line number.
+// The JSON or YAML toggle keeps the cursor on the same NODE, never the same line number.
 func TestSpecFormatToggle(t *testing.T) {
 	t.Run("preserves pointer not line", func(t *testing.T) {
 		m := toggleFixture(t)
@@ -256,7 +257,7 @@ func TestSyntax(t *testing.T) {
 		assert.NotContains(t, view, "swagger")
 	})
 
-	// Highlighting must never alter the text — the same invariant the renderer is tested on, asserted here through the
+	// Highlighting must never alter the text - the same invariant the renderer is tested on, asserted here through the
 	// whole pipeline.
 	t.Run("text survives highlighting", func(t *testing.T) {
 		m := syntaxModel(t)
@@ -333,7 +334,7 @@ func TestE2E_SyntaxLeavesTheSpecIntact(t *testing.T) {
 	}
 }
 
-// B-rescan-anchor — a re-render must keep the user on the same NODE.
+// B-rescan-anchor - a re-render must keep the user on the same NODE.
 //
 // This is the hot path: every save triggers a rescan, and live-reload is the tool's reason to exist.
 // Carrying the raw line number across would slide the user to a different node whenever the spec gained or lost lines
@@ -389,7 +390,7 @@ func TestRescan(t *testing.T) {
 			"fell back to the nearest ancestor that survived")
 	})
 
-	// An unchanged rescan — the common case, since most saves do not move anything — must not move the cursor at all.
+	// An unchanged rescan - the common case, since most saves do not move anything - must not move the cursor at all.
 	t.Run("identical spec does not move the cursor", func(t *testing.T) {
 		m := newRescanModel(t)
 		before := parkOn(t, m, "/definitions/User")
@@ -412,7 +413,7 @@ func TestRescan(t *testing.T) {
 		m.scan.JSON = rescanGrown
 		m.refreshSpec()
 
-		// The node moved a few lines but is still on screen, so the view should be steady — not recentred on the cursor.
+		// The node moved a few lines but is still on screen, so the view should be steady - not recentred on the cursor.
 		assert.Equal(t, topBefore, m.spec.TopLine(),
 			"the node was still visible, so nothing needed to scroll")
 	})
@@ -442,8 +443,9 @@ func TestRescan(t *testing.T) {
 	})
 }
 
-// followFixture builds a Model wired with a known spec/source index pair, ready to drive follow mode without a real
-// scan.
+// followFixture builds a Model wired with a known spec and source index pair.
+//
+// Ready to drive follow mode without a real scan.
 func followFixture(t *testing.T) *Model {
 	t.Helper()
 
@@ -476,8 +478,9 @@ func syntaxModel(t *testing.T) *Model {
 	return testModel(t, panelSize(70, 24), withSpecJSON(syntaxSpec))
 }
 
-// toggleFixture builds a model holding both renders of the same spec, with the spec pane focused and the JSON index
-// live.
+// toggleFixture builds a model holding both renders of the same spec.
+//
+// The spec pane is focused and the JSON index is live.
 //
 // The pane is short on purpose (a 5-line viewport) so both renders can actually scroll to the target node.
 func toggleFixture(t *testing.T) *Model {
@@ -536,7 +539,7 @@ const rescanGrown = `{
   }
 }`
 
-// rescanShrunk drops User entirely — the type was deleted.
+// rescanShrunk drops User entirely - the type was deleted.
 const rescanShrunk = `{
   "definitions": {
     "Address": {
@@ -551,7 +554,7 @@ const rescanShrunk = `{
 
 func newRescanModel(t *testing.T) *Model {
 	t.Helper()
-	// Tall enough that a node shifted by a few lines is still on screen — otherwise "did it avoid scrolling?" cannot be
+	// Tall enough that a node shifted by a few lines is still on screen - otherwise "did it avoid scrolling?" cannot be
 	// asked.
 	m := testModel(t,
 		panelSize(60, 20),

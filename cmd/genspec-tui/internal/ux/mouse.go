@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// handleMouse focuses the pane under a left-click and scrolls the pane under the wheel — no Tab required.
+// handleMouse focuses the pane under a left-click and scrolls the pane under the wheel - no Tab required.
 func (m *Model) handleMouse(msg tea.MouseMsg) tea.Cmd {
 	p, ok := m.paneAt(msg.X, msg.Y)
 	if !ok {

@@ -27,7 +27,7 @@ func TestSourceIndex_PositionFor(t *testing.T) {
 	})
 
 	t.Run("nearest anchored ancestor", func(t *testing.T) {
-		// A finer node with no anchor of its own resolves to the closest anchored ancestor — here the property, then the
+		// A finer node with no anchor of its own resolves to the closest anchored ancestor - here the property, then the
 		// definition.
 		p, ok := idx.PositionFor("/definitions/User/properties/email/format")
 		require.True(t, ok)
@@ -114,7 +114,7 @@ func TestSourceIndex_FirstAnchor(t *testing.T) {
 }
 
 func TestSourceIndex_LastWins(t *testing.T) {
-	// A pointer recorded twice (node rewritten during the build) keeps the last position — upsert semantics.
+	// A pointer recorded twice (node rewritten during the build) keeps the last position - upsert semantics.
 	idx := BuildSourceIndex([]scanner.Provenance{
 		{Pointer: "/definitions/X", Pos: srcPos("a.go", 1)},
 		{Pointer: "/definitions/X", Pos: srcPos("a.go", 7)},

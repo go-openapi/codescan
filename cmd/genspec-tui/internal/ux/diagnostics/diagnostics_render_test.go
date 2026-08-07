@@ -13,8 +13,9 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
-// TestRenderDiagnostics checks the three render states: clean, hard-error, and a soft-diagnostic list with a severity
-// tally and relative paths.
+// TestRenderDiagnostics checks the three render states.
+//
+// Clean, hard-error, and a soft-diagnostic list with a severity tally and relative paths.
 func TestRenderDiagnostics(t *testing.T) {
 	t.Run("clean", func(t *testing.T) {
 		if got, _ := Render("/work", nil, nil, 0, true); got != "(no diagnostics)" {
@@ -57,7 +58,7 @@ func TestRenderDiagnostics(t *testing.T) {
 // TestSelectedRowKeepsItsHighlight is the regression witness for a selected row losing its highlight partway across.
 //
 // The selection bar is a background colour opened once at the start of the row and closed once at its end. Any style
-// applied INSIDE it emits a reset of its own, and a reset clears the background too — lipgloss does not re-open it — so
+// applied INSIDE it emits a reset of its own, and a reset clears the background too - lipgloss does not re-open it - so
 // a row highlighted over already-coloured text renders its bar only as far as the first coloured run (here, the
 // severity label) and then stops.
 //
@@ -84,8 +85,9 @@ func TestSelectedRowKeepsItsHighlight(t *testing.T) {
 	}
 }
 
-// TestSelectedAndUnselectedRowsCarrySameText pins that the highlight changes only how a row is painted, never what it
-// says.
+// TestSelectedAndUnselectedRowsCarrySameText pins that the highlight changes only how a row is painted.
+//
+// It never changes what the row says.
 //
 // The selected row is built by a different function from the unselected one (styling a whole line and styling its parts
 // cannot be the same code), so this is the guard against those two drifting.

@@ -15,9 +15,10 @@ import (
 	"github.com/go-openapi/codescan/internal/scanner"
 )
 
-// ResultMsg carries the outcome of a whole-scope scan: the spec rendered as both JSON and YAML, path/definition
-// counts for the header, how long the scan took, every grammar.Diagnostic the build emitted (in source order), plus any
-// hard error from codescan.Run.
+// ResultMsg carries the outcome of a whole-scope scan.
+//
+// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took,
+// every diagnostic the build emitted in source order, and any hard error from codescan.Run.
 type ResultMsg struct {
 	JSON       string
 	YAML       string
@@ -29,8 +30,9 @@ type ResultMsg struct {
 	Err        error
 }
 
-// Run runs codescan over the whole scope (the decision-C model: one spec for the whole scanned set) and renders it,
-// timing the work.
+// Run scans the whole scope, renders the spec, and times the work.
+//
+// Whole scope means one spec for the entire scanned set, rather than one per package.
 //
 // It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop. cfg is taken by value so the
 // goroutine has a stable snapshot even if the model mutates its options.

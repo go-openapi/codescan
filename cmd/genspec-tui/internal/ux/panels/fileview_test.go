@@ -40,9 +40,10 @@ func TestFileView_ReadOnlyNav(t *testing.T) {
 	assert.Equal(t, 3, fv.CurrentLine(), "clamped at the last line (4 lines, 0-based)")
 }
 
-// textarea NORMALISES the text it is given — tabs become spaces — so comparing the buffer against the file marked
-// every tab-indented Go file as edited the moment it was opened: a ● in the title, and a STALE badge on follow, with
-// nothing touched.
+// textarea NORMALISES the text it is given, turning tabs into spaces.
+//
+// Comparing the buffer against the file therefore marked every tab-indented Go file as edited the moment it was opened:
+// a ● in the title, and a STALE badge on follow, with nothing touched.
 //
 // The buffer is the baseline, not the bytes on disk.
 func TestFileView_NotDirtyOnOpen(t *testing.T) {

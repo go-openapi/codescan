@@ -77,7 +77,9 @@ func TestFlags_CoverEveryValueTypedOption(t *testing.T) {
 	}
 }
 
-// The tables must not rot: an entry naming a field that no longer exists, or one that has since become a bool, is stale.
+// The option tables must not rot.
+//
+// An entry naming a field that no longer exists, or one that has since become a bool, is stale.
 func TestFlags_TablesAreCurrent(t *testing.T) {
 	typ := reflect.TypeFor[codescan.Options]()
 
@@ -138,7 +140,7 @@ func TestFlags_ParseValues(t *testing.T) {
 	assert.InDelta(t, 0.8, opts.NameConcatBudget, 1e-9)
 }
 
-// NameFromTags is three-way, and flattening it would make `-name-from-tags=` mean the opposite of what it says.
+// NameFromTags is three-way, and flattening it would make -name-from-tags= mean the opposite of what it says.
 func TestFlags_NameFromTagsIsThreeWay(t *testing.T) {
 	for _, c := range []struct {
 		name    string

@@ -25,8 +25,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// A missing or unreadable file leaves an error message in the buffer, and the spans from the PREVIOUS file must not
-// colour it by their columns.
+// A missing or unreadable file leaves an error message in the buffer.
+//
+// The spans from the PREVIOUS file must not colour that message by their columns.
 func TestGoSpans_ReadErrorClearsSpans(t *testing.T) {
 	m := goViewerModel(t, testutils.WriteTempGo(t, annotatedGo))
 	require.Contains(t, m.fileView.View(false, false), "swagger:model")
@@ -123,8 +124,9 @@ func TestGoSyntax(t *testing.T) {
 	})
 }
 
-// Against real fixture sources rather than a hand-written snippet: highlighting must leave every line of every file
-// exactly as it was.
+// Highlighting must leave every line of every file exactly as it was.
+//
+// Checked against real fixture sources rather than a hand-written snippet.
 func TestE2E_GoSyntaxLeavesTheSourceIntact(t *testing.T) {
 	dir := filepath.Join(fixturesDir(t), "goparsing", "petstore", "models")
 	entries, err := os.ReadDir(dir)
@@ -157,9 +159,9 @@ func TestE2E_GoSyntaxLeavesTheSourceIntact(t *testing.T) {
 func TestCRLF(t *testing.T) {
 	// A file with Windows line endings must load with the SAME line numbering the file has.
 	//
-	// The editor widget treats a lone CR as a line break, so without normalising, the buffer gains a blank line after every
-	// real one and every coordinate below the first CR — anchors, marks, follow targets — points a growing distance
-	// away from what it names.
+	// The editor widget treats a lone CR as a line break, so without normalising,
+	// the buffer gains a blank line after every real one and every coordinate below the first CR - anchors, marks,
+	// follow targets - points a growing distance away from what it names.
 	//
 	// This reproduces on any platform: the endings are in the fixture, not the checkout.
 	t.Run("line numbering survives windows endings", func(t *testing.T) {
@@ -220,10 +222,11 @@ func TestCRLF(t *testing.T) {
 	})
 }
 
-// go/token counts BYTES and textarea substitutes four spaces per tab, so a file column and a displayed column are two
-// conversions apart.
+// A file column and a displayed column are two conversions apart.
 //
-// Getting this wrong is how `int64` once drew as `int` plus a green `64`.
+// go/token counts BYTES, and textarea substitutes four spaces per tab.
+//
+// Getting this wrong is how int64 once drew as int plus a green 64.
 func TestBufferColumn(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -251,15 +254,18 @@ func TestDiagKind_CoversEverySeverity(t *testing.T) {
 	assert.Equal(t, theme.SyntaxDiagHint, diagKind(grammar.SeverityHint))
 }
 
-// classificationOnce caches the malformed-input corpus scan for the package, for the same reason petstoreOnce caches
-// the petstore one: a real packages.Load costs seconds under -race, and three of these tests need the same scan.
+// classificationOnce caches the malformed-input corpus scan for the package.
+//
+// The same reason petstoreOnce caches the petstore one: a real packages.Load costs seconds under -race,
+// and three of these tests need the same scan.
 var (
 	classificationOnce sync.Once      //nolint:gochecknoglobals // test-only scan cache
 	classificationRes  scan.ResultMsg //nolint:gochecknoglobals // test-only scan cache
 )
 
-// End to end against a real scan: the diagnostic the pane below lists must be drawn on the token it names, in the
-// coordinates the pane draws in.
+// End to end against a real scan.
+//
+// The diagnostic the pane below lists must be drawn on the token it names, in the coordinates the pane draws in.
 func TestE2E_DiagnosticMarksTheOffendingKeyword(t *testing.T) {
 	m, path := classificationModel(t, filepath.Join("operations", "noparams.go"))
 
@@ -278,8 +284,8 @@ func TestE2E_DiagnosticMarksTheOffendingKeyword(t *testing.T) {
 	// translation the mark must still be the keyword, not the tab that precedes it.
 	//
 	// The subject used to be the `// in: formData` on the same field, which warned beside `swagger:file`.
-	// That warning was spurious — `in:` is a field directive the parameters builder reads out of band, and the line it
-	// fired on is the canonical file-upload idiom — so the subject moved to a keyword that is genuinely invalid there.
+	// That warning was spurious - `in:` is a field directive the parameters builder reads out of band, and the line it
+	// fired on is the canonical file-upload idiom - so the subject moved to a keyword that is genuinely invalid there.
 	// The tab-indent property under test is unchanged.
 	source := strings.Split(m.currentSource, "\n")
 	var checked int
@@ -333,7 +339,7 @@ func TestDiagMarks(t *testing.T) {
 		m.currentFile = path
 		require.Empty(t, m.sourceMarks(), "a clean file starts unmarked")
 
-		// Line 3 is `// A user of the system.`, prose — so an unmarked comment run.
+		// Line 3 is `// A user of the system.`, prose - so an unmarked comment run.
 		before := m.fileView.View(false, false)
 		require.NotContains(t, before, runOpenerFor(t, theme.SyntaxDiagError))
 
@@ -399,8 +405,9 @@ func TestDiagMarks(t *testing.T) {
 	})
 }
 
-// Over every Go file the malformed-input corpus scans: no mark may land past the end of the line it is on, at any
-// indentation.
+// No mark may land past the end of the line it is on, at any indentation.
+//
+// Checked over every Go file the malformed-input corpus scans.
 func TestE2E_NoMarkLandsPastItsLine(t *testing.T) {
 	dir := fixturesDir(t)
 	res := classificationScan(t)
@@ -473,8 +480,9 @@ func TestGoSpans_OnlyGoFiles(t *testing.T) {
 	}
 }
 
-// runOpenerFor is the SGR prefix a syntax class renders with — assertions match on it because a run also carries
-// whatever follows it up to the next run.
+// runOpenerFor is the SGR prefix a syntax class renders with.
+//
+// Assertions match on it because a run also carries whatever follows it, up to the next run.
 func runOpenerFor(t *testing.T, kind theme.SyntaxKind) string {
 	t.Helper()
 	rendered := theme.Syntax(kind).Render("x")

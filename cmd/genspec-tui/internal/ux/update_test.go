@@ -18,8 +18,8 @@ import (
 )
 
 // Update is the only door the bubbletea runtime uses, but the rest of the suite reaches past it to
-// handleKey. These drive one message of each kind through the door itself, so the dispatch arms —
-// and the commands they hand back to the runtime — are exercised the way the program runs.
+// handleKey. These drive one message of each kind through the door itself, so the dispatch arms
+// - and the commands they hand back to the runtime - are exercised the way the program runs.
 //
 // The returned commands are deliberately NOT executed: several of them block on a channel or sleep
 // out a debounce window, which is the runtime's job, not a test's.
@@ -81,8 +81,9 @@ func TestUpdate_ScanResult(t *testing.T) {
 	require.NotNil(t, m.specIndex, "and the indexes are rebuilt from it")
 }
 
-// A change event opens a debounce window and keeps listening; an editor save often fires several
-// events, and only the last one may survive to trigger a rescan.
+// A change event opens a debounce window and keeps listening.
+//
+// An editor save often fires several events, and only the last one may survive to trigger a rescan.
 func TestUpdate_FileSystemEvent(t *testing.T) {
 	m := testModel(t, sized(100, 40))
 	before := m.watch.gen
@@ -145,8 +146,10 @@ func TestUpdate_ClearNotice(t *testing.T) {
 	assert.Empty(t, m.notice)
 }
 
-// waitForFS is the listen loop: each call blocks for one event and is re-issued, so a closed
-// channel has to end the loop quietly rather than spinning on a nil read.
+// waitForFS is the listen loop.
+//
+// Each call blocks for one event and is re-issued,
+// so a closed channel has to end the loop quietly rather than spinning on a nil read.
 //
 // Its command is safe to execute here because the channel is primed.
 func TestWaitForFS(t *testing.T) {

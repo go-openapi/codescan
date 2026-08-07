@@ -40,8 +40,9 @@ func TestGoHighlight_ClassifiesTokens(t *testing.T) {
 	assert.Contains(t, kindsOn(idx, 9), theme.SyntaxPunct, "the parens and braces")
 }
 
-// The whole point of this pane is the annotations, so they must not read as dimmed-away commentary like the prose
-// around them.
+// The whole point of this pane is the annotations.
+//
+// So they must not read as dimmed-away commentary like the prose around them.
 func TestGoHighlight_AnnotationCommentsOutrankOrdinaryOnes(t *testing.T) {
 	idx := BuildGoHighlight([]byte(goSrc))
 
@@ -49,8 +50,9 @@ func TestGoHighlight_AnnotationCommentsOutrankOrdinaryOnes(t *testing.T) {
 	assert.Equal(t, theme.SyntaxComment, firstKind(t, idx, 3), "// A user of the system.")
 }
 
-// An annotation may sit on any line of a doc block, or trail a declaration (AfterDeclComments) — classification is
-// per line, not per comment token.
+// An annotation may sit on any line of a doc block, or trail a declaration.
+//
+// Classification is per line, not per comment token.
 func TestGoHighlight_AnnotationAnywhereInABlock(t *testing.T) {
 	const src = "package p\n" +
 		"\n" +
@@ -109,8 +111,10 @@ func TestGoHighlight_MultiLineTokensCoverEveryLine(t *testing.T) {
 //
 // Any multi-byte character earlier on the line shifts every run after it.
 func TestGoHighlight_ColumnsAreRunesNotBytes(t *testing.T) {
-	// c1..5 `const`, 7 a, 8 comma, 10 b, 12 `=`, 14 the string (7 runes), 21 comma, 23 the number — which would be byte
-	// column 24, `é` being 2 bytes.
+	// The run columns the fixture line is expected to produce.
+	//
+	// 1 to 5 const, 7 a, 8 comma, 10 b, 12 equals, 14 the string of 7 runes, 21 comma, 23 the number.
+	// That last would be byte column 24, the accented character being 2 bytes.
 	const src = "package p\n\nconst a, b = \"héllo\", 42\n"
 
 	idx := BuildGoHighlight([]byte(src))
@@ -159,8 +163,9 @@ func TestGoHighlight_SpansAscendByColumn(t *testing.T) {
 //
 // Marking a run at a character that is not there styles the padding past the line's end.
 func TestGoHighlight_NoRunPastTheEndOfALine(t *testing.T) {
-	// The blank line inside the block comment is the case a walk over the fixture corpus turned up: a continuation run
-	// would mark column 1 of a line that has no column 1, styling the padding the pane fills it with.
+	// The blank line inside the block comment is the case a corpus walk turned up.
+	//
+	// A continuation run would mark column 1 of a line that has no column 1, styling the padding the pane fills it with.
 	const src = "package p\n" +
 		"\n" +
 		"/* a\n" +
@@ -186,8 +191,9 @@ func TestGoHighlight_Empty(t *testing.T) {
 	assert.Zero(t, idx.Len())
 }
 
-// A model with its constraints where go-swagger actually puts them: the annotation on the TYPE, the keywords in each
-// FIELD's doc comment.
+// A model with its constraints where go-swagger actually puts them.
+//
+// The annotation on the TYPE, the keywords in each FIELD's doc comment.
 const goKeywordSrc = "package main\n" + // 0
 	"\n" + // 1
 	"// swagger:model User\n" + // 2
@@ -201,8 +207,9 @@ const goKeywordSrc = "package main\n" + // 0
 	"\tName string\n" + // 10
 	"}\n" // 11
 
-// runAt returns the text and kind of the i-th run on a line, taking each run to the next one's column — the same rule
-// the renderer uses.
+// runAt returns the text and kind of the i-th run on a line.
+//
+// Each run extends to the next one's column, which is the same rule the renderer uses.
 func runAt(t *testing.T, idx *HighlightIndex, lines []string, line, i int) (string, theme.SyntaxKind) {
 	t.Helper()
 	spans := idx.Spans(line)
@@ -219,8 +226,9 @@ func runAt(t *testing.T, idx *HighlightIndex, lines []string, line, i int) (stri
 	return string(runes[start:end]), spans[i].Kind
 }
 
-// The keyword is lifted out of the prose around it rather than the whole line being recoloured, so `// required: true`
-// reads the way `"required": true` does on the spec side.
+// The keyword is lifted out of the prose around it, rather than the whole line being recoloured.
+//
+// So an annotated required: true reads the way the quoted key does on the spec side.
 func TestGoHighlight_GrammarKeywordIsLiftedOutOfTheComment(t *testing.T) {
 	idx := BuildGoHighlight([]byte(goKeywordSrc))
 	lines := strings.Split(goKeywordSrc, "\n")
@@ -237,8 +245,9 @@ func TestGoHighlight_GrammarKeywordIsLiftedOutOfTheComment(t *testing.T) {
 	assert.Equal(t, theme.SyntaxComment, valueKind, "the value returns to prose")
 }
 
-// The table is the parser's own, so aliases and letter case come for free — and a multi-word keyword must be covered
-// whole, not up to its first space.
+// The table is the parser's own, so aliases and letter case come for free.
+//
+// A multi-word keyword must be covered whole, not up to its first space.
 func TestGoHighlight_GrammarKeywordAliasesAndMultiWord(t *testing.T) {
 	idx := BuildGoHighlight([]byte(goKeywordSrc))
 	lines := strings.Split(goKeywordSrc, "\n")
@@ -273,8 +282,10 @@ func TestGoHighlight_ProseIsNotMistakenForGrammar(t *testing.T) {
 	}
 }
 
-// Scope is the FILE: `name`, `in` and `example` are ordinary English words, so a file that declares no annotations gets
-// no keyword highlighting at all.
+// Scope is the FILE.
+//
+// name, in and example are ordinary English words, so a file
+// that declares no annotations gets no keyword highlighting at all.
 func TestGoHighlight_KeywordsOnlyInAnnotatedFiles(t *testing.T) {
 	const src = "package p\n" +
 		"\n" +
@@ -291,8 +302,10 @@ func TestGoHighlight_KeywordsOnlyInAnnotatedFiles(t *testing.T) {
 	}
 }
 
-// The regression a walk over the fixture corpus caught: scoping to the comment GROUP lit up route and parameter bodies
-// but missed every field constraint, because the `swagger:model` that makes them meaningful sits on the type.
+// The regression a walk over the fixture corpus caught.
+//
+// Scoping to the comment GROUP lit up route and parameter bodies but missed every field constraint,
+// because the swagger:model that makes them meaningful sits on the type.
 func TestGoHighlight_FieldConstraintsUnderATypeAnnotation(t *testing.T) {
 	idx := BuildGoHighlight([]byte(goKeywordSrc))
 
@@ -301,16 +314,18 @@ func TestGoHighlight_FieldConstraintsUnderATypeAnnotation(t *testing.T) {
 	assert.Contains(t, kindsOn(idx, 7), theme.SyntaxKeyword)
 }
 
-// The annotation itself is not split: it names the block rather than setting a property, and keeps the spec-key class
-// over the whole line.
+// The annotation itself is not split.
+//
+// It names the block rather than setting a property, and keeps the spec-key class over the whole line.
 func TestGoHighlight_AnnotationLineIsNotSplitIntoKeywordRuns(t *testing.T) {
 	idx := BuildGoHighlight([]byte(goKeywordSrc))
 
 	assert.Equal(t, []theme.SyntaxKind{theme.SyntaxKey}, kindsOn(idx, 2))
 }
 
-// Runs must ascend here too — three spans on one line is where an off-by-one in the keyword offsets would show up as
-// an overlapping paint.
+// Runs must ascend here too.
+//
+// Three spans on one line is where an off-by-one in the keyword offsets would show up as an overlapping paint.
 func TestGoHighlight_KeywordRunsAscend(t *testing.T) {
 	idx := BuildGoHighlight([]byte(goKeywordSrc))
 

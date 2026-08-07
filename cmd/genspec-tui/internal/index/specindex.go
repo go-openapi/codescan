@@ -12,8 +12,9 @@ import (
 
 // SpecIndex maps between rendered-spec lines and the RFC 6901 JSON pointer of the spec node shown on each line.
 //
-// It is the spec-side half of the cross-ref linker: line ↔ pointer, built fresh from the exact bytes the spec pane displays.
-// Lines are 0-based (matching the viewport's strings.Split addressing); the same structure also anchors spec remarks.
+// It is the spec-side half of the cross-ref linker: line ↔ pointer,
+// built fresh from the exact bytes the spec pane displays. Lines are 0-based
+// (matching the viewport's strings.Split addressing); the same structure also anchors spec remarks.
 type SpecIndex struct {
 	line2ptr map[int]string
 	ptr2line map[string]int
@@ -34,7 +35,7 @@ func NewSpecIndex(line2ptr map[int]string, ptr2line map[string]int) *SpecIndex {
 //
 // It tells where each node is, where each $ref points, and what every token is.
 //
-// They are grouped because they share the walk — adding a fourth should not mean a fourth traversal of the same bytes.
+// They are grouped because they share the walk - adding a fourth should not mean a fourth traversal of the same bytes.
 type Indexes struct {
 	Spec      *SpecIndex
 	Refs      *RefIndex
@@ -64,7 +65,7 @@ func BuildJSONIndex(b []byte) Indexes {
 // BuildYAMLIndex is BuildJSONIndex over the YAML render.
 //
 // The YAML lexer emits the same logical token stream with the same RFC 6901 pointer escaping, so the indexes built from
-// either render are interchangeable — only the lines differ.
+// either render are interchangeable - only the lines differ.
 func BuildYAMLIndex(b []byte) Indexes {
 	acc := newIndexAccum()
 
@@ -78,8 +79,9 @@ func BuildYAMLIndex(b []byte) Indexes {
 	return acc.finish()
 }
 
-// PointerAt returns the JSON pointer of the node at line, or the nearest member line above it when line itself carries
-// no pointer (e.g. a closing brace).
+// PointerAt returns the JSON pointer of the node at line.
+//
+// When line itself carries no pointer, a closing brace for instance, the nearest member line above it is used.
 //
 // The bool is false only for an empty index or a line above the first member.
 func (x *SpecIndex) PointerAt(line int) (string, bool) {

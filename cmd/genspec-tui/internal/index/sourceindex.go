@@ -29,7 +29,8 @@ type lineAnchor struct {
 
 // BuildSourceIndex builds the index from the provenance records collected during a scan (one OnProvenance call each).
 //
-// Later records win on a duplicate pointer (upsert / last-wins), matching codescan's build, where a node may be rewritten.
+// Later records win on a duplicate pointer (upsert / last-wins), matching codescan's build,
+// where a node may be rewritten.
 func BuildSourceIndex(provs []scanner.Provenance) *SourceIndex {
 	x := &SourceIndex{
 		fwd:    make(map[string]token.Position, len(provs)),
@@ -56,11 +57,13 @@ func (x *SourceIndex) Len() int {
 	return len(x.fwd)
 }
 
-// PositionFor returns the source position anchored to ptr, or — when ptr itself is a finer node with no anchor of its
-// own — the position of its nearest anchored ancestor.
+// PositionFor returns the source position anchored to ptr.
+//
+// When ptr is a finer node with no anchor of its own,
+// the position of its nearest anchored ancestor is returned instead.
 //
 // The walk trims one pointer segment at a time (a zero-alloc suffix shrink), so /definitions/User/properties/x/items
-// resolves to /definitions/User/properties/x, then /definitions/User, … until a hit.
+// resolves to /definitions/User/properties/x, then /definitions/User, ... until a hit.
 func (x *SourceIndex) PositionFor(ptr string) (token.Position, bool) {
 	if x == nil {
 		return token.Position{}, false
@@ -78,8 +81,9 @@ func (x *SourceIndex) PositionFor(ptr string) (token.Position, bool) {
 	return token.Position{}, false
 }
 
-// FirstAnchor returns the pointer of the earliest (lowest-line) anchor recorded in file, or ok=false when the file
-// produced no spec node.
+// FirstAnchor returns the pointer of the earliest anchor recorded in file.
+//
+// Earliest means lowest-line. Reports ok=false when the file produced no spec node.
 //
 // Backs the tree's "locate this file in the spec" jump.
 func (x *SourceIndex) FirstAnchor(file string) (string, bool) {

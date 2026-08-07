@@ -29,7 +29,9 @@ func plainOf(s string) string {
 	return b.String()
 }
 
-// `  "count": 3,` — the shape the JSON lexer reports, 1-based columns.
+// countLine is a sample rendered JSON line paired with the spans the lexer reports for it.
+//
+// Columns are 1-based, as the lexer gives them.
 func countLine() (string, []theme.Span) {
 	return `  "count": 3,`, []theme.Span{
 		{Col: 3, Kind: theme.SyntaxKey},
@@ -89,8 +91,9 @@ func TestRenderSpans_MultiByte(t *testing.T) {
 	}
 }
 
-// An unmapped kind renders unstyled rather than wrong — SyntaxPlain is the zero value precisely so a token nobody
-// classified degrades quietly.
+// An unmapped kind renders unstyled rather than wrong.
+//
+// SyntaxPlain is the zero value precisely so a token nobody classified degrades quietly.
 func TestRenderSpans_PlainKindIsUnstyled(t *testing.T) {
 	got := renderSpans("abc", []theme.Span{{Col: 1, Kind: theme.SyntaxPlain}}, 3)
 

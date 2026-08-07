@@ -1,12 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Package options is the scanner-options overlay: a scrollable modal of boolean toggles bound directly to the
-// codescan.Options the app scans with.
-//
-// It follows the same contract as the panels and the help overlay — a concrete type the root model owns and drives,
-// never a tea.Model. It records what the user asked for and reports it as dirty; deciding that a rescan is how a
-// change takes effect is the root model's business, not the modal's.
 package options
 
 import (
@@ -40,8 +34,8 @@ const (
 
 // dep records that a toggle only bites when another one holds a particular value.
 //
-// Several codescan knobs are modifiers rather than independent switches — PruneUnusedModels does nothing without
-// ScanModels, EmitXGoType does nothing while SkipExtensions suppresses every x-go-* extension — and an overlay that
+// Several codescan knobs are modifiers rather than independent switches - PruneUnusedModels does nothing without
+// ScanModels, EmitXGoType does nothing while SkipExtensions suppresses every x-go-* extension - and an overlay that
 // let you tick them without saying so would quietly lie about what it did.
 type dep struct {
 	ptr   *bool
@@ -52,7 +46,7 @@ type dep struct {
 // satisfied reports whether the dependency currently holds.
 func (d *dep) satisfied() bool { return d == nil || *d.ptr == d.on }
 
-// note renders the "…but only when X" suffix shown while the dependency is unmet.
+// note renders the "...but only when X" suffix shown while the dependency is unmet.
 func (d *dep) note() string {
 	if d.on {
 		return " (needs " + d.label + ")"
@@ -61,8 +55,9 @@ func (d *dep) note() string {
 	return " (moot: " + d.label + ")"
 }
 
-// toggle binds a row to a boolean field of the scan config, with a short human description (the field names alone are
-// cryptic) and the section it belongs to.
+// toggle binds a row to a boolean field of the scan config.
+//
+// It carries a short human description, the field names alone being cryptic, and the section it belongs to.
 //
 // Rows are stored flat and grouped at render time, so cursor movement stays a plain index and headers can never be
 // landed on.
@@ -172,7 +167,7 @@ func (o *Overlay) IsOpen() bool { return o.isOpen }
 
 // Dirty reports whether a toggle was flipped since the overlay was last opened.
 //
-// It stays readable after Close, which is what lets the model apply the change on dismissal — until the model says it
+// It stays readable after Close, which is what lets the model apply the change on dismissal - until the model says it
 // has, with MarkApplied.
 func (o *Overlay) Dirty() bool { return o.dirty }
 
@@ -195,7 +190,7 @@ func (o *Overlay) Close() { o.isOpen = false }
 
 // HandleKey drives the modal: move the cursor, toggle a boolean with space/enter, or dismiss.
 //
-// Dismissal only closes the overlay — the model asks Dirty afterwards and decides what applying means.
+// Dismissal only closes the overlay - the model asks Dirty afterwards and decides what applying means.
 func (o *Overlay) HandleKey(msg tea.KeyMsg) tea.Cmd {
 	last := len(o.toggles) - 1
 	if delta, ok := key.Nav(key.MsgBinding(msg), o.visibleRows(), len(o.toggles)); ok {
@@ -243,7 +238,7 @@ const (
 // contentWidth is the width to pin the frame at, given every row the overlay can show.
 //
 // Deliberately not capped to the terminal: a cap makes lipgloss WRAP the rows that overflow, splitting a toggle's label
-// from its explanation, whereas a modal wider than a narrow terminal is simply clipped — which is what it already did.
+// from its explanation, whereas a modal wider than a narrow terminal is simply clipped - which is what it already did.
 func (o *Overlay) contentWidth(all []string) int {
 	return max(
 		lipgloss.Width(strings.Join(all, "\n")),
@@ -264,7 +259,7 @@ func (o *Overlay) visibleRows() int {
 
 // lines renders the grouped rows and reports which rendered line the cursor sits on.
 //
-// Group headers are emitted as the group changes, so they are never navigable — the cursor indexes o.toggles, not
+// Group headers are emitted as the group changes, so they are never navigable - the cursor indexes o.toggles, not
 // these lines.
 func (o *Overlay) lines() ([]string, int) {
 	labelW := 0
@@ -322,8 +317,9 @@ func (o *Overlay) row(t toggle, selected bool, labelW int) string {
 	}
 }
 
-// windowAround returns at most size lines, scrolled so that cursor is visible and as far from the edges as the list
-// allows.
+// windowAround returns at most size lines, scrolled to keep cursor visible.
+//
+// The cursor is kept as far from the edges as the list allows.
 func windowAround(lines []string, cursor, size int) []string {
 	if len(lines) <= size {
 		return lines

@@ -19,8 +19,8 @@ import (
 
 // TestMain forces a colour profile, as ux, ux/panels and ux/diagnostics do.
 //
-// Without it lipgloss emits plain text under `go test` and every styling assertion below would pass against a renderer
-// that applied none — which is exactly how a selected row's broken highlight went unnoticed in the scan tab.
+// Without it lipgloss emits plain text under go test and every styling assertion below would pass against a renderer
+// that applied none - which is exactly how a selected row's broken highlight went unnoticed in the scan tab.
 func TestMain(m *testing.M) {
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	os.Exit(m.Run())
@@ -73,7 +73,7 @@ func TestRender_States(t *testing.T) {
 // TestRender_SelectedRowKeepsItsHighlight is the same regression guard the scan tab carries.
 //
 // The selection bar is a background opened once per row; any style applied inside it emits a reset that closes the
-// background early, and lipgloss does not re-open it — so the bar would stop partway across.
+// background early, and lipgloss does not re-open it - so the bar would stop partway across.
 func TestRender_SelectedRowKeepsItsHighlight(t *testing.T) {
 	for _, focused := range []bool{true, false} {
 		body, line := Render(twoFindings(), true, nil, 0, focused)
@@ -86,8 +86,9 @@ func TestRender_SelectedRowKeepsItsHighlight(t *testing.T) {
 	}
 }
 
-// TestRender_UnselectedRowIsColouredBySeverity pins that severity reaches the message, not just the label — the point
-// of colouring at all being that the pane can be read for red at a glance.
+// TestRender_UnselectedRowIsColouredBySeverity pins that severity reaches the message, not just the label.
+//
+// The point of colouring at all is that the pane can be read for red at a glance.
 func TestRender_UnselectedRowIsColouredBySeverity(t *testing.T) {
 	body, _ := Render(twoFindings(), true, nil, 0, true) // row 0 selected, so row 1 is styled
 	row := strings.Split(body, "\n")[2]
@@ -98,8 +99,9 @@ func TestRender_UnselectedRowIsColouredBySeverity(t *testing.T) {
 		"the severity colour stops at the label:\n%q", row)
 }
 
-// TestRender_SelectedAndPlainRowsCarrySameText guards the styled/plain pair against drifting, the two being built by
-// different functions.
+// TestRender_SelectedAndPlainRowsCarrySameText guards the styled and plain pair against drifting.
+//
+// The two are built by different functions.
 func TestRender_SelectedAndPlainRowsCarrySameText(t *testing.T) {
 	f := twoFindings()[0]
 

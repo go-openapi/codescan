@@ -36,7 +36,7 @@ func TestOverlay_AnswerKeys(t *testing.T) {
 		{"n declines", runes("n"), false},
 		{"esc declines", tea.KeyMsg{Type: tea.KeyEsc}, false},
 		// Enter usually means "take the default", and for a question guarding something irreversible the safe default is
-		// no — so this is a decline, not an accept.
+		// no - so this is a decline, not an accept.
 		{"enter declines", tea.KeyMsg{Type: tea.KeyEnter}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -71,8 +71,9 @@ func TestOverlay_TakeAnswerIsConsuming(t *testing.T) {
 	assert.False(t, ok, "the answer is collected exactly once")
 }
 
-// TestOverlay_UnknownKeysAreSwallowed pins that the overlay holds the question open rather than acting on a key whose
-// effect the user cannot see behind the modal.
+// TestOverlay_UnknownKeysAreSwallowed pins that the overlay holds the question open.
+//
+// It must not act on a key whose effect the user cannot see behind the modal.
 func TestOverlay_UnknownKeysAreSwallowed(t *testing.T) {
 	o := New()
 	o.Ask("Discard?")

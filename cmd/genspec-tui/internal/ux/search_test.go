@@ -13,9 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// The suite knew how to OPEN the search prompt and never typed into it, so everything past that —
-// the keystrokes reaching the input, running the query, stepping the matches, giving the keyboard
-// back — went untested.
+// The suite knew how to OPEN the search prompt and never typed into it, so everything past that
+// - the keystrokes reaching the input, running the query, stepping the matches, giving the keyboard
+// back - went untested.
 
 // typeQuery sends each rune of q through the dispatch, as a user would.
 func typeQuery(t *testing.T, m *Model, q string) {
@@ -111,8 +111,9 @@ func TestSearch_EmptyQueryClears(t *testing.T) {
 	assert.Zero(t, matchTotal(m))
 }
 
-// While the prompt holds the keyboard, keys that would otherwise act on the panes must reach the
-// input instead — otherwise a query containing `r` would trigger a rescan.
+// While the prompt holds the keyboard, keys must reach the input rather than the panes.
+//
+// Otherwise a query containing r would trigger a rescan.
 func TestSearch_SwallowsPaneKeys(t *testing.T) {
 	m := searchModel(t)
 	_ = m.handleKey(testutils.KeyRune('/'))
@@ -125,8 +126,9 @@ func TestSearch_SwallowsPaneKeys(t *testing.T) {
 	assert.True(t, m.search.Active())
 }
 
-// Opening the prompt is a change of view, so it drops the follow mode and the reference cycle that
-// were describing the old one.
+// Opening the prompt is a change of view.
+//
+// So it drops the follow mode and the reference cycle that were describing the old one.
 func TestSearch_OpeningDropsFollowAndRefs(t *testing.T) {
 	m := searchModel(t)
 	m.follow = followSpec
