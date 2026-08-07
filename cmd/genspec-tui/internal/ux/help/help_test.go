@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -148,6 +150,43 @@ func TestHelp_ShortTerminalStillReachesTheEnd(t *testing.T) {
 	lastEntry := lastSection.entries[len(lastSection.entries)-1]
 	assert.Contains(t, testutils.StripANSI(o.View()), lastEntry.action,
 		"the end of the keymap must be reachable by scrolling")
+}
+
+// TestHelp_WidthIsStableWhileScrolling pins the frame against the whole keymap rather than the visible slice.
+//
+// A modal that sizes itself to what is currently on screen changes width at every scroll step, because the widest line
+// in the window keeps changing. It reads as the box twitching while the content moves — a rendering fault, not
+// scrolling.
+func TestHelp_WidthIsStableWhileScrolling(t *testing.T) {
+	o := newOverlay(20)
+	o.Open()
+	require.Greater(t, len(helpLines()), o.visibleRows(), "precondition: the keymap must overflow, or nothing scrolls")
+
+	seen := map[int]int{}
+	for range len(helpLines()) + 2 {
+		seen[lipgloss.Width(o.View())]++
+		_ = o.HandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	assert.Len(t, seen, 1, "the frame changed width while scrolling; widths seen: %v", seen)
+}
+
+// TestHelp_FrameFitsItsWidestLine guards the other direction: pinning a width must not CLIP the content it was measured
+// from. lipgloss counts padding inside the width it is given, so a frame pinned to the measured text width wraps its
+// longest lines by exactly the padding.
+func TestHelp_FrameFitsItsWidestLine(t *testing.T) {
+	o := newOverlay(200) // tall enough that nothing scrolls out of view
+	o.Open()
+
+	body := testutils.StripANSI(o.View())
+	widest := ""
+	for _, e := range helpSections[0].entries {
+		if len(e.action) > len(widest) {
+			widest = e.action
+		}
+	}
+
+	assert.Contains(t, body, widest, "the widest entry must survive the frame intact, not be wrapped by the padding")
 }
 
 func newOverlay(height int) *Overlay {

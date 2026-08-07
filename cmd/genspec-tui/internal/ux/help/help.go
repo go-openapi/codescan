@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/key"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
@@ -158,13 +160,19 @@ func (o *Overlay) HandleKey(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
+// The modal's fixed texts, named so the width can be measured against them as well as against the keymap.
+const (
+	helpTitle  = "Key bindings"
+	helpFooter = "↑↓/jk: scroll · esc/h/?: close"
+)
+
 // View renders the help modal, with scrolling.
 func (o *Overlay) View() string {
 	lines := helpLines()
 	visible := o.visibleRows()
 
 	var b strings.Builder
-	b.WriteString(theme.Accent().Render("Key bindings"))
+	b.WriteString(theme.Accent().Render(helpTitle))
 	b.WriteString("\n\n")
 
 	if len(lines) > visible {
@@ -173,9 +181,25 @@ func (o *Overlay) View() string {
 	}
 	b.WriteString(strings.Join(lines, "\n"))
 	b.WriteString("\n\n")
-	b.WriteString(theme.Status().Render("↑↓/jk: scroll · esc/h/?: close"))
+	b.WriteString(theme.Status().Render(helpFooter))
 
-	return theme.Modal().Render(b.String())
+	return theme.ModalAt(o.contentWidth()).Render(b.String())
+}
+
+// contentWidth is the width to pin the frame at: the widest line the overlay can EVER show, not the widest one
+// currently on screen.
+//
+// Sizing to the visible window is what makes the box change width as the keymap scrolls under it — the frame appears
+// to twitch while the content moves, which reads as a rendering fault rather than as scrolling.
+//
+// Deliberately not capped to the terminal. A cap makes lipgloss WRAP the rows that overflow, which breaks the key/action
+// columns apart; a modal wider than a narrow terminal is simply clipped, which is what it already did.
+func (o *Overlay) contentWidth() int {
+	return max(
+		lipgloss.Width(strings.Join(helpLines(), "\n")),
+		lipgloss.Width(helpTitle),
+		lipgloss.Width(helpFooter),
+	)
 }
 
 // scrollBy moves the help window, clamped so it can never scroll past the end.

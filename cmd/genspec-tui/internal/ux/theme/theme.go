@@ -146,12 +146,28 @@ func Match() lipgloss.Style {
 		Background(lipgloss.Color("226"))
 }
 
+// modalPadH is the modal's horizontal padding, per side.
+const modalPadH = 3
+
 // Modal styles a centered popup box (e.g. the scanner-options dialog).
+//
+// It sizes to its content, which is right for a modal showing all of itself at once. An overlay that SCROLLS must use
+// ModalAt instead: left to size itself, the frame tracks whichever lines happen to be visible and the box changes width
+// as the content scrolls under it.
 func Modal() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorActive).
-		Padding(1, 3)
+		Padding(1, modalPadH)
+}
+
+// ModalAt is Modal pinned to a fixed width of textW columns of TEXT.
+//
+// The padding is added back on top, because lipgloss counts padding INSIDE the width it is given: a caller passing the
+// width it measured its own text at would otherwise have its longest lines wrapped by exactly the padding — which is
+// both wrong and hard to see, since it only bites the widest line.
+func ModalAt(textW int) lipgloss.Style {
+	return Modal().Width(textW + 2*modalPadH)
 }
 
 // SevError, SevWarn, and SevHint style a diagnostic's severity label in the diagnostics pane (red / amber / blue),

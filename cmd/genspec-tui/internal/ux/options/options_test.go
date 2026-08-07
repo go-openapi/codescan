@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
@@ -272,4 +273,23 @@ func TestOptions_DescriptionsAddInformation(t *testing.T) {
 		// The modal is as wide as its widest row, so descriptions are kept terse rather than clipped at render time.
 		assert.LessOrEqual(t, len(tg.desc), 40, "row %q description is too long for the modal", tg.label)
 	}
+}
+
+// TestOptions_WidthIsStableWhileScrolling pins the frame against every row rather than the visible window.
+//
+// The overlay windows its rows around the cursor, so without a pinned width the box resizes on every cursor move as
+// the widest row in view changes — the frame twitching while the list moves under it.
+func TestOptions_WidthIsStableWhileScrolling(t *testing.T) {
+	o, _ := newOverlay(t, 20)
+	o.Open()
+	all, _ := o.lines()
+	require.Greater(t, len(all), o.visibleRows(), "precondition: the list must overflow, or nothing scrolls")
+
+	seen := map[int]int{}
+	for range len(o.toggles) + 2 {
+		seen[lipgloss.Width(o.View())]++
+		_ = o.HandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	assert.Len(t, seen, 1, "the frame changed width while scrolling; widths seen: %v", seen)
 }

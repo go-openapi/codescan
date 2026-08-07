@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/key"
@@ -217,17 +218,38 @@ func (o *Overlay) HandleKey(msg tea.KeyMsg) tea.Cmd {
 
 // View renders the modal: a bordered list of boolean toggles with checkboxes and a cursor caret.
 func (o *Overlay) View() string {
-	lines, cursorLine := o.lines()
-	lines = windowAround(lines, cursorLine, o.visibleRows())
+	all, cursorLine := o.lines()
+	// Measured over EVERY row, before the window is taken: a frame sized to what is currently visible changes width as
+	// the list scrolls under it, which reads as the box twitching rather than the content moving.
+	width := o.contentWidth(all)
+	lines := windowAround(all, cursorLine, o.visibleRows())
 
 	var b strings.Builder
-	b.WriteString(theme.Accent().Render("Scanner options"))
+	b.WriteString(theme.Accent().Render(optionsTitle))
 	fmt.Fprintf(&b, "  %s\n\n", theme.Status().Render(fmt.Sprintf("(%d)", len(o.toggles))))
 	b.WriteString(strings.Join(lines, "\n"))
 	b.WriteString("\n\n")
-	b.WriteString(theme.Status().Render("↑↓/jk: move · space: toggle · esc/o: apply & close"))
+	b.WriteString(theme.Status().Render(optionsFooter))
 
-	return theme.Modal().Render(b.String())
+	return theme.ModalAt(width).Render(b.String())
+}
+
+// The modal's fixed texts, named so the width can be measured against them as well as against the rows.
+const (
+	optionsTitle  = "Scanner options"
+	optionsFooter = "↑↓/jk: move · space: toggle · esc/o: apply & close"
+)
+
+// contentWidth is the width to pin the frame at, given every row the overlay can show.
+//
+// Deliberately not capped to the terminal: a cap makes lipgloss WRAP the rows that overflow, splitting a toggle's label
+// from its explanation, whereas a modal wider than a narrow terminal is simply clipped — which is what it already did.
+func (o *Overlay) contentWidth(all []string) int {
+	return max(
+		lipgloss.Width(strings.Join(all, "\n")),
+		lipgloss.Width(fmt.Sprintf("%s  (%d)", optionsTitle, len(o.toggles))),
+		lipgloss.Width(optionsFooter),
+	)
 }
 
 // visibleRows is how many rendered rows fit between the modal's chrome (border, padding, title, footer).
