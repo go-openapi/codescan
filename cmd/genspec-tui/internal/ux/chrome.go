@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
@@ -31,12 +33,14 @@ func (m *Model) leftView(focused bool) string {
 
 // headerLine shows the app name, the (shortened) workdir, the active format, spec stats, and a scan spinner / ready
 // indicator.
+//
+// The work dir is the only elastic field, so it is given whatever the others leave rather than a fixed allowance. It
+// used to have a constant one, which every other field could outgrow: the stats widen with the spec, the tail gains a
+// duration once a scan has finished, and the match counter appears only while a search is active. Past that constant,
+// the right-hand end of the line simply ran off the screen — and the fields that vanished were the ones reporting
+// whether the scan had even finished.
 func (m *Model) headerLine() string {
-	// The banner claims its columns before the work dir does, so it survives a narrow terminal — discoverability is the
-	// whole point of it.
-	wd := shortenPath(m.cfg.WorkDir, max(m.width-54, 12))
 	stats := fmt.Sprintf("%d paths · %d defs", m.scan.NumPaths, m.scan.NumDefs)
-
 	if cur, total := m.spec.MatchInfo(); total > 0 {
 		stats += fmt.Sprintf("  ·  match %d/%d", cur, total)
 	}
@@ -44,7 +48,6 @@ func (m *Model) headerLine() string {
 	// Placed right after the app name rather than at the end of the line: a long work dir must never be able to push the
 	// one hint that reveals the others.
 	left := theme.Accent().Render("genspec-tui") + " " + theme.Chip().Render(" h: help ")
-	mid := theme.Status().Render(fmt.Sprintf("  ·  %s  ·  %s  ·  %s  ·  ", wd, m.spec.Format(), stats))
 
 	tail := theme.Status().Render("ready")
 	switch {
@@ -53,7 +56,20 @@ func (m *Model) headerLine() string {
 	case m.scan.Elapsed > 0:
 		tail = theme.Status().Render("ready (" + humanDuration(m.scan.Elapsed) + ")")
 	}
-	return left + mid + tail
+
+	// Measured, not guessed. Assembled around the work dir rather than through a format string, so nothing in the data
+	// can be read as a verb.
+	beforeWD, afterWD := "  ·  ", "  ·  "+m.spec.Format()+"  ·  "+stats+"  ·  "
+	spent := lipgloss.Width(left) + lipgloss.Width(beforeWD) + lipgloss.Width(afterWD) + lipgloss.Width(tail)
+	// No floor of its own: on a terminal too narrow for everything, the path yields first and shortenPath still keeps it
+	// legible at its own minimum. Anything that reports scan STATE is worth more columns than the directory it ran in.
+	wd := shortenPath(m.cfg.WorkDir, m.width-spent)
+
+	line := left + theme.Status().Render(beforeWD+wd+afterWD) + tail
+
+	// Last resort, for a terminal too narrow even for the inelastic fields: clip. Overflow wraps onto a second row,
+	// which pushes every pane down one and misaligns the mouse hit-testing against what is drawn.
+	return lipgloss.NewStyle().MaxWidth(m.width).Render(line)
 }
 
 // humanDuration renders d compactly: "947ms", "3s", "1m 3s" (minute form drops a zero-second remainder, e.g. "2m").
@@ -74,7 +90,15 @@ func humanDuration(d time.Duration) string {
 	}
 }
 
+// statusLine renders the bottom line, clipped to the terminal.
+//
+// Same reasoning as the header: several of its variants embed something unbounded — a JSON pointer, a follow target, a
+// file path — and a status line that wrapped would push the layout it sits under off by a row.
 func (m *Model) statusLine() string {
+	return lipgloss.NewStyle().MaxWidth(m.width).Render(m.statusContent())
+}
+
+func (m *Model) statusContent() string {
 	if m.search.Active() {
 		return m.search.View()
 	}
