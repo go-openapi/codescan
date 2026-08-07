@@ -49,6 +49,10 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 		return cmd
 	}
 
+	if cmd, handled := m.handleSplitKey(msg); handled {
+		return cmd
+	}
+
 	switch key.MsgBinding(msg) {
 	case key.Tab:
 		m.focused = (m.focused + 1) % paneCount
@@ -132,6 +136,29 @@ func (m *Model) handleSearchControl(msg tea.KeyMsg) (tea.Cmd, bool) {
 	}
 
 	return nil, false
+}
+
+// handleSplitKey moves a pane divider, each key travelling in its own arrow's direction.
+//
+// Reachable from every mode INCLUDING the editor: wanting more room for the pane you are typing in is exactly when you
+// reach for a resize, and a textarea swallows whatever it is not explicitly denied.
+//
+// Returns handled=false for anything that is not a split key.
+func (m *Model) handleSplitKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	switch key.MsgBinding(msg) {
+	case key.CtrlRight:
+		m.moveVSplit(+1)
+	case key.CtrlLeft:
+		m.moveVSplit(-1)
+	case key.CtrlUp:
+		m.moveHSplit(+1)
+	case key.CtrlDown:
+		m.moveHSplit(-1)
+	default:
+		return nil, false
+	}
+
+	return nil, true
 }
 
 // routePaneKey offers a key to the focused pane's own handler before the global bindings see it.
@@ -267,6 +294,10 @@ func (m *Model) handleViewerKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 // spec, F5 reloads from disk, Ctrl-Q quits, Tab moves focus.
 // Everything else edits the buffer.
 func (m *Model) handleEditKey(msg tea.KeyMsg) tea.Cmd {
+	if cmd, handled := m.handleSplitKey(msg); handled {
+		return cmd
+	}
+
 	switch msg.String() {
 	case "f5":
 		// Reachable from inside the editor on purpose: an unsaved buffer is exactly the state the reload guard exists

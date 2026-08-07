@@ -84,6 +84,18 @@ notices, and the spec re-renders.
 Clicking a pane focuses it, and the mouse wheel scrolls whichever pane is under
 the pointer — `Tab` is never required.
 
+Both dividers move: `ctrl+←`/`ctrl+→` for the one between the left pane and the
+spec, `ctrl+↑`/`ctrl+↓` for the one above the diagnostics. Each key travels in
+its own arrow's direction, and they work from every mode including the editor —
+wanting more room for what you are typing in is exactly when you reach for a
+resize.
+
+The dividers are held as **proportions**, not cell counts, so resizing the
+terminal keeps the layout you chose rather than letting one pane absorb the
+difference. They stop short of either edge: a pane driven to nothing could not
+be dragged back, because the keys that would restore it are advertised in a
+status line it no longer has room for.
+
 The binding surface is context-dependent — `f` follows from three different
 panes, `Enter` opens a file in the tree but follows a `$ref` in the spec — so
 the header carries a standing `h: help` banner, and `h` (or `?`) opens the full
@@ -102,6 +114,8 @@ the cursor falls back to its nearest surviving ancestor.
 |-----|--------|
 | `h` / `?` | the key-bindings overlay (also advertised in the header) |
 | `Tab` / `shift+Tab` | cycle focus forward / backward |
+| `ctrl+←` / `ctrl+→` | move the divider between the left pane and the spec |
+| `ctrl+↑` / `ctrl+↓` | move the divider above the diagnostics strip |
 | click | focus the pane under the pointer |
 | wheel | scroll the pane under the pointer |
 | `c` | copy the focused pane's raw content to the clipboard |
@@ -330,6 +344,14 @@ These are known and deliberate; the TUI says so rather than guessing.
 - **`shift+F3` is terminal-dependent.** bubbletea v1's key type carries no Shift
   modifier, and the xterm family reports shift+F3 as F15. Terminals that send
   something else have no previous-reference key; `F3` still wraps around.
+- **The split keys are terminal-dependent too.** `ctrl`+arrow reaches us as
+  `CSI 1;5<A-D>`, which most modern emulators send and some (notably inside a
+  default `tmux` or `screen`) do not. A terminal that sends a bare arrow instead
+  simply has no resize keys — nothing misfires, because a bare arrow is already
+  a navigation key.
+- **Split sizes last for the session only.** They are model state, so they
+  survive rescans and terminal resizes but not a restart; persisting them needs
+  a config file, which the TUI does not have.
 
 ## Development
 

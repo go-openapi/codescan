@@ -54,6 +54,8 @@ var helpSections = []helpSection{
 	{"anywhere", []helpEntry{
 		{"h  ?", "this help"},
 		{"tab  shift+tab", "cycle focus"},
+		{"ctrl+← →", "move the divider between the left pane and the spec"},
+		{"ctrl+↑ ↓", "move the divider above the diagnostics"},
 		{"click", "focus the pane under the pointer"},
 		{"wheel", "move the cursor in the pane under the pointer"},
 		{"c", "copy the focused pane to the clipboard"},
@@ -97,8 +99,8 @@ var helpSections = []helpSection{
 		{"esc", "back to the viewer"},
 	}},
 	{"confirmation popup", []helpEntry{
-		{"y", "yes"},
-		{"n  esc  enter", "no"},
+		{"y", "yes, go ahead"},
+		{"n  esc  enter", "no, leave things as they are"},
 	}},
 	{"diagnostics", []helpEntry{
 		{"↑ ↓  j k", "select a diagnostic"},

@@ -29,6 +29,10 @@ type Model struct {
 	leftW, topH, diagH int
 	ready              bool
 
+	// Where the two dividers sit, as a percentage of the terminal. Adjustable at runtime; see recalcLayout for why
+	// these are proportions rather than cell counts.
+	leftPct, diagPct int
+
 	// Mode: which pane owns the keyboard, and what the left one is showing.
 	//
 	// Every cluster consults these to decide whether a key is even theirs, which is what makes them the model's own
@@ -99,6 +103,31 @@ const (
 	paneCount
 )
 
+// The split geometry: where the dividers start, how far a keypress moves them, and how far they may travel.
+//
+// The bounds are what stop a divider being driven onto a pane's edge — a pane you cannot see is a pane you cannot
+// drag back, since the keys that would restore it are advertised in a status line the collapsed pane no longer has
+// room to explain. They are asymmetric because the panes are: the diagnostics strip is a list you glance at, so it
+// earns less of the screen than the two it sits under.
+const (
+	defaultLeftPct = 33 // the left pane's share of the width
+	defaultDiagPct = 25 // the diagnostics strip's share of the height
+
+	splitStep = 5
+
+	minLeftPct, maxLeftPct = 15, 85
+	minDiagPct, maxDiagPct = 10, 60
+)
+
+// Absolute floors, applied under the percentages so a small terminal still renders.
+//
+// Each is the least a pane can occupy and still show a border plus something inside it.
+const (
+	minLeftW = 1
+	minTopH  = 3
+	minDiagH = 5
+)
+
 // New builds the root model around a ready-made scan config; the source tree browses cfg.WorkDir.
 //
 // Taking the whole Options rather than a handful of arguments means a new CLI flag needs no signature change here —
@@ -110,6 +139,8 @@ func New(cfg codescan.Options) *Model {
 	m := &Model{
 		cfg:      cfg,
 		focused:  paneTree,
+		leftPct:  defaultLeftPct,
+		diagPct:  defaultDiagPct,
 		scan:     NewScanState(),
 		search:   NewSearchBox(),
 		watch:    NewSourceWatch(cfg.WorkDir),
@@ -265,14 +296,40 @@ func (m *Model) updateFocused(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// recalcLayout distributes the terminal size: a header line, a top row with the source tree (1/3 width) beside the
-// spec, a diagnostics strip, and a status line.
+// moveVSplit moves the vertical divider between the left pane and the spec, in whole steps, and relays out.
+//
+// Positive widens the left pane. The keys are spelled so that the divider travels in the arrow's own direction, which
+// is the only mapping that stays right whichever pane you happen to be thinking about.
+func (m *Model) moveVSplit(steps int) {
+	m.leftPct = clampPct(m.leftPct+steps*splitStep, minLeftPct, maxLeftPct)
+	m.recalcLayout()
+}
+
+// moveHSplit moves the horizontal divider above the diagnostics strip, in whole steps, and relays out.
+//
+// Positive grows the strip — the divider moving UP — so that here too the divider follows the arrow.
+func (m *Model) moveHSplit(steps int) {
+	m.diagPct = clampPct(m.diagPct+steps*splitStep, minDiagPct, maxDiagPct)
+	m.recalcLayout()
+}
+
+// clampPct holds a divider inside its travel.
+func clampPct(pct, lo, hi int) int { return min(max(pct, lo), hi) }
+
+// recalcLayout distributes the terminal size: a header line, a top row with the source tree beside the spec, a
+// diagnostics strip, and a status line.
+//
+// The two dividers are placed by PERCENTAGE rather than by cell count, so resizing the terminal keeps the proportions
+// the user chose instead of leaving one pane fixed while the other absorbs everything.
+//
+// The absolute floors below the percentages are what keeps a small terminal usable: a pane whose share rounds to
+// nothing is still given the few rows or columns it needs to render its border and a line of content.
 //
 // The regions are stored for mouse hit-testing.
 func (m *Model) recalcLayout() {
-	m.diagH = max(m.height/4, 5)
-	m.topH = max(m.height-headerH-statusH-m.diagH, 3)
-	m.leftW = max(min(m.width/3, m.width), 1)
+	m.diagH = max(m.height*m.diagPct/100, minDiagH)
+	m.topH = max(m.height-headerH-statusH-m.diagH, minTopH)
+	m.leftW = max(min(m.width*m.leftPct/100, m.width), minLeftW)
 	rightW := max(m.width-m.leftW, 1)
 
 	m.tree.SetSize(m.leftW, m.topH)

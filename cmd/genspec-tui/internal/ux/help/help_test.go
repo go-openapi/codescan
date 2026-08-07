@@ -42,10 +42,12 @@ func TestPaging_EveryNavigablePaneSupportsIt(t *testing.T) {
 	body := testutils.StripANSI(strings.Join(helpLines(), "\n"))
 
 	for _, section := range []string{"spec pane", "source tree", "file viewer", "diagnostics"} {
-		idx := strings.Index(body, section)
+		// Anchored to a line of its own: a section title is also an ordinary noun, so an ENTRY that happens to name a
+		// pane ("move the divider above the diagnostics") would otherwise be found first and the wrong block checked.
+		idx := strings.Index(body, "\n"+section+"\n")
 		require.Positive(t, idx, "section %q", section)
 
-		rest := body[idx:]
+		rest := body[idx+1:]
 		if next := strings.Index(rest[len(section):], "\n\n"); next > 0 {
 			rest = rest[:len(section)+next]
 		}

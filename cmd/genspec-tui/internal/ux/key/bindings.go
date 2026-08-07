@@ -48,6 +48,16 @@ const (
 	Esc      Binding = "esc"
 	Enter    Binding = "enter"
 
+	// CtrlUp / CtrlDown / CtrlLeft / CtrlRight move the pane dividers, each in the arrow's own direction.
+	//
+	// Terminal-dependent, like ShiftF3: the xterm family reports these as CSI 1;5<A-D> and most modern emulators follow,
+	// but a terminal that sends a bare arrow instead simply has no resize keys — nothing else misfires, because a bare
+	// arrow is already a navigation key.
+	CtrlUp    Binding = "ctrl+up"
+	CtrlDown  Binding = "ctrl+down"
+	CtrlLeft  Binding = "ctrl+left"
+	CtrlRight Binding = "ctrl+right"
+
 	// F3 steps to the next reference of the definition under the spec cursor.
 	F3 Binding = "f3"
 
