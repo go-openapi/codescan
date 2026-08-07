@@ -4,6 +4,7 @@
 package spec
 
 import (
+	"go/types"
 	"sort"
 	"testing"
 
@@ -11,7 +12,6 @@ import (
 	oaispec "github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
-	"golang.org/x/tools/go/packages"
 )
 
 const (
@@ -278,7 +278,12 @@ func TestSubtypeIndex_WithoutExpressionTypes(t *testing.T) {
 
 	stripped := newSubtypesBuilder(t)
 	for _, decl := range stripped.ctx.Models() {
-		decl.Pkg = &packages.Package{PkgPath: decl.PkgPath()} // syntax and types, no TypesInfo
+		pkg, ok := stripped.ctx.PkgForType(decl.ObjType())
+		require.True(t, ok)
+		// Syntax and types kept, every record of what an expression denotes dropped. Defs survives
+		// because that is what pairs a parsed declaration back to its object, which is precisely what
+		// a package assembled from export data plus source can still do.
+		pkg.TypesInfo = &types.Info{Defs: pkg.TypesInfo.Defs}
 	}
 	got := stripped.subtypes()
 

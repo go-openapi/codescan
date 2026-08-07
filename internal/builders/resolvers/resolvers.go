@@ -149,7 +149,17 @@ func UnsupportedBasic(tpe *types.Basic) bool {
 	return found
 }
 
+// FindASTField returns the struct or interface field declared at pos in file, or nil when there is
+// none.
+//
+// A nil file is a legitimate answer to "which file declares this?" — a package whose types were read
+// from compiled export data has none — so it yields no field rather than panicking. The guard is not
+// defensive padding: astutil.PathEnclosingInterval dereferences its root to bound the search.
 func FindASTField(file *ast.File, pos token.Pos) *ast.Field {
+	if file == nil {
+		return nil
+	}
+
 	ans, _ := astutil.PathEnclosingInterval(file, pos, pos)
 	for _, an := range ans {
 		if at, valid := an.(*ast.Field); valid {

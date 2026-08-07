@@ -47,12 +47,12 @@ func TestWrittenRHS_AgreesWithTheTypeChecker(t *testing.T) {
 			}
 
 			for _, decl := range typeSpecsOf(pkg) {
-				recorded, known := pkg.TypesInfo.Types[decl.Spec.Type]
+				recorded, known := pkg.TypesInfo.Types[decl.spec.Type]
 				if !known || recorded.Type == nil {
 					continue
 				}
 
-				resolved, ok := decl.resolveTypeExpr(decl.Spec.Type)
+				resolved, ok := decl.resolveTypeExpr(decl.spec.Type)
 				if !ok {
 					declined++
 
@@ -98,7 +98,7 @@ func TestWrittenRHS(t *testing.T) {
 				require.True(t, ok)
 
 				stripped := *found
-				stripped.Pkg = &packages.Package{PkgPath: found.Pkg.PkgPath} // no TypesInfo at all
+				stripped.pkg = &packages.Package{PkgPath: found.pkg.PkgPath} // no TypesInfo at all
 
 				rhs, ok := stripped.WrittenRHS()
 				require.True(t, ok)
@@ -141,7 +141,7 @@ func typeSpecsOf(pkg *packages.Package) []*EntityDecl {
 				if nt == nil && at == nil {
 					continue
 				}
-				out = append(out, &EntityDecl{Type: nt, Alias: at, Ident: ts.Name, Spec: ts, File: file, Pkg: pkg})
+				out = append(out, &EntityDecl{Type: nt, Alias: at, ident: ts.Name, spec: ts, file: file, pkg: pkg})
 			}
 		}
 	}

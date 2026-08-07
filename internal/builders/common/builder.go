@@ -34,7 +34,7 @@ type Builder struct {
 	Decl *scanner.EntityDecl
 
 	postDecls   []*scanner.EntityDecl
-	postDeclSet map[*ast.Ident]struct{} // dedup index keyed by EntityDecl.Ident
+	postDeclSet map[*types.TypeName]struct{} // dedup index keyed by the declared type's identity
 	diagnostics []grammar.Diagnostic
 	blockCache  map[*ast.CommentGroup][]grammar.Block
 }
@@ -227,24 +227,29 @@ func (s *Builder) CleanGoDocSelf(text string) string {
 
 // AppendPostDecl marks decl for post-processing by the spec orchestrator's discovery loop.
 //
-// Idempotent per-Builder: re-appending a decl whose Ident was already seen is a no-op.
-// Nil and Ident-less decls are silently ignored.
+// Idempotent per-Builder: re-appending a decl whose declared type was already seen is a no-op.
+// Nil decls are silently ignored.
+//
+// Dedup is on the type-checker's object rather than on the declaring identifier: a package cannot
+// declare one name twice, so the two are in bijection wherever both exist — and the object exists
+// for a declaration whose source was never parsed, where the identifier does not.
 //
 // # Details
 //
 // See [§postdecls](./README.md#postdecls) — per-Builder dedup index and the second dedup applied
 // at consumption time by spec.Builder.buildDiscovered.
 func (s *Builder) AppendPostDecl(decl *scanner.EntityDecl) {
-	if decl == nil || decl.Ident == nil {
+	if decl == nil {
 		return
 	}
+	obj := decl.Obj()
 	if s.postDeclSet == nil {
-		s.postDeclSet = make(map[*ast.Ident]struct{})
+		s.postDeclSet = make(map[*types.TypeName]struct{})
 	}
-	if _, dup := s.postDeclSet[decl.Ident]; dup {
+	if _, dup := s.postDeclSet[obj]; dup {
 		return
 	}
-	s.postDeclSet[decl.Ident] = struct{}{}
+	s.postDeclSet[obj] = struct{}{}
 	s.postDecls = append(s.postDecls, decl)
 }
 

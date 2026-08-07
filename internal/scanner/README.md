@@ -17,7 +17,8 @@ parameters, responses) consumed by the builder layer.
 - [§descwithref](#descwithref) — the description-only-decoration
   $ref shape and why it has a flag
 - [§declaration](#declaration) — `EntityDecl`'s two halves: what is
-  always available and what needs parsed source
+  always available, what needs parsed source, and the accessors that
+  make the difference impossible to ignore
 - [§diagnostics](#diagnostics) — `OnDiagnostic` contract and
   experimental-API caveat
 - [§prune](#prune) — `PruneUnusedModels` reachability and why it
@@ -92,24 +93,62 @@ type-checker. A package whose types were read from compiled export data
 carries it in full, positions included: `time.Duration` reports
 `$GOROOT/src/time/time.go`.
 
-The **syntax half** — `Comments`, `Ident`, `Spec`, `File`, `Pkg` — comes
-from parsed source, which a package need not have. Nothing that the type
-half can answer may be read from it: a name, a position and a package path
-all come from the object, or the declaration stops working the moment its
-source is not read.
+The **syntax half** — the comment group, the declaring identifier, the type
+spec, the enclosing file and the loaded package — comes from parsed source,
+which a package need not have. Nothing that the type half can answer may be
+read from it: a name, a position and a package path all come from the
+object, or the declaration stops working the moment its source is not read.
+
+The syntax half is **unexported**, so its absence is not a nil field a
+caller can forget about. It is reached through accessors, split by whether
+absence is already a legitimate outcome:
+
+| accessor | absent ⇒ | why |
+|---|---|---|
+| `HasSource() bool` | — | the single honest gate |
+| `Comments() *ast.CommentGroup` | `nil` | nil is already "no annotations here" — a declaration with no doc comment answers the same |
+| `File() *ast.File` | `nil` | its one consumer, `resolvers.FindASTField`, yields no field for a nil file |
+| `TypeExpr() (ast.Expr, bool)` | `false` | the written right-hand side; `Underlying` is not a substitute |
+| `Imports() ([]*ast.ImportSpec, bool)` | `false` | an import alias is spelled nowhere else |
+| `PkgImport(path) (*packages.Package, bool)` | `false` | the other half of `Imports`: an unaliased import's own name |
+| `EnumSourcePkg() (*packages.Package, bool)` | `false` | `swagger:enum` members are read from the package's const blocks |
+
+There is deliberately **no `Ident` accessor**. Everything the identifier was
+ever asked — the name, the position, the identity a dedup index keys on —
+the object answers, and it answers for a declaration with no source. The
+identifier survives only inside this package, as the key of the model
+indexes.
 
 ### What genuinely needs source
 
 Three things, and only three:
 
-1. **The annotations** (`Comments`, and a field's `Doc`). A comment exists
+1. **The annotations** (`Comments()`, and a field's `Doc`). A comment exists
    nowhere but in source.
 2. **The written right-hand side** — `Stamp` in `type StampResp Stamp`.
    `go/types` keeps no record of it on a defined type: `Underlying` peels
    every named layer at once, and the named layer is what a stdlib
    recognizer keys on and what a `swagger:strfmt` one declaration to the
-   right sits on. `WrittenRHS` reads it from `Spec.Type`.
+   right sits on. `WrittenRHS` reads it through `TypeExpr()`.
 3. **A file's imports**, for resolving a godoc doc-link.
+
+### Why `WrittenRHS`'s two refusals are not the same refusal
+
+`WrittenRHS` reports `(nil, false)` for two unrelated reasons, and a caller
+that cannot tell them apart is one silent wrong answer away from trouble:
+
+- **structural** — there is no syntax at all, so there is nothing to read;
+- **semantic** — the right-hand side is a shape the resolution declines
+  (a generic instantiation, a dot-imported name).
+
+`Underlying()` is the honest fallback for the second and a *wrong answer*
+for the first: it peels exactly the named layer the stdlib recognizers key
+on, so `type Stamp time.Time` in a syntax-less package would render as a
+struct instead of `format: date-time`. The schema builder therefore checks
+`HasSource()` before falling back, and refuses rather than guesses when
+there is no source. That branch is unreachable today — every `EntityDecl`
+is built from an AST walk — and it is written out so it cannot start
+springing quietly the day one is not.
 
 ### Not `types.Info.Types`
 

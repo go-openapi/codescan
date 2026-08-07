@@ -335,13 +335,13 @@ func (a *TypeIndex) processDecl(pkg *packages.Package, file *ast.File, n node, g
 			}
 
 			decl := &EntityDecl{
-				Comments: comments,
 				Type:     nt,
 				Alias:    at,
-				Ident:    ts.Name,
-				Spec:     ts,
-				File:     file,
-				Pkg:      pkg,
+				comments: comments,
+				ident:    ts.Name,
+				spec:     ts,
+				file:     file,
+				pkg:      pkg,
 			}
 			key := ts.Name
 			switch {

@@ -26,19 +26,19 @@ import (
 // this resolution declines to guess at (a generic instantiation, a dot-imported name). A caller
 // that only needs a plausible shape should fall back to Underlying.
 func (d *EntityDecl) WrittenRHS() (types.Type, bool) {
-	if d.Spec == nil {
+	if d.spec == nil {
 		return nil, false
 	}
 
 	// The checker's own record when the package was checked from source: it answers for every
 	// expression shape, including the ones resolved below declines.
-	if d.Pkg != nil && d.Pkg.TypesInfo != nil {
-		if tv, ok := d.Pkg.TypesInfo.Types[d.Spec.Type]; ok && tv.Type != nil {
+	if d.pkg != nil && d.pkg.TypesInfo != nil {
+		if tv, ok := d.pkg.TypesInfo.Types[d.spec.Type]; ok && tv.Type != nil {
 			return tv.Type, true
 		}
 	}
 
-	return d.resolveTypeExpr(d.Spec.Type)
+	return d.resolveTypeExpr(d.spec.Type)
 }
 
 // resolveTypeExpr resolves a type expression written in this declaration to the type it denotes,
@@ -98,13 +98,13 @@ func (d *EntityDecl) importedPackage(qualifier string) (*types.Package, bool) {
 		byPath[imported.Path()] = imported
 	}
 
-	if d.File == nil {
+	if d.file == nil {
 		// No import declarations to read the spelling from: an unaliased import is still findable by
 		// the package's own name, and an aliased one is not.
 		return uniqueByName(self.Imports(), qualifier)
 	}
 
-	for _, spec := range d.File.Imports {
+	for _, spec := range d.file.Imports {
 		path, err := strconv.Unquote(spec.Path.Value)
 		if err != nil {
 			continue

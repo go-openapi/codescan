@@ -243,7 +243,7 @@ func (s *Builder) structFieldCarrier(fld *types.Var, decl *scanner.EntityDecl, t
 		return fieldCarrier{}, false, nil
 	}
 
-	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	afld := resolvers.FindASTField(decl.File(), fld.Pos())
 	if afld == nil && fld.Pkg() != nil {
 		// The field is not in the embedding decl's file.
 		// This happens when an embedded named type promotes fields whose source lives elsewhere — e.g.
@@ -320,7 +320,7 @@ func (s *Builder) methodCarrier(fld *types.Func, decl *scanner.EntityDecl) (fiel
 		return fieldCarrier{}, false
 	}
 
-	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	afld := resolvers.FindASTField(decl.File(), fld.Pos())
 	if afld == nil {
 		return fieldCarrier{}, false
 	}

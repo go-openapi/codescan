@@ -697,13 +697,13 @@ func (s *ScanCtx) FindDecl(pkgPath, name string) (*EntityDecl, bool) {
 				}
 
 				return &EntityDecl{
-					Comments: comments,
 					Type:     nt,
 					Alias:    at,
-					Ident:    ts.Name,
-					Spec:     ts,
-					File:     file,
-					Pkg:      pkg,
+					comments: comments,
+					ident:    ts.Name,
+					spec:     ts,
+					file:     file,
+					pkg:      pkg,
 				}, true
 			}
 		}
@@ -776,13 +776,13 @@ func (s *ScanCtx) FindModelsByLeaf(name string) []*EntityDecl {
 // GetModel.
 // See [§model-lookup](./README.md#model-lookup).
 func (s *ScanCtx) AddDiscoveredModel(decl *EntityDecl) {
-	if decl == nil || decl.Ident == nil {
+	if decl == nil || decl.ident == nil {
 		return
 	}
-	if _, alreadyModel := s.app.Models[decl.Ident]; alreadyModel {
+	if _, alreadyModel := s.app.Models[decl.ident]; alreadyModel {
 		return
 	}
-	s.app.ExtraModels[decl.Ident] = decl
+	s.app.ExtraModels[decl.ident] = decl
 }
 
 // FindModel returns the model decl for (pkgPath, name) and, when the hit comes from FindDecl
@@ -804,7 +804,7 @@ func (s *ScanCtx) FindModel(pkgPath, name string) (*EntityDecl, bool) {
 	}
 
 	if decl, found := s.FindDecl(pkgPath, name); found {
-		s.app.ExtraModels[decl.Ident] = decl
+		s.app.ExtraModels[decl.ident] = decl
 		return decl, true
 	}
 

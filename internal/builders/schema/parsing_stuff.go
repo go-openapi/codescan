@@ -45,7 +45,7 @@ func (s *Builder) inferNames() {
 	//
 	// AnnotationArg() carries the IDENT_NAME when one was given; bare `swagger:model` keeps the Go
 	// identifier as the schema name.
-	model := s.findAnnotation(s.Decl.Comments, grammar.AnnModel)
+	model := s.findAnnotation(s.Decl.Comments(), grammar.AnnModel)
 	if model == nil {
 		return
 	}

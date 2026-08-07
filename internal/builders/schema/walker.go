@@ -75,7 +75,7 @@ func (s *Builder) overridesFor(cg *ast.CommentGroup) (title, desc common.Overrid
 // Returns true when the block's primary annotation is swagger:ignore; the caller short-circuits
 // further building.
 func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
-	block := s.ParseBlock(s.Decl.Comments)
+	block := s.ParseBlock(s.Decl.Comments())
 	// `swagger:ignore` only short-circuits when it is the FIRST annotation on the comment group.
 	// Fixture fixtures/enhancements/top-level-kinds/IgnoredModel deliberately places `swagger:model`
 	// first and `swagger:ignore` second to pin this behaviour: the ignore is silently overridden
@@ -92,7 +92,7 @@ func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 	// swagger:title / swagger:description overrides replace the godoc-derived title / description
 	// (enum value docs are still appended below).
 	// Overrides are author-written and never passed through CleanGoDoc.
-	titleOv, descOv := s.overridesFor(s.Decl.Comments)
+	titleOv, descOv := s.overridesFor(s.Decl.Comments())
 	if titleOv.Present {
 		schema.Title = titleOv.Value
 	}

@@ -160,7 +160,7 @@ func (p *Builder) warnDuplicateTargets(pb *grammar.ParametersBlock) {
 // (a struct may carry several swagger:parameters lines).
 func (p *Builder) parametersBlocks() []*grammar.ParametersBlock {
 	var out []*grammar.ParametersBlock
-	for _, b := range p.ParseBlocks(p.Decl.Comments) {
+	for _, b := range p.ParseBlocks(p.Decl.Comments()) {
 		if pb, ok := b.(*grammar.ParametersBlock); ok {
 			out = append(out, pb)
 		}
@@ -444,7 +444,7 @@ func (p *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, o
 	// An in:/required: annotation on the embed itself applies to the parameters it promotes (go-swagger#2701).
 	// Thread it through the recursion as inherited context, restoring afterwards so sibling fields are unaffected.
 	saved := p.inherited
-	if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+	if afld := resolvers.FindASTField(decl.File(), fld.Pos()); afld != nil {
 		p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
 	}
 	// An embed marked `in: body` IS the body parameter — the embedded struct becomes one body param's schema, exactly
@@ -583,7 +583,7 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		return "", nil
 	}
 
-	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	afld := resolvers.FindASTField(decl.File(), fld.Pos())
 	if afld == nil {
 		return "", nil
 	}

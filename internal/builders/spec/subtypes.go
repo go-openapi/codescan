@@ -169,7 +169,10 @@ func (s *Builder) subtypeKeysOf(defKey string) []string {
 // relation the document does not carry.
 // Declarations with no embeddable members (an alias, a named basic type, …) yield nothing.
 func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
-	if decl.Spec == nil {
+	// No source, no embeds to read: `swagger:allOf` lives in a comment, and the AST field it decorates
+	// is the only thing the annotation can be paired with.
+	expr, ok := decl.TypeExpr()
+	if !ok {
 		return nil
 	}
 
@@ -178,7 +181,7 @@ func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
 	// The two halves of an embed are read from different places and neither can stand in for the
 	// other: the annotation lives in the AST field's doc comment, the base it names lives in the
 	// declared type's underlying.
-	for _, embed := range resolvers.Embeds(embeddableMembers(decl.Spec), decl.ObjType().Underlying()) {
+	for _, embed := range resolvers.Embeds(embeddableMembers(expr), decl.ObjType().Underlying()) {
 		if !isAllOfEmbed(embed.Field, parser) {
 			continue
 		}
@@ -205,8 +208,8 @@ func allOfBases(decl *scanner.EntityDecl, parser grammar.Parser) []string {
 // In both AST shapes an embed is the entry with no Names.
 //
 // Returns nothing for any other type shape.
-func embeddableMembers(spec *ast.TypeSpec) []*ast.Field {
-	switch tpe := spec.Type.(type) {
+func embeddableMembers(typeExpr ast.Expr) []*ast.Field {
+	switch tpe := typeExpr.(type) {
 	case *ast.StructType:
 		if tpe.Fields == nil {
 			return nil

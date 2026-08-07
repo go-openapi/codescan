@@ -30,7 +30,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("panics when both Type and Alias are nil", func(t *testing.T) {
 			decl := &EntityDecl{
-				Ident: ast.NewIdent("Bad"),
+				ident: ast.NewIdent("Bad"),
 			}
 			assert.Panics(t, func() {
 				decl.Obj()
@@ -73,7 +73,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("panics when both Type and Alias are nil", func(t *testing.T) {
 			decl := &EntityDecl{
-				Ident: ast.NewIdent("Bad"),
+				ident: ast.NewIdent("Bad"),
 			}
 			assert.Panics(t, func() {
 				decl.ObjType()
@@ -127,7 +127,7 @@ func TestEntityDecl(t *testing.T) {
 
 		found, ok := sctx.FindDecl(modelsPkg, "BaseStruct")
 		require.True(t, ok)
-		wantPos := sctx.PosOf(found.Ident.Pos())
+		wantPos := sctx.PosOf(found.ident.Pos())
 
 		decl := &EntityDecl{Type: found.Type, Alias: found.Alias}
 
@@ -143,6 +143,64 @@ func TestEntityDecl(t *testing.T) {
 		assert.EqualT(t, "BaseStruct", name)
 	})
 
+	t.Run("the syntax half answers when there is source", func(t *testing.T) {
+		const modelsPkg = "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+
+		decl, ok := sctx.FindDecl(modelsPkg, "SomeTimedType")
+		require.True(t, ok)
+
+		assert.True(t, decl.HasSource())
+		assert.NotNil(t, decl.Comments())
+		assert.NotNil(t, decl.File())
+
+		expr, ok := decl.TypeExpr()
+		require.True(t, ok)
+		assert.EqualT(t, decl.spec.Type, expr)
+
+		imports, ok := decl.Imports()
+		require.True(t, ok)
+		assert.NotEmpty(t, imports)
+
+		imported, ok := decl.PkgImport("github.com/go-openapi/strfmt")
+		require.True(t, ok)
+		assert.EqualT(t, "strfmt", imported.Name)
+
+		_, ok = decl.PkgImport("example.com/never/imported")
+		assert.False(t, ok, "a path the declaring package does not import is not an import of it")
+
+		pkg, ok := decl.EnumSourcePkg()
+		require.True(t, ok)
+		assert.EqualT(t, modelsPkg, pkg.PkgPath)
+	})
+
+	t.Run("the syntax half reports its own absence", func(t *testing.T) {
+		// The state a package served from compiled export data is in: types, no parsed source. Every
+		// syntax accessor has to say so rather than dereference nothing.
+		found, ok := sctx.FindDecl(
+			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"SomeTimedType",
+		)
+		require.True(t, ok)
+
+		decl := &EntityDecl{Type: found.Type, Alias: found.Alias}
+
+		assert.False(t, decl.HasSource())
+		assert.Nil(t, decl.Comments())
+		assert.Nil(t, decl.File())
+
+		_, ok = decl.TypeExpr()
+		assert.False(t, ok)
+
+		_, ok = decl.Imports()
+		assert.False(t, ok)
+
+		_, ok = decl.PkgImport("github.com/go-openapi/strfmt")
+		assert.False(t, ok)
+
+		_, ok = decl.EnumSourcePkg()
+		assert.False(t, ok)
+	})
+
 	t.Run("Pos agrees with the declaring identifier", func(t *testing.T) {
 		for _, name := range []string{"User", "BaseStruct", "SomeStringType", "SomeStringTypeAlias"} {
 			decl, ok := sctx.FindDecl(
@@ -151,9 +209,9 @@ func TestEntityDecl(t *testing.T) {
 			)
 			require.True(t, ok)
 
-			assert.EqualT(t, decl.Ident.Pos(), decl.Pos())
-			assert.EqualT(t, decl.Spec.Pos(), decl.Pos())
-			assert.EqualT(t, decl.Ident.Name, decl.Name())
+			assert.EqualT(t, decl.ident.Pos(), decl.Pos())
+			assert.EqualT(t, decl.spec.Pos(), decl.Pos())
+			assert.EqualT(t, decl.ident.Name, decl.Name())
 		}
 	})
 

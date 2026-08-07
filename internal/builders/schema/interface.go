@@ -27,9 +27,14 @@ func (s *Builder) buildFromInterface(decl *scanner.EntityDecl, it *types.Interfa
 	// An embed's annotation lives in its AST field's doc comment and its identity in the interface's
 	// own embedded-type list; the two are paired positionally rather than through the type-checker's
 	// expression records, which a package read from export data does not have.
+	//
+	// No source means no pairing: an embed's annotation lives in a comment, so a declaration read
+	// from compiled export data has nothing to pair and every embed reads as unannotated.
 	var embeds []resolvers.Embed
-	if specType, ok := decl.Spec.Type.(*ast.InterfaceType); ok && specType.Methods != nil {
-		embeds = resolvers.Embeds(specType.Methods.List, it)
+	if expr, ok := decl.TypeExpr(); ok {
+		if specType, isIface := expr.(*ast.InterfaceType); isIface && specType.Methods != nil {
+			embeds = resolvers.Embeds(specType.Methods.List, it)
+		}
 	}
 
 	// First collect the embedded interfaces create refs when:

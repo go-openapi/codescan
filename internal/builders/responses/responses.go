@@ -67,7 +67,7 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 //
 // The targeting parse lives in the grammar, not the scanner.
 func (r *Builder) ResponseName() string {
-	for _, b := range r.ParseBlocks(r.Decl.Comments) {
+	for _, b := range r.ParseBlocks(r.Decl.Comments()) {
 		if rb, ok := b.(*grammar.ResponseBlock); ok {
 			if rb.Name != "" {
 				return rb.Name
@@ -116,7 +116,7 @@ func (r *Builder) Build(responses map[string]oaispec.Response) error {
 	// skipped.
 	if response.Schema != nil && response.Schema.Ref.String() == "" && !underlyingIsStruct(r.Decl.ObjType()) {
 		handlers.DispatchSchemaLevel0(
-			r.ParseBlock(r.Decl.Comments), nil, response.Schema, "",
+			r.ParseBlock(r.Decl.Comments()), nil, response.Schema, "",
 			r.RecordDiagnostic, handlers.SchemaOptions{},
 		)
 	}
@@ -330,7 +330,7 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 
 				return nil
 			}
-			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments)); isf {
+			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments())); isf {
 				applyDeclFormat(sfnm, tpe.Underlying(), typable)
 				resp.WithSchema(&sch)
 
@@ -465,7 +465,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 	// An in: annotation on the embed applies to the response fields it promotes (go-swagger#2701) — body/header routing.
 	// Thread it through the recursion, restoring afterwards so siblings are unaffected.
 	saved := r.inherited
-	if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+	if afld := resolvers.FindASTField(decl.File(), fld.Pos()); afld != nil {
 		r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
 	}
 	// An embed marked `in: body` IS the response body — the embedded struct becomes the body schema, exactly like a
@@ -510,7 +510,7 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		return nil
 	}
 
-	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	afld := resolvers.FindASTField(decl.File(), fld.Pos())
 	if afld == nil {
 		return nil
 	}

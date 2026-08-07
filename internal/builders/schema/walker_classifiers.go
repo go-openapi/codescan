@@ -66,7 +66,7 @@ func (s *Builder) classifierTextMarshal(tpe types.Type, tgt ifaces.SwaggerTypabl
 		return false
 	}
 
-	if name, ok := s.findAnnotationArg(decl.Comments, grammar.AnnStrfmt); ok {
+	if name, ok := s.findAnnotationArg(decl.Comments(), grammar.AnnStrfmt); ok {
 		tgt.Typed("string", name)
 		return true
 	}
@@ -288,7 +288,7 @@ func (s *Builder) inheritedStrfmt(declared *types.Named) (string, bool) {
 		// The enum's own declaration is the first step: its swagger:strfmt (if any) already won in
 		// classifierNamedBasic's strfmt-first arm, so a match here can only come from further right.
 		if current != types.Type(declared) {
-			if format, ok := s.findAnnotationArg(decl.Comments, grammar.AnnStrfmt); ok {
+			if format, ok := s.findAnnotationArg(decl.Comments(), grammar.AnnStrfmt); ok {
 				return format, true
 			}
 		}

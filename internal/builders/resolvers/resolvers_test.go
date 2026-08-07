@@ -6,6 +6,7 @@ package resolvers
 import (
 	"errors"
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"go/types"
 	"testing"
@@ -523,6 +524,40 @@ func TestMustIfaceFromSource(t *testing.T) {
 		// Valid, type-checkable source that simply never declares T: the nil scope lookup must be
 		// guarded into an ErrInternal panic, not an opaque nil dereference.
 		assertPanicsWrappingErrInternal(t, `package p; type U interface{ Foo() }`)
+	})
+}
+
+// TestFindASTField covers the file-less call, which every caller now makes reachable: a declaration
+// whose package carries types but no parsed source hands FindASTField a nil file.
+//
+// Without the guard astutil.PathEnclosingInterval dereferences it, so this asserts "no field" rather
+// than a panic — the same answer as a position no field encloses.
+func TestFindASTField(t *testing.T) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "p.go", `package p
+
+type T struct {
+	Name string
+}
+`, parser.ParseComments)
+	require.NoError(t, err)
+
+	t.Run("a position inside a field yields that field", func(t *testing.T) {
+		st, ok := file.Decls[0].(*ast.GenDecl).Specs[0].(*ast.TypeSpec).Type.(*ast.StructType)
+		require.TrueT(t, ok)
+		want := st.Fields.List[0]
+
+		got := FindASTField(file, want.Names[0].Pos())
+		require.NotNil(t, got)
+		assert.EqualT(t, want, got)
+	})
+
+	t.Run("a position no field encloses yields nothing", func(t *testing.T) {
+		assert.Nil(t, FindASTField(file, file.Pos()))
+	})
+
+	t.Run("no file yields nothing rather than panicking", func(t *testing.T) {
+		assert.Nil(t, FindASTField(nil, token.Pos(1)))
 	})
 }
 
