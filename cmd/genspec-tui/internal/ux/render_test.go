@@ -142,7 +142,7 @@ func TestFollowBadge(t *testing.T) {
 	}{
 		{followSpec, "SPEC ▸ SOURCE"},
 		{followSource, "SOURCE ▸ SPEC"},
-		{followDiag, "DIAG ▸ SOURCE"},
+		{followDiag, "DIAG ▸ SOURCE + SPEC"},
 	} {
 		m := testModel(t, sized(100, 40))
 		m.follow = tc.mode

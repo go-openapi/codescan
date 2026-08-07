@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -642,6 +643,76 @@ func newJoinFixture(t *testing.T) joinFixture {
 			return line
 		},
 	}
+}
+
+// withDiagnostics puts diagnostics in the pane and gives it the keyboard, so the fixture can be driven from the diag
+// side as well as the spec and source ones.
+func (f joinFixture) withDiagnostics(t *testing.T, diags ...grammar.Diagnostic) joinFixture {
+	t.Helper()
+
+	f.m.diag.SetSize(80, 8)
+	f.m.diagH = 8
+	f.m.scan.Diags = diags
+	f.m.refreshDiagnostics()
+	f.m.focused = paneDiag
+
+	return f
+}
+
+// selectDiag moves the diagnostic selection and re-mirrors the followers, as the Update loop does.
+func (f joinFixture) selectDiag(delta int) {
+	f.m.moveDiagCursor(delta)
+	f.m.syncFollowIfActive()
+}
+
+// TestJoin_DiagFollowDrivesBothPanes pins that the diagnostics driver mirrors the source AND the spec.
+//
+// A diagnostic names a place in the source, but what it says is usually about what that place produced — so unlike the
+// spec- and source-driven modes, which each drive their opposite, this one drives both.
+func TestJoin_DiagFollowDrivesBothPanes(t *testing.T) {
+	f := newJoinFixture(t)
+	f = f.withDiagnostics(t,
+		grammar.Warnf(pos(f.userGo, joinSrcEmail, 2), grammar.CodeInvalidNumber, "about the email field"),
+		grammar.Warnf(pos(f.addrGo, joinSrcCity, 2), grammar.CodeInvalidNumber, "about the city field"),
+	)
+
+	f.m.toggleFollow(followDiag)
+
+	require.Equal(t, paneDiag, f.m.focused, "the diagnostics pane stays the driver")
+	assert.Equal(t, f.userGo, f.m.currentFile)
+	assert.Equal(t, joinSrcEmail-1, f.m.fileView.CurrentLine(), "source follower on the diagnostic's line")
+	assert.Equal(t, f.specLine("/definitions/User/properties/email"), f.m.spec.CursorLine(),
+		"spec follower on the node that line produced")
+	assert.Contains(t, f.m.followTarget, "/definitions/User/properties/email")
+
+	// Moving the selection re-drives both halves, across a change of file.
+	f.selectDiag(+1)
+
+	assert.Equal(t, f.addrGo, f.m.currentFile)
+	assert.Equal(t, joinSrcCity-1, f.m.fileView.CurrentLine())
+	assert.Equal(t, f.specLine("/definitions/Address/properties/city"), f.m.spec.CursorLine())
+	assert.Contains(t, f.m.followTarget, "/definitions/Address/properties/city")
+}
+
+// TestJoin_DiagFollowHalvesResolveIndependently pins that one half missing does not suppress the other.
+//
+// A diagnostic on a line that produced nothing is the ordinary case — a parse error means nothing was built from it —
+// so the source half must still resolve and still be reported.
+func TestJoin_DiagFollowHalvesResolveIndependently(t *testing.T) {
+	f := newJoinFixture(t)
+	f = f.withDiagnostics(t,
+		// Line 1 is the package clause: above every anchor in the file, so nothing was produced at or before it.
+		grammar.Errorf(pos(f.userGo, 1, 1), grammar.CodeInvalidNumber, "nothing here produced a node"),
+	)
+	before := f.m.spec.CursorLine()
+
+	f.m.toggleFollow(followDiag)
+
+	assert.Equal(t, f.userGo, f.m.currentFile, "the source half resolves")
+	assert.Equal(t, 0, f.m.fileView.CurrentLine())
+	assert.Equal(t, before, f.m.spec.CursorLine(), "the spec follower holds position rather than guessing")
+	assert.Contains(t, f.m.followTarget, "user.go:1", "the source half is still reported")
+	assert.Contains(t, f.m.followTarget, noAnchorDesc, "and the spec half names which miss this is")
 }
 
 // driveSpec moves the spec cursor to `line` (what driveSpecToSource reads) and re-mirrors the follower.

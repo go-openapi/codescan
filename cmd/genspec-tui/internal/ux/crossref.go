@@ -11,19 +11,23 @@ import (
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/panels"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
-// followMode is the cross-ref auto-follow state: off, or one pane driving the other.
+// followMode is the cross-ref auto-follow state: off, or one pane driving the other(s).
 //
-// The driver keeps focus; the follower mirrors on every cursor move (syncFollowIfActive runs after each key/scroll).
-// `f` toggles it; any focus change or edit exits it.
+// The driver keeps focus; every follower mirrors it on each cursor move (syncFollowIfActive runs after each
+// key/scroll). `f` toggles it; any focus change or edit exits it.
+//
+// Most modes drive one follower because the driving pane is itself one of the two ends of the link. The diagnostics
+// pane is not — it is a third place, naming a source position — so it drives both.
 type followMode int
 
 const (
 	followOff    followMode = iota
 	followSpec              // spec drives, the source pane follows
 	followSource            // the source pane drives, the spec follows
-	followDiag              // the diagnostics pane drives, the source pane follows
+	followDiag              // the diagnostics pane drives, BOTH other panes follow
 )
 
 // jumpDiagToSource opens the selected diagnostic's source line and MOVES FOCUS there — the one-shot counterpart to
@@ -46,12 +50,18 @@ func (m *Model) jumpDiagToSource() tea.Cmd {
 	return m.notify("→ %s:%d", relTo(m.cfg.WorkDir, d.Pos.Filename), d.Pos.Line)
 }
 
-// driveDiagToSource mirrors the source follower to the selected diagnostic's position, WITHOUT moving focus (the diag
-// pane stays the driver).
+// followSep joins the two halves of the diagnostic driver's status badge.
+const followSep = "  ·  "
+
+// driveDiagFollowers mirrors BOTH followers to the selected diagnostic, WITHOUT moving focus (the diag pane stays the
+// driver).
 //
-// Returns a human-readable target for the status badge; the position rides on the diagnostic itself, so no index lookup
-// is needed.
-func (m *Model) driveDiagToSource() string {
+// The diag driver feeds two followers where the others feed one. A diagnostic is *about* a place in the source, but
+// what you generally want to see next is what that place turned into — and for a diagnostic that reports a shape rather
+// than a syntax error, the spec side is the whole question.
+//
+// Returns the composed target for the status badge.
+func (m *Model) driveDiagFollowers() string {
 	if len(m.scan.Diags) == 0 {
 		return "(no diagnostics)"
 	}
@@ -59,11 +69,41 @@ func (m *Model) driveDiagToSource() string {
 	if !d.Pos.IsValid() || d.Pos.Filename == "" {
 		return "(diagnostic carries no position)"
 	}
+
+	// Reported as two independent halves rather than one verdict: a diagnostic whose line produced no spec node is the
+	// ordinary case — a parse error means nothing was built from it — and collapsing that into a single "not found"
+	// would hide that the source half resolved perfectly well.
+	return m.driveDiagToSource(d) + followSep + m.driveDiagToSpec(d)
+}
+
+// driveDiagToSource mirrors the source follower to the diagnostic's own position.
+//
+// The position rides on the diagnostic itself, so no index lookup is needed — which is why this half cannot miss once
+// the caller has checked the position is valid.
+func (m *Model) driveDiagToSource(d grammar.Diagnostic) string {
 	if m.currentFile != d.Pos.Filename {
 		m.loadFileQuietly(d.Pos.Filename)
 	}
 	m.fileView.GotoLine(d.Pos.Line - 1) // follower centres on the target; not focused
+
 	return fmt.Sprintf("%s:%d", relTo(m.cfg.WorkDir, d.Pos.Filename), d.Pos.Line)
+}
+
+// driveDiagToSpec mirrors the spec follower to the node the diagnostic's source line produced.
+//
+// This goes through the SAME nearest-anchor walk the source pane's own `f` uses, rather than anything diagnostic-
+// specific: "what did this line turn into" has one answer, and it should not depend on which pane asked.
+//
+// On a miss the spec follower holds position and the reason is returned, matching how driveSpecToSource treats its own.
+func (m *Model) driveDiagToSpec(d grammar.Diagnostic) string {
+	t := resolveSourceToSpec(m.srcIndex, m.specIndex, d.Pos.Filename, d.Pos.Line)
+	if !t.Found {
+		return t.Miss
+	}
+
+	m.spec.JumpTo(t.Line) // follower centres on the produced node; not focused
+
+	return t.Pointer
 }
 
 // refreshSpec renders the spec pane from the stored JSON/YAML per the active format toggle, and rebuilds the
@@ -307,7 +347,7 @@ func (m *Model) syncFollowIfActive() {
 			m.exitFollow()
 			return
 		}
-		m.followTarget = m.driveDiagToSource()
+		m.followTarget = m.driveDiagFollowers()
 	case followOff:
 	}
 }

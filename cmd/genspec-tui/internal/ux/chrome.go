@@ -124,7 +124,7 @@ func (m *Model) followBadge() string {
 	case followSource:
 		label = "SOURCE ▸ SPEC"
 	case followDiag:
-		label = "DIAG ▸ SOURCE"
+		label = "DIAG ▸ SOURCE + SPEC"
 	case followSpec, followOff:
 	}
 	target := m.followTarget

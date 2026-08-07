@@ -167,7 +167,7 @@ The viewer shadows only these keys; every other binding (`/`, `o`, `r`, `g`,
 | `↑` `↓` / `j` `k` | select a diagnostic |
 | `PgUp` / `PgDn`, `Home` / `End` | select a page at a time, or jump to the ends |
 | `Enter` | go to this diagnostic's source line and focus it |
-| `f` | toggle follow mode (the selection drives, the source pane mirrors) |
+| `f` | toggle follow mode (the selection drives, the source **and** spec panes mirror) |
 
 ## Cross-reference navigation
 
@@ -179,15 +179,22 @@ Two indexes, rebuilt on every render, meet at a JSON pointer:
 
 ### Follow mode (`f`)
 
-`f` turns on a persistent link between two panes. The pane you pressed it in is
-the **driver** and keeps focus; the other **mirrors** it on every cursor move,
-centring and highlighting the linked line. The two roles are styled differently
-so it is always clear which pane leads. A `SPEC ▸ SOURCE` badge names the
+`f` turns on a persistent link between panes. The pane you pressed it in is the
+**driver** and keeps focus; the others **mirror** it on every cursor move,
+centring and highlighting the linked line. The roles are styled differently so
+it is always clear which pane leads. A `SPEC ▸ SOURCE` badge names the
 direction and the resolved target.
 
 Follow works in three directions: spec → source, source → spec, and
-diagnostic → source. `Esc`, a second `f`, changing focus, or starting to edit
-all leave it.
+diagnostic → source **and** spec. `Esc`, a second `f`, changing focus, or
+starting to edit all leave it.
+
+The diagnostics pane drives two followers where the others drive one, because
+it is not itself either end of the link — it is a third place naming a source
+position, and what a finding *says* is usually about what that position
+produced. The two halves resolve independently: a diagnostic on a line that
+produced no spec node is the ordinary case (a parse error means nothing was
+built from it), so the source half still resolves and the badge reports both.
 
 ### References (`F3`, `Enter`)
 
