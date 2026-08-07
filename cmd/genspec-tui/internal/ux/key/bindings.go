@@ -37,6 +37,8 @@ const (
 	G        Binding = "g"
 	F        Binding = "f"
 	I        Binding = "i"
+	N        Binding = "n"
+	Y        Binding = "y"
 	PgUp     Binding = "pgup"
 	PgDown   Binding = "pgdown"
 	Home     Binding = "home"
@@ -48,6 +50,12 @@ const (
 
 	// F3 steps to the next reference of the definition under the spec cursor.
 	F3 Binding = "f3"
+
+	// F5 re-reads the open file from disk, the browser-standard spelling of "reload".
+	//
+	// Deliberately not also ctrl+r: the editor is a live textarea, and ctrl+r is redo or reverse-search in enough editors
+	// that binding it to a discarding action would be a trap.
+	F5 Binding = "f5"
 
 	// ShiftF3 steps to the PREVIOUS reference.
 	//

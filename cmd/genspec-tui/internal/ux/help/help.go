@@ -58,6 +58,7 @@ var helpSections = []helpSection{
 		{"wheel", "move the cursor in the pane under the pointer"},
 		{"c", "copy the focused pane to the clipboard"},
 		{"r", "rescan now"},
+		{"F5", "reload the open file from disk (asks before discarding edits)"},
 		{"o", "scanner options"},
 		{"ctrl+q  ctrl+c", "quit"},
 	}},
@@ -92,7 +93,12 @@ var helpSections = []helpSection{
 	{"file editor", []helpEntry{
 		{"ctrl+f", "jump to the spec node this line produced"},
 		{"ctrl+s", "save (triggers a rescan)"},
+		{"F5", "reload from disk, discarding edits"},
 		{"esc", "back to the viewer"},
+	}},
+	{"confirmation popup", []helpEntry{
+		{"y", "yes"},
+		{"n  esc  enter", "no"},
 	}},
 	{"diagnostics", []helpEntry{
 		{"↑ ↓  j k", "select a diagnostic"},

@@ -106,6 +106,7 @@ the cursor falls back to its nearest surviving ancestor.
 | wheel | scroll the pane under the pointer |
 | `c` | copy the focused pane's raw content to the clipboard |
 | `r` | rescan now |
+| `F5` | reload the open file from disk (asks before discarding unsaved edits) |
 | `o` | scanner options popup (`space` toggles, `Esc`/`o` applies and rescans) |
 | `ctrl+q` / `ctrl+c` | quit |
 
@@ -156,9 +157,27 @@ The viewer shadows only these keys; every other binding (`/`, `o`, `r`, `g`,
 |-----|--------|
 | `ctrl+f` | jump from the cursor's line to the spec node it produced |
 | `ctrl+s` | save (triggers a rescan) |
+| `F5` | reload from disk, discarding the edits (asks first) |
 | `Esc` | back to the read-only viewer |
 
 `ctrl+f` rather than `f` because the editor owns plain `f` for typing.
+
+## Reloading
+
+`F5` re-reads the open file from disk. Disk is the source of truth here, so
+this is how you pick up a change made outside the TUI — a `git checkout`, a
+`gofmt`, another editor — and equally how you throw away edits you no longer
+want.
+
+It asks first, and only when there is something to lose: with a clean buffer it
+just reloads. Answer `y` to discard, `n` or `Esc` to keep editing. `Enter`
+declines too — the destructive answer is the one you have to type on purpose.
+
+Reload keeps the line you were on and always lands in the read-only viewer,
+even when it interrupted an edit. The line is restored **by number**, which is
+the honest approximation: unlike a rescan, where the spec cursor is restored by
+node, nothing anchors a line of Go source to anything stable across an edit
+made behind the TUI's back.
 
 ### Diagnostics pane
 

@@ -26,8 +26,11 @@ type Overlay interface {
 //
 // One list, consulted by the key dispatch, the view and the layout alike — the precedence used to be spelled out
 // separately in each, as parallel lists that merely happened to agree.
+//
+// The confirmation comes first: it is the only one holding an action back, and a question that could be buried under
+// another modal would be a question the user cannot answer.
 func (m *Model) overlays() []Overlay {
-	return []Overlay{&m.options, &m.help}
+	return []Overlay{&m.confirm, &m.options, &m.help}
 }
 
 // activeOverlay returns the overlay currently covering the UI, or nil when none is.
@@ -36,6 +39,32 @@ func (m *Model) activeOverlay() Overlay {
 		if o.IsOpen() {
 			return o
 		}
+	}
+
+	return nil
+}
+
+// applyConfirm carries out the pending action when the confirmation overlay has just been answered yes.
+//
+// The action is cleared either way: a declined question is finished with, and leaving it armed would let the NEXT
+// confirmation inherit it.
+func (m *Model) applyConfirm() tea.Cmd {
+	accepted, answered := m.confirm.TakeAnswer()
+	if !answered {
+		return nil
+	}
+
+	action := m.pendingConfirm
+	m.pendingConfirm = confirmNothing
+	if !accepted {
+		return nil
+	}
+
+	switch action {
+	case confirmReload:
+		return m.reloadFile()
+	case confirmNothing:
+		return nil
 	}
 
 	return nil

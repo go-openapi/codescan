@@ -165,6 +165,48 @@ func (m *Model) openFile(path string) tea.Cmd {
 	return nil
 }
 
+// requestReload re-reads the open file from disk, asking first when that would throw away unsaved edits.
+//
+// The auto-reload this replaces fired on every watcher event and silently clobbered whatever was in the buffer. A
+// manual reload is the useful half of that — the file changed underneath you, or you want your edits gone — and the
+// guard is what makes it safe to offer.
+func (m *Model) requestReload() tea.Cmd {
+	if m.currentFile == "" {
+		return m.notify("%s", noFileDesc)
+	}
+	if !m.fileView.Dirty() {
+		return m.reloadFile()
+	}
+
+	m.pendingConfirm = confirmReload
+	m.confirm.Ask("Discard unsaved edits to " + relTo(m.cfg.WorkDir, m.currentFile) + "?")
+
+	return nil
+}
+
+// reloadFile re-reads the open file from disk, keeping the reader roughly where they were.
+//
+// The nav line is restored by NUMBER, which is the only anchor available: unlike a rescan — where the spec cursor is
+// restored by node — nothing indexes a line of Go source to something stable across an external edit. So the line is
+// honest about being approximate rather than pretending to track content.
+//
+// Reload always lands in the READ-ONLY viewer, even when it interrupted an edit: the buffer has just been replaced with
+// something the user did not type, and dropping them back into the editor over it invites re-editing the very content
+// they chose to discard.
+func (m *Model) reloadFile() tea.Cmd {
+	path := m.currentFile
+	if path == "" {
+		return m.notify("%s", noFileDesc)
+	}
+	line := m.fileView.CurrentLine()
+
+	m.loadFileQuietly(path) // SetFile marks the buffer clean and leaves edit mode
+	m.fileView.GotoLine(line)
+	m.fileView.Blur() // the textarea is no longer the active mode, so it must stop capturing input
+
+	return m.notify("reloaded %s", relTo(m.cfg.WorkDir, path))
+}
+
 // saveFile writes the editor buffer back to disk.
 //
 // The watcher then triggers a rescan, so the spec reflects the edit.

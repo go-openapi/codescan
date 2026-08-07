@@ -18,8 +18,14 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 	}
 
 	// Modal overlays capture all keys until they dismiss themselves.
+	//
+	// An overlay only ever RECORDS what it wants; the apply steps below are where the model decides what that means, in
+	// the same order overlays() ranks them.
 	if o := m.activeOverlay(); o != nil {
 		cmd := o.HandleKey(msg)
+		if confirmed := m.applyConfirm(); confirmed != nil {
+			return confirmed
+		}
 		if rescan := m.applyOptions(); rescan != nil {
 			return rescan
 		}
@@ -58,6 +64,8 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.R:
 		return m.startScan()
+	case key.F5:
+		return m.requestReload()
 	case key.H, key.Question:
 		m.help.Open()
 		return nil
@@ -256,10 +264,14 @@ func (m *Model) handleViewerKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 // handleEditKey routes keys to the file editor while it is focused.
 //
 // A few app keys still work: Esc returns to the read-only viewer, Ctrl-S saves, Ctrl-F follows the cursor line to the
-// spec, Ctrl-Q quits, Tab moves focus.
+// spec, F5 reloads from disk, Ctrl-Q quits, Tab moves focus.
 // Everything else edits the buffer.
 func (m *Model) handleEditKey(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
+	case "f5":
+		// Reachable from inside the editor on purpose: an unsaved buffer is exactly the state the reload guard exists
+		// for, and requiring Esc first would mean leaving the mode to ask about the mode.
+		return m.requestReload()
 	case "esc":
 		m.fileView.StopEdit()
 		// The buffer may have moved under the runs computed when it was loaded, and stale spans colour by the OLD columns —
