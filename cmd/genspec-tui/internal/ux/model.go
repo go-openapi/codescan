@@ -17,6 +17,7 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/help"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/options"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/panels"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/reference"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 )
 
@@ -78,9 +79,10 @@ type Model struct {
 	diag     panels.Diagnostics
 
 	// Modal overlays, in the precedence the overlays method states.
-	help    help.Overlay
-	options options.Overlay
-	confirm confirm.Overlay
+	help      help.Overlay
+	options   options.Overlay
+	confirm   confirm.Overlay
+	reference reference.Overlay
 
 	// What an accepted confirmation will do. The overlay records the answer; naming the action is the model's job.
 	pendingConfirm confirmAction
@@ -137,19 +139,20 @@ const (
 // falls back to `r` (manual rescan).
 func New(cfg codescan.Options) *Model {
 	m := &Model{
-		cfg:      cfg,
-		focused:  paneTree,
-		leftPct:  defaultLeftPct,
-		diagPct:  defaultDiagPct,
-		scan:     NewScanState(),
-		search:   NewSearchBox(),
-		watch:    NewSourceWatch(cfg.WorkDir),
-		tree:     panels.NewTree(cfg.WorkDir),
-		fileView: panels.NewFileView(),
-		spec:     panels.NewSpec(),
-		diag:     panels.NewDiagnostics(),
-		help:     help.New(),
-		confirm:  confirm.New(),
+		cfg:       cfg,
+		focused:   paneTree,
+		leftPct:   defaultLeftPct,
+		diagPct:   defaultDiagPct,
+		scan:      NewScanState(),
+		search:    NewSearchBox(),
+		watch:     NewSourceWatch(cfg.WorkDir),
+		tree:      panels.NewTree(cfg.WorkDir),
+		fileView:  panels.NewFileView(),
+		spec:      panels.NewSpec(),
+		diag:      panels.NewDiagnostics(),
+		help:      help.New(),
+		confirm:   confirm.New(),
+		reference: reference.New(),
 	}
 	// Built after the struct exists: the options rows bind to the scan-config booleans by pointer, and those pointers
 	// have to be into m.cfg (valid because m is heap-allocated) rather than into the caller's copy.

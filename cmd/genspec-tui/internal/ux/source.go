@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -220,6 +221,95 @@ func (m *Model) saveFile() tea.Cmd {
 	m.fileView.MarkClean()
 
 	return m.notify("saved %s", relTo(m.cfg.WorkDir, m.currentFile))
+}
+
+// annotationSite is a swagger: directive found on a line, and where its header token sits.
+//
+// The columns are what let a CLICK require the token itself rather than merely its line.
+type annotationSite struct {
+	Kind  grammar.AnnotationKind
+	Start int // 1-based rune column of the `s` in `swagger:`
+	End   int // 1-based rune column just past the annotation's name
+}
+
+// covers reports whether a 1-based rune column falls on the directive's header token.
+func (s annotationSite) covers(col int) bool { return col >= s.Start && col < s.End }
+
+// showAnnotationReference opens the reference popup for the annotation on the viewer's current line.
+//
+// Reading the BUFFER rather than the file on disk is what makes this work while you are still typing the annotation —
+// which is when you want it.
+func (m *Model) showAnnotationReference() tea.Cmd {
+	site, ok := annotationOnLine(m.currentLineText())
+	if !ok {
+		return m.notify("(no swagger annotation on this line)")
+	}
+
+	return m.openReference(site)
+}
+
+// openReference shows one site's entry, or explains why it cannot.
+func (m *Model) openReference(site annotationSite) tea.Cmd {
+	doc, ok := site.Kind.Doc()
+	if !ok {
+		// Reachable only through a kind the grammar knows but nobody documented; the completeness test in the grammar
+		// package exists to keep it unreachable.
+		return m.notify("no reference entry for %s%s", grammar.AnnotationPrefix, site.Kind)
+	}
+	m.reference.Show(site.Kind.String(), doc)
+
+	return nil
+}
+
+// currentLineText returns the text of the line the viewer's cursor is on, or "" when there is no file open.
+func (m *Model) currentLineText() string {
+	if m.currentFile == "" {
+		return ""
+	}
+	text, _ := m.fileView.Line(m.fileView.CurrentLine())
+
+	return text
+}
+
+// annotationOnLine finds the swagger: directive in one line of Go source, and where its header token sits.
+//
+// Scoped to what follows a `//`, so the prefix appearing inside a string literal — a fixture builder, a test table, this
+// very scanner's own source — is not offered as an annotation to look up.
+func annotationOnLine(line string) (annotationSite, bool) {
+	before, comment, ok := strings.Cut(line, "//")
+	if !ok {
+		return annotationSite{}, false
+	}
+
+	rel := strings.Index(comment, grammar.AnnotationPrefix)
+	if rel < 0 {
+		return annotationSite{}, false
+	}
+
+	// The name is the run of characters ADJACENT to the prefix. Taking the first whitespace-separated field instead
+	// would accept `swagger: model`, which the grammar does not, and would then report a token range with a hole in it.
+	after := comment[rel+len(grammar.AnnotationPrefix):]
+	nameEnd := strings.IndexFunc(after, func(r rune) bool {
+		return r == ' ' || r == '\t' || r == ':' || r == ','
+	})
+	if nameEnd < 0 {
+		nameEnd = len(after)
+	}
+
+	name := after[:nameEnd]
+	kind := grammar.AnnotationKindFromName(name)
+	if kind == grammar.AnnUnknown {
+		return annotationSite{}, false
+	}
+
+	// Rune columns, since the comment before the directive may hold anything.
+	start := utf8.RuneCountInString(line[:len(before)+len("//")+rel]) + 1
+
+	return annotationSite{
+		Kind:  kind,
+		Start: start,
+		End:   start + utf8.RuneCountInString(grammar.AnnotationPrefix+name),
+	}, true
 }
 
 // relTo renders path relative to base when possible, else the base name.

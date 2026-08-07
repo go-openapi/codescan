@@ -126,6 +126,66 @@ func (p *FileView) GotoLine(line int) {
 	p.offset = min(max(p.navLine-visible/2, 0), max(p.lineCount()-visible, 0))
 }
 
+// LineColAt maps a point inside the panel — panel-relative, 0-based — to a 0-based buffer line and the 1-based rune
+// column of the character under it.
+//
+// Reports ok=false for the panel's chrome, for a row past the end of the buffer, for a column inside the prefix, and
+// for edit mode, where the textarea owns its own layout and this geometry does not apply.
+//
+// Columns are runes, so the mapping is exact for the annotations it exists to hit and drifts only on a line mixing
+// double-width characters with one — which no swagger directive does.
+func (p *FileView) LineColAt(x, y int) (line, col int, ok bool) {
+	// The panel draws a top border and a title row before the first line of the body.
+	const chromeH, borderW = 2, 1
+
+	if p.editing {
+		return 0, 0, false
+	}
+
+	row := y - chromeH
+	if row < 0 || row >= max(p.h-3, 0) {
+		return 0, 0, false
+	}
+
+	line = p.offset + row
+	if line < 0 || line >= p.lineCount() {
+		return 0, 0, false
+	}
+
+	// Bounded on the right by the panel's own border, so a click on the frame does not resolve to text.
+	if x >= p.w-borderW {
+		return 0, 0, false
+	}
+
+	numW, gutW := p.prefixWidth()
+	col = x - borderW - gutW - (numW + 1)
+	if col < 0 {
+		return 0, 0, false
+	}
+	col++ // 1-based, matching the span columns
+
+	// A line too long for the pane is drawn cut, with an ellipsis in its final column (see fit). That cell shows no
+	// character of the buffer, so it must not resolve to one — otherwise a click on the ellipsis reports whatever
+	// happens to sit at that offset in a line the user cannot actually see the end of.
+	text, _ := p.Line(line)
+	textW := max(p.w-2-(numW+1)-gutW, 0)
+	if len([]rune(text)) > textW && col >= textW {
+		return 0, 0, false
+	}
+
+	return line, col, true
+}
+
+// Line returns the text of a 0-based buffer line, reporting ok=false when it is out of range.
+func (p *FileView) Line(i int) (string, bool) {
+	lines := strings.Split(p.ta.Value(), "\n")
+	if i < 0 || i >= len(lines) {
+		return "", false
+	}
+
+	return lines[i], true
+}
+
 // VisibleRows is how many lines the read-only window shows, for page-sized moves of the nav line.
 func (p *FileView) VisibleRows() int { return max(p.h-3, 1) }
 
@@ -203,13 +263,7 @@ func (p *FileView) viewerBody(focused, navActive bool) string {
 	visible := max(p.h-3, 0)
 	lines := strings.Split(p.ta.Value(), "\n")
 	total := len(lines)
-	numW := len(strconv.Itoa(total))
-
-	// The link gutter only claims width when there is something to mark.
-	gutW := 0
-	if len(p.anchors) > 0 {
-		gutW = gutterWidth
-	}
+	numW, gutW := p.prefixWidth()
 	textW := max(inner-(numW+1)-gutW, 0)
 
 	style := navStyle(focused)
@@ -232,6 +286,20 @@ func (p *FileView) viewerBody(focused, navActive bool) string {
 		}
 	}
 	return b.String()
+}
+
+// prefixWidth is what the row prefix costs before a line's text: the line-number column, and the link gutter when
+// there is anything to mark in it.
+//
+// Shared with LineColAt rather than recomputed there, because a hit test that disagreed with the renderer by one column
+// would be wrong only at the edges of a token — the hardest kind of wrong to notice.
+func (p *FileView) prefixWidth() (numW, gutW int) {
+	numW = len(strconv.Itoa(len(strings.Split(p.ta.Value(), "\n"))))
+	if len(p.anchors) > 0 {
+		gutW = gutterWidth
+	}
+
+	return numW, gutW
 }
 
 // gutterFor renders the link marker for a 1-based source line, or blanks of the same width to keep the line numbers

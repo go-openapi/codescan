@@ -260,6 +260,15 @@ func (m *Model) moveDiagCursor(delta int) {
 // handleViewerKey drives the read-only file viewer: move the highlighted nav line, follow it to the spec node it
 // produced (`f`), enter the editor (`i`/ Enter), or leave back to the tree (Esc).
 func (m *Model) handleViewerKey(msg tea.KeyMsg) (tea.Cmd, bool) {
+	// Checked on the RAW spelling and before the nav keys, because MsgBinding lowercases: `K` would otherwise arrive as
+	// `k` and move the cursor up. Same reason `N` is handled apart from `n` for search.
+	//
+	// `K` is vim's own "look up what is under the cursor", and what LSP clients bind hover to — so it collides with `k`
+	// for exactly the reason it is the discoverable choice here.
+	if msg.String() == "K" {
+		return m.showAnnotationReference(), true
+	}
+
 	if delta, ok := key.Nav(key.MsgBinding(msg), m.fileView.VisibleRows(), m.fileView.LastLine()); ok {
 		m.fileView.ScrollBy(delta)
 

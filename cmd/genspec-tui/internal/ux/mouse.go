@@ -22,10 +22,45 @@ func (m *Model) handleMouse(msg tea.MouseMsg) tea.Cmd {
 	case tea.MouseButtonLeft:
 		if msg.Action == tea.MouseActionPress {
 			m.focused = p
-			return m.syncEditFocus()
+			cmd := m.syncEditFocus()
+			if ref, hit := m.clickedAnnotation(p, msg); hit {
+				return ref
+			}
+
+			return cmd
 		}
 	}
 	return nil
+}
+
+// clickedAnnotation opens the annotation reference when a click landed ON a swagger: directive in the source viewer.
+//
+// The pointer must be over the directive's own token, not merely somewhere on its line. Clicking a pane to focus it is
+// the most ordinary thing a user does here, and it must not throw a modal up because the pointer happened to come to
+// rest inside a comment.
+//
+// The nav line is deliberately left where it is: this answers "what is that", not "go there".
+func (m *Model) clickedAnnotation(p pane, msg tea.MouseMsg) (tea.Cmd, bool) {
+	if p != paneTree || m.leftMode != modeView || m.fileView.Editing() {
+		return nil, false
+	}
+
+	line, col, ok := m.fileView.LineColAt(msg.X, msg.Y-headerH)
+	if !ok {
+		return nil, false
+	}
+
+	text, ok := m.fileView.Line(line)
+	if !ok {
+		return nil, false
+	}
+
+	site, ok := annotationOnLine(text)
+	if !ok || !site.covers(col) {
+		return nil, false
+	}
+
+	return m.openReference(site), true
 }
 
 // scrollPane scrolls the given pane: the tree moves its cursor; the viewport panes handle the wheel event natively.

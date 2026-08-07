@@ -30,7 +30,7 @@ type Overlay interface {
 // The confirmation comes first: it is the only one holding an action back, and a question that could be buried under
 // another modal would be a question the user cannot answer.
 func (m *Model) overlays() []Overlay {
-	return []Overlay{&m.confirm, &m.options, &m.help}
+	return []Overlay{&m.confirm, &m.options, &m.help, &m.reference}
 }
 
 // activeOverlay returns the overlay currently covering the UI, or nil when none is.

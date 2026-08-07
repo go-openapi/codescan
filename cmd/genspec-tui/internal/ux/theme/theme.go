@@ -149,6 +149,14 @@ func Match() lipgloss.Style {
 // modalPadH is the modal's horizontal padding, per side.
 const modalPadH = 3
 
+// ModalChromeW is how many columns a modal's frame costs on top of its text: the padding on both sides plus a border
+// column on each.
+//
+// For an overlay whose text WRAPS, and which therefore has to choose a width the terminal can hold. An overlay whose
+// lines cannot be broken should not use this to clip itself — wrapping a laid-out table is worse than letting it run
+// off the edge.
+const ModalChromeW = 2 + 2*modalPadH
+
 // Modal styles a centered popup box (e.g. the scanner-options dialog).
 //
 // It sizes to its content, which is right for a modal showing all of itself at once. An overlay that SCROLLS must use

@@ -116,7 +116,7 @@ the cursor falls back to its nearest surviving ancestor.
 | `Tab` / `shift+Tab` | cycle focus forward / backward |
 | `ctrl+←` / `ctrl+→` | move the divider between the left pane and the spec |
 | `ctrl+↑` / `ctrl+↓` | move the divider above the diagnostics strip |
-| click | focus the pane under the pointer |
+| click | focus the pane under the pointer — or, on a `swagger:` directive, show what it means |
 | wheel | scroll the pane under the pointer |
 | `c` | copy the focused pane's raw content to the clipboard |
 | `r` | rescan now |
@@ -159,6 +159,7 @@ composes.
 | `↑` `↓` / `j` `k` | move the navigation line |
 | `PgUp` / `PgDn`, `Home` / `End` | move a page at a time, or jump to the ends |
 | `f` | toggle follow mode (source drives, the spec mirrors) |
+| `K` | what the `swagger:` annotation on this line means |
 | `i` / `Enter` | start editing |
 | `Esc` | back to the tree |
 
@@ -175,6 +176,27 @@ The viewer shadows only these keys; every other binding (`/`, `o`, `r`, `g`,
 | `Esc` | back to the read-only viewer |
 
 `ctrl+f` rather than `f` because the editor owns plain `f` for typing.
+
+## Annotation reference (`K`)
+
+With the viewer's navigation line on a comment carrying a `swagger:` directive,
+`K` shows what that annotation does: its syntax, a one-line summary, and what
+may be written in its body.
+
+`K` rather than a letter of its own because it is vim's "look up what is under
+the cursor", and what LSP clients bind hover to. It reads the **buffer**, so it
+works on an annotation you are still typing — which is when it is wanted.
+
+Clicking the directive does the same. The pointer has to be on the `swagger:…`
+token itself, not merely on its line: clicking a pane to focus it is the most
+ordinary thing you do here, and it must not throw a popup up because the pointer
+came to rest inside a comment. The click asks "what is that" and leaves the
+navigation line where it was.
+
+The entries cover the twenty `swagger:` annotations. Individual body keywords
+(`required`, `minLength`, `enum`, …) are not documented one by one — there are
+too many for a popup to be the right place — so each annotation's entry says
+instead which family of keywords its body accepts.
 
 ## Reloading
 
