@@ -125,6 +125,15 @@ func Status() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(colorDim)
 }
 
+// Dim styles secondary text that should recede — currently a diagnostic's trailing [code], which is a lookup key
+// rather than something read on every row.
+//
+// Shares its colour with Status; they are separate functions because they are separate decisions, and a status line
+// that stopped being dim should not drag the diagnostics pane with it.
+func Dim() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(colorDim)
+}
+
 // Accent styles the app name / emphasised header text.
 func Accent() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(colorActive).Bold(true)
