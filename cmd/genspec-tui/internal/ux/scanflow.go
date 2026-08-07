@@ -13,6 +13,7 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/diagnostics"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/validation"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/watcher"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
@@ -145,6 +146,7 @@ func (m *Model) absorbScan(msg scan.ResultMsg) {
 
 	m.diagCursor = min(max(m.diagCursor, 0), max(len(m.scan.Diags)-1, 0))
 	m.srcIndex = index.BuildSourceIndex(msg.Provenance)
+	m.retireValidation() // the findings judged the document this scan has just replaced
 
 	m.applyScan()
 }
@@ -175,7 +177,20 @@ func (m *Model) applyScan() {
 // severity, paths relative to the work dir, the selected row highlighted); a clean scan with no diagnostics shows the
 // empty state.
 func (m *Model) refreshDiagnostics() {
-	content, line := diagnostics.Render(m.cfg.WorkDir, m.scan.Err, m.scan.Diags, m.diagCursor, m.focused == paneDiag)
+	focused := m.focused == paneDiag
+
+	var (
+		content string
+		line    int
+	)
+	if m.diagTab == tabValidation {
+		content, line = validation.Render(
+			m.validation.Findings, m.validation.Ran, m.validation.Err, m.validation.Cursor, focused)
+	} else {
+		content, line = diagnostics.Render(m.cfg.WorkDir, m.scan.Err, m.scan.Diags, m.diagCursor, focused)
+	}
+
+	m.diag.SetTitle(m.diagTabTitle())
 	m.diag.SetContent(content)
 	if line >= 0 {
 		m.diag.RevealLine(line)

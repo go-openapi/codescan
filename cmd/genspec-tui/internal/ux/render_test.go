@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/validation"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -93,6 +94,27 @@ func TestStatusLine(t *testing.T) {
 		m := testModel(t, sized(100, 40), focusedOn(paneDiag), withDiags(threeDiags()...))
 
 		assert.Contains(t, testutils.StripANSI(m.statusLine()), "diagnostic 1/3")
+	})
+
+	// Both tabs are populated here on purpose: the counter has to come from the tab on SCREEN, not from whichever
+	// list happens to be non-empty. Reporting the scan's cursor under a validation list counts a selection the user
+	// cannot see, and against the wrong total.
+	t.Run("a selected validation finding", func(t *testing.T) {
+		m := testModel(t, sized(100, 40), focusedOn(paneDiag), withDiags(threeDiags()...))
+		m.validation = ValidationState{
+			Ran: true,
+			Findings: []validation.Finding{
+				{Severity: grammar.SeverityError, Message: "first"},
+				{Severity: grammar.SeverityError, Message: "second"},
+			},
+			Cursor: 1,
+		}
+		m.diagTab = tabValidation
+
+		out := testutils.StripANSI(m.statusLine())
+
+		assert.Contains(t, out, "finding 2/2")
+		assert.NotContains(t, out, "diagnostic", "the scan tab's counter must not leak into the validation tab")
 	})
 
 	t.Run("a notice outranks the pane hint", func(t *testing.T) {

@@ -28,6 +28,7 @@ const (
 	followSpec              // spec drives, the source pane follows
 	followSource            // the source pane drives, the spec follows
 	followDiag              // the diagnostics pane drives, BOTH other panes follow
+	followValidation        // the validation tab drives, the spec pane follows
 )
 
 // jumpDiagToSource opens the selected diagnostic's source line and MOVES FOCUS there — the one-shot counterpart to
@@ -348,6 +349,12 @@ func (m *Model) syncFollowIfActive() {
 			return
 		}
 		m.followTarget = m.driveDiagFollowers()
+	case followValidation:
+		if m.focused != paneDiag || m.diagTab != tabValidation {
+			m.exitFollow()
+			return
+		}
+		m.followTarget = m.driveValidationToSpec()
 	case followOff:
 	}
 }

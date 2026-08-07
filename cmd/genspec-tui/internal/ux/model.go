@@ -86,6 +86,10 @@ type Model struct {
 
 	// What an accepted confirmation will do. The overlay records the answer; naming the action is the model's job.
 	pendingConfirm confirmAction
+
+	// The diagnostics pane's two views: the scan's own findings, and the spec validation `v` produces on demand.
+	diagTab    diagTab
+	validation ValidationState
 }
 
 // confirmAction names what a pending confirmation carries out when the user accepts it.
@@ -197,6 +201,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case spinner.TickMsg:
 		return m, m.tickSpinner(msg)
+
+	case validationMsg:
+		return m, m.absorbValidation(msg)
 
 	case scan.ResultMsg:
 		m.absorbScan(msg)

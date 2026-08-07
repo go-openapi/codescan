@@ -120,10 +120,11 @@ func (m *Model) statusContent() string {
 		return theme.Status().Render(
 			"viewing · ↑↓/jk: line · f: follow mode · i: edit · esc: tree · tab: focus · c: copy")
 	}
-	if m.focused == paneDiag && len(m.scan.Diags) > 0 {
-		return theme.Status().Render(fmt.Sprintf(
-			"diagnostic %d/%d  ·  ↑↓/jk: select · f: follow mode · tab: focus · c: copy",
-			m.diagCursor+1, len(m.scan.Diags)))
+	if m.focused == paneDiag {
+		if counter := m.diagCounter(); counter != "" {
+			return theme.Status().Render(counter +
+				"  ·  ↑↓/jk: select · f: follow mode · tab: focus · c: copy")
+		}
 	}
 	if m.focused == paneSpec && m.specIndex.Len() > 0 {
 		if ptr, ok := m.specIndex.PointerAt(m.spec.CursorLine()); ok {
@@ -139,6 +140,28 @@ func (m *Model) statusContent() string {
 		"tab/click: focus · enter: open file · g: locate · /: search · n/N: next/prev · o: options · c: copy · r: rescan · ctrl+q: quit")
 }
 
+// diagCounter names the diagnostics pane's selection, for whichever tab is showing.
+//
+// It reads the tab the way refreshDiagnostics does, because the two must agree: reporting the scan's cursor under a
+// validation list has it count a selection the user cannot see, and the totals differ too.
+//
+// Returns "" when the showing tab has nothing to count, so the caller falls through to the general hint.
+func (m *Model) diagCounter() string {
+	if m.diagTab == tabValidation {
+		if n := len(m.validation.Findings); n > 0 {
+			return fmt.Sprintf("finding %d/%d", m.validation.Cursor+1, n)
+		}
+
+		return ""
+	}
+
+	if n := len(m.scan.Diags); n > 0 {
+		return fmt.Sprintf("diagnostic %d/%d", m.diagCursor+1, n)
+	}
+
+	return ""
+}
+
 // followBadge renders the auto-follow status line: which pane drives, the resolved target, and how to exit.
 //
 // The accent label makes the mode obvious.
@@ -149,6 +172,8 @@ func (m *Model) followBadge() string {
 		label = "SOURCE ▸ SPEC"
 	case followDiag:
 		label = "DIAG ▸ SOURCE + SPEC"
+	case followValidation:
+		label = "VALIDATION ▸ SPEC"
 	case followSpec, followOff:
 	}
 	target := m.followTarget

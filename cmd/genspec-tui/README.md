@@ -120,6 +120,7 @@ the cursor falls back to its nearest surviving ancestor.
 | wheel | scroll the pane under the pointer |
 | `c` | copy the focused pane's raw content to the clipboard |
 | `r` | rescan now |
+| `v` / `V` | validate the generated spec / switch the diagnostics pane between scan and validation |
 | `F5` | reload the open file from disk (asks before discarding unsaved edits) |
 | `o` | scanner options popup (`space` toggles, `Esc`/`o` applies and rescans) |
 | `ctrl+q` / `ctrl+c` | quit |
@@ -215,7 +216,7 @@ the honest approximation: unlike a rescan, where the spec cursor is restored by
 node, nothing anchors a line of Go source to anything stable across an edit
 made behind the TUI's back.
 
-### Diagnostics pane
+### Diagnostics pane — scan tab
 
 | Key | Action |
 |-----|--------|
@@ -223,6 +224,54 @@ made behind the TUI's back.
 | `PgUp` / `PgDn`, `Home` / `End` | select a page at a time, or jump to the ends |
 | `Enter` | go to this diagnostic's source line and focus it |
 | `f` | toggle follow mode (the selection drives, the source **and** spec panes mirror) |
+
+### Diagnostics pane — validation tab
+
+| Key | Action |
+|-----|--------|
+| `↑` `↓` / `j` `k` | select a finding |
+| `PgUp` / `PgDn`, `Home` / `End` | select a page at a time, or jump to the ends |
+| `Enter` | go to this finding's node in the spec |
+| `f` | toggle follow mode (the selection drives, the spec pane mirrors) |
+
+## Validating the generated spec (`v`)
+
+`v` runs the document through [go-openapi/validate][validate] and lists what it
+finds in a **validation** tab of the diagnostics pane; `V` switches between that
+and the scan's own findings.
+
+The two tabs answer different questions. The scan tab says whether your
+**annotations** were understood. The validation tab says whether the
+**document** they produced is legal Swagger 2.0 — a scan can be perfectly clean
+and still emit something a consumer rejects.
+
+They also track different things, which is why they are tabs rather than one
+list. A scan diagnostic knows a source position, so it drives the source pane
+(and the spec). A validation finding knows only a JSON pointer, so `Enter` and
+`f` there drive the **spec** pane and nothing else.
+
+The tab exists only once you have pressed `v`, and a rescan retires it: the
+findings judged the document that scan has just replaced, and a list of
+complaints about a spec that no longer exists invites navigating to nodes that
+may have moved or gone. Press `v` again.
+
+Navigation is exact for an ordinary object path: a finding about
+`definitions.User.properties.email.type` lands on that node. Two cases land on
+the **enclosing** node instead, and both are the validator's notation rather
+than the conversion:
+
+- **Anything inside an array.** The validator omits array indices, reporting
+  `paths./pets.get.parameters.type` where the node is at
+  `…/parameters/0/type`. You land on the parameter list. This is common —
+  parameter lists are always arrays.
+- **A "required but missing" finding**, whose whole complaint is that the node
+  it names does not exist. `…responses.200.description` lands on the response,
+  which is the only place there is to go.
+
+Resolution walks up to the nearest node actually rendered, so an imprecise
+landing is always an *ancestor* of what was reported — never a sibling, and
+never somewhere untrue. (A path template containing a dot would also split
+wrongly, since the notation cannot express one; the same walk-up covers it.)
 
 ## Cross-reference navigation
 
@@ -403,3 +452,4 @@ codescan's `OnDiagnostic` callback, and `main` discards the standard logger, so
 nothing paints over the alt-screen.
 
 [codescan]: https://github.com/go-openapi/codescan
+[validate]: https://github.com/go-openapi/validate

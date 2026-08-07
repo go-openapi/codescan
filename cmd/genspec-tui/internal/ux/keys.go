@@ -53,6 +53,14 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 		return cmd
 	}
 
+	// Checked on the raw spelling, before the lowercasing switch below turns `V` into `v` and revalidates instead of
+	// switching tab.
+	if msg.String() == "V" {
+		m.toggleDiagTab()
+
+		return nil
+	}
+
 	switch key.MsgBinding(msg) {
 	case key.Tab:
 		m.focused = (m.focused + 1) % paneCount
@@ -70,6 +78,8 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 		return m.startScan()
 	case key.F5:
 		return m.requestReload()
+	case key.V:
+		return m.startValidation()
 	case key.H, key.Question:
 		m.help.Open()
 		return nil
@@ -225,6 +235,10 @@ func (m *Model) handleRefNav(msg tea.KeyMsg) (tea.Cmd, bool) {
 //
 // Returns handled=false for keys it doesn't own, so global bindings still apply.
 func (m *Model) handleDiagNav(msg tea.KeyMsg) (tea.Cmd, bool) {
+	if m.diagTab == tabValidation {
+		return m.handleValidationNav(msg)
+	}
+
 	if delta, ok := key.Nav(key.MsgBinding(msg), m.diag.VisibleRows(), len(m.scan.Diags)); ok {
 		m.moveDiagCursor(delta)
 
@@ -238,6 +252,29 @@ func (m *Model) handleDiagNav(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.toggleFollow(followDiag)
 	case key.Enter:
 		return m.jumpDiagToSource(), true
+	default:
+		return nil, false
+	}
+
+	return nil, true
+}
+
+// handleValidationNav is handleDiagNav for the validation tab.
+//
+// The same keys mean the same things, pointed at the other end of the link: a validation finding names a node in the
+// DOCUMENT, so `f` and Enter drive the spec pane where the scan tab's drive the source.
+func (m *Model) handleValidationNav(msg tea.KeyMsg) (tea.Cmd, bool) {
+	if delta, ok := key.Nav(key.MsgBinding(msg), m.diag.VisibleRows(), len(m.validation.Findings)); ok {
+		m.moveValidationCursor(delta)
+
+		return nil, true
+	}
+
+	switch key.MsgBinding(msg) {
+	case key.F:
+		m.toggleFollow(followValidation)
+	case key.Enter:
+		return m.jumpValidationToSpec(), true
 	default:
 		return nil, false
 	}

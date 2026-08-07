@@ -38,6 +38,7 @@ const (
 	F        Binding = "f"
 	I        Binding = "i"
 	N        Binding = "n"
+	V        Binding = "v"
 	Y        Binding = "y"
 	PgUp     Binding = "pgup"
 	PgDown   Binding = "pgdown"

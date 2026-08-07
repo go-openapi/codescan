@@ -19,6 +19,7 @@ type Diagnostics struct {
 	vp      viewport.Model
 	w, h    int
 	content string
+	title   string
 }
 
 // NewDiagnostics returns a Diagnostics panel with placeholder content.
@@ -35,6 +36,12 @@ func (p *Diagnostics) SetSize(w, h int) {
 	p.vp.Width = max(w-2, 0)
 	p.vp.Height = max(h-3, 0)
 }
+
+// SetTitle replaces the panel's heading, which the model uses to carry the tab strip.
+//
+// The panel stays presentation-only: which tabs exist and which is active is the model's business, and it composes the
+// string.
+func (p *Diagnostics) SetTitle(s string) { p.title = s }
 
 // SetContent replaces the rendered diagnostics text.
 func (p *Diagnostics) SetContent(s string) {
@@ -74,6 +81,10 @@ func (p *Diagnostics) Update(msg tea.Msg) tea.Cmd {
 
 // View renders the bordered panel; focused brightens the border/title.
 func (p *Diagnostics) View(focused bool) string {
-	title := theme.Title(focused).Render("diagnostics")
+	name := p.title
+	if name == "" {
+		name = "diagnostics"
+	}
+	title := theme.Title(focused).Render(name)
 	return theme.Panel(p.w, p.h, focused).Render(title + "\n" + p.vp.View())
 }

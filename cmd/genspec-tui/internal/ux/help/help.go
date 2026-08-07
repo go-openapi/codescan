@@ -64,6 +64,8 @@ var helpSections = []helpSection{
 		{"c", "copy the focused pane to the clipboard"},
 		{"r", "rescan now"},
 		{"F5", "reload the open file from disk (asks before discarding edits)"},
+		{"v", "validate the generated spec (go-openapi/validate)"},
+		{"V", "switch the diagnostics pane between scan and validation"},
 		{"o", "scanner options"},
 		{"ctrl+q  ctrl+c", "quit"},
 	}},
@@ -112,6 +114,13 @@ var helpSections = []helpSection{
 		{"home  end", "first / last diagnostic"},
 		{"enter", "go to this diagnostic's source line"},
 		{"f", "follow mode → source"},
+	}},
+	{"validation tab", []helpEntry{
+		{"↑ ↓  j k", "select a finding"},
+		{"pgup  pgdn", "select a page at a time"},
+		{"home  end", "first / last finding"},
+		{"enter", "go to this finding's node in the spec"},
+		{"f", "follow mode → spec"},
 	}},
 	{"options popup", []helpEntry{
 		{"↑ ↓  j k", "move"},
