@@ -768,11 +768,41 @@ The toolchain-free strategy has no use for the assembled form: it already has th
 source, and reading an annotated dependency in full costs one type-check of a
 small package.
 
-**What both give up is the same thing**, and it is not the annotations: a type
-declared in a dependency that says nothing about itself. Nothing marks such a
-package as worth reading, so a model declared in one collapses to its name alone.
-Reading it would mean reading a dependency because a scan *reaches* it, which is a
-different rule from reading one because it has something to say.
+**What is given up is not the annotations**: it is a type declared in a dependency
+that says nothing about itself. Nothing marks such a package as worth reading, so a
+model declared in one collapses to its name alone. This bites
+`CompiledDependencies` only — the toolchain-free route's bundle covers the standard
+library, so a non-stdlib dependency misses it and falls through to source.
+
+<a id="compiled-dependencies"></a>
+
+#### Why widening the read-back rule does not fix it
+
+Tried and reverted, 2026-08-08. The obvious fix is to mirror the other route: read
+back every dependency **outside the standard library**, annotated or not, which is
+exactly the line a std-only bundle draws. The definition does come back — and comes
+back **empty, with no warning**, which is worse than its absence, because
+`GetModel` then succeeds and the warning that named it stops firing.
+
+Struct fields are located by **position**:
+
+```go
+afld := resolvers.FindASTField(decl.File(), fld.Pos())   // structFieldCarrier
+```
+
+The `*types.Var` comes from export data; `decl.File()` is the AST we parsed
+ourselves. Both live in one `FileSet`, but as two `token.File` entries for the same
+filename at different bases — so the positions never match, `FindASTField` returns
+nil, and every field is skipped by the branch that exists for promoted fields.
+
+So parse-and-bridge carries **type-level** comments, which is all the annotated-
+dependency case ever needed (`swagger:strfmt` sits above the type), and it cannot
+carry **field-level** correspondence: a struct field is not in package scope, so
+`bridgeDefs` has nothing to map it by.
+
+Closing it needs a name-based field bridge plus a fallback in the field walk — a
+schema-builder change with its own witness fixture, not a loader tweak. **Parked**,
+and it is the prerequisite for `CompiledDependencies` ever becoming the default.
 
 `genexportdata` mirrors that, skipping annotated packages by default and saying so:
 

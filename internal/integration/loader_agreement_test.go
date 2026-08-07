@@ -86,8 +86,9 @@ func abConfigs(tb testing.TB) []abConfig {
 			apply: func(o *codescan.Options) { o.ToolchainFreeLoader = true },
 		},
 		{
-			// Axis B. go/packages takes dependency types from `go list -export`, wholesale: there is
-			// no per-dependency choice on this route, so a dependency's own annotations are gone.
+			// Axis B. go/packages takes dependency types from `go list -export` wholesale — a LoadMode
+			// is one value for the whole load — and the annotated ones are read back afterwards, which
+			// is how it reaches the per-dependency outcome the toolchain-free route decides during it.
 			name:  "compiled-dependencies",
 			apply: func(o *codescan.Options) { o.CompiledDependencies = true },
 		},
@@ -179,43 +180,63 @@ func abCuratedTargets() []string {
 // with why. Everything not listed must agree exactly. Keys are "<config>|<target>"; regenerate the
 // table with CODESCAN_AB_REPORT=1.
 //
-// The entries fall into three families, and the split is the finding.
+// Two families remain, and what left the table says as much as what is still on it.
 //
-//  1. THE DECLARATION CONTRACT — the scan does not degrade, it FAILS. A builder asks for the
-//     declaration of a type whose declaring package has no syntax, and errors out. Both export-data
-//     configurations hit it, because both produce a package with types and no AST. This is the
-//     state on-demand materialisation exists to fill in, and it is the reason a decision has to be
-//     taken about what an absent syntax half means before laziness spreads any further.
+//		CLOSED — a dependency's own annotations. `swagger:strfmt` marks live in strfmt's source, and
+//		export data carries types, not comments. The go/packages route used to take every dependency
+//		from `go list -export` wholesale; it now reads back the source of the ones whose files carry the
+//		marker, so both routes keep those marks.
 //
-//  2. A DEPENDENCY'S OWN ANNOTATIONS ARE LOST — CLOSED. `swagger:strfmt` marks live in strfmt's
-//     source, and export data carries types, not comments. The go/packages route used to take every
-//     dependency from `go list -export` wholesale; it now reads back the source of the ones whose
-//     files carry the marker, so both routes keep those marks and these targets agree.
+//		CLOSED — a stdlib type whose rendering its declaration never decided. `time.Duration` in a
+//		response header comes out `integer/int64` from its underlying type, byte-identical to the
+//		baseline: the declaration was only ever going to add prose. That the fallback lands exactly on
+//		the full-source answer here is the evidence it is the right fallback.
 //
-//  3. A DEPENDENCY-DECLARED MODEL COLLAPSES — OPEN, and not for family 2's reason after all. The
-//     model is declared in `scan-repo-boundary/makeplans`, which carries no annotation anywhere in
-//     its source: the marker scan passes over it, correctly, and the definition still collapses to a
-//     bare `x-go-name`. Both routes now behave the same way, so this is what the export-data trade
-//     costs rather than a difference between them. Closing it would mean reading a dependency
-//     because a scan REACHES it, which is a different rule from reading one because it has something
-//     to say.
+//	 1. A STDLIB TYPE LOSES ITS PROSE. The scan no longer FAILS on these — that was the defect worth
+//	    fixing, since one unreadable field took a whole document with it — but the schema is thinner:
+//	    an unreadable interface renders as the open schema rather than a definition. What is lost is
+//	    the declaration's doc comment, which for a stdlib type means the standard library's own prose
+//	    appearing in someone's API. Each raises a scan.sourceless-type Warning naming the type, and
+//	    swagger:description puts a better answer back. Kept as a divergence because it IS one, not
+//	    because it is a fault.
 //
-// Family 1 closes when the declaration contract does. Either way the assertion below flips to a
-// failure, which is how these announce that they are stale.
+//	 2. A DEPENDENCY-DECLARED MODEL COLLAPSES. The model is declared in `scan-repo-boundary/makeplans`,
+//	    which carries no annotation anywhere in its source: the marker scan passes over it and the
+//	    definition collapses to a bare `x-go-name`. Only compiled-dependencies is affected — the
+//	    toolchain-free route's bundle covers the standard library, so everything else misses it and
+//	    falls through to source, makeplans included.
+//
+//	    DO NOT CLOSE THIS BY WIDENING THE READ-BACK RULE. Tried 2026-08-08: read back every dependency
+//	    outside the standard library, annotated or not, which is exactly the line the other route
+//	    draws. The definition comes back, and comes back EMPTY with no warning — worse than its
+//	    absence, since GetModel then succeeds and the warning that named it stops firing.
+//
+//	    Struct fields are located by POSITION (structFieldCarrier -> resolvers.FindASTField(decl.File(),
+//	    fld.Pos())). The *types.Var comes from export data and the AST from our own parse: two
+//	    token.File entries for one filename, different bases, positions that never match, every field
+//	    silently skipped. Parse-and-bridge carries TYPE-LEVEL comments — all §5.2 needed for strfmt's
+//	    marks — and cannot carry field-level correspondence, because a struct field is not in package
+//	    scope for bridgeDefs to map.
+//
+//	    Closing it needs a name-based field bridge plus a fallback in the field walk: a schema-builder
+//	    change with its own witness, not a loader tweak. Parked, and it is the prerequisite for
+//	    CompiledDependencies ever defaulting on.
+//
+// Either way the assertion below flips to a failure when one of these closes, which is how they
+// announce that they are stale.
 func abExpected() map[string]string {
 	return map[string]string{
-		// (1) the declaration contract, stdlib — both routes.
-		"compiled-dependencies|./bugs/2248/...": "builders/responses asks for the declaration of time.Duration, " +
-			"which has types and no syntax: `unable to find package and source file for: time.Duration`",
-		"export-data|./bugs/2248/...": "same as compiled-dependencies: time.Duration has no declaration to find",
-		"compiled-dependencies|./enhancements/opaque-streams/...": "builders/schema asks for the declaration of " +
-			"io.Writer: `can't find source file for type: interface{Write(p []byte) (n int, err error)}`",
-		"export-data|./enhancements/opaque-streams/...": "same as compiled-dependencies: io.Writer has no declaration to find",
-		"compiled-dependencies|./goparsing/go123/...": "builders/schema asks for the declaration of reflect.Type, " +
-			"a stdlib interface with no syntax behind it",
-		"export-data|./goparsing/go123/...": "same as compiled-dependencies: reflect.Type has no declaration to find",
+		// (1) a stdlib type with no declaration to read and no identity recognizer to answer for it.
+		// Degrades and warns; used to fail the scan.
+		"compiled-dependencies|./enhancements/opaque-streams/...": "io.Writer renders as the open schema " +
+			"instead of a definition whose description is io.Writer's own method godoc",
+		"export-data|./enhancements/opaque-streams/...": "same as compiled-dependencies: io.Writer has no declaration to read",
+		"compiled-dependencies|./goparsing/go123/...": "reflect.Type renders as the open schema, same cause: " +
+			"a stdlib interface with no syntax behind it; reflect.Value loses its definition outright",
+		"export-data|./goparsing/go123/...": "same as compiled-dependencies: reflect.Type and reflect.Value " +
+			"have no declaration to read",
 
-		// (3) the model itself is declared in a dependency that says nothing about itself.
+		// (2) the model itself is declared in a dependency that says nothing about itself.
 		"compiled-dependencies|./goparsing/bookings/...": "the Booking model is declared in " +
 			"scan-repo-boundary/makeplans, which carries no annotation, so the marker scan does not read it " +
 			"back and the definition collapses to a bare `x-go-name: Booking`",

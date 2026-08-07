@@ -129,6 +129,23 @@ type Options struct {
 	// scan.compiled-dependencies Hint saying so, and any declaration a builder then wanted and could
 	// not find is reported individually, naming the type.
 	//
+	// # Opt-in, and staying that way
+	//
+	// Decided 2026-08-08, after the option stopped losing dependency annotations and stopped failing
+	// on types it could not resolve. Two things keep it from being the default:
+	//
+	//   - a model declared in an UNANNOTATED dependency still collapses. Splitting model types into a
+	//     shared library that carries no swagger annotations of its own is an ordinary way to lay out a
+	//     Go project, and it is the one case here that silently changes a document rather than thinning
+	//     one field of it. See internal/scanner/README.md#compiled-dependencies for why widening the
+	//     read-back rule does not fix it;
+	//   - the cost is inverted on a cold build cache. Roughly 2.3x faster warm and 6x slower cold,
+	//     because export data has to be compiled before it exists — and CI, where a spec is most often
+	//     regenerated, is cold almost by definition.
+	//
+	// It also needs the dependency closure to BUILD rather than merely type-check, since `go list
+	// -export` compiles it. A tree codescan can scan today is not necessarily a tree it can compile.
+	//
 	// The toolchain-free loader has ExportData below, which is the same idea supplied by hand.
 	//
 	// Experimental: see ToolchainFreeLoader.

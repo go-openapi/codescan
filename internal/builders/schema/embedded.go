@@ -86,6 +86,12 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 	case *types.Struct:
 		decl, found := s.Ctx.GetModel(tpe.Obj().Pkg().Path(), tpe.Obj().Name())
 		if !found {
+			// Nothing to promote from a struct whose declaration cannot be read: the embedding type keeps
+			// its own fields and loses the embedded ones, which is a smaller object rather than a wrong one.
+			if s.SourcelessFallback(tpe.Obj()) {
+				return nil
+			}
+
 			return missingSource(tpe)
 		}
 		s.Ctx.AddDiscoveredModel(decl)
@@ -105,6 +111,12 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 		resolvers.MustNotBeABuiltinType(o)
 		decl, found := s.Ctx.GetModel(o.Pkg().Path(), o.Name())
 		if !found {
+			// As above: an embedded interface whose declaration is unreadable promotes no method-derived
+			// properties rather than taking the document with it.
+			if s.SourcelessFallback(o) {
+				return nil
+			}
+
 			return missingSource(tpe)
 		}
 		s.Ctx.AddDiscoveredModel(decl)

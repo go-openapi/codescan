@@ -92,6 +92,18 @@ const (
 // fail — and for the predeclared `error` it always fails, since a predeclared object has no package
 // and therefore no declaring source to find.
 //
+// What this set does NOT hold is as much a decision as what it does. A recognizer asserts that a type
+// means one thing on the wire wherever it appears, and it may only be added where that is true of
+// every use. time.Duration is the standing counter-example: it is a count of nanoseconds, and whether
+// an API means nanoseconds, seconds or an ISO 8601 string is the author's choice rather than a
+// property of the type — which is why go-openapi publishes strfmt.Duration, carrying a stated wire
+// format, instead of teaching this set to guess at one. io.Writer is kept out of the opaque-stream
+// table for the same reason.
+//
+// So a consumed type with no recognizer is reported rather than resolved by assumption: the scanner
+// says its declaration could not be read, and the author says what they meant with a strfmt type or
+// an annotation.
+//
 // # Details
 //
 // See [§special-types](./README.md#special-types).

@@ -336,10 +336,11 @@ func (s *Builder) buildDeclAlias(tpe *types.Alias, target ifaces.SwaggerTypable)
 		// shape on the alias's OWN definition rather than chaining a $ref to a separately-built
 		// definition.
 		//
-		// This matches what the sibling *types.Alias branch already does, what TransparentAliases mode
-		// already does for stdlib decls, and eliminates the Q30 noise from stdlib godocs landing on the
-		// chain targets (Time / RawMessage) — those targets no longer exist in the spec when the alias
-		// inlines the canonical shape directly.
+		// This matches what the sibling *types.Alias branch already does, and what TransparentAliases
+		// mode already does for stdlib decls. It also keeps the standard library's prose out of the
+		// document: chaining published a definition for the target (Time / RawMessage) carrying whatever
+		// godoc that stdlib declaration happened to have, and the target does not exist at all once the
+		// alias inlines the canonical shape directly.
 		//
 		// For predeclared `error`, this is also the only safe path: it has no package, so the GetModel
 		// lookup below would nil-panic on Pkg().Path().

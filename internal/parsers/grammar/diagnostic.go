@@ -220,6 +220,24 @@ const (
 	// Informational (Hint); emitted once per scan, not per package.
 	CodeCompiledDependencies Code = "scan.compiled-dependencies"
 
+	// CodeSourcelessType fires when a type is rendered from what its type alone says, because the
+	// package declaring it arrived with no source to read.
+	//
+	// This is the one place where a load strategy shows through into the document. The scan does not
+	// fail over it — a whole spec is not worth losing to one field — but it does not pass in silence
+	// either, because the thinning is invisible in the output: a schema that is merely less specific
+	// than it would have been.
+	//
+	// It takes a conjunction to reach: the declaring package has to arrive without source, one of its
+	// types has to be consumed in the emitted surface, and no identity recognizer may claim it first.
+	// In practice that is a standard-library type with no obvious wire form — time.Duration,
+	// reflect.Type — which is why the answer is neither to guess at one nor to widen the recognizer set
+	// until it covers the standard library. What is lost is a doc comment the author usually did not
+	// want in their API anyway, and the remedy is local: say it with swagger:description.
+	//
+	// Warning; emitted per consumed type.
+	CodeSourcelessType Code = "scan.sourceless-type"
+
 	// CodeOmitUnresolved fires when a `swagger:omit` target names no field of the embedded type it is applied to — a
 	// typo, or a field renamed upstream.
 	//

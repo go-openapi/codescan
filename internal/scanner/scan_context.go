@@ -1074,6 +1074,20 @@ func (s *ScanCtx) FindEnumValues(pkg *packages.Package, enumName string) (list [
 	return list, descList, posList, true
 }
 
+// SourcelessPackage reports whether a package's types arrived without its source, and why.
+//
+// The distinction a builder needs when a declaration lookup comes back empty. Empty because the load
+// deliberately did not read that package is an expected outcome of a chosen strategy; empty for any
+// other reason means the graph is not what it claims to be, and the builders keep failing on that —
+// turning a broken load into a quietly thinner document would be the worse trade.
+//
+// Always false under an ordinary scan, where every package is read from source.
+func (s *ScanCtx) SourcelessPackage(pkgPath string) (reason string, sourceless bool) {
+	reason, sourceless = s.exportOnly[pkgPath]
+
+	return reason, sourceless
+}
+
 // reportSourcelessLookup announces that a declaration was wanted from a package whose types arrived
 // without its source.
 //

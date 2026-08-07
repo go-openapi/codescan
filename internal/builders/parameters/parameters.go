@@ -362,6 +362,14 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 
 	decl, found := p.Ctx.DeclForType(o.Type())
 	if !found {
+		// No declaration to read, but the type is complete: render what it is rather than what it was
+		// called. time.Duration lands here and comes out as its underlying int64, which is the same answer
+		// a readable declaration produces for a parameter — the declaration was only ever going to add
+		// prose.
+		if p.SourcelessFallback(o) {
+			return schema.Delegate(p.Builder, schema.WithType(ftpe.Underlying(), typable))
+		}
+
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrParameters)
 	}
 

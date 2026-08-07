@@ -167,6 +167,23 @@ Three layers, all in `special_types.go`:
   identity-based and cannot misfire on user types, so this helper is
   **called uniformly at every site** that handles a `*types.TypeName`.
 
+**What the set deliberately excludes.** A recognizer asserts that a
+type means one thing on the wire wherever it appears, so one may only
+be added where that holds for every use. `time.Duration` is the
+standing counter-example: it counts nanoseconds, and whether an API
+means nanoseconds, seconds or an ISO 8601 string is the author's
+decision rather than a property of the type — which is why go-openapi
+publishes `strfmt.Duration`, carrying a stated wire format, instead of
+teaching this set to guess at one. `io.Writer` stays out of the
+opaque-stream table for the same reason, see
+[§opaque-streams](#opaque-streams).
+
+A consumed type with no recognizer is therefore **reported, not
+resolved by assumption**: where its declaring package was served
+without source, the scanner says the declaration could not be read,
+and the author states what they meant with a strfmt type or an
+annotation.
+
 The two UUID recognizers are a **certain/guessed pair**, and the
 distinction is the whole reason both exist:
 

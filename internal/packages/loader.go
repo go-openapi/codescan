@@ -541,6 +541,11 @@ func (i *importer) Import(importPath string) (*types.Package, error) {
 			// Nothing in this package's source speaks to a scan, so its types are the whole of what it has to offer.
 			// One that DOES speak falls through and is read from source like any other — half-loading it would give the
 			// builders declarations with no record of what they denote.
+			//
+			// Recorded, not announced. Whether taking only the types costs anything is not knowable here — it depends on
+			// whether some builder later wants a declaration out of this package — so the fact is kept and replayed at
+			// the lookup that wanted one. Saying it now would bury the reader under the whole standard library.
+			i.ld.reportExportOnly(importPath, "nothing in its source is annotated, so it was not parsed")
 			i.from.Imports[importPath] = i.ld.exportedPackage(importPath, tpkg)
 
 			return tpkg, nil

@@ -402,6 +402,12 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 
 	decl, found := r.Ctx.DeclForType(o.Type())
 	if !found {
+		// See the parameters builder's twin: the type is complete even when its declaration is not
+		// readable, so it is rendered from its underlying shape rather than costing the document.
+		if r.SourcelessFallback(o) {
+			return schema.Delegate(r.Builder, schema.WithType(ftpe.Underlying(), typable))
+		}
+
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrResponses)
 	}
 
