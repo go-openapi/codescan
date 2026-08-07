@@ -9,6 +9,7 @@
 package help
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -176,13 +177,14 @@ func (o *Overlay) View() string {
 	b.WriteString(theme.Accent().Render(helpTitle))
 	b.WriteString("\n\n")
 
+	top := 0
 	if len(lines) > visible {
-		top := min(max(o.scroll, 0), len(lines)-visible)
+		top = min(max(o.scroll, 0), len(lines)-visible)
 		lines = lines[top : top+visible]
 	}
 	b.WriteString(strings.Join(lines, "\n"))
 	b.WriteString("\n\n")
-	b.WriteString(theme.Status().Render(helpFooter))
+	b.WriteString(theme.Status().Render(o.footer(top)))
 
 	return theme.ModalAt(o.contentWidth()).Render(b.String())
 }
@@ -199,8 +201,24 @@ func (o *Overlay) contentWidth() int {
 	return max(
 		lipgloss.Width(strings.Join(helpLines(), "\n")),
 		lipgloss.Width(helpTitle),
-		lipgloss.Width(helpFooter),
+		// Measured at the LAST page, where the counter carries its largest numbers. Measuring the current page instead
+		// would put a digit's worth of width back under the scroll — the very thing this frame is pinned to prevent.
+		lipgloss.Width(o.footer(max(len(helpLines())-o.visibleRows(), 0))),
 	)
+}
+
+// footer renders the bottom line for a window starting at line `top`.
+//
+// It states the range as well as the keys, because the keymap no longer fits a screen: a section below the fold is a
+// binding nobody knows exists, and hiding one on the very screen whose job is discoverability is the worst place for it.
+func (o *Overlay) footer(top int) string {
+	total := len(helpLines())
+	visible := o.visibleRows()
+	if total <= visible {
+		return helpFooter
+	}
+
+	return fmt.Sprintf("%d–%d of %d  ·  %s", top+1, min(top+visible, total), total, helpFooter)
 }
 
 // scrollBy moves the help window, clamped so it can never scroll past the end.
