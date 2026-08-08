@@ -55,6 +55,21 @@ func TestEnvelopeMatchesTheTypeScriptContract(t *testing.T) {
 	}
 }
 
+// The scan must not care how the working copy was checked out. Stated as its own test because the
+// contract test above reads whatever git produced, so on a platform that checks out LF it can never
+// fail this way, and on one that does not it fails as "no declarations" - naming the file rather
+// than the line ending.
+func TestTypeScriptDeclarationsSurviveCarriageReturns(t *testing.T) {
+	t.Parallel()
+
+	const declaration = "export type Anchor = {\n  pointer: string;\n  file?: string;\n};\n"
+
+	want := map[string]map[string]bool{"Anchor": {"pointer": false, "file": true}}
+
+	assert.Equal(t, want, tsDeclarations(declaration), "checked out with LF")
+	assert.Equal(t, want, tsDeclarations(strings.ReplaceAll(declaration, "\n", "\r\n")), "checked out with CRLF")
+}
+
 // goFields reads the JSON contract off a struct: name, and whether it may be absent.
 func goFields(v any) map[string]bool {
 	typ := reflect.TypeOf(v)
@@ -79,22 +94,34 @@ var (
 	rxTSProperty = regexp.MustCompile(`^\s+(\w+)(\??):`)
 )
 
-// parseTSTypes reads the `export type X = { ... }` declarations, yielding each one's property names
-// and whether the property is optional.
-//
-// A line scan rather than a TypeScript parse: the file is hand-written to one shape, and a test that
-// needed a parser to state a contract would be harder to trust than the contract.
+// parseTSTypes reads the declarations out of the file at path.
 func parseTSTypes(t *testing.T, path string) map[string]map[string]bool {
 	t.Helper()
 
 	source, err := os.ReadFile(filepath.FromSlash(path))
 	require.NoErrorf(t, err, "cannot read the playground's type declarations at %s", path)
 
+	types := tsDeclarations(string(source))
+	require.NotEmptyf(t, types, "found no type declarations in %s", path)
+
+	return types
+}
+
+// tsDeclarations picks the `export type X = { ... }` declarations out of TypeScript source, yielding
+// each one's property names and whether the property is optional.
+//
+// A line scan rather than a TypeScript parse: the file is hand-written to one shape, and a test that
+// needed a parser to state a contract would be harder to trust than the contract.
+//
+// Line endings are normalised first. .ts carries no eol attribute, so a Windows checkout hands this
+// CRLF, and a declaration head is matched to its end of line - which is how it read a whole file as
+// containing no declarations at all.
+func tsDeclarations(source string) map[string]map[string]bool {
 	types := make(map[string]map[string]bool)
 
 	var current map[string]bool
 
-	for line := range strings.SplitSeq(string(source), "\n") {
+	for line := range strings.SplitSeq(strings.ReplaceAll(source, "\r\n", "\n"), "\n") {
 		switch {
 		case current == nil:
 			if head := rxTSTypeHead.FindStringSubmatch(line); head != nil {
@@ -109,8 +136,6 @@ func parseTSTypes(t *testing.T, path string) map[string]map[string]bool {
 			}
 		}
 	}
-
-	require.NotEmptyf(t, types, "found no type declarations in %s", path)
 
 	return types
 }
