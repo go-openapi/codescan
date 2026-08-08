@@ -1463,7 +1463,10 @@
       "headers": {
         "ones": {
           "type": "array",
-          "items": {}
+          "items": {
+            "x-go-type": "github.com/go-openapi/codescan/fixtures/goparsing/classification/operations.SimpleOne",
+            "type": "string"
+          }
         }
       }
     },
@@ -1472,7 +1475,10 @@
       "headers": {
         "ones": {
           "type": "array",
-          "items": {}
+          "items": {
+            "x-go-type": "github.com/go-openapi/codescan/fixtures/goparsing/classification/operations.SimpleOne",
+            "type": "string"
+          }
         }
       }
     },

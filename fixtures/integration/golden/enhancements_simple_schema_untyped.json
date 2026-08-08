@@ -1,0 +1,81 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/untyped": {
+      "get": {
+        "tags": [
+          "untyped"
+        ],
+        "summary": "Returns something.",
+        "operationId": "getUntyped",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Anything",
+            "x-go-type": "any",
+            "description": "Anything says nothing at all.",
+            "name": "anything",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Raw",
+            "x-go-type": "encoding/json.RawMessage",
+            "description": "Raw says \"some JSON\", which a query string cannot carry as anything but text.",
+            "name": "raw",
+            "in": "query"
+          },
+          {
+            "x-go-name": "Body",
+            "description": "Body is the control: the very same types are legal as an empty schema here.",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/untypedResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Payload": {
+      "type": "object",
+      "title": "Payload carries the same two fields into a body, where empty stays empty.",
+      "properties": {
+        "anything": {
+          "x-go-name": "Anything"
+        },
+        "raw": {
+          "x-go-name": "Raw"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/fixtures/enhancements/simple-schema-untyped"
+    }
+  },
+  "responses": {
+    "untypedResponse": {
+      "description": "UntypedResponse reaches them from a response header, and keeps the body control.",
+      "schema": {
+        "$ref": "#/definitions/Payload"
+      },
+      "headers": {
+        "X-Anything": {
+          "type": "string",
+          "description": "Anything is a header that resolves to nothing.",
+          "x-go-type": "any"
+        },
+        "X-Raw": {
+          "type": "string",
+          "description": "Raw is a header carrying opaque JSON.",
+          "x-go-type": "encoding/json.RawMessage"
+        }
+      }
+    }
+  }
+}

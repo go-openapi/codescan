@@ -44,9 +44,11 @@ type Tag struct {
 type LeakResponse struct {
 	// TagHeader is a header field typed as a named struct. Pre-Q2
 	// this leaked `$ref: "#/definitions/Tag"` onto resp.Schema and
-	// left the header empty. Post-fix resp.Schema stays nil; the
-	// header surfaces empty (no Type — the named struct can't
-	// reduce to a SimpleSchema primitive); diagnostic fires.
+	// left the header empty. Post-fix resp.Schema stays nil and the
+	// diagnostic fires; the named struct still cannot reduce to a
+	// SimpleSchema primitive, so the header defaults to
+	// {string, x-go-type} rather than to no type at all, which OAS
+	// v2 does not allow on a header.
 	//
 	// in: header
 	TagHeader Tag `json:"X-Tag"`

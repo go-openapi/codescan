@@ -65,7 +65,10 @@
     "headerAliasedStructResponse": {
       "description": "HeaderAliasedStructResponse — header field is an alias of a\nnamed struct. Expected emission: NO body schema corruption\n(Q2 fix); header surfaces empty (struct can't reduce to a\nSimpleSchema primitive); CodeUnsupportedInSimpleSchema\ndiagnostic fires for the underlying ref attempt.",
       "headers": {
-        "X-Detail": {}
+        "X-Detail": {
+          "type": "string",
+          "x-go-type": "github.com/go-openapi/codescan/fixtures/enhancements/alias-response-shapes.EnvelopeAlias"
+        }
       }
     }
   }

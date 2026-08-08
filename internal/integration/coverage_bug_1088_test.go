@@ -59,8 +59,8 @@ func TestCoverage_Bug1088(t *testing.T) {
 	require.NotNil(t, arr.Items)
 	assert.Empty(t, arr.Items.Ref.String(),
 		"an object array item must not carry a $ref in a query parameter (go-swagger#1088)")
-	assert.Empty(t, arr.Items.Type,
-		"an object element has no valid simple-schema form; it dissolves to empty {}")
+	assert.Equal(t, "string", arr.Items.Type,
+		"an object element has no valid simple-schema form; `items` is itself a SimpleSchema and needs a type, so it defaults to string")
 
 	// --- response headers (same simple-schema constraint) ---
 	headers := doc.Responses["arrayResp"].Headers

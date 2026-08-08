@@ -416,6 +416,8 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	// This arm had none of them, and the lookup is not a soft gate here: a field typed `error` has no package, so
 	// resolving its declaring source dereferenced nil and took the whole scan down.
 	if schema.ApplyStdlibSpecials(o, typable, r.Ctx.SkipExtensions()) {
+		r.ensureSimpleSchemaTyped(typable, ftpe, o.Name())
+
 		return nil
 	}
 
@@ -437,13 +439,34 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	)
 }
 
+// ensureSimpleSchemaTyped repairs a response header that resolved to no type, and reports the choice
+// made on the author's behalf.
+//
+// The parameters builder's twin: the recognizers answering in this builder's own field arms return
+// without entering the schema builder's Build, so the catch-at-exit contract never sees those
+// targets. A header cannot spell "any JSON" any more than a query parameter can.
+func (r *Builder) ensureSimpleSchemaTyped(typable ifaces.SwaggerTypable, tpe types.Type, goName string) {
+	if !schema.EnsureSimpleSchemaTyped(typable, tpe, r.Ctx.SkipExtensions()) {
+		return
+	}
+
+	r.RecordDiagnostic(grammar.Warnf(
+		r.Ctx.PosOf(r.Decl.Pos()),
+		grammar.CodeUnderspecifiedInSimpleSchema,
+		"a response header typed %s resolved to no type, which OAS v2 does not allow on a header; "+
+			"defaulted to {type: string}",
+		goName,
+	))
+}
+
 func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
 		_ = typable.Schema()
+		r.ensureSimpleSchemaTyped(typable, tpe, o.Name())
 
-		return nil // just leave an empty schema
+		return nil // an empty schema where the position can hold one
 	}
 
 	// Shared with the parameters builder — see schema.BuildFieldAlias.

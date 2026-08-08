@@ -23,7 +23,9 @@
       "description": "LeakResponse pins the post-fix shape: the header field is\nsurfaced, the body schema is NOT corrupted, and the diagnostic\nsignals the misuse.",
       "headers": {
         "X-Tag": {
-          "description": "TagHeader is a header field typed as a named struct. Pre-Q2\nthis leaked `$ref: \"#/definitions/Tag\"` onto resp.Schema and\nleft the header empty. Post-fix resp.Schema stays nil; the\nheader surfaces empty (no Type — the named struct can't\nreduce to a SimpleSchema primitive); diagnostic fires."
+          "type": "string",
+          "description": "TagHeader is a header field typed as a named struct. Pre-Q2\nthis leaked `$ref: \"#/definitions/Tag\"` onto resp.Schema and\nleft the header empty. Post-fix resp.Schema stays nil and the\ndiagnostic fires; the named struct still cannot reduce to a\nSimpleSchema primitive, so the header defaults to\n{string, x-go-type} rather than to no type at all, which OAS\nv2 does not allow on a header.",
+          "x-go-type": "github.com/go-openapi/codescan/fixtures/enhancements/response-header-ref-leak.Tag"
         }
       }
     },
@@ -33,7 +35,8 @@
         "X-Tag-ID": {
           "type": "string",
           "format": "uuid",
-          "description": "TagID is a header field with strfmt override on a named-struct\ntype. The strfmt override runs after the exit-validator's\nreset, so the header surfaces as {string, uuid}. No body-schema\nleak."
+          "description": "TagID is a header field with strfmt override on a named-struct\ntype. The strfmt override runs after the exit-validator's\nreset, so the header surfaces as {string, uuid}. No body-schema\nleak.",
+          "x-go-type": "github.com/go-openapi/codescan/fixtures/enhancements/response-header-ref-leak.Tag"
         }
       }
     }

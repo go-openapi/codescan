@@ -1580,7 +1580,6 @@ SimpleSchema-legal primitive:
 
 - `time.Time` → `{string, date-time}` (stdlib recognizer)
 - `TextMarshaler` → `{string, format}` (textmarshal shortcut)
-- `json.RawMessage` → empty `{}` (any)
 - user-driven overrides (`swagger:strfmt`, `swagger:type`, the
   `swagger:alias` per-type opt-in via
   [§classifier-walkers](#classifier-walkers)'
@@ -1591,16 +1590,42 @@ The exit validator (`validateSimpleSchemaOutcome` in
 `buildFromType` returns:
 
 - accept when `shape.Type` is in
-  `{"", string, number, integer, boolean, array}`, plus `file` if
-  `in == "formData"` (empty means "any" — `json.RawMessage` ends up
-  here).
+  `{string, number, integer, boolean, array}`, plus `file` if
+  `in == "formData"`.
+- when `shape.Type` is **empty**, emit
+  `CodeUnderspecifiedInSimpleSchema` and default to `{type: string}`.
 - otherwise emit `CodeUnsupportedInSimpleSchema` (severity
-  `SeverityWarning`) and **reset** the target.
+  `SeverityWarning`), **reset** the target, and default it the same
+  way.
 
-The reset wipes the target back to empty `{}` (no `Type`, no
-`Format`, no `Ref`) rather than degrading to `{type: string}` —
-empty is honest about the failed resolution and avoids silently
-mistyping a complex shape as a string.
+**Empty is not an accepted outcome.** OAS v2 makes `type` required on
+a non-body parameter and on a response header, so resolving to
+nothing is invalid there rather than permissive — `{}` is the one
+answer the position cannot carry. `any` and `json.RawMessage` are the
+usual sources: "any JSON" answers a body or a definition and answers
+nothing here. This reverses the earlier "empty is honest about the
+failed resolution" rule, which produced honest *invalid* output; both
+paths now end at `{type: string}` and both say so with a diagnostic.
+
+`string` rather than `byte` or `binary`: a query string, a path
+segment and a header are percent-encoded text, so `binary` would
+claim octets the position cannot hold and `byte` a base64 framing
+nobody applied — the same reasoning that keeps `binary` out of
+[§opaque-streams](#opaque-streams). No format is invented, but an
+already-resolved one survives, so a `swagger:strfmt` that landed a
+format without a type keeps it. `x-go-type` records what the fallback
+erased, under the `SkipExtensions` umbrella like any other extension.
+
+**The validator is not the only place this must happen.**
+`ApplyStdlibSpecials` also answers inside the parameters and
+responses builders' own field arms (`buildNamedField`,
+`buildFieldAlias`), which return *without* entering `Build` — so the
+catch-at-exit contract never sees those targets, and `any` /
+`json.RawMessage` reach a parameter exactly that way. Those arms call
+the exported `EnsureSimpleSchemaTyped`, which holds the rule, and
+report it themselves: each owns the position it is building and can
+name the field. `EnsureSimpleSchemaTyped` no-ops on `in == "body"`,
+so a schema position keeps the empty schema that is correct there.
 
 ### `SimpleSchemaProbe` interface
 
