@@ -54,6 +54,45 @@ They are options rather than inherited process state so that a scan is
 reproducible: a value picked up from whatever shell started it is easy to apply on
 one code path and forget on another.
 
+### Which loader, and why
+
+Three ways to get a package graph. The table below catalogues the fields; this is
+how to choose between them.
+
+**Standard loader** — the default. Loads your code with the Go toolchain, through
+`golang.org/x/tools/go/packages`. Maintained by the Go team, and the reference for
+how patterns and imports resolve: where either of the others disagrees with it, the
+other one is wrong. Requires Go installed, and uses the build cache.
+
+**Pure-Go loader** (`ToolchainFreeLoader`) — loads your code with codescan's own
+reimplementation. Cuts memory by roughly 45%, and needs no `go` command and no
+subprocess. It still reads `GOROOT/src` for the standard library, so it wants a Go
+*installation* — just not a runnable toolchain. Modules only. It uses no build
+cache, so cold costs what warm costs: about level with the standard loader on a
+warm cache, roughly 30% faster on a cold one, and the only choice whose cost does
+not depend on cache state. Usually the right pick for CI.
+
+**Compiled dependencies** (`CompiledDependencies`) — takes dependency types from
+the compiler's export data instead of reading their source. On a warm build cache
+it is the fastest by a wide margin, and several times smaller. But it must
+*compile* the dependency closure rather than type-check it, so on a cold cache it
+is an order of magnitude slower and writes a large build cache. Right for a warm
+developer loop, wrong for CI.
+
+Two further options drop the `GOROOT` requirement altogether, for environments with
+no Go installation at all — a WASI guest, a browser. Both trade fidelity for that
+reach: `StubStdlib` synthesizes the standard library, and `ExportData` serves
+dependencies from a blob you prepare in advance.
+
+{{% notice style="note" %}}
+The percentages are indicative, not a promise: the balance moves with the size of
+the tree being scanned, and on a small one the pure-Go loader is *slower* warm than
+the standard loader. Measure your own corpus with
+[`hack/loader-benchmark`](https://github.com/go-openapi/codescan/tree/master/hack/loader-benchmark),
+which compares a released version against a working tree and carries the tables and
+the method.
+{{% /notice %}}
+
 | Option | Type | Default | Effect |
 |--------|------|---------|--------|
 | `GOOS` / `GOARCH` | `string` | `""` (this machine) | The platform the scanned code is built for. `//go:build` lines and `_linux.go` / `_amd64.go` filename suffixes resolve against them, so they select which files a package is made of. |
