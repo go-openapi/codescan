@@ -208,7 +208,12 @@ var opaqueStreamTypes = map[string]map[string]struct{}{ //nolint:gochecknoglobal
 		"File": {},
 	},
 	"github.com/go-openapi/runtime": {
+		"File":            {}, // up to now, a type alias (see below)
 		"NamedReadCloser": {},
+		"MultipartForm":   {},
+	},
+	"github.com/go-openapi/swag/fileutils": {
+		"File": {},
 	},
 }
 
