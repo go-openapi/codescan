@@ -27,7 +27,19 @@ updates:
     # 2. golang.org-dependencies are auto-merged
     # 3. go-openapi patch updates are auto-merged. Minor/major version updates require a manual merge.
     # 4. other dependencies require a manual merge
-    directory: "/"
+    #
+    # One entry per workspace member, mirroring go.work's use list. Naming them is
+    # what makes the coverage checkable: bumps have reached fixtures/ from the
+    # single "/" entry before now, but that relies on the updater following
+    # go.work rather than on anything stated here, and docs/examples and
+    # hack/genexportdata/bundle have never shown up in a pull request at all.
+    # A group spans the directories, so this stays one pull request per group.
+    directories:
+      - "/"
+      - "/cmd/genspec-tui"
+      - "/docs/examples"
+      - "/fixtures"
+      - "/hack/genexportdata/bundle"
     schedule:
       interval: "weekly"
       day: "friday"
@@ -50,3 +62,34 @@ updates:
           - "github.com/go-openapi/*"
           - "github.com/stretchr/testify"
           - "golang.org/*"
+
+  - package-ecosystem: "npm"
+    # The playground app — the only npm package in this repo. Its checks are
+    # front-end-test.yml, not the go test matrix.
+    #
+    # Two groups, split by what a bump can break:
+    #
+    # 1. development-dependencies (vite, vitest, svelte, typescript, …) are
+    #    auto-merged. The name is deliberate: the shared auto-merge workflow
+    #    matches the group name by *substring*, so this opts in to the same
+    #    policy the go development-dependencies group already gets. What guards
+    #    it is svelte-check + vitest + a production build, on both node LTS lines.
+    #
+    # 2. playground-dependencies (codemirror, swagger-ui-dist, the WASI shim) ship
+    #    in the bundle and are only verifiable by looking at the rendered page,
+    #    which no CI does. Manual merge, on purpose — the name avoids the
+    #    auto-merge substring.
+    #
+    # hack/browser is deliberately left out: a throwaway conformance probe with a
+    # single dependency, not worth a weekly pull request.
+    directory: "/hack/doc-site/genspec-wasi"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+    open-pull-requests-limit: 2
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+
+      playground-dependencies:
+        dependency-type: "production"

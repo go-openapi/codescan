@@ -1,0 +1,84 @@
+name: front-end test
+
+# The playground app is the only TypeScript in this repo, and it is checked by a
+# toolchain the Go workflows know nothing about. It gets its own workflow so that a
+# front-end change is gated by svelte-check and vitest rather than by `go test`, and
+# so that a Node upgrade or a dependabot npm bump fails here instead of surfacing in
+# the documentation deployment.
+#
+# Node only: `npm run build` needs no Go and no WASI artifact — a missing
+# public/genspec-wasi.wasm is copied as nothing rather than failing the build. The
+# pack that pairs the app with a freshly built artifact is `npm run dist`, and that
+# stays in update-doc.yml where it is deployed.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+    - hack/doc-site/genspec-wasi/**
+    # The producer of the -format=json envelope the app consumes. A change here can
+    # invalidate the app without touching a line of it, so the lane runs. What decides
+    # whether the contract still holds is a Go test next to the envelope, since nothing
+    # in this workflow reads Go.
+    - cmd/genspec-wasi/**
+    - .github/workflows/front-end-test.yml
+
+  pull_request:
+    paths:
+    - hack/doc-site/genspec-wasi/**
+    # The producer of the -format=json envelope the app consumes. A change here can
+    # invalidate the app without touching a line of it, so the lane runs. What decides
+    # whether the contract still holds is a Go test next to the envelope, since nothing
+    # in this workflow reads Go.
+    - cmd/genspec-wasi/**
+    - .github/workflows/front-end-test.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+    working-directory: hack/doc-site/genspec-wasi
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both LTS lines. The doc build pins one of them; the other is what tells us
+        # a dependabot bump has moved the floor before the pin follows it.
+        node-version: [ '22', '24' ]
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: '1'
+          sparse-checkout: hack/doc-site/genspec-wasi/
+      -
+        name: Set up node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: hack/doc-site/genspec-wasi/package-lock.json
+      -
+        name: Install dependencies
+        # npm ci, not npm install: the lock file is what makes this reproducible, and
+        # CI is not the place to pick up a new minor.
+        run: npm ci
+      -
+        name: Type-check
+        run: npm run check
+      -
+        name: Unit tests
+        run: npm run test
+      -
+        name: Build
+        run: npm run build
