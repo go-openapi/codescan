@@ -269,23 +269,24 @@ findings judged the document that scan has just replaced, and a list of
 complaints about a spec that no longer exists invites navigating to nodes that
 may have moved or gone. Press `v` again.
 
-Navigation is exact for an ordinary object path: a finding about
-`definitions.User.properties.email.type` lands on that node. Two cases land on
-the **enclosing** node instead, and both are the validator's notation rather
-than the conversion:
+Each finding carries the JSON pointer the validator recorded as it walked, taken
+from the result rather than read back out of the message. So navigation is exact
+for an ordinary path, and for an indexed one:
+`/paths/~1pets/get/parameters/0/type` lands on that parameter rather than on the
+list. Two cases land on the **enclosing** node instead:
 
-- **Anything inside an array.** The validator omits array indices, reporting
-  `paths./pets.get.parameters.type` where the node is at
-  `…/parameters/0/type`. You land on the parameter list. This is common —
-  parameter lists are always arrays.
-- **A "required but missing" finding**, whose whole complaint is that the node
-  it names does not exist. `…responses.200.description` lands on the response,
-  which is the only place there is to go.
+- **A "required but missing" finding**, whose whole complaint is that the node it
+  names is not there. `…/responses/200/description` lands on the response, which
+  is the only place there is to go.
+- **A finding reached through a `$ref`.** The pointer describes the path the
+  validator travelled, which need not exist in the document as authored — a
+  finding about a default declared on `#/definitions/Book` can be reported under
+  the response that `$ref`s it. The pane renders the unexpanded spec, so you land
+  on the `$ref`.
 
 Resolution walks up to the nearest node actually rendered, so an imprecise
 landing is always an *ancestor* of what was reported — never a sibling, and
-never somewhere untrue. (A path template containing a dot would also split
-wrongly, since the notation cannot express one; the same walk-up covers it.)
+never somewhere untrue.
 
 ## Cross-reference navigation
 

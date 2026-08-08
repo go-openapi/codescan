@@ -33,8 +33,8 @@ var errValidatorBroke = stderrors.New("the validator could not run")
 
 func twoFindings() []Finding {
 	return []Finding{
-		{Severity: grammar.SeverityError, Path: "paths./pets.get.responses.200", Message: "description is required"},
-		{Severity: grammar.SeverityWarning, Path: "definitions.User", Message: "unused definition"},
+		{Severity: grammar.SeverityError, Pointer: "/paths/~1pets/get/responses/200", Message: "description is required"},
+		{Severity: grammar.SeverityWarning, Pointer: "/definitions/User", Message: "unused definition"},
 	}
 }
 
@@ -65,7 +65,8 @@ func TestRender_States(t *testing.T) {
 
 		assert.Contains(t, body, "2 findings (1 error, 1 warning)")
 		assert.Contains(t, body, "description is required")
-		assert.Contains(t, body, "paths./pets.get.responses.200", "the reported path is shown verbatim")
+		assert.Contains(t, body, "/paths/~1pets/get/responses/200",
+			"the row shows the pointer, which is where enter will go")
 		assert.Equal(t, 1, line, "the selected row sits under the tally")
 	})
 }

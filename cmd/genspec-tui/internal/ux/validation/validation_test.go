@@ -71,10 +71,10 @@ func TestRun_ReportsWarnings(t *testing.T) {
 	require.NotEmpty(t, warns, "a spec with unreferenced components must not read as clean")
 	for _, f := range warns {
 		assert.NotEmpty(t, f.Message)
+		assert.NotEmpty(t, f.Pointer, "a warning is navigable too: %q", f.Message)
 	}
-	// Not asserted here: a location. These warnings name their subject as "#/definitions/NeverUsed" inside the
-	// sentence, which is not one of the two shapes locationOf can read, so they arrive navigable-less. Making them
-	// navigable needs the location the validator records rather than one recovered from the message.
+	// These name their subject inside the sentence ("#/definitions/NeverUsed is not used anywhere"), so a location read
+	// out of the message would find nothing here. The validator's own record has it.
 
 	errsOnly, _ := Tally(findings)
 	assert.Zero(t, errsOnly, "the spec itself is legal; nothing here is an error")
@@ -105,7 +105,6 @@ func TestRun_LocatesFindings(t *testing.T) {
 		if f.Pointer != "" {
 			located++
 			assert.True(t, f.Pointer[0] == '/', "a pointer starts at the root: %q", f.Pointer)
-			assert.NotContains(t, f.Pointer, ".", "the dotted path must have been converted: %q", f.Pointer)
 		}
 	}
 
@@ -130,39 +129,6 @@ func TestRun_UnloadableSpec(t *testing.T) {
 	_, err := Run([]byte("{not json"))
 
 	require.Error(t, err, "a document that cannot even be loaded is reported, not silently valid")
-}
-
-// TestPointerFor covers the conversion from the validator's dotted notation to RFC 6901.
-//
-// Including the escaping that every path template needs.
-func TestPointerFor(t *testing.T) {
-	for _, tc := range []struct {
-		in, want string
-	}{
-		{"", ""},
-		{"paths", "/paths"},
-		{"paths./pets.get.responses.200", "/paths/~1pets/get/responses/200"},
-		{"definitions.User.properties.email", "/definitions/User/properties/email"},
-		// `~` and `/` are the two characters RFC 6901 escapes, and a spec can contain both.
-		{"definitions.a~b", "/definitions/a~0b"},
-		{"paths./a/b", "/paths/~1a~1b"},
-	} {
-		assert.Equal(t, tc.want, pointerFor(tc.in), "pointerFor(%q)", tc.in)
-	}
-}
-
-// TestPointerFor_AmbiguousPathTemplate documents one known limit of the notation.
-//
-// It cannot express a path template containing a dot, so the conversion splits it.
-//
-// Recorded for completeness, but it is NOT the limitation that bites in practice - see
-// TestValidation_PointerResolutionAccuracy for the two that do, both about what the validator omits rather than about
-// what this splits.
-func TestPointerFor_AmbiguousPathTemplate(t *testing.T) {
-	got := pointerFor("paths./pets.json.get")
-
-	assert.Equal(t, "/paths/~1pets/json/get", got,
-		"the dot inside the template is indistinguishable from a separator")
 }
 
 func TestTally(t *testing.T) {

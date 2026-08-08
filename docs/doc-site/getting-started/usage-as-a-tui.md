@@ -184,14 +184,19 @@ about a spec that no longer exists invites navigating to nodes that may have
 moved or gone. Press `v` again.
 
 {{% notice style="info" title="Where a finding lands" %}}
-Navigation is exact for an ordinary object path. Two cases land on the
-*enclosing* node instead, and both are the validator's notation rather than the
-conversion: findings **inside an array** (the validator omits indices, so
-`paths./pets.get.parameters.type` lands on the parameter list — common, since
-parameter lists are always arrays), and **"required but missing"** findings, whose
-whole complaint is that the node they name does not exist. Resolution walks up to
-the nearest node actually rendered, so an imprecise landing is always an
-*ancestor* of what was reported — never a sibling, and never somewhere untrue.
+A finding carries the JSON pointer the validator recorded as it walked, so
+navigation is exact for an ordinary path — indexed ones included:
+`/paths/~1pets/get/parameters/0/type` lands on that parameter, not on the list.
+
+Two cases land on the *enclosing* node instead. A **"required but missing"**
+finding names the node whose absence *is* the complaint, so its parent is the only
+place there is to go. And a finding the validator reached **through a `$ref`** is
+reported against the path it travelled, which need not exist in the document as
+authored — the pane renders the unexpanded spec, so you land on the `$ref`.
+
+Resolution walks up to the nearest node actually rendered, so an imprecise landing
+is always an *ancestor* of what was reported — never a sibling, and never
+somewhere untrue.
 {{% /notice %}}
 
 ## Looking up an annotation

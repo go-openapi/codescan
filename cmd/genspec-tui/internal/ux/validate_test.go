@@ -211,16 +211,12 @@ func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
 //
 // Measured against the validator rather than reasoned about.
 //
-// The conversion from the validator's dotted notation is exact in the ordinary case - a deep definition path lands on
-// the node itself. Two things cost precision, and neither is the notation:
+// Pointers come from the validator's own record of where it was, so an ordinary path lands on the node itself - a deep
+// definition path and an indexed one alike. One thing still costs precision, and it is not recoverable: a
+// "required but missing" finding names a node that by definition is not there, so its parent is the only honest
+// landing. That is what the walk-up is for now.
 //
-//   - the validator omits ARRAY INDICES, so a finding about one parameter reports ...parameters.type where the node is
-//     at .../parameters/0/type. It therefore lands on the array;
-//   - a "required but missing" finding names a node that by definition is not there, so its parent is the only honest
-//     landing.
-//
-// Both degrade to the enclosing node, which is why the walk-up exists. This test exists so a change in either direction
-// is noticed.
+// This test exists so a change in either direction is noticed.
 func TestValidation_PointerResolutionAccuracy(t *testing.T) {
 	const spec = `{
   "swagger": "2.0",
@@ -268,18 +264,34 @@ func TestValidation_PointerResolutionAccuracy(t *testing.T) {
 	assert.Positive(t, exact, "no finding located exactly; the conversion would be useless")
 	t.Logf("exact=%d via-ancestor=%d unlocated=%d", exact, viaAncestor, unlocated)
 
-	// The deep definition path is the one that must be exact - nothing about it is array-shaped or absent.
-	m.validation = ValidationState{Ran: true, Findings: findings}
-	for i, f := range findings {
-		if f.Pointer != "/definitions/User/properties/email/type" {
-			continue
-		}
-		m.validation.Cursor = i
+	// Two shapes must be exact. The deep definition path, which nothing about is array-shaped or absent - and an
+	// INDEXED one, which is the shape the old dotted notation could not express at all: it reported
+	// paths./pets.get.parameters.type for a node living at .../parameters/0/type, so every finding about a parameter
+	// landed on the list.
+	for _, want := range []string{
+		"/paths/~1pets/get/parameters/0/type",     // indexed
+		"/definitions/User/properties/email/type", // deep and plain
+	} {
+		// require, not a bare loop: a shape that stops being reported would otherwise make this pass by never running.
+		i := indexOfPointer(t, findings, want)
+		m.validation = ValidationState{Ran: true, Findings: findings, Cursor: i}
+
 		landed, ok := m.validationTarget()
 		require.True(t, ok)
-		assert.Equal(t, f.Pointer, landed, "a plain object path must land on the node itself")
-
-		return
+		assert.Equal(t, want, landed, "this shape must land on the node itself, not on an ancestor")
 	}
-	t.Fatal("the fixture produced no definition-path finding; the assertion above checked nothing")
+}
+
+// indexOfPointer finds the finding carrying ptr, failing the test when nothing does.
+func indexOfPointer(t *testing.T, findings []validation.Finding, ptr string) int {
+	t.Helper()
+
+	for i, f := range findings {
+		if f.Pointer == ptr {
+			return i
+		}
+	}
+	require.FailNow(t, "no finding reported "+ptr+"; the test would otherwise assert nothing")
+
+	return -1
 }

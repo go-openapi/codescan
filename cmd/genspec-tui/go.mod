@@ -10,11 +10,10 @@ require (
 	github.com/go-openapi/codescan v0.36.3
 	github.com/go-openapi/core/json v0.0.3
 	github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3
-	github.com/go-openapi/errors v0.22.8
 	github.com/go-openapi/loads v0.25.0
 	github.com/go-openapi/strfmt v0.27.0
 	github.com/go-openapi/testify/v2 v2.6.0
-	github.com/go-openapi/validate v0.26.1
+	github.com/go-openapi/validate v0.26.2
 	github.com/muesli/termenv v0.16.0
 	go.yaml.in/yaml/v3 v3.0.5
 )
@@ -29,12 +28,13 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
-	github.com/go-openapi/analysis v0.25.5 // indirect
+	github.com/go-openapi/analysis v0.26.0 // indirect
+	github.com/go-openapi/errors v0.22.8 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-openapi/jsonreference v1.0.0 // indirect
 	github.com/go-openapi/spec v0.22.9 // indirect
 	github.com/go-openapi/swag/conv v0.28.0 // indirect
-	github.com/go-openapi/swag/fileutils v0.27.3 // indirect
+	github.com/go-openapi/swag/fileutils v0.28.0 // indirect
 	github.com/go-openapi/swag/jsonutils v0.28.0 // indirect
 	github.com/go-openapi/swag/loading v0.28.0 // indirect
 	github.com/go-openapi/swag/mangling v0.28.0 // indirect

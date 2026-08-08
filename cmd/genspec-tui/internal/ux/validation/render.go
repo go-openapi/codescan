@@ -93,13 +93,16 @@ func plainRow(f Finding) string {
 	return fmt.Sprintf("%s %s: %s", location(f), f.Severity, f.Message)
 }
 
-// location is the finding's reported path, or a marker when it named none.
+// location is where the finding says the offending value is, or a marker when it named nowhere.
+//
+// The row shows the POINTER, which is also where enter will take you - so what is printed and what navigating does
+// cannot disagree. The validator's own wording of the path survives inside the message.
 func location(f Finding) string {
-	if f.Path == "" {
+	if f.Pointer == "" {
 		return "(spec)"
 	}
 
-	return f.Path
+	return f.Pointer
 }
 
 // severityStyle maps a severity to its pane style.
