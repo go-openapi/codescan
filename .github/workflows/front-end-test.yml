@@ -19,11 +19,21 @@ on:
     branches: [ "master" ]
     paths:
     - hack/doc-site/genspec-wasi/**
+    # The producer of the -format=json envelope the app consumes. A change here can
+    # invalidate the app without touching a line of it, so the lane runs. What decides
+    # whether the contract still holds is a Go test next to the envelope, since nothing
+    # in this workflow reads Go.
+    - cmd/genspec-wasi/**
     - .github/workflows/front-end-test.yml
 
   pull_request:
     paths:
     - hack/doc-site/genspec-wasi/**
+    # The producer of the -format=json envelope the app consumes. A change here can
+    # invalidate the app without touching a line of it, so the lane runs. What decides
+    # whether the contract still holds is a Go test next to the envelope, since nothing
+    # in this workflow reads Go.
+    - cmd/genspec-wasi/**
     - .github/workflows/front-end-test.yml
 
 concurrency:
