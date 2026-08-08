@@ -275,9 +275,12 @@ for an ordinary path, and for an indexed one:
 `/paths/~1pets/get/parameters/0/type` lands on that parameter rather than on the
 list. Two cases land on the **enclosing** node instead:
 
-- **A "required but missing" finding**, whose whole complaint is that the node it
-  names is not there. `…/responses/200/description` lands on the response, which
-  is the only place there is to go.
+- **A finding whose subject is a node's absence.** `…/responses/200/description
+  in body is required` can only be reported at the node that is not there, so the
+  response is the only place to go. This is narrower than "anything about
+  required": a `required` array naming a property it never declares is located
+  exactly, at the offending entry (`/definitions/Pet/required/0`), because that
+  entry is a real node and is the text to amend.
 - **A finding reached through a `$ref`.** The pointer describes the path the
   validator travelled, which need not exist in the document as authored — a
   finding about a default declared on `#/definitions/Book` can be reported under

@@ -188,9 +188,11 @@ A finding carries the JSON pointer the validator recorded as it walked, so
 navigation is exact for an ordinary path — indexed ones included:
 `/paths/~1pets/get/parameters/0/type` lands on that parameter, not on the list.
 
-Two cases land on the *enclosing* node instead. A **"required but missing"**
-finding names the node whose absence *is* the complaint, so its parent is the only
-place there is to go. And a finding the validator reached **through a `$ref`** is
+Two cases land on the *enclosing* node instead. A finding whose subject is a
+node's **absence** (`schema in body is required`) can only be reported at the node
+that is not there, so its parent is the only place to go — narrower than "anything
+about required", since a `required` array naming an undeclared property is located
+exactly, at the entry. And a finding the validator reached **through a `$ref`** is
 reported against the path it travelled, which need not exist in the document as
 authored — the pane renders the unexpanded spec, so you land on the `$ref`.
 

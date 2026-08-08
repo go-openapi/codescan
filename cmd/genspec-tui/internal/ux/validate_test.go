@@ -207,14 +207,81 @@ func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
 	assert.Equal(t, before, m.spec.CursorLine(), "the spec follower stays put rather than guessing")
 }
 
+// TestValidation_RequiredEntryLocatesExactly covers a finding whose subject is an entry of a `required` array.
+//
+// It lands on the entry rather than on the definition holding it, which is the text a reader has to go and amend.
+//
+// One fault per spec, deliberately. The validator walks the definitions MAP and breaks out on the first error, so a
+// document with two such faults reports whichever Go's map order reached first - and the second only sometimes. One
+// fault each keeps this test about locations instead of about iteration order.
+//
+// The warning case is only visible at all because warnings are now read off the result that carries them.
+func TestValidation_RequiredEntryLocatesExactly(t *testing.T) {
+	// requiredSpec builds a document whose Pet definition is reachable from a path, since unreferenced definitions are
+	// not checked, with `props` as its properties and one required entry naming `required`.
+	requiredSpec := func(required, props string) string {
+		return `{
+  "swagger": "2.0",
+  "info": {"title": "t", "version": "1"},
+  "paths": {
+    "/pets": {
+      "get": {
+        "operationId": "getPets",
+        "responses": {"200": {"description": "ok", "schema": {"$ref": "#/definitions/Pet"}}}
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {"type": "object", "required": ["` + required + `"], "properties": {` + props + `}}
+  }
+}`
+	}
+
+	for _, tc := range []struct {
+		name     string
+		spec     string
+		severity grammar.Severity
+	}{
+		{
+			name:     "a required property that is never declared",
+			spec:     requiredSpec("notDeclared", `"name": {"type": "string"}`),
+			severity: grammar.SeverityError,
+		},
+		{
+			name:     "a property both required and readOnly",
+			spec:     requiredSpec("readOnlyToo", `"readOnlyToo": {"type": "string", "readOnly": true}`),
+			severity: grammar.SeverityWarning,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			const want = "/definitions/Pet/required/0"
+
+			m := testModel(t, sized(120, 40), diagSize(120, 10), withSpecJSON(tc.spec))
+			findings, err := validation.Run([]byte(tc.spec))
+			require.NoError(t, err)
+
+			i := indexOfPointer(t, findings, want)
+			assert.Equal(t, tc.severity, findings[i].Severity)
+
+			m.validation = ValidationState{Ran: true, Findings: findings, Cursor: i}
+			landed, ok := m.validationTarget()
+			require.True(t, ok)
+			assert.Equal(t, want, landed, "a required entry is a real node, so it must land on itself")
+		})
+	}
+}
+
 // TestValidation_PointerResolutionAccuracy records how precisely findings actually locate.
 //
 // Measured against the validator rather than reasoned about.
 //
 // Pointers come from the validator's own record of where it was, so an ordinary path lands on the node itself - a deep
-// definition path and an indexed one alike. One thing still costs precision, and it is not recoverable: a
-// "required but missing" finding names a node that by definition is not there, so its parent is the only honest
-// landing. That is what the walk-up is for now.
+// definition path, an indexed one, and an entry of a required array alike.
+//
+// One shape still costs precision, and it is not recoverable: a finding whose subject is a node's ABSENCE
+// ("schema in body is required") can only be reported at the node that is not there. Its parent is the only honest
+// landing, and that is what the walk-up is for now. Note this is narrower than "anything about required" - a required
+// array naming an undeclared property is located exactly, at the entry, which is the text a reader has to go and amend.
 //
 // This test exists so a change in either direction is noticed.
 func TestValidation_PointerResolutionAccuracy(t *testing.T) {
