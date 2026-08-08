@@ -54,8 +54,9 @@ func TestSpec_NoGutterCostsNoWidth(t *testing.T) {
 		"got %q", secondLine())
 }
 
-// The gutter is prefixed after highlighting, so both survive together and the styles still apply to the text rather
-// than to the marker column.
+// The gutter is prefixed after highlighting.
+//
+// So both survive together, and the styles still apply to the text rather than to the marker column.
 func TestSpec_GutterCoexistsWithSearchAndCursor(t *testing.T) {
 	sp := NewSpec()
 	sp.SetSize(40, 12)

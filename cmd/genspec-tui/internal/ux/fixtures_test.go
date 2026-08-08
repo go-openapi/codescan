@@ -15,7 +15,7 @@ import (
 // testModel assembles a Model for a test through one door, browsing a fresh temp dir.
 //
 // It goes through New rather than filling a struct literal, so a test can never be assembled differently from
-// production — which is what a hand-rolled &Model{} does: it has to know which panels a code path will reach, and
+// production - which is what a hand-rolled &Model{} does: it has to know which panels a code path will reach, and
 // which of them are unusable when zero-valued (a zero textinput panics on Focus). That knowledge was spread across
 // eighteen per-file fixtures, each rediscovering it.
 //
@@ -50,8 +50,8 @@ type modelOpt func(*testing.T, *Model)
 
 // sized fits the terminal (and every panel with it) to w×h.
 //
-// Several tests turn on how much fits on screen — paging, clamping, whether the cursor row is inside the scrolled
-// window — so the size is stated wherever it is load-bearing rather than inherited.
+// Several tests turn on how much fits on screen - paging, clamping, whether the cursor row is inside the scrolled
+// window - so the size is stated wherever it is load-bearing rather than inherited.
 func sized(w, h int) modelOpt {
 	return func(_ *testing.T, m *Model) {
 		m.width, m.height = w, h

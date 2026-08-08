@@ -31,7 +31,7 @@ func TestHighlight_ClassifiesJSONTokens(t *testing.T) {
 		[]theme.SyntaxKind{theme.SyntaxKey, theme.SyntaxPunct, theme.SyntaxNumber, theme.SyntaxPunct},
 		kindsOn(idx, 3))
 
-	// booleans and null are one class — they are the literal keywords
+	// booleans and null are one class - they are the literal keywords
 	assert.Contains(t, kindsOn(idx, 4), theme.SyntaxKeyword, "true")
 	assert.Contains(t, kindsOn(idx, 5), theme.SyntaxKeyword, "null")
 
@@ -39,8 +39,9 @@ func TestHighlight_ClassifiesJSONTokens(t *testing.T) {
 	assert.Contains(t, kindsOn(idx, 6), theme.SyntaxString)
 }
 
-// A YAML block collection's delimiters have no character of their own, so they report the span of what they enclose —
-// the opener the first token inside, the closer the last.
+// A YAML block collection's delimiters have no character of their own.
+//
+// So they report the span of what they enclose: the opener the first token inside, the closer the last.
 //
 // Both therefore share a column with a token that does own the text, and the accumulator must let that token keep the
 // run: a delimiter run starting where a value starts would paint the value as punctuation.
@@ -57,7 +58,7 @@ func TestHighlight_YAMLBlockDelimitersDoNotStealTheirNeighboursColumn(t *testing
 	idx := BuildYAMLIndex([]byte(hlYAML)).Highlight
 	require.Positive(t, idx.Len())
 
-	// The opening delimiters of `definitions:` — the root mapping's, emitted BEFORE the key it shares column 1 with.
+	// The opening delimiters of `definitions:` - the root mapping's, emitted BEFORE the key it shares column 1 with.
 	first := idx.Spans(0)
 	require.NotEmpty(t, first)
 	assert.Equal(t, theme.SyntaxKey, first[0].Kind, "the key owns column 1, not the mapping opener")
@@ -74,8 +75,10 @@ func TestHighlight_YAMLBlockDelimitersDoNotStealTheirNeighboursColumn(t *testing
 		kindsOn(idx, 6), "`b` keeps its class through the closers")
 }
 
-// Spans record where a run STARTS, so a line can never hold two runs at the same column, whichever lexer produced them
-// — the renderer would emit one of them as a zero-width run and paint the other over its neighbour's text.
+// Spans record where a run STARTS, so a line can never hold two runs at the same column.
+//
+// Whichever lexer produced them, the renderer would emit one as a zero-width run
+// and paint the other over its neighbour's text.
 func TestHighlight_SpansStartAtDistinctColumns(t *testing.T) {
 	for name, idx := range map[string]*HighlightIndex{
 		"json": BuildJSONIndex([]byte(hlJSON)).Highlight,
@@ -105,8 +108,9 @@ func TestHighlight_NilAndEmpty(t *testing.T) {
 	assert.NotNil(t, idx, "an empty document still yields an index, not nil")
 }
 
-// One walk, three products — adding the highlight index must not have cost a second traversal, nor disturbed the
-// other two.
+// One walk, three products.
+//
+// Adding the highlight index must not have cost a second traversal, nor disturbed the other two.
 func TestHighlight_SharesTheWalkWithTheOtherIndexes(t *testing.T) {
 	built := BuildJSONIndex([]byte(hlJSON))
 

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -21,7 +23,7 @@ func TestPaging_TreeArrowsAreDocumented(t *testing.T) {
 
 // The overlay is the only in-app record of the keymap, so a binding that gets dispatched but never listed is invisible.
 //
-// This is a coarse guard — it cannot prove completeness — but it fails if a documented key is dropped.
+// This is a coarse guard - it cannot prove completeness - but it fails if a documented key is dropped.
 func TestHelp_ListsTheDispatchedBindings(t *testing.T) {
 	body := testutils.StripANSI(strings.Join(helpLines(), "\n"))
 
@@ -37,15 +39,17 @@ func TestHelp_ListsTheDispatchedBindings(t *testing.T) {
 
 // Every navigable pane pages.
 //
-// Stated as one test so a pane added later has an obvious place to be listed — and an obvious reason to support it.
+// Stated as one test so a pane added later has an obvious place to be listed - and an obvious reason to support it.
 func TestPaging_EveryNavigablePaneSupportsIt(t *testing.T) {
 	body := testutils.StripANSI(strings.Join(helpLines(), "\n"))
 
 	for _, section := range []string{"spec pane", "source tree", "file viewer", "diagnostics"} {
-		idx := strings.Index(body, section)
+		// Anchored to a line of its own: a section title is also an ordinary noun, so an ENTRY that happens to name a
+		// pane ("move the divider above the diagnostics") would otherwise be found first and the wrong block checked.
+		idx := strings.Index(body, "\n"+section+"\n")
 		require.Positive(t, idx, "section %q", section)
 
-		rest := body[idx:]
+		rest := body[idx+1:]
 		if next := strings.Index(rest[len(section):], "\n\n"); next > 0 {
 			rest = rest[:len(section)+next]
 		}
@@ -146,6 +150,45 @@ func TestHelp_ShortTerminalStillReachesTheEnd(t *testing.T) {
 	lastEntry := lastSection.entries[len(lastSection.entries)-1]
 	assert.Contains(t, testutils.StripANSI(o.View()), lastEntry.action,
 		"the end of the keymap must be reachable by scrolling")
+}
+
+// TestHelp_WidthIsStableWhileScrolling pins the frame against the whole keymap rather than the visible slice.
+//
+// A modal that sizes itself to what is currently on screen changes width at every scroll step, because the widest line
+// in the window keeps changing. It reads as the box twitching while the content moves - a rendering fault, not
+// scrolling.
+func TestHelp_WidthIsStableWhileScrolling(t *testing.T) {
+	o := newOverlay(20)
+	o.Open()
+	require.Greater(t, len(helpLines()), o.visibleRows(), "precondition: the keymap must overflow, or nothing scrolls")
+
+	seen := map[int]int{}
+	for range len(helpLines()) + 2 {
+		seen[lipgloss.Width(o.View())]++
+		_ = o.HandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	assert.Len(t, seen, 1, "the frame changed width while scrolling; widths seen: %v", seen)
+}
+
+// TestHelp_FrameFitsItsWidestLine guards the other direction.
+//
+// Pinning a width must not CLIP the content it was measured from.
+// lipgloss counts padding inside the width it is given,
+// so a frame pinned to the measured text width wraps its longest lines by exactly the padding.
+func TestHelp_FrameFitsItsWidestLine(t *testing.T) {
+	o := newOverlay(200) // tall enough that nothing scrolls out of view
+	o.Open()
+
+	body := testutils.StripANSI(o.View())
+	widest := ""
+	for _, e := range helpSections[0].entries {
+		if len(e.action) > len(widest) {
+			widest = e.action
+		}
+	}
+
+	assert.Contains(t, body, widest, "the widest entry must survive the frame intact, not be wrapped by the padding")
 }
 
 func newOverlay(height int) *Overlay {

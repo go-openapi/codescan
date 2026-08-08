@@ -10,9 +10,10 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// refSpecJSON references /definitions/User from three places — a property, an array's items, and a response schema
-// — plus one external ref that must be recorded but not resolvable, and a ref to a path key needing RFC 6901
-// escaping.
+// refSpecJSON references /definitions/User from three places.
+//
+// A property, an array's items, and a response schema. It also carries one external ref that must be recorded
+// but not resolvable, and a ref to a path key needing RFC 6901 escaping.
 //
 // Indented exactly as json.MarshalIndent renders.
 const refSpecJSON = `{
@@ -75,7 +76,7 @@ func TestRefIndex_FindsEveryLocalSite(t *testing.T) {
 	assert.Equal(t, []int{refLineLead, refLineMembers, refLineResponse},
 		[]int{sites[0].Line, sites[1].Line, sites[2].Line})
 
-	// Each site names the node HOLDING the $ref, not the $ref member itself — that is the node the user is navigating
+	// Each site names the node HOLDING the $ref, not the $ref member itself - that is the node the user is navigating
 	// to.
 	assert.Equal(t, "/definitions/Team/properties/lead", sites[0].Pointer)
 	assert.Equal(t, "/definitions/Team/properties/members/items", sites[1].Pointer)
@@ -110,8 +111,9 @@ func TestRefIndex_RefAt(t *testing.T) {
 	assert.False(t, ok)
 }
 
-// The whole point of the index is the join: a site's target must be a pointer the SpecIndex can actually resolve to a
-// line.
+// The whole point of the index is the join.
+//
+// A site's target must be a pointer the SpecIndex can actually resolve to a line.
 func TestRefIndex_TargetsResolveInTheSpecIndex(t *testing.T) {
 	built := BuildJSONIndex([]byte(refSpecJSON))
 	spec, refs := built.Spec, built.Refs
@@ -123,8 +125,9 @@ func TestRefIndex_TargetsResolveInTheSpecIndex(t *testing.T) {
 	}
 }
 
-// YAML renders the same document at different lines; the pointers must match the JSON side exactly, so navigation
-// survives a format toggle.
+// YAML renders the same document at different lines.
+//
+// The pointers must match the JSON side exactly, so navigation survives a format toggle.
 func TestRefIndex_YAMLMatchesJSONPointers(t *testing.T) {
 	const refSpecYAML = `definitions:
   Team:

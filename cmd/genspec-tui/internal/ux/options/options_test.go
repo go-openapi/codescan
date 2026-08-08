@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
@@ -74,8 +75,9 @@ func TestOptions_OverlayCoversEveryBoolKnob(t *testing.T) {
 	}
 }
 
-// The omission list must not rot either: an entry naming a field that no longer exists, or one that has since been
-// given a row, is stale.
+// The omission list must not rot either.
+//
+// An entry naming a field that no longer exists, or one that has since been given a row, is stale.
 func TestOptions_OmissionListIsCurrent(t *testing.T) {
 	o, cfg := newOverlay(t, 40)
 
@@ -94,8 +96,9 @@ func TestOptions_OmissionListIsCurrent(t *testing.T) {
 	}
 }
 
-// Every row must point into the config the overlay was built over — a row bound to a stray variable would toggle
-// nothing, and the scan would ignore it.
+// Every row must point into the config the overlay was built over.
+//
+// A row bound to a stray variable would toggle nothing, and the scan would ignore it.
 func TestOptions_EveryRowPointsIntoTheConfig(t *testing.T) {
 	o, cfgPtr := newOverlay(t, 40)
 
@@ -120,8 +123,9 @@ func TestOptions_EveryRowPointsIntoTheConfig(t *testing.T) {
 	}
 }
 
-// Rows are stored flat but rendered grouped, so each group must appear as one contiguous run — otherwise a header
-// would be emitted twice.
+// Rows are stored flat but rendered grouped, so each group must appear as one contiguous run.
+//
+// Otherwise a header would be emitted twice.
 func TestOptions_GroupsAreContiguous(t *testing.T) {
 	o, _ := newOverlay(t, 40)
 
@@ -272,4 +276,23 @@ func TestOptions_DescriptionsAddInformation(t *testing.T) {
 		// The modal is as wide as its widest row, so descriptions are kept terse rather than clipped at render time.
 		assert.LessOrEqual(t, len(tg.desc), 40, "row %q description is too long for the modal", tg.label)
 	}
+}
+
+// TestOptions_WidthIsStableWhileScrolling pins the frame against every row rather than the visible window.
+//
+// The overlay windows its rows around the cursor, so without a pinned width the box resizes on every cursor move as
+// the widest row in view changes - the frame twitching while the list moves under it.
+func TestOptions_WidthIsStableWhileScrolling(t *testing.T) {
+	o, _ := newOverlay(t, 20)
+	o.Open()
+	all, _ := o.lines()
+	require.Greater(t, len(all), o.visibleRows(), "precondition: the list must overflow, or nothing scrolls")
+
+	seen := map[int]int{}
+	for range len(o.toggles) + 2 {
+		seen[lipgloss.Width(o.View())]++
+		_ = o.HandleKey(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	assert.Len(t, seen, 1, "the frame changed width while scrolling; widths seen: %v", seen)
 }

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package ux is the bubbletea front-end for genspec-tui: a single root Model composing a header line, three panels
-// (source tree, spec, diagnostics), and a status/help line.
+// (source tree, spec, diagnostics), and a status and help line.
 //
-// Structure borrows from fredbi/git-janitor — one root model owning panel values, an enum-based key dispatch, mouse
-// focus/scroll, and a recalcLayout that distributes the terminal size across panels.
+// Structure borrows from fredbi/git-janitor - one root model owning panel values, an enum-based key dispatch, mouse
+// focus or scroll, and a recalcLayout that distributes the terminal size across panels.
 //
 // # What lives where
 //
@@ -14,7 +14,7 @@
 // alone reaches into all three panels, both spec indexes, the source index and the status line, so it is spread across
 // files rather than hidden behind a package boundary it could not honestly keep.
 //
-//   - model.go     the Model struct, its lifecycle (New/Close/Init/Update/View), layout and focus routing
+//   - model.go     the Model struct, its lifecycle (New, Close, Init, Update and View), layout and focus routing
 //   - keys.go      key dispatch: global bindings, per-pane handlers, the search input, the editor
 //   - crossref.go  follow modes, go-to-definition, find-references, gutters, the spec render
 //   - refcycle.go  the find-references walk, as its own small type

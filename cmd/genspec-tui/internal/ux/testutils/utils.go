@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+// SPDX-License-Identifier: Apache-2.0
+
 package testutils
 
 import (
@@ -10,8 +13,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// StripANSI removes the SGR escape sequences lipgloss emits, so assertions can look at the text a user reads rather
-// than the styling around it.
+// StripANSI removes the SGR escape sequences lipgloss emits.
+//
+// Assertions can then look at the text a user reads, rather than at the styling around it.
 func StripANSI(s string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); i++ {

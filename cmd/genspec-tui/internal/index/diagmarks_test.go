@@ -11,8 +11,9 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// The common case, and it is common by construction rather than by luck: a diagnostic and a lexical run both address a
-// token, so they agree on where it starts.
+// The common case, and it is common by construction rather than by luck.
+//
+// A diagnostic and a lexical run both address a token, so they agree on where it starts.
 func TestDiagMarks_ExactHitRestylesTheRun(t *testing.T) {
 	marked := MarkDiagnostics(lexicalSpans(), []DiagMark{
 		{Line: 4, Col: 5, Kind: theme.SyntaxDiagError},
@@ -25,8 +26,9 @@ func TestDiagMarks_ExactHitRestylesTheRun(t *testing.T) {
 	}, marked[4], "the keyword's own run carries the diagnostic")
 }
 
-// Not every diagnostic lands on a token boundary — codescan reports an invalid enum option at the space before the
-// value.
+// Not every diagnostic lands on a token boundary.
+//
+// codescan reports an invalid enum option at the space before the value.
 //
 // Opening a run there over-reaches rather than pointing somewhere false.
 func TestDiagMarks_InsideARunOpensANewOne(t *testing.T) {
@@ -66,7 +68,7 @@ func TestDiagMarks_Edges(t *testing.T) {
 	assert.Equal(t, lexicalSpans(), marked, "positionless marks are dropped, not clamped onto line 0")
 }
 
-// A diagnostic on a line with no lexical runs still marks it — a blank or unclassified line can carry one.
+// A diagnostic on a line with no lexical runs still marks it - a blank or unclassified line can carry one.
 func TestDiagMarks_LineWithNoRuns(t *testing.T) {
 	marked := MarkDiagnostics(lexicalSpans(), []DiagMark{
 		{Line: 9, Col: 3, Kind: theme.SyntaxDiagHint},
@@ -76,8 +78,9 @@ func TestDiagMarks_LineWithNoRuns(t *testing.T) {
 	assert.Len(t, marked[4], 3, "other lines are unaffected")
 }
 
-// lexicalSpans is what a `\t// in: formData` line tokenizes to: the comment markers, the keyword, then the value back
-// in prose.
+// lexicalSpans is what an annotated in: formData line tokenizes to.
+//
+// The comment markers, the keyword, then the value back in prose.
 func lexicalSpans() map[int][]theme.Span {
 	return map[int][]theme.Span{
 		4: {

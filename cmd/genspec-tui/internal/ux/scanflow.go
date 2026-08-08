@@ -13,13 +13,14 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/diagnostics"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/validation"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/watcher"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
 // ScanState is what the last scan produced, plus whether another is in flight.
 //
-// It has exactly two writers — startScan, when one begins, and absorbScan, when its result lands. Everything else
+// It has exactly two writers - startScan, when one begins, and absorbScan, when its result lands. Everything else
 // only reads it: the header and status line are projections of it, and the cross-ref layer renders from its JSON or
 // YAML. Keeping it in one struct is what makes that one-way traffic visible.
 type ScanState struct {
@@ -54,8 +55,10 @@ func (s *ScanState) Body(yamlFmt bool) string {
 	return s.JSON
 }
 
-// SourceWatch is the live-reload plumbing: the file watcher, the channel its events arrive on, and the debounce
-// generation that lets a newer change discard a timer already in flight.
+// SourceWatch is the live-reload plumbing.
+//
+// It holds the file watcher, the channel its events arrive on, and the debounce generation
+// that lets a newer change discard a timer already in flight.
 type SourceWatch struct {
 	w   *watcher.Watcher
 	ch  <-chan struct{}
@@ -64,7 +67,7 @@ type SourceWatch struct {
 
 // NewSourceWatch starts a watcher on dir, best-effort.
 //
-// If it cannot initialize, live reload is simply unavailable and the user falls back to `r` (manual rescan) — so the
+// If it cannot initialize, live reload is simply unavailable and the user falls back to r (manual rescan) - so the
 // error is deliberately swallowed rather than failing the whole TUI.
 func NewSourceWatch(dir string) SourceWatch {
 	w, err := watcher.New(dir)
@@ -88,7 +91,7 @@ func (s *SourceWatch) Bump() int {
 	return s.gen
 }
 
-// Current reports whether gen is still the newest debounce window — false means a later change superseded it.
+// Current reports whether gen is still the newest debounce window - false means a later change superseded it.
 func (s *SourceWatch) Current(gen int) bool { return gen == s.gen }
 
 // Close releases the watcher.
@@ -98,8 +101,9 @@ func (s *SourceWatch) Close() {
 	}
 }
 
-// noticeTTL is how long a transient status notice (e.g. "copied to clipboard") stays on the status line before it
-// clears.
+// noticeTTL is how long a transient status notice stays on the status line before it clears.
+//
+// A notice is something like "copied to clipboard".
 const noticeTTL = 2 * time.Second
 
 // debounceDelay coalesces a burst of file-change events (an editor save often fires several) into a single rescan.
@@ -117,8 +121,9 @@ type fsEventMsg struct{}
 // debounceMsg fires after the quiet period; gen guards against stale timers.
 type debounceMsg struct{ gen int }
 
-// startScan marks a scan in flight and returns the scan command, starting the spinner only when one isn't already
-// running (avoids stacking tick loops).
+// startScan marks a scan in flight and returns the scan command.
+//
+// The spinner starts only when one is not already running, which avoids stacking tick loops.
 func (m *Model) startScan() tea.Cmd {
 	already := m.scan.Running
 	m.scan.Running = true
@@ -130,10 +135,12 @@ func (m *Model) startScan() tea.Cmd {
 	return tea.Batch(run, m.scan.Spin.Tick)
 }
 
-// absorbScan takes in a finished scan: it replaces everything the previous one produced, re-derives the source index
-// from the new provenance, and re-renders the three views that show any of it.
+// absorbScan takes in a finished scan.
 //
-// The diagnostics cursor is clamped rather than reset — a scan that fixed one diagnostic should leave you next to the
+// It replaces everything the previous one produced, re-derives the source index from the new provenance,
+// and re-renders the three views that show any of it.
+//
+// The diagnostics cursor is clamped rather than reset - a scan that fixed one diagnostic should leave you next to the
 // ones it did not.
 func (m *Model) absorbScan(msg scan.ResultMsg) {
 	m.scan.Running = false
@@ -145,6 +152,7 @@ func (m *Model) absorbScan(msg scan.ResultMsg) {
 
 	m.diagCursor = min(max(m.diagCursor, 0), max(len(m.scan.Diags)-1, 0))
 	m.srcIndex = index.BuildSourceIndex(msg.Provenance)
+	m.retireValidation() // the findings judged the document this scan has just replaced
 
 	m.applyScan()
 }
@@ -168,14 +176,28 @@ func (m *Model) applyScan() {
 	m.refreshSource()
 }
 
-// refreshDiagnostics re-renders the diagnostics pane from the stored diagnostics and the selection cursor, scrolling
-// the selected diagnostic into view.
+// refreshDiagnostics re-renders the diagnostics pane from whichever tab is active.
+//
+// It draws from the stored findings and that tab's selection cursor, scrolling the selected row into view.
 //
 // The pane shows any hard error from codescan.Run first, then every grammar.Diagnostic the build emitted (colored by
 // severity, paths relative to the work dir, the selected row highlighted); a clean scan with no diagnostics shows the
 // empty state.
 func (m *Model) refreshDiagnostics() {
-	content, line := diagnostics.Render(m.cfg.WorkDir, m.scan.Err, m.scan.Diags, m.diagCursor, m.focused == paneDiag)
+	focused := m.focused == paneDiag
+
+	var (
+		content string
+		line    int
+	)
+	if m.diagTab == tabValidation {
+		content, line = validation.Render(
+			m.validation.Findings, m.validation.Ran, m.validation.Err, m.validation.Cursor, focused)
+	} else {
+		content, line = diagnostics.Render(m.cfg.WorkDir, m.scan.Err, m.scan.Diags, m.diagCursor, focused)
+	}
+
+	m.diag.SetTitle(m.diagTabTitle())
 	m.diag.SetContent(content)
 	if line >= 0 {
 		m.diag.RevealLine(line)

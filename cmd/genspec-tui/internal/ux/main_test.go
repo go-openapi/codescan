@@ -13,7 +13,7 @@ import (
 
 // TestMain forces a colour profile for the whole package's tests.
 //
-// The reason is that lipgloss degrades to plain text off a TTY, which `go test` never is,
+// The reason is that lipgloss degrades to plain text off a TTY, which go test never is,
 // so without this every style renders identically and any assertion about styling passes just as happily against
 // a pane that applied none.
 //

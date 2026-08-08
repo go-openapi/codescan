@@ -17,10 +17,10 @@ import (
 
 // FileView is the left pane's file display.
 //
-// It opens READ-ONLY and navigable — a highlighted line you move with the cursor keys and follow to the spec — and
-// switches to an editable textarea on demand (`i`), returning to the viewer on Esc.
+// It opens READ-ONLY and navigable - a highlighted line you move with the cursor keys and follow to the spec - and
+// switches to an editable textarea on demand (i), returning to the viewer on Esc.
 // Disk is the source of truth; saving writes back and the watcher drives the rescan.
-// A VIM/VS-Code integration is the eventual full editor.
+// A VIM or VS-Code integration is the eventual full editor.
 type FileView struct {
 	ta      textarea.Model
 	w, h    int
@@ -43,7 +43,7 @@ func NewFileView() FileView {
 	return FileView{ta: ta}
 }
 
-// SetAnchors installs the source lines that produced a spec node, for the viewer's link gutter (design §6.5).
+// SetAnchors installs the source lines that produced a spec node, for the viewer's link gutter.
 //
 // Keyed 1-based, matching token.Position.
 // A nil map renders no gutter.
@@ -110,10 +110,9 @@ func (p *FileView) NavDown() { p.gotoNav(p.navLine + 1) }
 // ScrollBy moves the nav line by delta (mouse wheel in read-only mode).
 func (p *FileView) ScrollBy(delta int) { p.gotoNav(p.navLine + delta) }
 
-// GotoLine parks the read-only nav line on the 0-based line and scrolls it to the VERTICAL CENTRE, clamped at the edges
-// (design §6.1).
+// GotoLine parks the read-only nav line on a 0-based line and centres it vertically, clamped at the edges.
 //
-// This is the JUMP primitive — cross-ref landings and follow-mode mirroring — as opposed to the nav keys, which
+// This is the JUMP primitive - cross-ref landings and follow-mode mirroring - as opposed to the nav keys, which
 // move the cursor one line and scroll as little as possible.
 //
 // The distinction matters: a follower target moves continuously as the driver scrolls, and minimal scrolling would pin
@@ -124,6 +123,68 @@ func (p *FileView) GotoLine(line int) {
 	p.navLine = min(max(line, 0), max(p.lineCount()-1, 0))
 	visible := max(p.h-3, 1)
 	p.offset = min(max(p.navLine-visible/2, 0), max(p.lineCount()-visible, 0))
+}
+
+// LineColAt maps a point inside the panel to a buffer line and a rune column.
+//
+// The point is panel-relative and 0-based. The line is 0-based; the column is 1-based,
+// and names the character under the point.
+//
+// Reports ok=false for the panel's chrome, for a row past the end of the buffer, for a column inside the prefix, and
+// for edit mode, where the textarea owns its own layout and this geometry does not apply.
+//
+// Columns are runes, so the mapping is exact for the annotations it exists to hit and drifts only on a line mixing
+// double-width characters with one - which no swagger directive does.
+func (p *FileView) LineColAt(x, y int) (line, col int, ok bool) {
+	// The panel draws a top border and a title row before the first line of the body.
+	const chromeH, borderW = 2, 1
+
+	if p.editing {
+		return 0, 0, false
+	}
+
+	row := y - chromeH
+	if row < 0 || row >= max(p.h-3, 0) {
+		return 0, 0, false
+	}
+
+	line = p.offset + row
+	if line < 0 || line >= p.lineCount() {
+		return 0, 0, false
+	}
+
+	// Bounded on the right by the panel's own border, so a click on the frame does not resolve to text.
+	if x >= p.w-borderW {
+		return 0, 0, false
+	}
+
+	numW, gutW := p.prefixWidth()
+	col = x - borderW - gutW - (numW + 1)
+	if col < 0 {
+		return 0, 0, false
+	}
+	col++ // 1-based, matching the span columns
+
+	// A line too long for the pane is drawn cut, with an ellipsis in its final column (see fit). That cell shows no
+	// character of the buffer, so it must not resolve to one - otherwise a click on the ellipsis reports whatever
+	// happens to sit at that offset in a line the user cannot actually see the end of.
+	text, _ := p.Line(line)
+	textW := max(p.w-2-(numW+1)-gutW, 0)
+	if len([]rune(text)) > textW && col >= textW {
+		return 0, 0, false
+	}
+
+	return line, col, true
+}
+
+// Line returns the text of a 0-based buffer line, reporting ok=false when it is out of range.
+func (p *FileView) Line(i int) (string, bool) {
+	lines := strings.Split(p.ta.Value(), "\n")
+	if i < 0 || i >= len(lines) {
+		return "", false
+	}
+
+	return lines[i], true
 }
 
 // VisibleRows is how many lines the read-only window shows, for page-sized moves of the nav line.
@@ -170,10 +231,11 @@ func (p *FileView) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// View renders the bordered panel: the textarea in edit mode, a line-numbered read-only viewer with the nav line
-// highlighted otherwise.
+// View renders the bordered panel.
 //
-// A "●" marks unsaved edits. focused drives the border/title brightness; navActive drives the nav-line highlight
+// In edit mode that is the textarea; otherwise a line-numbered read-only viewer with the nav line highlighted.
+//
+// A "●" marks unsaved edits. focused drives the border and title brightness; navActive drives the nav-line highlight
 // (true when focused OR mirroring as a follow follower).
 func (p *FileView) View(focused, navActive bool) string {
 	name := p.title
@@ -193,23 +255,19 @@ func (p *FileView) View(focused, navActive bool) string {
 	return theme.Panel(p.w, p.h, focused).Render(title + "\n" + body)
 }
 
-// viewerBody renders the read-only window: a right-aligned line-number gutter and the file text, with the nav line
-// highlighted when navActive (the pane is focused, or mirroring the followed line as a follow follower).
+// viewerBody renders the read-only window.
 //
-// The driver pane keeps focus in follow mode, so focused doubles as "this is the driver line" — strong bar when it
-// is, muted tint when this pane is only mirroring (§6.5).
+// A right-aligned line-number gutter, then the file text. The nav line is highlighted when navActive:
+// the pane is focused, or it is mirroring the followed line.
+//
+// The driver pane keeps focus in follow mode, so focused doubles as "this is the driver line" - strong bar when it
+// is, muted tint when this pane is only mirroring.
 func (p *FileView) viewerBody(focused, navActive bool) string {
 	inner := max(p.w-2, 0)
 	visible := max(p.h-3, 0)
 	lines := strings.Split(p.ta.Value(), "\n")
 	total := len(lines)
-	numW := len(strconv.Itoa(total))
-
-	// The link gutter only claims width when there is something to mark.
-	gutW := 0
-	if len(p.anchors) > 0 {
-		gutW = gutterWidth
-	}
+	numW, gutW := p.prefixWidth()
 	textW := max(inner-(numW+1)-gutW, 0)
 
 	style := navStyle(focused)
@@ -234,8 +292,24 @@ func (p *FileView) viewerBody(focused, navActive bool) string {
 	return b.String()
 }
 
-// gutterFor renders the link marker for a 1-based source line, or blanks of the same width to keep the line numbers
-// aligned.
+// prefixWidth is what the row prefix costs before a line's text.
+//
+// The line-number column, plus the link gutter when there is anything to mark in it.
+//
+// Shared with LineColAt rather than recomputed there, because a hit test that disagreed with the renderer by one column
+// would be wrong only at the edges of a token - the hardest kind of wrong to notice.
+func (p *FileView) prefixWidth() (numW, gutW int) {
+	numW = len(strconv.Itoa(len(strings.Split(p.ta.Value(), "\n"))))
+	if len(p.anchors) > 0 {
+		gutW = gutterWidth
+	}
+
+	return numW, gutW
+}
+
+// gutterFor renders the link marker for a 1-based source line.
+//
+// When there is no marker it renders blanks of the same width, so the line numbers stay aligned.
 //
 // Empty when the gutter is off.
 func (p *FileView) gutterFor(srcLine, width int) string {
@@ -249,8 +323,10 @@ func (p *FileView) gutterFor(srcLine, width int) string {
 	return theme.Gutter().Render(string(GutterAnchor)) + " "
 }
 
-// navStyle is the whole-line style for the highlighted nav line: the strong bar when this pane drives (the driver keeps
-// focus in follow mode, design §6.1), a muted tint when it is only mirroring another pane's cursor (§6.5).
+// navStyle is the whole-line style for the highlighted nav line.
+//
+// The strong bar when this pane drives, the driver keeping focus in follow mode; a muted tint
+// when it is only mirroring another pane's cursor.
 func navStyle(focused bool) lipgloss.Style {
 	if focused {
 		return theme.Selected()
@@ -264,8 +340,9 @@ func (p *FileView) gotoNav(line int) {
 	p.clampOffset()
 }
 
-// syncEditorCursor steps the textarea cursor to navLine (textarea has no row-setter), so toggling into edit mode keeps
-// the line.
+// syncEditorCursor steps the textarea cursor to navLine, so toggling into edit mode keeps the line.
+//
+// Stepping rather than setting, because textarea has no row-setter.
 func (p *FileView) syncEditorCursor() {
 	for p.ta.Line() < p.navLine {
 		before := p.ta.Line()

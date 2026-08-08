@@ -14,8 +14,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// The resolvers are pure over the indexes, so every case below is reachable without a Model, a panel or a temp dir —
-// which is the point: this is where the "nothing here" answers are decided, and each is a different thing to tell the
+// The resolvers are pure over the indexes, so every case below is reachable without a Model, a panel or a temp dir
+// - which is the point: this is where the "nothing here" answers are decided, and each is a different thing to tell the
 // user.
 
 const userPtr = "/definitions/User"
@@ -94,7 +94,7 @@ func TestResolveSpecToSource(t *testing.T) {
 		assert.Contains(t, got.Miss, noProvenanceDesc)
 	})
 
-	// Some other node is anchored, so the index is populated — this node simply was not produced from code, which is
+	// Some other node is anchored, so the index is populated - this node simply was not produced from code, which is
 	// the InputSpec overlay case.
 	t.Run("spec-only node", func(t *testing.T) {
 		got := resolveSpecToSource(rendered(userPtr), anchored("other.go", 1, "/definitions/Other"), 0)

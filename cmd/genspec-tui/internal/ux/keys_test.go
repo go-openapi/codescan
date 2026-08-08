@@ -63,7 +63,7 @@ func TestHelp_SwallowsOtherKeys(t *testing.T) {
 	assert.False(t, m.search.Active(), "/ did not open search")
 }
 
-// `h` is an ordinary character in the editor; opening help there would make the buffer unusable.
+// h is an ordinary character in the editor; opening help there would make the buffer unusable.
 func TestHelp_DoesNotHijackTheEditor(t *testing.T) {
 	m := newHelpModel(t)
 	m.loadFileQuietly(testutils.WriteTempGo(t, "package p\n"))
@@ -149,8 +149,8 @@ func TestOptions_CloseWithoutChangesDoesNotRescan(t *testing.T) {
 
 // A change is applied ONCE.
 //
-// The dirty flag has to outlive the close for the model to see it, so something must then say it has been acted on —
-// otherwise the next keystroke that reaches any overlay asks for the same rescan all over again.
+// The dirty flag has to outlive the close for the model to see it, so something must then say it has been acted on
+// - otherwise the next keystroke that reaches any overlay asks for the same rescan all over again.
 func TestOptions_ChangeIsAppliedOnlyOnce(t *testing.T) {
 	m := newOptionsModel(t)
 	_ = m.handleKey(testutils.KeyRune('o'))
@@ -181,8 +181,9 @@ func TestOptions_SwallowsOtherKeys(t *testing.T) {
 	assert.False(t, m.help.IsOpen(), "h did not open the help behind it")
 }
 
-// Quitting is decided above the overlays, so ctrl+q means the same thing here as everywhere else — it used to close
-// the popup and rescan instead.
+// Quitting is decided above the overlays.
+//
+// So ctrl+q means the same thing here as everywhere else. It used to close the popup and rescan instead.
 func TestOptions_QuitsFromTheOverlay(t *testing.T) {
 	m := newOptionsModel(t)
 	_ = m.handleKey(testutils.KeyRune('o'))
@@ -197,10 +198,11 @@ func TestOptions_QuitsFromTheOverlay(t *testing.T) {
 // Writing the keymap out is what exposed these: laid side by side, three panes were missing the paging the spec pane
 // had, and `h` turned out to be taken.
 
-// `h` is advertised in the header, so no pane may shadow it — least of all the source tree, which is where the app
-// starts.
+// h is advertised in the header, so no pane may shadow it.
 //
-// The tree's vim-style h/l aliases for collapse/expand gave way to the arrows, which always worked.
+// Least of all the source tree, which is where the app starts.
+//
+// The tree's vim-style h/l aliases for collapse or expand gave way to the arrows, which always worked.
 func TestPaging_TreeDoesNotShadowTheHelpKey(t *testing.T) {
 	m := testModel(t, sized(100, 40), focusedOn(paneTree))
 	m.leftMode = modeBrowse
@@ -252,7 +254,7 @@ func newHelpModel(t *testing.T) *Model {
 }
 
 // What the rows are and how they render is the overlay's own business, and is tested there. What the model owes it is
-// the wiring: `o` opens it, keys reach it, and a change is APPLIED — the overlay records the intent, the model decides
+// the wiring: `o` opens it, keys reach it, and a change is APPLIED - the overlay records the intent, the model decides
 // a rescan is what carrying it out means.
 
 func newOptionsModel(t *testing.T) *Model {

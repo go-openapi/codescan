@@ -20,7 +20,7 @@ import (
 // Spans record only where a run STARTS.
 //
 // The renderer takes each run to the next span's column, which is what lets it slice RAW text at known boundaries and
-// apply styling last — the only ordering in which a truncated line cannot cut through an escape sequence.
+// apply styling last - the only ordering in which a truncated line cannot cut through an escape sequence.
 type HighlightIndex struct {
 	byLine map[int][]theme.Span
 }

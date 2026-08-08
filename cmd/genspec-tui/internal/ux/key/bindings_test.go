@@ -33,8 +33,10 @@ func TestNav_Movements(t *testing.T) {
 	}
 }
 
-// Home and End are deltas rather than absolute positions: every caller clamps, so ∓span always lands on the ends
-// wherever the cursor started. That is what lets one rule serve a scroll offset, a list index and a line cursor.
+// Home and End are deltas rather than absolute positions.
+//
+// Every caller clamps, so a span delta always lands on the ends wherever the cursor started.
+// That is what lets one rule serve a scroll offset, a list index and a line cursor.
 func TestNav_HomeAndEndReachTheEndsFromAnywhere(t *testing.T) {
 	const span = 40
 	clamp := func(v int) int { return min(max(v, 0), span) }

@@ -11,7 +11,7 @@ import (
 // SearchBox is the spec-pane search prompt: the text input, and whether it currently holds the keyboard.
 //
 // While it is active it takes the status line and every key, which is why "is the user typing a query" has to be
-// answerable from outside — but nothing outside needs to know how the input works.
+// answerable from outside - but nothing outside needs to know how the input works.
 type SearchBox struct {
 	active bool
 	input  textinput.Model

@@ -114,8 +114,9 @@ func TestRenderDiagnostics_SelectedLine(t *testing.T) {
 	assert.Equal(t, 2, line)
 }
 
-// Spotted in a screenshot: the spec cursor and the selected diagnostic were both drawn with the strong bar, so two
-// panes appeared to be driving at once.
+// Spotted in a screenshot: two panes appeared to be driving at once.
+//
+// The spec cursor and the selected diagnostic were both drawn with the strong bar.
 //
 // The rule everywhere else is focused = strong, unfocused = muted tint.
 func TestDiag_SelectionDimsWhenUnfocused(t *testing.T) {
@@ -153,7 +154,7 @@ func TestDiagNav(t *testing.T) {
 		assert.Zero(t, m.diagCursor)
 	})
 
-	// The wheel must move the selection, not just the view — otherwise you can scroll away and then `f` or Enter acts on
+	// The wheel must move the selection, not just the view - otherwise you can scroll away and then `f` or Enter acts on
 	// a diagnostic you cannot see.
 	t.Run("wheel moves the selection", func(t *testing.T) {
 		m, _ := diagNavModel(t)
@@ -242,9 +243,10 @@ func TestDiagNav(t *testing.T) {
 	})
 }
 
-// TestDoScanCollectsDiagnostics is the end-to-end wiring proof: a malformed numeric validation surfaces the parser's
-// CodeInvalidNumber through Options.OnDiagnostic into scan.ResultMsg.Diags, without failing the scan
-// (diagnostics never abort the build).
+// TestDoScanCollectsDiagnostics is the end-to-end wiring proof.
+//
+// A malformed numeric validation surfaces the parser's CodeInvalidNumber through Options.OnDiagnostic,
+// and on into scan.ResultMsg.Diags. The scan does not fail: diagnostics never abort the build.
 func TestDoScanCollectsDiagnostics(t *testing.T) {
 	dir := writeModule(t, map[string]string{
 		"go.mod":   "module diagfixture\n\ngo 1.25\n",
@@ -282,9 +284,9 @@ func TestDoScanCollectsDiagnostics(t *testing.T) {
 
 const diagNavCount = 30
 
-// badMaximumFixture is the minimal diagnostic trigger: a swagger:model whose field carries a non-numeric `maximum:`.
+// badMaximumFixture is the minimal diagnostic trigger: a swagger:model whose field carries a non-numeric maximum:.
 //
-// The parser drops the keyword from the spec and emits grammar.CodeInvalidNumber — exactly the soft-diagnostic shape
+// The parser drops the keyword from the spec and emits grammar.CodeInvalidNumber - exactly the soft-diagnostic shape
 // the pane is built to surface.
 // Kept inline so the test owns its input and the lean TUI module needs no root test-fixture dependency.
 const badMaximumFixture = `package diagfixture
@@ -300,8 +302,9 @@ type BadMaximum struct {
 }
 `
 
-// diagNavModel builds a model with many diagnostics over two files, so paging and file-switching both have somewhere to
-// go.
+// diagNavModel builds a model with many diagnostics over two files.
+//
+// Paging and file-switching then both have somewhere to go.
 func diagNavModel(t *testing.T) (*Model, string) {
 	t.Helper()
 
@@ -333,8 +336,10 @@ func codes(diags []grammar.Diagnostic) []grammar.Code {
 	return out
 }
 
-// writeModule materializes files (relative path → content) under a fresh temp dir and returns it. codescan scans it
-// as a standalone module (it forces GOWORK=off), so no go.sum or workspace entry is needed for a stdlib-only tree.
+// writeModule materializes files under a fresh temp dir and returns it.
+//
+// Files are given as relative path to content. codescan scans the result as a standalone module, forcing GOWORK=off,
+// so a stdlib-only tree needs neither a go.sum nor a workspace entry.
 func writeModule(t *testing.T, files map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()

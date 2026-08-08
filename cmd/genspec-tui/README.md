@@ -51,17 +51,31 @@ go run ./cmd/genspec-tui -workdir ./fixtures -packages ./goparsing/petstore/...
 | `-name-from-tags` | `json` | ordered struct tags a field's name derives from, e.g. `form,json` for gin. Pass `-name-from-tags=` (empty) to use the Go field name instead |
 | `-name-concat-budget` | `0.65` | readability cutoff when deconflicting colliding definition names |
 
+A second group decides what gets built and how it is loaded — the go environment
+the scan runs under, plus codescan's own loader:
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `-goos` / `-goarch` | this machine's | the platform the scanned code is built for, so `//go:build` lines and `_linux.go` suffixes resolve the way that platform resolves them |
+| `-goflags` | — | default go command flags, as `GOFLAGS` (e.g. `-tags=integration`); `-build-tags` wins |
+| `-gowork` | search upwards | workspace selection, as `GOWORK`: `off` to disable, or the path to a `go.work` |
+| `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` (e.g. `jsonv2`) |
+| `-toolchain-free-loader` | `false` | load packages with codescan's own loader instead of the go command (experimental) |
+| `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-toolchain-free-loader`) |
+
 Every boolean scanner option can be toggled live with `o`; the spec re-renders
 on close, which makes the popup the fastest way to see what a flag such as
 `EmitRefSiblings` actually changes. The rows are grouped (discovery & scope ·
-`$ref` & composition · naming · docs & comments · types & extensions), and a
-knob that only bites in combination says so — `PruneUnusedModels` shows
-`(needs ScanModels)` until that one is on, and `EmitXGoType` shows
+`$ref` & composition · naming · docs & comments · types & extensions · package
+loading), and a knob that only bites in combination says so — `PruneUnusedModels`
+shows `(needs ScanModels)` until that one is on, and `EmitXGoType` shows
 `(moot: SkipExtensions)` while extensions are suppressed.
 
 The value-typed options are flags rather than popup rows, since a checkbox list
-cannot express them — see the table above. The one option with no route in at
-all is `InputSpec` (overlay mode).
+cannot express them — see the tables above. The three booleans that appear in
+both places (`-scan-models` and the two loader flags) let a session start one way
+and change without a restart. The one option with no route in at all is
+`InputSpec` (overlay mode).
 
 ## Layout
 
@@ -84,6 +98,18 @@ notices, and the spec re-renders.
 Clicking a pane focuses it, and the mouse wheel scrolls whichever pane is under
 the pointer — `Tab` is never required.
 
+Both dividers move: `ctrl+←`/`ctrl+→` for the one between the left pane and the
+spec, `ctrl+↑`/`ctrl+↓` for the one above the diagnostics. Each key travels in
+its own arrow's direction, and they work from every mode including the editor —
+wanting more room for what you are typing in is exactly when you reach for a
+resize.
+
+The dividers are held as **proportions**, not cell counts, so resizing the
+terminal keeps the layout you chose rather than letting one pane absorb the
+difference. They stop short of either edge: a pane driven to nothing could not
+be dragged back, because the keys that would restore it are advertised in a
+status line it no longer has room for.
+
 The binding surface is context-dependent — `f` follows from three different
 panes, `Enter` opens a file in the tree but follows a `$ref` in the spec — so
 the header carries a standing `h: help` banner, and `h` (or `?`) opens the full
@@ -102,10 +128,14 @@ the cursor falls back to its nearest surviving ancestor.
 |-----|--------|
 | `h` / `?` | the key-bindings overlay (also advertised in the header) |
 | `Tab` / `shift+Tab` | cycle focus forward / backward |
-| click | focus the pane under the pointer |
+| `ctrl+←` / `ctrl+→` | move the divider between the left pane and the spec |
+| `ctrl+↑` / `ctrl+↓` | move the divider above the diagnostics strip |
+| click | focus the pane under the pointer — or, on a `swagger:` directive, show what it means |
 | wheel | scroll the pane under the pointer |
 | `c` | copy the focused pane's raw content to the clipboard |
 | `r` | rescan now |
+| `v` / `V` | validate the generated spec / switch the diagnostics pane between scan and validation |
+| `F5` | reload the open file from disk (asks before discarding unsaved edits) |
 | `o` | scanner options popup (`space` toggles, `Esc`/`o` applies and rescans) |
 | `ctrl+q` / `ctrl+c` | quit |
 
@@ -144,6 +174,7 @@ composes.
 | `↑` `↓` / `j` `k` | move the navigation line |
 | `PgUp` / `PgDn`, `Home` / `End` | move a page at a time, or jump to the ends |
 | `f` | toggle follow mode (source drives, the spec mirrors) |
+| `K` | what the `swagger:` annotation on this line means |
 | `i` / `Enter` | start editing |
 | `Esc` | back to the tree |
 
@@ -156,18 +187,105 @@ The viewer shadows only these keys; every other binding (`/`, `o`, `r`, `g`,
 |-----|--------|
 | `ctrl+f` | jump from the cursor's line to the spec node it produced |
 | `ctrl+s` | save (triggers a rescan) |
+| `F5` | reload from disk, discarding the edits (asks first) |
 | `Esc` | back to the read-only viewer |
 
 `ctrl+f` rather than `f` because the editor owns plain `f` for typing.
 
-### Diagnostics pane
+## Annotation reference (`K`)
+
+With the viewer's navigation line on a comment carrying a `swagger:` directive,
+`K` shows what that annotation does: its syntax, a one-line summary, and what
+may be written in its body.
+
+`K` rather than a letter of its own because it is vim's "look up what is under
+the cursor", and what LSP clients bind hover to. It reads the **buffer**, so it
+works on an annotation you are still typing — which is when it is wanted.
+
+Clicking the directive does the same. The pointer has to be on the `swagger:…`
+token itself, not merely on its line: clicking a pane to focus it is the most
+ordinary thing you do here, and it must not throw a popup up because the pointer
+came to rest inside a comment. The click asks "what is that" and leaves the
+navigation line where it was.
+
+The entries cover the twenty `swagger:` annotations. Individual body keywords
+(`required`, `minLength`, `enum`, …) are not documented one by one — there are
+too many for a popup to be the right place — so each annotation's entry says
+instead which family of keywords its body accepts.
+
+## Reloading
+
+`F5` re-reads the open file from disk. Disk is the source of truth here, so
+this is how you pick up a change made outside the TUI — a `git checkout`, a
+`gofmt`, another editor — and equally how you throw away edits you no longer
+want.
+
+It asks first, and only when there is something to lose: with a clean buffer it
+just reloads. Answer `y` to discard, `n` or `Esc` to keep editing. `Enter`
+declines too — the destructive answer is the one you have to type on purpose.
+
+Reload keeps the line you were on and always lands in the read-only viewer,
+even when it interrupted an edit. The line is restored **by number**, which is
+the honest approximation: unlike a rescan, where the spec cursor is restored by
+node, nothing anchors a line of Go source to anything stable across an edit
+made behind the TUI's back.
+
+### Diagnostics pane — scan tab
 
 | Key | Action |
 |-----|--------|
 | `↑` `↓` / `j` `k` | select a diagnostic |
 | `PgUp` / `PgDn`, `Home` / `End` | select a page at a time, or jump to the ends |
 | `Enter` | go to this diagnostic's source line and focus it |
-| `f` | toggle follow mode (the selection drives, the source pane mirrors) |
+| `f` | toggle follow mode (the selection drives, the source **and** spec panes mirror) |
+
+### Diagnostics pane — validation tab
+
+| Key | Action |
+|-----|--------|
+| `↑` `↓` / `j` `k` | select a finding |
+| `PgUp` / `PgDn`, `Home` / `End` | select a page at a time, or jump to the ends |
+| `Enter` | go to this finding's node in the spec |
+| `f` | toggle follow mode (the selection drives, the spec pane mirrors) |
+
+## Validating the generated spec (`v`)
+
+`v` runs the document through [go-openapi/validate][validate] and lists what it
+finds in a **validation** tab of the diagnostics pane; `V` switches between that
+and the scan's own findings.
+
+The two tabs answer different questions. The scan tab says whether your
+**annotations** were understood. The validation tab says whether the
+**document** they produced is legal Swagger 2.0 — a scan can be perfectly clean
+and still emit something a consumer rejects.
+
+They also track different things, which is why they are tabs rather than one
+list. A scan diagnostic knows a source position, so it drives the source pane
+(and the spec). A validation finding knows only a JSON pointer, so `Enter` and
+`f` there drive the **spec** pane and nothing else.
+
+The tab exists only once you have pressed `v`, and a rescan retires it: the
+findings judged the document that scan has just replaced, and a list of
+complaints about a spec that no longer exists invites navigating to nodes that
+may have moved or gone. Press `v` again.
+
+Navigation is exact for an ordinary object path: a finding about
+`definitions.User.properties.email.type` lands on that node. Two cases land on
+the **enclosing** node instead, and both are the validator's notation rather
+than the conversion:
+
+- **Anything inside an array.** The validator omits array indices, reporting
+  `paths./pets.get.parameters.type` where the node is at
+  `…/parameters/0/type`. You land on the parameter list. This is common —
+  parameter lists are always arrays.
+- **A "required but missing" finding**, whose whole complaint is that the node
+  it names does not exist. `…responses.200.description` lands on the response,
+  which is the only place there is to go.
+
+Resolution walks up to the nearest node actually rendered, so an imprecise
+landing is always an *ancestor* of what was reported — never a sibling, and
+never somewhere untrue. (A path template containing a dot would also split
+wrongly, since the notation cannot express one; the same walk-up covers it.)
 
 ## Cross-reference navigation
 
@@ -179,15 +297,22 @@ Two indexes, rebuilt on every render, meet at a JSON pointer:
 
 ### Follow mode (`f`)
 
-`f` turns on a persistent link between two panes. The pane you pressed it in is
-the **driver** and keeps focus; the other **mirrors** it on every cursor move,
-centring and highlighting the linked line. The two roles are styled differently
-so it is always clear which pane leads. A `SPEC ▸ SOURCE` badge names the
+`f` turns on a persistent link between panes. The pane you pressed it in is the
+**driver** and keeps focus; the others **mirror** it on every cursor move,
+centring and highlighting the linked line. The roles are styled differently so
+it is always clear which pane leads. A `SPEC ▸ SOURCE` badge names the
 direction and the resolved target.
 
 Follow works in three directions: spec → source, source → spec, and
-diagnostic → source. `Esc`, a second `f`, changing focus, or starting to edit
-all leave it.
+diagnostic → source **and** spec. `Esc`, a second `f`, changing focus, or
+starting to edit all leave it.
+
+The diagnostics pane drives two followers where the others drive one, because
+it is not itself either end of the link — it is a third place naming a source
+position, and what a finding *says* is usually about what that position
+produced. The two halves resolve independently: a diagnostic on a line that
+produced no spec node is the ordinary case (a parse error means nothing was
+built from it), so the source half still resolves and the badge reports both.
 
 ### References (`F3`, `Enter`)
 
@@ -304,6 +429,14 @@ These are known and deliberate; the TUI says so rather than guessing.
 - **`shift+F3` is terminal-dependent.** bubbletea v1's key type carries no Shift
   modifier, and the xterm family reports shift+F3 as F15. Terminals that send
   something else have no previous-reference key; `F3` still wraps around.
+- **The split keys are terminal-dependent too.** `ctrl`+arrow reaches us as
+  `CSI 1;5<A-D>`, which most modern emulators send and some (notably inside a
+  default `tmux` or `screen`) do not. A terminal that sends a bare arrow instead
+  simply has no resize keys — nothing misfires, because a bare arrow is already
+  a navigation key.
+- **Split sizes last for the session only.** They are model state, so they
+  survive rescans and terminal resizes but not a restart; persisting them needs
+  a config file, which the TUI does not have.
 
 ## Development
 
@@ -333,3 +466,4 @@ codescan's `OnDiagnostic` callback, and `main` discards the standard logger, so
 nothing paints over the alt-screen.
 
 [codescan]: https://github.com/go-openapi/codescan
+[validate]: https://github.com/go-openapi/validate

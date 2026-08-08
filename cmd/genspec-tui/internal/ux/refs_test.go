@@ -75,8 +75,9 @@ func TestRefs_CycleBackwardEntersAtTheLastSite(t *testing.T) {
 	assert.Contains(t, m.refs.Status, "ref 2/3")
 }
 
-// The cursor need not be on the definition line itself: a node inside the definition resolves up to it, the way the
-// rest of the tool resolves pointers.
+// The cursor need not be on the definition line itself.
+//
+// A node inside the definition resolves up to it, the way the rest of the tool resolves pointers.
 func TestRefs_CycleFromInsideTheDefinition(t *testing.T) {
 	m := newRefModel(t)
 	m.spec.SetCursor(rmLineUserName) // /definitions/User/properties/name
@@ -86,8 +87,9 @@ func TestRefs_CycleFromInsideTheDefinition(t *testing.T) {
 		"an inner node cycles the enclosing definition's uses")
 }
 
-// Scrolling away ends the cycle: the next F3 asks about wherever the user now is, rather than continuing to walk the
-// previous definition's uses.
+// Scrolling away ends the cycle.
+//
+// The next F3 asks about wherever the user now is, rather than continuing to walk the previous definition's uses.
 func TestRefs_ScrollingAwayStartsAFreshCycle(t *testing.T) {
 	m := newRefModel(t)
 	m.spec.SetCursor(rmLineUserDecl)
@@ -103,8 +105,9 @@ func TestRefs_ScrollingAwayStartsAFreshCycle(t *testing.T) {
 	assert.Empty(t, m.refs.Anchor)
 }
 
-// Line 0 is the opening brace, which carries no pointer at all — a different miss from "this node has no references",
-// and it must say so.
+// Line 0 is the opening brace, which carries no pointer at all.
+//
+// That is a different miss from "this node has no references", and it must say so.
 func TestRefs_CycleOnAnUnindexedLine(t *testing.T) {
 	m := newRefModel(t)
 	m.spec.SetCursor(0)
@@ -123,9 +126,9 @@ func TestRefs_NothingReferencesTheNode(t *testing.T) {
 	assert.Empty(t, m.refs.Status, "no cycle was started")
 }
 
-// The Phase-D keys belong to the spec pane.
+// The reference-navigation keys belong to the spec pane.
 //
-// From anywhere else they must fall through untouched — Enter in particular still has to open a file in the tree.
+// From anywhere else they must fall through untouched - Enter in particular still has to open a file in the tree.
 func TestRefs_KeysAreSpecPaneOnly(t *testing.T) {
 	for _, p := range []pane{paneTree, paneDiag} {
 		m := newRefModel(t)
@@ -178,7 +181,7 @@ func TestRefs_GotoDefinition(t *testing.T) {
 
 // Regression: a jump CENTRES its target, so after F3 the line we landed on is not the top of the viewport.
 //
-// Enter must still act on where the jump put the user — otherwise the headline workflow (find a use, then go back to
+// Enter must still act on where the jump put the user - otherwise the headline workflow (find a use, then go back to
 // the definition) reports "no $ref on this line".
 func TestRefs_CycleThenGotoDefinition(t *testing.T) {
 	m := newRefModel(t)
@@ -197,8 +200,9 @@ func TestRefs_CycleThenGotoDefinition(t *testing.T) {
 		"and the definition we landed on becomes the new cursor, so Enter can chain")
 }
 
-// Moving the cursor off the site the cycle parked it on ends the cycle: the next F3 asks about the node the user is now
-// on.
+// Moving the cursor off the site the cycle parked it on ends the cycle.
+//
+// The next F3 asks about the node the user is now on.
 func TestRefs_MovingTheCursorEndsTheCycle(t *testing.T) {
 	m := newRefModel(t)
 	m.spec.SetCursor(rmLineUserDecl)
@@ -207,7 +211,7 @@ func TestRefs_MovingTheCursorEndsTheCycle(t *testing.T) {
 	require.Contains(t, m.refs.Status, "ref 1/3")
 
 	// One line down and we are off the site, so the cycle cannot continue. (That line is inside Team, which nothing
-	// references — hence no new cycle.)
+	// references - hence no new cycle.)
 	_ = m.handleKey(tea.KeyMsg{Type: tea.KeyDown})
 	require.Equal(t, rmLineLead+1, m.spec.CursorLine())
 
@@ -222,8 +226,9 @@ func TestRefs_MovingTheCursorEndsTheCycle(t *testing.T) {
 		"a fresh cycle, re-anchored on the node now under the cursor")
 }
 
-// The spec pane is navigable in its own right: the cursor keys move the cursor, and paging moves it with the view
-// rather than leaving it behind off screen.
+// The spec pane is navigable in its own right.
+//
+// The cursor keys move the cursor, and paging moves it with the view rather than leaving it behind off screen.
 func TestSpecNav_CursorKeys(t *testing.T) {
 	m := newRefModel(t)
 	m.topH = 10 // gives handleSpecNav a page size
@@ -253,7 +258,7 @@ func TestSpecNav_CursorKeys(t *testing.T) {
 	assert.Positive(t, m.spec.CursorLine(), "page down carried the cursor with it")
 }
 
-// The nav keys belong to the spec pane only — j/k must still drive the tree and the diagnostics list.
+// The nav keys belong to the spec pane only - j/k must still drive the tree and the diagnostics list.
 func TestSpecNav_OnlyFromTheSpecPane(t *testing.T) {
 	m := newRefModel(t)
 	m.spec.SetCursor(rmLineUserDecl)
@@ -287,8 +292,9 @@ func TestRefs_GotoDefinitionEdges(t *testing.T) {
 	})
 }
 
-// The cycle holds rendered line numbers, so anything that replaces the render must drop it rather than let F3 jump to a
-// line that no longer means anything.
+// The cycle holds rendered line numbers.
+//
+// So anything that replaces the render must drop it, rather than let F3 jump to a line that no longer means anything.
 func TestRefs_CycleResets(t *testing.T) {
 	active := func(t *testing.T) *Model {
 		t.Helper()
@@ -484,7 +490,7 @@ func TestE2E_GutterMarksNavigableLines(t *testing.T) {
 		"the gutter is a hint, not a mark on every line — otherwise it says nothing")
 }
 
-// D2 — find-references cycling and go-to-definition, through the model.
+// D2 - find-references cycling and go-to-definition, through the model.
 //
 // The spec pane carries a real line cursor, so "the node under the cursor" means exactly that.
 // Tests park it with SetCursor and assert on CursorLine.

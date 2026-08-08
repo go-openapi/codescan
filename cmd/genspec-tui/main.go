@@ -1,17 +1,6 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Command genspec-tui is an interactive terminal front-end for the codescan Swagger-spec generator.
-//
-// It provides a source-tree browser (left), the generated spec (right, JSON/YAML), and diagnostics (bottom).
-//
-// It regenerates the whole-scope spec on any file change.
-//
-// The scan is configured from two places.
-//   - Boolean knobs are toggled live in the options overlay (`o`)
-//   - build tags, package and tag filters, naming — are command-line flags (a checkbox list cannot express them)
-//
-// The knobs settings overlay re-runs the scan on close.
 package main
 
 import (
@@ -133,7 +122,7 @@ func (c *cliFlags) passed(name string) bool {
 //   - nil (unset) keeps the historic ["json"] behaviour
 //   - an empty but NON-nil slice means "consult no struct tag, use the Go field name"
 //
-// Collapsing those two would make `-name-from-tags=` silently mean the opposite of what it says.
+// Collapsing those two would make -name-from-tags= silently mean the opposite of what it says.
 func resolveNameFromTags(raw string, passed bool) []string {
 	if !passed {
 		return nil
@@ -146,8 +135,8 @@ func resolveNameFromTags(raw string, passed bool) []string {
 }
 
 func main() {
-	// Mute the scanner's logging. codescan writes warnings (unsupported type kinds, skipped builtins, …) through the
-	// standard log package, whose default sink is stderr — which paints over bubbletea's alt-screen and corrupts the TUI.
+	// Mute the scanner's logging. codescan writes warnings (unsupported type kinds, skipped builtins, ...) through the
+	// standard log package, whose default sink is stderr - which paints over bubbletea's alt-screen and corrupts the TUI.
 	//
 	// Discard it globally for the lifetime of the program.
 	//
@@ -164,7 +153,7 @@ func main() {
 
 // run is main's body, split out so that os.Exit happens with no deferred call pending.
 //
-// Exiting from inside main skipped `defer model.Close()`, leaving the file watcher running until the process died anyway.
+// Exiting from inside main skipped defer model.Close(), leaving the file watcher running until the process died anyway.
 func run() error {
 	cli := registerFlags(flag.CommandLine)
 	flag.Parse()
@@ -185,7 +174,7 @@ func run() error {
 
 // splitList parses a comma-separated flag into trimmed, non-empty entries.
 //
-// It returns nil when there is nothing usable — nil being what codescan reads as "no filter".
+// It returns nil when there is nothing usable - nil being what codescan reads as "no filter".
 func splitList(s string) []string {
 	var out []string
 	for p := range strings.SplitSeq(s, ",") {

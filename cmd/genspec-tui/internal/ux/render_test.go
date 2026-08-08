@@ -8,14 +8,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/validation"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
 
 // The rest of the suite drives handleKey directly, which is the right altitude for testing what a
-// key does — but it means the render path never runs. These call View and the lines it composes, so
+// key does - but it means the render path never runs. These call View and the lines it composes, so
 // a panic or an empty pane in any state is caught here rather than by a user.
 
 // view renders and strips the styling, leaving the text a user reads.
@@ -93,6 +96,27 @@ func TestStatusLine(t *testing.T) {
 		assert.Contains(t, testutils.StripANSI(m.statusLine()), "diagnostic 1/3")
 	})
 
+	// Both tabs are populated here on purpose: the counter has to come from the tab on SCREEN, not from whichever
+	// list happens to be non-empty. Reporting the scan's cursor under a validation list counts a selection the user
+	// cannot see, and against the wrong total.
+	t.Run("a selected validation finding", func(t *testing.T) {
+		m := testModel(t, sized(100, 40), focusedOn(paneDiag), withDiags(threeDiags()...))
+		m.validation = ValidationState{
+			Ran: true,
+			Findings: []validation.Finding{
+				{Severity: grammar.SeverityError, Message: "first"},
+				{Severity: grammar.SeverityError, Message: "second"},
+			},
+			Cursor: 1,
+		}
+		m.diagTab = tabValidation
+
+		out := testutils.StripANSI(m.statusLine())
+
+		assert.Contains(t, out, "finding 2/2")
+		assert.NotContains(t, out, "diagnostic", "the scan tab's counter must not leak into the validation tab")
+	})
+
 	t.Run("a notice outranks the pane hint", func(t *testing.T) {
 		m := testModel(t, sized(100, 40))
 		m.notice = "saved user.go"
@@ -142,7 +166,7 @@ func TestFollowBadge(t *testing.T) {
 	}{
 		{followSpec, "SPEC ▸ SOURCE"},
 		{followSource, "SOURCE ▸ SPEC"},
-		{followDiag, "DIAG ▸ SOURCE"},
+		{followDiag, "DIAG ▸ SOURCE + SPEC"},
 	} {
 		m := testModel(t, sized(100, 40))
 		m.follow = tc.mode
@@ -204,6 +228,55 @@ func TestHeaderLine(t *testing.T) {
 		assert.Contains(t, out, "h: help")
 		assert.Contains(t, out, "…", "the work dir is trimmed from the left instead")
 	})
+
+	// The work dir used to be given a fixed allowance and every other field a hand-tuned constant to fit inside. The
+	// stats widen with the spec, the tail gains a duration, the match counter appears mid-search - so past that constant
+	// the line simply ran off the right of the screen.
+	//
+	// Driven at several widths with every field at its longest, since the failure is a function of their sum.
+	t.Run("the whole line fits, whatever it is reporting", func(t *testing.T) {
+		const deepPath = "/home/fred/src/github.com/go-openapi/codescan/.worktrees/feat/" +
+			"tui-ux-enhancements/fixtures/enhancements/annotation-noise"
+
+		for _, w := range []int{40, 60, 80, 120, 160, 200} {
+			m := testModel(t, sized(w, 40), withSpecJSON(refSpecJSON))
+			m.cfg.WorkDir = deepPath
+			m.scan.NumPaths, m.scan.NumDefs = 1234, 5678
+			m.scan.Elapsed = 63 * time.Second
+			require.Positive(t, m.spec.Search("definitions"))
+
+			assert.LessOrEqual(t, lipgloss.Width(m.headerLine()), w, "the header overflows a %d-column terminal", w)
+		}
+	})
+
+	// Which end gives way matters: what went missing was the half reporting whether the scan had finished at all, which
+	// is worth more columns than the directory it ran in.
+	t.Run("a long work dir yields to the fields on its right", func(t *testing.T) {
+		m := testModel(t, sized(120, 40))
+		m.cfg.WorkDir = strings.Repeat("/very-long-path-segment", 8)
+		m.scan.NumPaths, m.scan.NumDefs = 12, 34
+		m.scan.Elapsed = 2 * time.Second
+
+		out := testutils.StripANSI(m.headerLine())
+
+		assert.Contains(t, out, "12 paths · 34 defs")
+		assert.Contains(t, out, "ready (2s)")
+	})
+}
+
+// TestStatusLineFits covers the other unbounded line.
+//
+// Several of its variants embed a JSON pointer, a follow target or a file path, none of which have a length limit.
+func TestStatusLineFits(t *testing.T) {
+	for _, w := range []int{40, 80, 120} {
+		m := testModel(t, sized(w, 40), withSpecJSON(refSpecJSON), focusedOn(paneSpec))
+		m.spec.SetCursor(refLine(t, `"User": {`))
+		assert.LessOrEqual(t, lipgloss.Width(m.statusLine()), w, "the status line overflows a %d-column terminal", w)
+
+		m.follow = followDiag
+		m.followTarget = strings.Repeat("/definitions/VeryLongDefinitionName", 4)
+		assert.LessOrEqual(t, lipgloss.Width(m.statusLine()), w, "the follow badge overflows a %d-column terminal", w)
+	}
 }
 
 func TestHumanDuration(t *testing.T) {
@@ -274,8 +347,9 @@ func TestFocusedContent(t *testing.T) {
 	assert.Contains(t, m.focusedContent(), "package p")
 }
 
-// Nothing to copy must not enqueue a clipboard command — the command shells out, so an empty one
-// would be a pointless subprocess.
+// Nothing to copy must not enqueue a clipboard command.
+//
+// The command shells out, so an empty one would be a pointless subprocess.
 //
 // An empty open file is the reachable case: the spec pane always holds at least its placeholder,
 // and the tree always holds its root row.

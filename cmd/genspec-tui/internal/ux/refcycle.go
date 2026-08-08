@@ -9,10 +9,12 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
 )
 
-// RefCycle is the find-references walk (F3 / shift+F3): the definition whose uses are being visited, its reference
-// sites in rendered-line order, and which one the cursor is parked on.
+// RefCycle is the find-references walk behind F3 and shift+F3.
 //
-// It is valid only for the render it was computed against — every line number in it is a line of THAT render — so a
+// It holds the definition whose uses are being visited, its reference sites in rendered-line order, and
+// which one the cursor is parked on.
+//
+// It is valid only for the render it was computed against - every line number in it is a line of THAT render - so a
 // rescan or a format toggle drops it.
 type RefCycle struct {
 	Anchor string          // the definition pointer whose uses are being cycled

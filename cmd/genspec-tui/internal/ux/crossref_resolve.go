@@ -14,7 +14,7 @@ import (
 //
 // A link can fail for genuinely different reasons, and conflating them sends the user hunting for a bug that isn't
 // there: a node with no anchored ancestor was never produced from code, an InputSpec overlay node legitimately has no
-// origin, and a node that resolved but isn't rendered is simply outside the active JSON/YAML view.
+// origin, and a node that resolved but isn't rendered is simply outside the active JSON or YAML view.
 //
 // All three are first-class answers rather than errors, which is why a resolution carries one whether or not it found
 // anything.
@@ -91,7 +91,7 @@ func resolveFileToSpec(src *index.SourceIndex, spec *index.SpecIndex, path strin
 
 // resolveRefToSpec follows the $ref on a rendered line to the node it points at.
 //
-// Only local (`#/…`) refs are followable: the TUI renders one spec and is not a $ref resolver, so an external target
+// Only local (#/...) refs are followable: the TUI renders one spec and is not a $ref resolver, so an external target
 // is reported honestly rather than guessed at.
 func resolveRefToSpec(refs *index.RefIndex, spec *index.SpecIndex, line int) specTarget {
 	site, ok := refs.RefAt(line)

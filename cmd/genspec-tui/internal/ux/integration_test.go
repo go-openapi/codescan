@@ -3,7 +3,7 @@
 
 // End-to-end tests: a real scan of the petstore fixture, and a hand-built spec wired to real files on disk.
 //
-// These deliberately assemble everything — they are what would catch a wiring mistake between the layers the rest of
+// These deliberately assemble everything - they are what would catch a wiring mistake between the layers the rest of
 // the suite tests apart.
 
 package ux
@@ -22,12 +22,13 @@ import (
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
+	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// D3 — the whole chain against a REAL scan.
+// D3 - the whole chain against a REAL scan.
 //
 // Every other test in this package feeds the model hand-written JSON.
 // That proves the indexes and the navigation agree with each other, but not that either agrees with what codescan
@@ -131,7 +132,7 @@ func TestE2E_CycleVisitsEverySiteExactlyOnce(t *testing.T) {
 	assert.Contains(t, m.refs.Status, "ref 1/")
 }
 
-// Both renders of the same scan must find the same reference sites — only the line numbers differ.
+// Both renders of the same scan must find the same reference sites - only the line numbers differ.
 //
 // This is what makes ctrl+j/ctrl+y safe mid-investigation.
 func TestE2E_YAMLFindsTheSameSites(t *testing.T) {
@@ -148,8 +149,9 @@ func TestE2E_YAMLFindsTheSameSites(t *testing.T) {
 		"the same nodes reference pet in either render")
 }
 
-// The two halves of the linker must agree on a real scan: a definition the ref index points at should also be a node
-// the provenance index can take to source.
+// The two halves of the linker must agree on a real scan.
+//
+// A definition the ref index points at should also be a node the provenance index can take to source.
 func TestE2E_RefTargetsHaveSource(t *testing.T) {
 	m := scanPetstore(t)
 	require.Positive(t, m.srcIndex.Len(), "the scan emitted provenance")
@@ -164,8 +166,9 @@ func TestE2E_RefTargetsHaveSource(t *testing.T) {
 	}
 }
 
-// Spec→source follow, end to end: park on a definition, turn on follow, and the source pane must open the Go file
-// that actually declares it.
+// Spec to source follow, end to end.
+//
+// Park on a definition, turn on follow, and the source pane must open the Go file that actually declares it.
 func TestE2E_FollowOpensTheDeclaringFile(t *testing.T) {
 	m := scanPetstore(t)
 
@@ -218,7 +221,7 @@ func TestJoin_SpecToSource(t *testing.T) {
 
 	// The spec has far more nodes than codescan anchors, so most lines resolve via nearest-ancestor.
 	//
-	// `…/email/type` has no anchor of its own.
+	// `.../email/type` has no anchor of its own.
 	t.Run("nearest ancestor", func(t *testing.T) {
 		f := newJoinFixture(t)
 		f.m.focused = paneSpec
@@ -341,8 +344,9 @@ func TestJoin_SourceToSpec(t *testing.T) {
 	})
 }
 
-// A rescan rebuilds both indexes; follow must re-resolve against the NEW spec rather than keep pointing at a line
-// number from the old render.
+// A rescan rebuilds both indexes, and follow must re-resolve against the new spec.
+//
+// Keeping a line number from the old render would point somewhere arbitrary.
 func TestJoin_FollowSurvivesRescan(t *testing.T) {
 	f := newJoinFixture(t)
 	f.m.loadFileQuietly(f.userGo)
@@ -526,18 +530,18 @@ func TestJoin_ViewerPassesGlobalKeysThrough(t *testing.T) {
 // The JOIN, exercised through the model.
 //
 // The two indexes have their own unit tests; what those cannot show is whether the model wires them together correctly.
-// So these tests synthesize a scan — a rendered spec body plus the []scanner.Provenance a real scan would emit —
-// build the indexes with the REAL builders, put the source files on disk, and then assert where the follower actually
+// So these tests synthesize a scan - a rendered spec body plus the []scanner.Provenance a real scan would emit
+// - build the indexes with the REAL builders, put the source files on disk, and then assert where the follower actually
 // lands.
 //
 // The provenance set deliberately anchors only definitions and properties, the way codescan does (anchors-only
-// emission): no anchor on `…/email/type`, none on a struct's closing brace.
+// emission): no anchor on `.../email/type`, none on a struct's closing brace.
 // That is what makes nearest-ancestor (spec→source) and nearest-enclosing (source→spec) resolution observable
 // rather than incidental.
 
 // joinSpecJSON is what the spec pane renders.
 //
-// Line numbers are load-bearing — see joinLine* below.
+// Line numbers are load-bearing - see joinLine* below.
 const joinSpecJSON = `{
   "definitions": {
     "Address": {
@@ -566,9 +570,9 @@ const (
 	joinLineCity       = 4
 	joinLineUser       = 9
 	joinLineEmail      = 11
-	joinLineEmailType  = 12 // NOT anchored — resolves up to the email property
+	joinLineEmailType  = 12 // NOT anchored - resolves up to the email property
 	joinLineManager    = 14
-	joinLineManagerRef = 15 // NOT anchored — resolves up to the manager property
+	joinLineManagerRef = 15 // NOT anchored - resolves up to the manager property
 )
 
 // The synthesized source.
@@ -597,7 +601,7 @@ const (
 	joinSrcUserDecl    = 4
 	joinSrcEmail       = 5
 	joinSrcManager     = 6
-	joinSrcUserClose   = 7 // NOT anchored — resolves back to the manager field
+	joinSrcUserClose   = 7 // NOT anchored - resolves back to the manager field
 	joinSrcAddressDecl = 4
 	joinSrcCity        = 5
 )
@@ -609,8 +613,9 @@ type joinFixture struct {
 	specLine func(ptr string) int
 }
 
-// newJoinFixture writes the source files to a temp dir, builds the real spec index from the rendered bytes, and
-// installs the provenance a scan would emit.
+// newJoinFixture writes the source files to a temp dir and wires the indexes over them.
+//
+// The spec index is built from the rendered bytes, and the provenance is the one a scan would emit.
 func newJoinFixture(t *testing.T) joinFixture {
 	t.Helper()
 
@@ -644,7 +649,79 @@ func newJoinFixture(t *testing.T) joinFixture {
 	}
 }
 
-// driveSpec moves the spec cursor to `line` (what driveSpecToSource reads) and re-mirrors the follower.
+// withDiagnostics puts diagnostics in the pane and gives it the keyboard.
+//
+// The fixture can then be driven from the diag side as well as the spec and source ones.
+func (f joinFixture) withDiagnostics(t *testing.T, diags ...grammar.Diagnostic) joinFixture {
+	t.Helper()
+
+	f.m.diag.SetSize(80, 8)
+	f.m.diagH = 8
+	f.m.scan.Diags = diags
+	f.m.refreshDiagnostics()
+	f.m.focused = paneDiag
+
+	return f
+}
+
+// selectDiag moves the diagnostic selection and re-mirrors the followers, as the Update loop does.
+func (f joinFixture) selectDiag(delta int) {
+	f.m.moveDiagCursor(delta)
+	f.m.syncFollowIfActive()
+}
+
+// TestJoin_DiagFollowDrivesBothPanes pins that the diagnostics driver mirrors the source AND the spec.
+//
+// A diagnostic names a place in the source, but what it says is usually about what that place produced - so unlike the
+// spec- and source-driven modes, which each drive their opposite, this one drives both.
+func TestJoin_DiagFollowDrivesBothPanes(t *testing.T) {
+	f := newJoinFixture(t)
+	f = f.withDiagnostics(t,
+		grammar.Warnf(pos(f.userGo, joinSrcEmail, 2), grammar.CodeInvalidNumber, "about the email field"),
+		grammar.Warnf(pos(f.addrGo, joinSrcCity, 2), grammar.CodeInvalidNumber, "about the city field"),
+	)
+
+	f.m.toggleFollow(followDiag)
+
+	require.Equal(t, paneDiag, f.m.focused, "the diagnostics pane stays the driver")
+	assert.Equal(t, f.userGo, f.m.currentFile)
+	assert.Equal(t, joinSrcEmail-1, f.m.fileView.CurrentLine(), "source follower on the diagnostic's line")
+	assert.Equal(t, f.specLine("/definitions/User/properties/email"), f.m.spec.CursorLine(),
+		"spec follower on the node that line produced")
+	assert.Contains(t, f.m.followTarget, "/definitions/User/properties/email")
+
+	// Moving the selection re-drives both halves, across a change of file.
+	f.selectDiag(+1)
+
+	assert.Equal(t, f.addrGo, f.m.currentFile)
+	assert.Equal(t, joinSrcCity-1, f.m.fileView.CurrentLine())
+	assert.Equal(t, f.specLine("/definitions/Address/properties/city"), f.m.spec.CursorLine())
+	assert.Contains(t, f.m.followTarget, "/definitions/Address/properties/city")
+}
+
+// TestJoin_DiagFollowHalvesResolveIndependently pins that one half missing does not suppress the other.
+//
+// A diagnostic on a line that produced nothing is the ordinary case:
+// a parse error means nothing was built from it.
+// So the source half must still resolve, and must still be reported.
+func TestJoin_DiagFollowHalvesResolveIndependently(t *testing.T) {
+	f := newJoinFixture(t)
+	f = f.withDiagnostics(t,
+		// Line 1 is the package clause: above every anchor in the file, so nothing was produced at or before it.
+		grammar.Errorf(pos(f.userGo, 1, 1), grammar.CodeInvalidNumber, "nothing here produced a node"),
+	)
+	before := f.m.spec.CursorLine()
+
+	f.m.toggleFollow(followDiag)
+
+	assert.Equal(t, f.userGo, f.m.currentFile, "the source half resolves")
+	assert.Equal(t, 0, f.m.fileView.CurrentLine())
+	assert.Equal(t, before, f.m.spec.CursorLine(), "the spec follower holds position rather than guessing")
+	assert.Contains(t, f.m.followTarget, "user.go:1", "the source half is still reported")
+	assert.Contains(t, f.m.followTarget, noAnchorDesc, "and the spec half names which miss this is")
+}
+
+// driveSpec moves the spec cursor to line (what driveSpecToSource reads) and re-mirrors the follower.
 func (f joinFixture) driveSpec(line int) {
 	f.m.spec.SetCursor(line)
 	f.m.syncFollowIfActive()
@@ -656,10 +733,11 @@ func (f joinFixture) driveSource(srcLine int) {
 	f.m.syncFollowIfActive()
 }
 
-// fixturesDir resolves the repo-level fixtures/ directory from this file's own location, so the test runs from any
-// working directory (CI runs it from cmd/genspec-tui, not the repo root).
+// fixturesDir resolves the repo-level fixtures directory from this file's own location.
 //
-// Deliberately local rather than borrowing scantest.FixturesDir — the TUI module should not grow a dependency on the
+// That lets the test run from any working directory. CI runs it from cmd/genspec-tui rather than the repo root.
+//
+// Deliberately local rather than borrowing scantest.FixturesDir - the TUI module should not grow a dependency on the
 // library's test helpers for one path join.
 func fixturesDir(t *testing.T) string {
 	t.Helper()
