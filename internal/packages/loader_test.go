@@ -326,15 +326,21 @@ func TestLoadKeepsRootedPathsUnderRecursivePatterns(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "sub", "s.go"),
 		[]byte("package sub\n\ntype S struct{ A string }\n"), 0o600))
 
-	loader := packages.NewLoader(packages.WithFS(os.DirFS("/")), packages.WithGoEnv(packages.GoEnv{GOOS: "linux", GOARCH: "amd64"}))
+	// The FS is rooted at the top of whatever holds the temp tree — "/" on a POSIX system, the volume elsewhere — because
+	// a rooted path is exactly what has to survive the round trip through io/fs's own namespace.
+	fsRoot := filepath.VolumeName(root) + string(filepath.Separator)
+
+	loader := packages.NewLoader(packages.WithFS(os.DirFS(fsRoot)), packages.WithGoEnv(packages.GoEnv{GOOS: "linux", GOARCH: "amd64"}))
 	pkgs, err := loader.Load(&packages.Config{Dir: root}, "./...")
 	require.NoError(t, err)
 	require.NotEmpty(t, pkgs)
 
 	for _, p := range pkgs {
 		for _, f := range p.GoFiles {
-			assert.True(t, strings.HasPrefix(f, "/"),
+			assert.True(t, filepath.IsAbs(f),
 				"file %q lost its root; positions derived from it would not resolve", f)
+			assert.True(t, strings.HasPrefix(f, root),
+				"file %q was not reported under the directory that was scanned", f)
 		}
 	}
 }

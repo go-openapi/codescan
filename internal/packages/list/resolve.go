@@ -8,6 +8,7 @@ import (
 	"go/build"
 	"io/fs"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -172,7 +173,7 @@ func (r *Resolver) ResolvePatterns(patterns []string) ([]Target, error) {
 			// or ./mycode/vendor.
 			// The directory itself is not special though: a package that merely happens to be called vendor is an ordinary
 			// match, which is why this prunes the children rather than the node.
-			if d != dir && path.Base(d) == "vendor" {
+			if d != dir && r.vfs.Base(d) == "vendor" {
 				return fs.SkipDir
 			}
 
@@ -380,9 +381,15 @@ func (r *Resolver) moduleCache() string {
 		return ""
 	}
 	// GOPATH may be a list; the module cache lives under the first entry.
-	if i := strings.IndexAny(gopath, ":;"); i >= 0 {
-		gopath = gopath[:i]
+	//
+	// Only the HOST's separator separates — ';' on Windows, ':' everywhere else — and the distinction is not academic.
+	// Accepting either cuts every Windows GOPATH at its drive letter, leaving "C", so the cache resolves to a directory
+	// that cannot exist and every cached dependency falls through to synthesis; on Unix it splits a directory whose name
+	// contains a semicolon in half.
+	if entries := filepath.SplitList(gopath); len(entries) > 0 {
+		gopath = entries[0]
 	}
+
 	return r.vfs.Join(gopath, "pkg", "mod")
 }
 
@@ -458,7 +465,7 @@ func (r *Resolver) pkgPathFor(dir string) string {
 func (r *Resolver) pathlessID(dir string) string {
 	rel, ok := r.vfs.HasSubdir(r.dir, dir)
 	if !ok || rel == "." || rel == "" {
-		return path.Base(dir)
+		return r.vfs.Base(dir)
 	}
 
 	return rel

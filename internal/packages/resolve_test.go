@@ -340,3 +340,51 @@ func TestPkgPath_NoModuleDoesNotLeakAbsolutePaths(t *testing.T) {
 	assert.Equal(t, "a", got[0])
 	assert.NotContains(t, got[0], root, "the scanning machine's layout is not part of the answer")
 }
+
+// A dependency in the module cache resolves whatever the shape of GOPATH.
+//
+// GOPATH may be a list, and only the host's separator separates it. Accepting ':' and ';' interchangeably cut every
+// Windows GOPATH at its drive letter — "C:\Users\x\go" became "C" — so the module cache pointed at a directory that
+// cannot exist and every cached dependency fell through to synthesis. A synthesized type has no fields, which is
+// exactly how a `swagger:strfmt` mark on a dependency's type went missing while the scan still succeeded.
+func TestModuleCache_GOPATHSplitsOnTheHostSeparatorOnly(t *testing.T) {
+	t.Parallel()
+
+	// A directory whose name carries the separator the host does NOT use. Where ';' is not the separator it is an
+	// ordinary character and makes the witness; where it is, the drive letter every absolute path starts with is the
+	// witness already.
+	name := "gopath"
+	if filepath.ListSeparator != ';' {
+		name = "go;path"
+	}
+
+	gopath := filepath.Join(t.TempDir(), name)
+	dep := filepath.Join(gopath, "pkg", "mod", "example.com", "dep@v1.0.0")
+	require.NoError(t, os.MkdirAll(dep, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dep, "go.mod"),
+		[]byte("module example.com/dep\n\ngo 1.25.0\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dep, "d.go"),
+		[]byte("package dep\n\ntype D struct{ A string }\n"), 0o600))
+
+	root := writeTree(t, map[string]string{
+		"go.mod": "module example.com/main\n\ngo 1.25.0\n\nrequire example.com/dep v1.0.0\n",
+		"a/a.go": "package a\n\nimport \"example.com/dep\"\n\ntype A struct{ D dep.D }\n",
+	})
+
+	pkgs, err := packages.NewLoader(packages.WithStrategy(packages.StrategyToolchainFree)).
+		// GOMODCACHE is cleared so the cache is derived from GOPATH, which is the case that had the fault.
+		Load(&packages.Config{Dir: root, Env: append(os.Environ(), "GOPATH="+gopath, "GOMODCACHE=")}, "./a")
+	require.NoError(t, err)
+	require.Len(t, pkgs, 1)
+
+	loaded := pkgs[0].Imports["example.com/dep"]
+	require.NotNil(t, loaded, "the dependency was not resolved at all")
+
+	obj := loaded.Types.Scope().Lookup("D")
+	require.NotNil(t, obj)
+
+	strct, ok := obj.Type().Underlying().(*types.Struct)
+	require.True(t, ok)
+	assert.Equal(t, 1, strct.NumFields(),
+		"the dependency was synthesized rather than read: a synthesized type is an empty struct")
+}

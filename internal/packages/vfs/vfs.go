@@ -33,11 +33,22 @@ func (v *FS) Virtual() bool { return v.fsys != nil }
 //
 // io/fs requires slash-separated, unrooted paths, while callers naturally write OS paths and sometimes absolute ones.
 // Normalising here (rather than rejecting) keeps the same patterns working against both backends.
+//
+// A drive letter goes first, because it is what makes a Windows path absolute and it is not a separator: "D:\a" would
+// otherwise survive as "D:/a" and address nothing inside the FS. Dropping it puts a rooted OS path in the same place
+// the rooted POSIX form lands, which is the convention the option documents.
+//
+// Both steps read the path rather than the host. A virtual filesystem need not have been built on the machine that is
+// scanning it — an embedded or recorded tree carries the shape it was captured with — so deferring to the host (which
+// is what filepath.ToSlash and filepath.VolumeName do) would normalise a Windows-shaped tree only when Windows was
+// reading it. The cost is that a backslash cannot be part of a name here, which is already true wherever such a tree
+// came from.
 func (v *FS) Clean(p string) string {
 	if !v.Virtual() {
 		return p
 	}
-	p = filepath.ToSlash(p)
+	p = trimDrive(p)
+	p = strings.ReplaceAll(p, `\`, "/")
 	p = strings.TrimPrefix(p, "./")
 	p = strings.TrimLeft(p, "/")
 	if p == "" {
@@ -97,6 +108,18 @@ func (v *FS) Join(elem ...string) string {
 		return filepath.Join(elem...)
 	}
 	return path.Join(elem...)
+}
+
+// Base is the last element of a directory path, under whichever convention the path was written with.
+//
+// path.Base is not a substitute: it looks for a forward slash, so on Windows it hands back "D:\src\vendor" whole, and
+// every caller comparing a directory's name against a fixed one silently stops matching.
+func (v *FS) Base(p string) string {
+	if !v.Virtual() {
+		return filepath.Base(p)
+	}
+
+	return path.Base(v.Clean(p))
 }
 
 func (v *FS) IsAbs(p string) bool {
@@ -159,6 +182,9 @@ func (v *FS) WalkDirs(root string, yield func(string) error) error {
 }
 
 // rebase maps a path produced by walking under inner back onto the caller's root.
+//
+// The root decides the separator, because the result has to read like the path the caller wrote: a scan pointed at an
+// OS path gets OS paths back even though the walk happened in io/fs's slash-separated namespace.
 func rebase(root, inner, p string) string {
 	if p == inner {
 		return root
@@ -169,7 +195,34 @@ func rebase(root, inner, p string) string {
 		rel = p
 	}
 
-	return strings.TrimSuffix(root, "/") + "/" + rel
+	sep := separator(root)
+	if sep != "/" {
+		rel = strings.ReplaceAll(rel, "/", sep)
+	}
+
+	return strings.TrimSuffix(root, sep) + sep + rel
+}
+
+// separator reports the path separator a caller-supplied path is written with, defaulting to the io/fs one.
+func separator(p string) string {
+	if i := strings.LastIndexAny(p, `/\`); i >= 0 && p[i] == '\\' {
+		return `\`
+	}
+
+	return "/"
+}
+
+// trimDrive drops a Windows drive prefix, so that what remains is a path a rooted namespace can hold.
+func trimDrive(p string) string {
+	if len(p) >= 2 && p[1] == ':' && isDriveLetter(p[0]) {
+		return p[2:]
+	}
+
+	return p
+}
+
+func isDriveLetter(c byte) bool {
+	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 }
 
 // skipDir reports directories the go tool itself never treats as packages.
