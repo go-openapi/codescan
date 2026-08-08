@@ -29,7 +29,7 @@ markup:
         block: true
     renderHooks:
       image:
-        useEmbedded: always
+        useEmbedded: never
   highlight:
     codeFences: true
     guessSyntax: false

@@ -62,6 +62,10 @@ genspec-tui -workdir [my source location]
 
 ![tui_screenshot](docs/genspec-tui.png)
 
+A walkthrough of what it is for — scanning, tracking a node back to its source,
+diagnostics and spec validation — is on the doc site:
+[Usage as a terminal UI][tui-doc-site].
+
 ## Generate a spec from the command line
 
 `genspec-wasi` is the headless counterpart: it writes the specification to standard output and takes no
@@ -155,6 +159,8 @@ Maintainers can cut a new release by either:
 [goversion-url]: https://github.com/go-openapi/codescan/blob/master/go.mod
 [top-badge]: https://img.shields.io/github/languages/top/go-openapi/codescan
 [commits-badge]: https://img.shields.io/github/commits-since/go-openapi/codescan/latest
+<!-- Project docs -->
+[tui-doc-site]: https://go-openapi.github.io/codescan/getting-started/usage-as-a-tui/
 <!-- Organization docs -->
 [contributing-doc-site]: https://go-openapi.github.io/doc-site/contributing/contributing/index.html
 [maintainers-doc-site]: https://go-openapi.github.io/doc-site/maintainers/index.html
