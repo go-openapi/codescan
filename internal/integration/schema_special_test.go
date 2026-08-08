@@ -392,11 +392,17 @@ func testSpecialTypesWhatNot(t *testing.T, sp *oaispec.Swagger, props map[string
 							require.TrueT(t, prop.Type.Contains("integer"))
 							require.EqualT(t, "uint64", prop.Format)
 						})
-					case "G", "H":
+					case "G":
 						t.Run(
-							"math/big types are not recognized as special types and as TextMarshalers they render as string",
+							"big.Float carries only MarshalText, so it travels quoted",
 							func(t *testing.T) {
 								require.TrueT(t, prop.Type.Contains("string"))
+							})
+					case "H":
+						t.Run(
+							"big.Int carries a MarshalJSON, which encoding/json prefers, so it travels as a number",
+							func(t *testing.T) {
+								require.TrueT(t, prop.Type.Contains("integer"))
 							})
 					case "I":
 						t.Run("go array should render as a json array", func(t *testing.T) {

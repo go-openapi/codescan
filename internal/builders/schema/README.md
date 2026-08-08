@@ -21,6 +21,7 @@ trade-offs, and known quirks live here.
 - [§embedded](#embedded) — embed routing, struct/interface specials asymmetry
 - [§embed-depth](#embed-depth) — ambiguous-embed diagnostic mechanism
 - [§opaque-streams](#opaque-streams) — stream types, and the two answers a stream can take
+- [§math-big](#math-big) — the arbitrary-precision numbers, and why the three disagree
 - [§omit](#omit) — `swagger:omit` — the author's pre-filter on promoted fields
 - [§json-dash](#json-dash) — what `json:"-"` does, and the two shapes it is confused with
 - [§method-mangler](#method-mangler) — interface-method JSON-name derivation
@@ -163,9 +164,12 @@ Three layers, all in `special_types.go`:
 
 - **`applyStdlibSpecials(obj, target)`** — the canonical safe set
   `{recognizeAny, recognizeTime, recognizeError, recognizeRawMessage,
-  recognizeStdUUID, recognizeOpaqueStream}`. All six are
+  recognizeStdUUID, recognizeOpaqueStream, recognizeMathBig}`. All seven are
   identity-based and cannot misfire on user types, so this helper is
   **called uniformly at every site** that handles a `*types.TypeName`.
+  `recognizeMathBig` is additionally passed by `buildFromTextMarshal`,
+  the only recognizer in both lists — see [§math-big](#math-big) for why
+  membership in one alone would split the answer by pointer-ness.
 
 **What the set deliberately excludes.** A recognizer asserts that a
 type means one thing on the wire wherever it appears, so one may only
@@ -240,7 +244,7 @@ The function is entered from `buildFromType`'s shortcut
 2. route aliases through `buildAlias` (honour `TransparentAliases` / `RefAliases`)
 3. type-assert to `*types.Named` (fallback: `{string, ""}`)
 4. **classifier (`swagger:strfmt`) — explicit user intent wins**
-5. **stdlib recognizers via `applySpecialType(recognizeError, recognizeTime, recognizeRawMessage, recognizeStdUUID, recognizeUUID)`** — identity before fuzzy
+5. **stdlib recognizers via `applySpecialType(recognizeError, recognizeTime, recognizeRawMessage, recognizeStdUUID, recognizeMathBig, recognizeUUID)`** — identity before fuzzy
 6. `PkgForType`-miss bail (gates only the generic fallback below)
 7. **generic fallback** — `{string, ""}` + `x-go-type: pkg.Name`
 
@@ -708,6 +712,61 @@ An explicit `swagger:strfmt` / `swagger:type` / `swagger:file` still wins; the c
 Related: this closes part of [§quirks](#quirks)' degraded-graph concern for these types — a
 recognizer answers from the object alone, so a truncated package graph no longer means a hard
 `unable to find package and source file for: io.Reader`.
+
+## <a id="math-big"></a>§math-big — the arbitrary-precision numbers, and why the three disagree
+
+`recognizeMathBig` recognizes `math/big`'s three number types. They do **not** share an answer, and
+the split is not a style choice — it is what `encoding/json` does:
+
+| Type | Marshals via | On the wire | Emitted |
+|------|--------------|-------------|---------|
+| `big.Int` | `MarshalJSON` | `1234567890123456789000` | `{type: integer}` |
+| `big.Float` | `MarshalText` | `"3.5"` | `{type: string}` |
+| `big.Rat` | `MarshalText` | `"5/3"` | `{type: string}` |
+
+All three carry a `MarshalText`; only `big.Int` also carries a `MarshalJSON`, and `encoding/json`
+prefers `json.Marshaler` over `encoding.TextMarshaler`. So `big.Int` travels as a bare number while
+its two siblings travel quoted. Unmarshalling enforces the same split in both directions — a number
+offered to a `*big.Float` is rejected, and a string offered to a `*big.Int` is too — so reading
+`Float` and `Rat` as `number` because of their names would publish a spec that round-trips through
+nothing.
+
+**No `format`, in any arm.** The precision is unbounded by construction: `int64` / `double` would be
+a narrower claim than the type makes.
+
+**It is in the canonical `ApplyStdlibSpecials` set *and* in `buildFromTextMarshal`'s list** — the only
+recognizer in both. That is what makes the answer independent of pointer-ness. A `*big.Int` field
+satisfies `TextMarshaler`, so `buildFromType`'s shortcut diverts it to `buildFromTextMarshal` before
+any call site reaches `ApplyStdlibSpecials`; a `big.Int` field does not satisfy it, because the
+marshal methods take a pointer receiver, so it arrives through the ordinary named-type path. Wiring
+only one of the two would leave the same Go type rendering one way as a pointer and another by value.
+
+That the two agree is a statement about `encoding/json`, not a convenience: it takes the address of an
+addressable field to reach a pointer-receiver marshaller, so a `big.Int` field of a struct marshalled
+through a pointer — what any server does — emits exactly what its `*big.Int` neighbour emits.
+
+**`x-go-type` in every arm.** `integer` cannot say the value is unbounded rather than an `int64`, and
+`string` cannot tell a decimal float from a quotient — `big.Float` and `big.Rat` land on the same
+schema and differ in what the string *contains*. That is the `recognizeError` criterion ("the
+rendering erases the type"), see [§traceability](#traceability).
+
+**What this replaced.** Neither half was right. Through a pointer all three collapsed onto `{type:
+string}` via the TextMarshaler fallback, which mis-stated `big.Int`. By value none of them satisfied
+`TextMarshaler`, so they fell to structural drilling and published `Int`, `Float` and `Rat` as object
+definitions carrying `math/big`'s own godoc as title/description — the same leak the stream types used
+to produce, see [§opaque-streams](#opaque-streams).
+
+**A defined type over one of them is recognized too**, through the written-RHS rule rather than
+through identity: `type Tally big.Int` inherits none of big.Int's methods, but the scanner keeps the
+type the declaration was *written over*, so it means `big.Int` here for the same reason `type MyTime
+time.Time` has always meant a date-time rather than a drilled struct. An alias (`type Amount =
+big.Int`) is the same type object and matches the recognizer directly.
+
+An explicit `swagger:strfmt` / `swagger:type` still wins; the classifier runs first. A format override
+adjusts the format and the `x-go-type` stamp survives; a type override replaces the schema outright
+and the stamp goes with it.
+
+Witnessed by `TestMathBig` over `fixtures/enhancements/math-big/`.
 
 ## <a id="embedded"></a>§embedded — embed routing, struct/interface specials asymmetry
 
