@@ -604,6 +604,80 @@ The flag exists separately because the interesting case is the middle row: runni
 codescan's own strategy over an ordinary tree on disk. Before it, the only way to
 reach it was to hand it a virtual filesystem.
 
+Two consequences of that override are worth stating, because both have bitten:
+
+- an option only one strategy can honour is **dropped, not refused**, when the other
+  one runs. `CompiledDependencies` is the case — the go command is what takes
+  dependency types from export data, so under `FS` it does nothing. Anything
+  *announcing* what a load is about to do therefore has to ask
+  `Loader.Strategy()` rather than read the request off `Options`; announcing from
+  the request is how a toolchain-free scan came to be told its dependency types
+  were compiled while it read every one of them from source.
+- `FS` is **the whole world the scan can read**, not just the tree being scanned —
+  see [§virtual-filesystem](#virtual-filesystem).
+
+<a id="virtual-filesystem"></a>
+
+### `FS` is the whole world
+
+Dependencies and the standard library are read through `FS` as well. Neither GOROOT
+nor the module cache lives inside a module, so a filesystem holding only the module
+under scan resolves neither: every import outside it is synthesized from the names
+selected through it, and the spec comes out **valid and quietly thinner** — a lost
+`format`, a lost byte-array rendering.
+
+That is announced rather than fatal: one `scan.synthesized-import` per unresolved
+import, plus `scan.degraded-load`. Measured on the petstore, `FS` rooted at the
+fixtures module against the same scan on the real filesystem:
+
+| | definitions | `orderedAt.format` | diagnostics |
+|---|---|---|---|
+| real filesystem | 4 | `date-time` | none |
+| `FS` at the module root | 4 | *(empty)* | `degraded-load` ×1, `synthesized-import` ×5 |
+
+Both scans succeed. The difference is entirely in what the document says.
+
+**Paths.** Everything the scan derives is interpreted against the root of `FS`,
+following `io/fs` conventions — slash-separated and unrooted. An absolute path is
+mapped onto that convention by dropping its leading separator, which is what lets
+an unrooted tree (`embed.FS`, `fstest.MapFS`) be used at all. It is a convention
+rather than a heuristic: `fs.FS` exposes no way to tell a rooted tree from an
+unrooted one, so there is nothing to detect.
+
+The corollary is that a tree meaning to serve GOROOT or the module cache has to
+**mirror their absolute layout** beneath its own root — `/usr/lib/go/src/…` is
+looked up as `usr/lib/go/src/…` — and is therefore tied to the host it was recorded
+from. Which is precisely why the other two options exist: `ExportData` carries the
+compiler's own types instead of its source (no fidelity cost, valid only for the
+toolchain that produced it), and `StubStdlib` needs nothing mounted at all (reach
+over fidelity).
+
+### The embed.FS recipe
+
+`FS` was built for `embed.FS` first, and what can be embedded decides the shape.
+A module's own source and its `vendor/` directory can, since both are inside the
+module; GOROOT cannot. So the two halves come from different places:
+
+| half | how |
+|---|---|
+| module source + non-stdlib dependencies | `go mod vendor`, then embed the module — read and parsed like any tree |
+| the standard library | `ExportData`, which is itself an `fs.FS` and embeds alongside |
+
+Both ship in one binary, and no absolute-path mirroring is needed — this is the
+configuration that sidesteps the host-tied recorded tree entirely.
+
+Vendoring is doing real work here rather than being a packaging detail: a vendored
+dependency is read **from inside the tree**, so it keeps its own annotations. A
+vendored `go-openapi/strfmt` still supplies its `swagger:strfmt` marks, where a
+dependency reduced to compiled types would have lost them.
+
+`TestEmbeddedTree_SourceAndVendorFromFS_StdlibFromExportData` pins the composition,
+and both halves are load-bearing: dropping the blob synthesizes the standard
+library, dropping the vendored source loses the dependency's `format`.
+
+`StubStdlib` substitutes for the second row where no blob can be produced, at the
+fidelity cost documented on that option.
+
 Putting the switch inside the loader is also what keeps the options honest. `GOOS`
 / `GOARCH` are the example: the go command reads the target from the environment
 and nowhere else, so a target that is merely stored applies under one strategy and

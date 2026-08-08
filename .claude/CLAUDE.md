@@ -180,7 +180,12 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
       (default) keeps the historic behaviour.
     - `FS` — read source through an `io/fs` filesystem instead of the real one.
       Implies `ToolchainFreeLoader`: `go list` runs against the real filesystem,
-      so it could not honour `FS` even if asked.
+      so it could not honour `FS` even if asked. **`FS` is the whole world the
+      scan can read**, not just the module: dependencies and GOROOT come through
+      it too, absolute paths map by dropping the leading separator (so a tree
+      serving GOROOT must mirror its absolute layout), and anything unreachable
+      is synthesized — a valid, quietly thinner spec plus `scan.degraded-load` /
+      `scan.synthesized-import`. See `internal/scanner/README.md#virtual-filesystem`.
     - `StubStdlib` — synthesize the stdlib from the names selected through it
       rather than reading GOROOT. Trades fidelity for reach: a synthesized type
       has no fields and no method set, so `json.RawMessage` stops rendering as a

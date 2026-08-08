@@ -76,11 +76,46 @@ type Options struct {
 
 	// FS makes the scan read its source through a virtual filesystem instead of the real one.
 	//
-	// Packages, WorkDir and every path derived from them are then interpreted relative to the root of
-	// FS, following io/fs conventions. This is what lets codescan scan a tree that was never written
-	// to disk: an in-memory tree in a WASI guest, an uploaded archive, a testing/fstest.MapFS.
+	// This is what lets codescan scan a tree that was never written to disk: an in-memory tree in a
+	// WASI guest, an uploaded archive, a testing/fstest.MapFS.
 	//
-	// Setting it implies ToolchainFreeLoader: `go list` reaches the filesystem by running a process
+	// # FS is the whole world, not just the tree being scanned
+	//
+	// Dependencies and the standard library are read through it too. A filesystem holding only the
+	// module under scan resolves neither, since neither GOROOT nor the module cache lives inside a
+	// module — every import outside it is then synthesized from the names selected through it, and the
+	// spec comes out valid and quietly thinner (a lost format, a lost byte-array rendering). That is
+	// announced rather than fatal: one scan.synthesized-import per unresolved import, plus
+	// scan.degraded-load. Seeing those against a tree you expected to be complete means FS is missing
+	// something, not that the source is wrong.
+	//
+	// # Paths
+	//
+	// Packages, WorkDir and every path the scan derives are interpreted against the root of FS,
+	// following io/fs conventions: slash-separated and unrooted. An absolute path is mapped onto that
+	// convention by dropping its leading separator, which is what lets an unrooted tree be used at all.
+	// The corollary is that a tree meaning to serve GOROOT or the module cache must mirror their
+	// absolute layout beneath its own root — /usr/lib/go/src/... is looked up as usr/lib/go/src/... —
+	// and that such a tree is therefore tied to the host it was recorded from.
+	//
+	// # Supplying the half that is not the module under scan
+	//
+	// Three ways, in descending fidelity: mirror it in the tree, as above; ExportData, which carries
+	// the compiler's own types and costs no fidelity but is valid only for the toolchain that produced
+	// it; or StubStdlib, which trades fidelity for reach and needs nothing mounted. See each.
+	//
+	// For the case FS was built for — an embed.FS — what can be embedded decides the recipe. A module's
+	// own source and its vendor directory can, since both are inside the module; GOROOT cannot. So:
+	//
+	//	go mod vendor, then embed the module          source + non-stdlib dependencies, read as usual
+	//	ExportData alongside it                       the standard library
+	//
+	// ExportData is itself an fs.FS, so it embeds too, and the two halves ship as one binary. Vendoring
+	// is what keeps a dependency's own annotations — a vendored go-openapi/strfmt is read from inside
+	// the tree, marks and all. StubStdlib substitutes for the second line where no blob can be
+	// produced, at the fidelity cost documented there.
+	//
+	// Setting FS implies ToolchainFreeLoader: `go list` reaches the filesystem by running a process
 	// against the real one, so it could not honour FS even if asked.
 	//
 	// Experimental: see ToolchainFreeLoader.
