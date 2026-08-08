@@ -1,0 +1,104 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/specials": {
+      "get": {
+        "tags": [
+          "specials"
+        ],
+        "summary": "Returns one of the recognized types as a whole response body.",
+        "operationId": "getSpecial",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/definedStamp"
+          },
+          "201": {
+            "$ref": "#/responses/definedRaw"
+          },
+          "202": {
+            "$ref": "#/responses/definedStream"
+          },
+          "203": {
+            "$ref": "#/responses/definedWhole"
+          },
+          "210": {
+            "$ref": "#/responses/aliasedStamp"
+          },
+          "211": {
+            "$ref": "#/responses/aliasedRaw"
+          },
+          "212": {
+            "$ref": "#/responses/aliasedStream"
+          },
+          "213": {
+            "$ref": "#/responses/aliasedWhole"
+          },
+          "214": {
+            "$ref": "#/responses/aliasedFraction"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "aliasedFraction": {
+      "description": "",
+      "schema": {
+        "type": "string",
+        "x-go-type": "math/big.Rat"
+      }
+    },
+    "aliasedRaw": {
+      "description": "",
+      "schema": {}
+    },
+    "aliasedStamp": {
+      "description": "",
+      "schema": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "aliasedStream": {
+      "description": "",
+      "schema": {
+        "type": "string",
+        "format": "byte",
+        "x-go-type": "io.Reader"
+      }
+    },
+    "aliasedWhole": {
+      "description": "",
+      "schema": {
+        "type": "integer",
+        "x-go-type": "math/big.Int"
+      }
+    },
+    "definedRaw": {
+      "description": "",
+      "schema": {}
+    },
+    "definedStamp": {
+      "description": "",
+      "schema": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "definedStream": {
+      "description": "",
+      "schema": {
+        "type": "string",
+        "format": "byte",
+        "x-go-type": "io.Reader"
+      }
+    },
+    "definedWhole": {
+      "description": "",
+      "schema": {
+        "type": "integer",
+        "x-go-type": "math/big.Int"
+      }
+    }
+  }
+}
