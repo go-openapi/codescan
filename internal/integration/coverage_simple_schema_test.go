@@ -90,10 +90,12 @@ func TestCoverage_SimpleSchemaViolation(t *testing.T) {
 	}
 	assert.True(t, saidSo, "dropping the error-typed parameter must be reported under its own code; got %v", got)
 
-	// Case 2 — nothing to fall back to, so the target is wiped.
+	// Case 2 — nothing to fall back to, so the target is reset and then defaulted.
+	// Emptying it alone would leave a parameter with no `type`, which OAS v2 does not allow: the reset
+	// undoes the unrepresentable resolution, and `string` is what a text-only position can still carry.
 	unrep, ok := byName["unrepresentable"]
 	require.True(t, ok, "missing parameter unrepresentable")
-	assert.Empty(t, unrep.Type, "an unrepresentable Go type is wiped")
-	assert.Empty(t, unrep.Format, "Format wiped with it")
-	assert.Empty(t, unrep.Ref.String(), "Ref wiped with it")
+	assert.Equal(t, "string", unrep.Type, "an unrepresentable Go type defaults to string, never to no type at all")
+	assert.Empty(t, unrep.Format, "no format is invented for it")
+	assert.Empty(t, unrep.Ref.String(), "Ref wiped by the reset")
 }

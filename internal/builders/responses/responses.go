@@ -279,6 +279,27 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 	}
 	resolvers.MustNotBeABuiltinType(o)
 
+	// The canonical recognizers, ahead of the written-RHS redirect and the shape dispatch below — the order the schema
+	// builder uses, and for its reason: these answer from the object alone, so subordinating them to a lookup or to a
+	// shape test makes a rule that needs nothing depend on one that can fail.
+	//
+	// The shape test is what fails here. `time.Time` is a STRUCT underneath, so dispatching on the underlying sends it to
+	// the struct arm to have its fields read as response headers — it has none exported, and the response came out with
+	// no schema whatsoever. `type Stamp time.Time` escaped that only because the written-RHS redirect below catches it
+	// first; the alias spelling `type Stamp = time.Time` arrives here AS time.Time and had nothing to catch it.
+	//
+	// The refusal above stays in front: `any` and `error` are not responses, and the recognizers would render them
+	// instead of refusing them.
+	{
+		var sch oaispec.Schema
+		typable := schema.NewTypable(&sch, 0, r.Ctx.SkipExtensions())
+		if schema.ApplyStdlibSpecials(o, typable, r.Ctx.SkipExtensions()) {
+			resp.WithSchema(&sch)
+
+			return nil
+		}
+	}
+
 	// Follow the declaration's WRITTEN right-hand side when that is itself a named type, before dispatching on the
 	// underlying shape.
 	//
@@ -316,20 +337,18 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 			var sch oaispec.Schema
 			typable := schema.NewTypable(&sch, 0, r.Ctx.SkipExtensions())
 
-			// The recognizer and the declaration's format are applied HERE rather than by the sub-build, and the sub-build is
-			// handed the UNDERLYING rather than the declared type — deliberately.
+			// The declaration's format is applied HERE rather than by the sub-build, and the sub-build is handed the
+			// UNDERLYING rather than the declared type — deliberately.
 			// A `swagger:response` declares a response, not a model: passing the named type would send it through the $ref
 			// machinery and publish it as a definition, which is the one thing this arm must not do.
 			//
-			// Both branches used to write into `sch` and return WITHOUT the resp.WithSchema below, so a response declared on a
-			// named time.Time or a named formatted type carried a description and no schema whatsoever.
-			d := decl.Obj()
-			if resolvers.IsStdTime(d) {
-				typable.Typed("string", "date-time")
-				resp.WithSchema(&sch)
-
-				return nil
-			}
+			// It used to write into `sch` and return WITHOUT the resp.WithSchema below, so a response declared on a named
+			// formatted type carried a description and no schema whatsoever.
+			//
+			// A hand-rolled `IsStdTime` used to sit in front of this, reached through the same declaration lookup. It could
+			// never fire: time.Time is a struct underneath, so it takes the struct arm above and never arrives here. The
+			// canonical set at the top of this function is what actually answers for it now, and for every other recognized
+			// type this arm never covered.
 			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments())); isf {
 				applyDeclFormat(sfnm, tpe.Underlying(), typable)
 				resp.WithSchema(&sch)
@@ -397,6 +416,8 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	// This arm had none of them, and the lookup is not a soft gate here: a field typed `error` has no package, so
 	// resolving its declaring source dereferenced nil and took the whole scan down.
 	if schema.ApplyStdlibSpecials(o, typable, r.Ctx.SkipExtensions()) {
+		r.ensureSimpleSchemaTyped(typable, ftpe, o.Name())
+
 		return nil
 	}
 
@@ -418,13 +439,34 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	)
 }
 
+// ensureSimpleSchemaTyped repairs a response header that resolved to no type, and reports the choice
+// made on the author's behalf.
+//
+// The parameters builder's twin: the recognizers answering in this builder's own field arms return
+// without entering the schema builder's Build, so the catch-at-exit contract never sees those
+// targets. A header cannot spell "any JSON" any more than a query parameter can.
+func (r *Builder) ensureSimpleSchemaTyped(typable ifaces.SwaggerTypable, tpe types.Type, goName string) {
+	if !schema.EnsureSimpleSchemaTyped(typable, tpe, r.Ctx.SkipExtensions()) {
+		return
+	}
+
+	r.RecordDiagnostic(grammar.Warnf(
+		r.Ctx.PosOf(r.Decl.Pos()),
+		grammar.CodeUnderspecifiedInSimpleSchema,
+		"a response header typed %s resolved to no type, which OAS v2 does not allow on a header; "+
+			"defaulted to {type: string}",
+		goName,
+	))
+}
+
 func (r *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
 		_ = typable.Schema()
+		r.ensureSimpleSchemaTyped(typable, tpe, o.Name())
 
-		return nil // just leave an empty schema
+		return nil // an empty schema where the position can hold one
 	}
 
 	// Shared with the parameters builder — see schema.BuildFieldAlias.

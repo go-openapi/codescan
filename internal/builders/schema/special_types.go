@@ -40,8 +40,14 @@ func (s *Builder) buildFromTextMarshal(tpe types.Type, target ifaces.SwaggerTypa
 		return nil
 	}
 	// Implicit recognizers in priority order: certain (identity) before guessed (fuzzy name).
+	//
+	// recognizeMathBig belongs here as much as in the canonical set: a *big.Int / *big.Float / *big.Rat
+	// field satisfies TextMarshaler, so it is diverted here before any call site reaches
+	// [ApplyStdlibSpecials]. Without it the same math/big type renders one way through a pointer and
+	// another by value. See [§math-big](./README.md#math-big).
 	if applySpecialType(tio, target, s.skipExtensions,
-		recognizeError, recognizeTime, recognizeRawMessage, recognizeStdUUID, recognizeUUID) {
+		recognizeError, recognizeTime, recognizeRawMessage, recognizeStdUUID, recognizeMathBig,
+		recognizeUUID) {
 		return nil
 	}
 	// Generic fallback: x-go-type carries pkg.Name, so PkgForType-miss must bail (can't produce the
@@ -78,10 +84,20 @@ const (
 	// Safe everywhere, so it lives in the canonical set applied by [ApplyStdlibSpecials].
 	// See [§opaque-streams](./README.md#opaque-streams).
 	recognizeOpaqueStream
+
+	// recognizeMathBig is an identity match on the arbitrary-precision numbers big.{Int,Float,Rat}.
+	//
+	// Safe everywhere, so it lives in the canonical set applied by [ApplyStdlibSpecials] — and, unlike
+	// the rest of that set, it is ALSO passed by [Builder.buildFromTextMarshal], because all three
+	// types are reached through the TextMarshaler shortcut whenever the field is a pointer.
+	// See [§math-big](./README.md#math-big).
+	recognizeMathBig
 )
 
-// ApplyStdlibSpecials runs the canonical safe set of identity-based recognizers (any / time.Time /
-// error / json.RawMessage / go1.27 uuid.UUID).
+// ApplyStdlibSpecials runs the canonical safe set of identity-based recognizers.
+//
+// Examples: any, [time.Time], [error], [json.RawMessage], [uuid.UUID] (go1.27), the opaque byte
+// streams and the math/big numbers.
 //
 // Safe at every call site that handles a *types.TypeName. Exported for the parameters and responses
 // builders, which reach it from their own field arms: each used to carry a hand-rolled subset of
@@ -110,7 +126,7 @@ const (
 func ApplyStdlibSpecials(obj *types.TypeName, target ifaces.SwaggerTypable, skipExt bool) bool {
 	return applySpecialType(obj, target, skipExt,
 		recognizeAny, recognizeTime, recognizeError, recognizeRawMessage, recognizeStdUUID,
-		recognizeOpaqueStream)
+		recognizeOpaqueStream, recognizeMathBig)
 }
 
 // applySpecialType iterates wanted recognizers in order and applies the first match to target,
@@ -169,6 +185,37 @@ func applySpecialTypeForKey(obj *types.TypeName, target ifaces.SwaggerTypable, s
 			target.Typed("string", "uuid")
 			return true
 		}
+
+	case recognizeMathBig: // identity — see [§math-big](./README.md#math-big).
+		// Each answer is the shape encoding/json actually produces and accepts, which is not the same
+		// for the three: big.Int has a MarshalJSON (a bare numeric literal, and json.Marshaler beats
+		// the MarshalText it also carries), while Float and Rat have only MarshalText and therefore
+		// travel quoted — "3.5" and "5/3". Reading them as numbers because they are named Float and
+		// Rat would publish a spec that round-trips through nothing.
+		//
+		// x-go-type in every arm, because each rendering erases the type: `integer` cannot say the
+		// value is unbounded rather than an int64, and `string` cannot tell a decimal float from a
+		// quotient. That is the `recognizeError` criterion — see
+		// [§traceability](./README.md#traceability).
+		//
+		// No format in either arm: the precision is unbounded by construction, so int64 / double
+		// would be a narrower claim than the type makes.
+		var bigType string
+		switch {
+		case resolvers.IsStdBigInt(obj):
+			bigType = "integer"
+		case resolvers.IsStdBigFloat(obj), resolvers.IsStdBigRat(obj):
+			bigType = "string"
+		default:
+			return false
+		}
+
+		if !skipExt {
+			target.AddExtension("x-go-type", obj.Pkg().Path()+"."+obj.Name())
+		}
+		target.Typed(bigType, "")
+
+		return true
 
 	case recognizeOpaqueStream: // identity — see [§opaque-streams](./README.md#opaque-streams).
 		if resolvers.IsOpaqueStream(obj) {

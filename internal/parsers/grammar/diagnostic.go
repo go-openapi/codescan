@@ -83,6 +83,16 @@ const (
 	// that the recognizer cascade couldn't reduce to a primitive.
 	CodeUnsupportedInSimpleSchema Code = "validate.unsupported-in-simple-schema"
 
+	// CodeUnderspecifiedInSimpleSchema fires when a non-body parameter or response header resolves to no type at all.
+	//
+	// OAS v2 requires a type on every SimpleSchema, so an empty one is not a resolution but the absence of one: the Go
+	// type said nothing a client or a consumer could act on. `any` and `json.RawMessage` are the usual sources — "any
+	// JSON" is a legitimate answer for a body or a definition, and no answer at all outside them.
+	//
+	// The target defaults to `{type: string}`, the only SimpleSchema type that can carry an unknown payload in a
+	// text-only position, and the author states what they meant with `swagger:type` or a strfmt.
+	CodeUnderspecifiedInSimpleSchema Code = "validate.underspecified-in-simple-schema"
+
 	// CodeUnsupportedType fires when a `swagger:type` argument cannot be resolved to an inline schema: an unknown type
 	// name, a `file` override (use swagger:file instead), or a keyword used where it is not valid (e.g. `inline`/`array`
 	// as an array element).

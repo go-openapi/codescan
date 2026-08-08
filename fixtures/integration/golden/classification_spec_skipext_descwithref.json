@@ -1315,7 +1315,9 @@
       "headers": {
         "ones": {
           "type": "array",
-          "items": {}
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -1324,7 +1326,9 @@
       "headers": {
         "ones": {
           "type": "array",
-          "items": {}
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

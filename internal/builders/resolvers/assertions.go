@@ -236,6 +236,24 @@ func IsAny(o *types.TypeName) bool {
 	return o.Pkg() == nil && o.Name() == "any"
 }
 
+// isStdBig reports whether o is the math/big type called name.
+func isStdBig(o *types.TypeName, name string) bool {
+	return o != nil && o.Pkg() != nil && o.Pkg().Path() == "math/big" && o.Name() == name
+}
+
+// IsStdBigInt reports whether o is [math/big.Int], which travels as a JSON *number*: it carries a
+// MarshalJSON emitting a bare numeric literal, and encoding/json prefers json.Marshaler over the
+// MarshalText the same type also has.
+func IsStdBigInt(o *types.TypeName) bool { return isStdBig(o, "Int") }
+
+// IsStdBigFloat reports whether o is [math/big.Float], which travels as a JSON *string* holding a
+// decimal float ("3.5"): it has MarshalText and no MarshalJSON, and unmarshalling rejects a number.
+func IsStdBigFloat(o *types.TypeName) bool { return isStdBig(o, "Float") }
+
+// IsStdBigRat reports whether o is [math/big.Rat], which travels as a JSON *string* holding a
+// quotient ("5/3"): it has MarshalText and no MarshalJSON, and unmarshalling rejects a number.
+func IsStdBigRat(o *types.TypeName) bool { return isStdBig(o, "Rat") }
+
 func AddExtension(ve *oaispec.VendorExtensible, key string, value any, skip bool) {
 	if skip {
 		return

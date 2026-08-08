@@ -357,6 +357,8 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	// The subset hand-rolled here was `any` only — which is unreachable in this arm, since the predeclared `any` is an
 	// alias and lands in the one below.
 	if schema.ApplyStdlibSpecials(o, typable, p.Ctx.SkipExtensions()) {
+		p.ensureSimpleSchemaTyped(typable, ftpe, o.Name())
+
 		return nil
 	}
 
@@ -380,13 +382,34 @@ func (p *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 	return schema.DelegateAs(p.Builder, decl, schema.OptionFor(decl.ObjType(), typable))
 }
 
+// ensureSimpleSchemaTyped repairs a non-body parameter that resolved to no type, and reports the
+// choice made on the author's behalf.
+//
+// The recognizers answering in this builder's own field arms return without ever entering the schema
+// builder's Build, so the catch-at-exit contract never sees those targets. `any` and
+// `json.RawMessage` resolve to "any JSON", which OAS v2 gives a non-body parameter no way to spell.
+func (p *Builder) ensureSimpleSchemaTyped(typable ifaces.SwaggerTypable, tpe types.Type, goName string) {
+	if !schema.EnsureSimpleSchemaTyped(typable, tpe, p.Ctx.SkipExtensions()) {
+		return
+	}
+
+	p.RecordDiagnostic(grammar.Warnf(
+		p.Ctx.PosOf(p.Decl.Pos()),
+		grammar.CodeUnderspecifiedInSimpleSchema,
+		"a parameter (in=%q) typed %s resolved to no type, which OAS v2 does not allow on a non-body "+
+			"parameter; defaulted to {type: string}",
+		typable.In(), goName,
+	))
+}
+
 func (p *Builder) buildFieldAlias(tpe *types.Alias, typable ifaces.SwaggerTypable) error {
 	o := tpe.Obj()
 	if resolvers.IsAny(o) {
 		// e.g. Field interface{} or Field any
 		_ = typable.Schema()
+		p.ensureSimpleSchemaTyped(typable, tpe, o.Name())
 
-		return nil // just leave an empty schema
+		return nil // an empty schema where the position can hold one
 	}
 	if resolvers.IsStdErrorType(tpe) {
 		// Same refusal as the named arm, and it has to be spelled against the resolved type: an alias's own object is the
