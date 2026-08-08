@@ -27,7 +27,19 @@ updates:
     # 2. golang.org-dependencies are auto-merged
     # 3. go-openapi patch updates are auto-merged. Minor/major version updates require a manual merge.
     # 4. other dependencies require a manual merge
-    directory: "/"
+    #
+    # One entry per workspace member, mirroring go.work's use list. Naming them is
+    # what makes the coverage checkable: bumps have reached fixtures/ from the
+    # single "/" entry before now, but that relies on the updater following
+    # go.work rather than on anything stated here, and docs/examples and
+    # hack/genexportdata/bundle have never shown up in a pull request at all.
+    # A group spans the directories, so this stays one pull request per group.
+    directories:
+      - "/"
+      - "/cmd/genspec-tui"
+      - "/docs/examples"
+      - "/fixtures"
+      - "/hack/genexportdata/bundle"
     schedule:
       interval: "weekly"
       day: "friday"
