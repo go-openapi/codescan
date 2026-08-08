@@ -38,6 +38,48 @@ const validSpec = `{
   }
 }`
 
+// warnSpec is valid but carries things nothing refers to, which the validator reports as WARNINGS rather than errors.
+//
+// The distinction is the point: a spec can be legal and still worth saying something about.
+const warnSpec = `{
+  "swagger": "2.0",
+  "info": {"title": "t", "version": "1"},
+  "paths": {
+    "/pets": {
+      "get": {"operationId": "getPets", "responses": {"200": {"description": "ok"}}}
+    }
+  },
+  "definitions": {"NeverUsed": {"type": "object"}},
+  "parameters": {"unusedParam": {"name": "q", "in": "query", "type": "string"}}
+}`
+
+// TestRun_ReportsWarnings covers the half of the validator's output that is not errors.
+//
+// It is a regression test with a story: warnings were read off the warnings-ONLY result, whose warnings live in its
+// Errors field, so the slice was always empty and a spec with warnings was reported as clean.
+func TestRun_ReportsWarnings(t *testing.T) {
+	findings, err := Run([]byte(warnSpec))
+	require.NoError(t, err)
+
+	var warns []Finding
+	for _, f := range findings {
+		if f.Severity == grammar.SeverityWarning {
+			warns = append(warns, f)
+		}
+	}
+
+	require.NotEmpty(t, warns, "a spec with unreferenced components must not read as clean")
+	for _, f := range warns {
+		assert.NotEmpty(t, f.Message)
+	}
+	// Not asserted here: a location. These warnings name their subject as "#/definitions/NeverUsed" inside the
+	// sentence, which is not one of the two shapes locationOf can read, so they arrive navigable-less. Making them
+	// navigable needs the location the validator records rather than one recovered from the message.
+
+	errsOnly, _ := Tally(findings)
+	assert.Zero(t, errsOnly, "the spec itself is legal; nothing here is an error")
+}
+
 func TestRun_ReportsFindings(t *testing.T) {
 	findings, err := Run([]byte(brokenSpec))
 

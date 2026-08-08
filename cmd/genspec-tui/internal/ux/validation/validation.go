@@ -48,13 +48,16 @@ func Run(specJSON []byte) ([]Finding, error) {
 		return nil, fmt.Errorf("cannot load the generated spec: %w", err)
 	}
 
-	errs, warns := validate.NewSpecValidator(doc.Schema(), strfmt.Default).Validate(doc)
+	// Everything comes off the FIRST result, which holds both lists. The second is a warnings-only view of the same
+	// run, and it carries them as its ERRORS - so reading warnings from its Warnings field, as this did, always found
+	// an empty slice and the pane reported a spec with warnings as clean.
+	result, _ := validate.NewSpecValidator(doc.Schema(), strfmt.Default).Validate(doc)
 
-	findings := make([]Finding, 0, len(errs.Errors)+len(warns.Warnings))
-	for _, e := range errs.Errors {
+	findings := make([]Finding, 0, len(result.Errors)+len(result.Warnings))
+	for _, e := range result.Errors {
 		findings = append(findings, finding(grammar.SeverityError, e))
 	}
-	for _, w := range warns.Warnings {
+	for _, w := range result.Warnings {
 		findings = append(findings, finding(grammar.SeverityWarning, w))
 	}
 
