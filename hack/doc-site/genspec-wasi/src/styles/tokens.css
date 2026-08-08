@@ -1,0 +1,141 @@
+/*
+ * SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Every value the app draws with, named by role rather than by colour, so a theme is a different set
+ * of values and never a different set of names.
+ *
+ * Declared inside @layer, and that is the whole embedding contract. Unlayered declarations beat
+ * layered ones no matter how specific, so a host page that sets --cs-accent on any ancestor wins
+ * over the default below without !important and without us having to guess what the doc site calls
+ * its own variables. Anything not overridden keeps ours.
+ *
+ * Scoped to .cs-root rather than :root for the same reason: the app is a component on somebody
+ * else's page, and has no business styling the document.
+ *
+ * There is no prefers-color-scheme block here. The theme store resolves "follow the system" in
+ * JavaScript and always stamps data-theme, so the two themes are stated once each rather than the
+ * dark one twice - and an explicit choice wins in both directions by construction.
+ */
+
+@layer cs.tokens {
+  .cs-root {
+    color-scheme: light;
+
+    /* Ink. faint is decoration - never the only carrier of meaning. */
+    --cs-fg: #16181d;
+    --cs-fg-muted: #5a616e;
+    --cs-fg-faint: #838b99;
+
+    /* Surfaces, from the page backwards: sunken is chrome, raised floats above it. */
+    --cs-bg: #ffffff;
+    --cs-bg-sunken: #f5f6f8;
+    --cs-bg-raised: #ffffff;
+    --cs-bg-inset: #eef0f3;
+    --cs-bg-hover: #00000008;
+    --cs-bg-active: #0000000f;
+
+    --cs-line: #e2e4ea;
+    --cs-line-strong: #c6cad4;
+
+    --cs-accent: #2f5bd8;
+    --cs-accent-fg: #ffffff;
+    --cs-accent-soft: #e9eefc;
+
+    /* Severity, matching the scanner's three levels. */
+    --cs-error: #c0362c;
+    --cs-error-soft: #fdecea;
+    --cs-warning: #8a5a00;
+    --cs-warning-soft: #fdf3e2;
+    --cs-hint: #40708f;
+    --cs-hint-soft: #eaf2f7;
+
+    --cs-focus: var(--cs-accent);
+
+    --cs-match: #fdf0c0;
+    --cs-match-current: #fbe08a;
+
+    /* Syntax. One set for Go and for the rendered document, since a reader moves between the two
+       panes constantly and two palettes would read as two applications. */
+    --cs-syn-keyword: #8250b0;
+    --cs-syn-type: #1a6b78;
+    --cs-syn-string: #1d6b3f;
+    --cs-syn-number: #a1560a;
+    --cs-syn-comment: #6b7280;
+    --cs-syn-property: #2f5bd8;
+    --cs-syn-func: #7a4a1f;
+
+    /* Spacing. A six-step ramp covers a tool this dense; more invites inconsistency. */
+    --cs-s1: 0.25rem;
+    --cs-s2: 0.5rem;
+    --cs-s3: 0.75rem;
+    --cs-s4: 1rem;
+    --cs-s5: 1.5rem;
+    --cs-s6: 2rem;
+
+    --cs-r1: 3px;
+    --cs-r2: 6px;
+    --cs-r3: 10px;
+
+    --cs-font-ui: system-ui, -apple-system, "Segoe UI", roboto, sans-serif;
+    --cs-font-mono: ui-monospace, sfmono-regular, "SF Mono", menlo, consolas, monospace;
+    --cs-fs-xs: 11px;
+    --cs-fs-sm: 12px;
+    --cs-fs-md: 13px;
+    --cs-fs-lg: 15px;
+    --cs-lh: 1.5;
+    --cs-lh-code: 1.6;
+
+    --cs-shadow-1: 0 1px 2px #0000000f;
+    --cs-shadow-2: 0 4px 16px #00000014;
+
+    /* Chrome heights, shared so the panes can size themselves against them. */
+    --cs-bar-h: 2.75rem;
+    --cs-tab-h: 2.25rem;
+
+    --cs-transition: 120ms ease;
+  }
+
+  .cs-root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --cs-fg: #e5e8ee;
+    --cs-fg-muted: #a2aab9;
+    --cs-fg-faint: #737c8c;
+
+    --cs-bg: #16181d;
+    --cs-bg-sunken: #1b1e24;
+    --cs-bg-raised: #21252c;
+    --cs-bg-inset: #101216;
+    --cs-bg-hover: #ffffff0a;
+    --cs-bg-active: #ffffff14;
+
+    --cs-line: #2b3038;
+    --cs-line-strong: #3d434e;
+
+    --cs-accent: #7ea2f5;
+    --cs-accent-fg: #10131a;
+    --cs-accent-soft: #1e2942;
+
+    --cs-error: #f08b82;
+    --cs-error-soft: #33201e;
+    --cs-warning: #e0b25c;
+    --cs-warning-soft: #2f2718;
+    --cs-hint: #8fb8d1;
+    --cs-hint-soft: #1b2830;
+
+    --cs-shadow-1: 0 1px 2px #00000052;
+    --cs-shadow-2: 0 4px 16px #0000005c;
+
+    --cs-syn-keyword: #c99bec;
+    --cs-syn-type: #6fd4dd;
+    --cs-syn-string: #93d19c;
+    --cs-syn-number: #e9b177;
+    --cs-syn-comment: #7f8899;
+    --cs-syn-property: #8fb0f7;
+    --cs-syn-func: #e0be8c;
+
+    --cs-match: #3a3520;
+    --cs-match-current: #554a1e;
+  }
+}
