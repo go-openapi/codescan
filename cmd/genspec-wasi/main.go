@@ -36,7 +36,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/internal/exportdata"
@@ -220,24 +220,20 @@ func resolveLoader(mode string) (bool, error) {
 	}
 }
 
-// absolutePath resolves p against the working directory.
+// absolutePath resolves p against the working directory, in the host's own notion of a path.
 //
-// path/filepath.Abs is not used: it consults the process working directory, which a WASI guest may
-// not have, and the result has to be a slash path rooted at the mount anyway.
+// Absolute means what the host means by it, not "starts with a slash": a Windows -workdir starts
+// with a drive letter, so reading it as relative appends it to the working directory and yields a
+// path that names nothing. Under WASI the two notions coincide, and the working directory is
+// consulted only for a relative -workdir -- an absolute one names the mount and returns before
+// os.Getwd, which a guest need not have.
 func absolutePath(p string) (string, error) {
-	if strings.HasPrefix(p, "/") {
-		return p, nil
-	}
-
-	wd, err := os.Getwd()
+	abs, err := filepath.Abs(p)
 	if err != nil {
 		return "", fmt.Errorf("cannot resolve %q against the working directory: %w", p, err)
 	}
-	if p == "." || p == "" {
-		return wd, nil
-	}
 
-	return strings.TrimSuffix(wd, "/") + "/" + strings.TrimPrefix(p, "./"), nil
+	return abs, nil
 }
 
 func (c *config) emit(doc any, sink *collector, stdout io.Writer) error {
