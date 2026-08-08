@@ -32,3 +32,8 @@ go.work.sum
 .mcp.json
 .worktrees
 go.work.sum
+internal/exportdata/exportdata.zip
+
+# stray binaries from "go build ./hack/..."
+/genexportdata
+/genspec-wasi

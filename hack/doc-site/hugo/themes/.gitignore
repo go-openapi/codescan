@@ -1,2 +1,4 @@
 hugo-relearn
 codescan-static/js/mermaid11/mermaid.min.js
+codescan-static/playground/assets
+codescan-static/playground/genspec-wasi.wasm

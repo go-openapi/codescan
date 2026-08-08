@@ -62,6 +62,41 @@ genspec-tui -workdir [my source location]
 
 ![tui_screenshot](docs/genspec-tui.png)
 
+## Generate a spec from the command line
+
+`genspec-wasi` is the headless counterpart: it writes the specification to standard output and takes no
+dependency beyond the library, so it also cross-compiles to WebAssembly and runs under a WASI
+runtime with no Go toolchain installed.
+
+```cmd
+go install github.com/go-openapi/codescan/cmd/genspec-wasi@latest
+```
+
+```cmd
+genspec-wasi -workdir [my source location] ./...
+```
+
+`-format=json` wraps the document with everything the scan observed — diagnostics
+and cross-references, each carrying a source position — for a caller that wants
+to do something with them rather than read them.
+
+See [cmd/genspec-wasi/README.md](cmd/genspec-wasi/README.md) for the WASI build, what a guest needs mounted,
+and how to ship the standard library's types inside the artifact.
+
+## Scan in a browser
+
+**Experimental, and offered for demonstration** — the interface is verified by hand rather than by
+tests. [`hack/doc-site/genspec-wasi`](hack/doc-site/genspec-wasi/README.md) is the same
+artifact with a front-end around it: open a Go module, watch the specification it produces, edit the
+source and watch it change. There is no server and nothing is uploaded — the scanner is codescan
+compiled to WebAssembly, running in the tab.
+
+It follows `genspec-tui` closely enough to be judged against it: syntax highlighting on both sides, a
+diagnostics gutter, `/` search, and cross-references that answer *which Go code produced this node*
+and *what did this field turn into* — by position rather than by guessing at names.
+
+Destined for the documentation site, where a tutorial's example box becomes something you can edit.
+
 ## Change log
 
 See <https://github.com/go-openapi/codescan/releases>

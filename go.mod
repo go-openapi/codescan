@@ -23,5 +23,6 @@ require (
 	github.com/go-openapi/swag/pools v0.28.0 // indirect
 	github.com/go-openapi/swag/stringutils v0.28.0 // indirect
 	github.com/go-openapi/swag/typeutils v0.28.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 )

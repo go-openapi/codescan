@@ -35,9 +35,9 @@ to builders without direct coupling.
 |------|----------|
 | `options.go` | `Options` struct: packages, work dir, build tags, include/exclude, feature flags |
 | `scan_context.go` | `ScanCtx` / `NewScanCtx`; `loadPackages` picks a loader from `Options.FS` (see `README.md#loader`) |
-| `load_golist.go` / `load_wasm.go` | the `golang.org/x/tools/go/packages` (`go list`) loader; excluded from `wasm` builds, which have no process model |
 | `index.go` | `TypeIndex` — node classification (meta/route/operation/model/parameters/response) |
 | `declaration.go` | `EntityDecl` — wraps a type/value declaration with its enclosing file/package |
+| `written_rhs.go` | `WrittenRHS` — the type a declaration was *written* over (`Stamp` in `type StampResp Stamp`), which peeling to the underlying would discard |
 | `enum_value.go` | `enumBasicLitValue` — converts a `const Foo Kind = "bar"` RHS into its runtime value (enum discovery) |
 | `provenance.go` | `Provenance` — ties a spec JSON pointer to the source position of the Go construct that produced it; emitted via `Options.OnProvenance` (cross-ref linker, source side) |
 | `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |

@@ -1,0 +1,188 @@
+/*
+ * SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The shared look, drawn only from tokens.css, and confined to .cs-root so an embedding page keeps
+ * its own typography and its own buttons. Layered for the same reason the tokens are: a host that
+ * wants a different control shape can say so without fighting specificity.
+ */
+
+@layer cs.base {
+  .cs-root,
+  .cs-root *,
+  .cs-root *::before,
+  .cs-root *::after {
+    box-sizing: border-box;
+  }
+
+  .cs-root {
+    font: var(--cs-fs-md) / var(--cs-lh) var(--cs-font-ui);
+    color: var(--cs-fg);
+    background: var(--cs-bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One focus treatment everywhere. Keyboard only: a pointer user has a cursor to tell them where
+     they are, and a ring on every click reads as an error. */
+  .cs-root :focus-visible {
+    outline: 2px solid var(--cs-focus);
+    outline-offset: 1px;
+    border-radius: var(--cs-r1);
+  }
+
+  .cs-root :where(h1, h2, h3, h4, p, figure) {
+    margin: 0;
+  }
+
+  .cs-root :where(code, pre, textarea, .cs-mono) {
+    font-family: var(--cs-font-mono);
+    font-size: var(--cs-fs-md);
+    line-height: var(--cs-lh-code);
+    font-variant-ligatures: none;
+    tab-size: 4;
+  }
+
+  /* Controls */
+
+  .cs-root :where(button, .cs-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cs-s2);
+    height: 1.85rem;
+    padding: 0 var(--cs-s3);
+    font: inherit;
+    color: var(--cs-fg);
+    background: var(--cs-bg-raised);
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--cs-r2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--cs-transition), border-color var(--cs-transition);
+  }
+
+  .cs-root :where(button, .cs-btn):hover:not(:disabled) {
+    background: var(--cs-bg-hover);
+  }
+
+  .cs-root :where(button, .cs-btn):active:not(:disabled) {
+    background: var(--cs-bg-active);
+  }
+
+  .cs-root :where(button, .cs-btn):disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .cs-root .cs-btn-primary {
+    color: var(--cs-accent-fg);
+    background: var(--cs-accent);
+    border-color: transparent;
+  }
+
+  .cs-root .cs-btn-primary:hover:not(:disabled) {
+    background: var(--cs-accent);
+    filter: brightness(1.08);
+  }
+
+  /* A control that is chrome rather than an action: no border until you reach for it. */
+  .cs-root .cs-btn-quiet {
+    background: transparent;
+    border-color: transparent;
+    color: var(--cs-fg-muted);
+  }
+
+  .cs-root .cs-btn-quiet:hover:not(:disabled) {
+    color: var(--cs-fg);
+    background: var(--cs-bg-hover);
+  }
+
+  .cs-root :where(input[type="text"], select) {
+    height: 1.85rem;
+    padding: 0 var(--cs-s2);
+    font: inherit;
+    color: var(--cs-fg);
+    background: var(--cs-bg-raised);
+    border: 1px solid var(--cs-line-strong);
+    border-radius: var(--cs-r2);
+  }
+
+  .cs-root input[type="checkbox"] {
+    accent-color: var(--cs-accent);
+    margin: 0;
+  }
+
+  /* Text roles */
+
+  .cs-root .cs-muted { color: var(--cs-fg-muted); }
+  .cs-root .cs-faint { color: var(--cs-fg-faint); }
+  .cs-root .cs-error { color: var(--cs-error); }
+
+  /* A small uppercase label for a pane header or a group heading. */
+  .cs-root .cs-label {
+    font-size: var(--cs-fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--cs-fg-muted);
+  }
+
+  /* A count or a status word riding next to a label. */
+  .cs-root .cs-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cs-s1);
+    padding: 0 var(--cs-s2);
+    height: 1.25rem;
+    font-size: var(--cs-fs-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--cs-fg-muted);
+    background: var(--cs-bg-inset);
+    border-radius: 999px;
+  }
+
+  .cs-root .cs-pill-error { color: var(--cs-error); background: var(--cs-error-soft); }
+  .cs-root .cs-pill-warning { color: var(--cs-warning); background: var(--cs-warning-soft); }
+  .cs-root .cs-pill-hint { color: var(--cs-hint); background: var(--cs-hint-soft); }
+
+  /* Scrolling regions. Every pane body is one, and none of them scrolls the page. */
+  .cs-root .cs-scroll {
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+
+  .cs-root .cs-scroll pre {
+    margin: 0;
+    padding: var(--cs-s3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cs-root * {
+      transition-duration: 1ms !important;
+      animation-duration: 1ms !important;
+    }
+  }
+}
+
+/* The standalone page, and only it: #app is the mount point in our own index.html, and a doc-site
+   article that embeds the playground owns its page box and will size its own container.
+ *
+ * The shell is a column of flex children that each say min-height: 0, so it has no height of its own
+ * - it takes whatever its parent gives it. Give it nothing and it collapses to the height of its
+ * content, which reads as every pane being starved rather than as a missing rule. */
+@layer cs.page {
+  html, body {
+    margin: 0;
+    height: 100%;
+  }
+
+  #app {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  #app > .cs-root {
+    height: 100%;
+  }
+}
