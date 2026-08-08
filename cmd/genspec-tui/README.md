@@ -51,17 +51,31 @@ go run ./cmd/genspec-tui -workdir ./fixtures -packages ./goparsing/petstore/...
 | `-name-from-tags` | `json` | ordered struct tags a field's name derives from, e.g. `form,json` for gin. Pass `-name-from-tags=` (empty) to use the Go field name instead |
 | `-name-concat-budget` | `0.65` | readability cutoff when deconflicting colliding definition names |
 
+A second group decides what gets built and how it is loaded — the go environment
+the scan runs under, plus codescan's own loader:
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `-goos` / `-goarch` | this machine's | the platform the scanned code is built for, so `//go:build` lines and `_linux.go` suffixes resolve the way that platform resolves them |
+| `-goflags` | — | default go command flags, as `GOFLAGS` (e.g. `-tags=integration`); `-build-tags` wins |
+| `-gowork` | search upwards | workspace selection, as `GOWORK`: `off` to disable, or the path to a `go.work` |
+| `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` (e.g. `jsonv2`) |
+| `-toolchain-free-loader` | `false` | load packages with codescan's own loader instead of the go command (experimental) |
+| `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-toolchain-free-loader`) |
+
 Every boolean scanner option can be toggled live with `o`; the spec re-renders
 on close, which makes the popup the fastest way to see what a flag such as
 `EmitRefSiblings` actually changes. The rows are grouped (discovery & scope ·
-`$ref` & composition · naming · docs & comments · types & extensions), and a
-knob that only bites in combination says so — `PruneUnusedModels` shows
-`(needs ScanModels)` until that one is on, and `EmitXGoType` shows
+`$ref` & composition · naming · docs & comments · types & extensions · package
+loading), and a knob that only bites in combination says so — `PruneUnusedModels`
+shows `(needs ScanModels)` until that one is on, and `EmitXGoType` shows
 `(moot: SkipExtensions)` while extensions are suppressed.
 
 The value-typed options are flags rather than popup rows, since a checkbox list
-cannot express them — see the table above. The one option with no route in at
-all is `InputSpec` (overlay mode).
+cannot express them — see the tables above. The three booleans that appear in
+both places (`-scan-models` and the two loader flags) let a session start one way
+and change without a restart. The one option with no route in at all is
+`InputSpec` (overlay mode).
 
 ## Layout
 

@@ -44,6 +44,34 @@ What gets loaded and which packages and types are in play. See
 | `PruneUnusedModels` | `bool` | `false` | With `ScanModels`, drop discovered definitions not transitively reachable from a path, shared response/parameter, or `InputSpec` root. Runs before name reduction; `InputSpec` definitions are pinned. No-op without `ScanModels`. See [Pruning unused models]({{% relref "pruning-unused-models" %}}). |
 | `InputSpec` | `*spec.Swagger` | `nil` | Base document to overlay scanned discoveries onto; its definitions are pinned and seed pruning roots. See [Overlaying a spec]({{% relref "overlaying-a-spec" %}}). |
 
+## Loading & the go environment
+
+Where the package graph comes from, and which platform it is built for. These
+change the emitted spec the way `BuildTags` does — by deciding which files each
+package is made of — or change what the scan needs in order to run at all.
+
+They are options rather than inherited process state so that a scan is
+reproducible: a value picked up from whatever shell started it is easy to apply on
+one code path and forget on another.
+
+| Option | Type | Default | Effect |
+|--------|------|---------|--------|
+| `GOOS` / `GOARCH` | `string` | `""` (this machine) | The platform the scanned code is built for. `//go:build` lines and `_linux.go` / `_amd64.go` filename suffixes resolve against them, so they select which files a package is made of. |
+| `GOFLAGS` | `string` | `""` (process env) | Default go command flags, e.g. `-tags=integration`. Flags given through `BuildTags` win, as they do for the go command. |
+| `GOWORK` | `string` | `""` (search upwards) | Workspace selection: `off` disables it, a path names a `go.work`. Inside a workspace a sibling module resolves to the copy being worked on rather than to the module cache — miss that and its types are read stale, or synthesized empty. |
+| `GOEXPERIMENT` | `string` | `""` (process env) | Toolchain experiments, e.g. `jsonv2`; each contributes a `goexperiment.<name>` build tag. |
+| `ToolchainFreeLoader` | `bool` | `false` | Resolve the package graph with codescan's own loader instead of `golang.org/x/tools/go/packages`. Same job and, across the fixture corpus, the same spec; it differs in needing no installed toolchain and no subprocess, since it never runs `go list`. **Experimental.** |
+| `FS` | `fs.FS` | `nil` | Read source through a virtual filesystem — an in-memory tree, an uploaded archive, an `embed.FS` — instead of the real one. Implies `ToolchainFreeLoader`, since `go list` can only read the real filesystem. **`FS` is the whole world the scan can read**: dependencies and GOROOT come through it too, absolute paths map by dropping the leading separator, and anything unreachable is synthesized — a valid but quietly thinner spec, announced by `scan.synthesized-import` and `scan.degraded-load`. **Experimental.** |
+| `StubStdlib` | `bool` | `false` | Synthesize the standard library from the names the code selects, rather than reading GOROOT. Toolchain-free loader only. Identity recognition still works (`time.Time`, `json.RawMessage` are matched on package and name), but a synthesized type has no fields and no method set — so `json.RawMessage` stops rendering as a byte array and nothing is seen to implement `encoding.TextMarshaler`. Trades fidelity for reach, quietly; prefer a full graph where GOROOT is available. **Experimental.** |
+| `ExportData` | `fs.FS` | `nil` | Serve dependencies from pre-computed export data (one `<import path>.export` file per package) under the toolchain-free loader. Unlike `StubStdlib` this costs no fidelity, the types being the ones the compiler computed — but it is valid only for the toolchain that produced it, and an uncovered package falls back to source, then to synthesis. The module under scan is never read this way, and neither is a dependency whose source carries annotations. **Experimental.** |
+| `CompiledDependencies` | `bool` | `false` | Take dependency types from the compiler's export data under the go/packages loader. Markedly faster on a warm build cache and markedly slower on a cold one, since the closure must be compiled first. Annotated dependencies are read back from source, so a `swagger:strfmt` written in a library still counts; a model declared in an *unannotated* dependency collapses to its name. Raises `scan.compiled-dependencies`. **Experimental.** |
+
+{{% notice style="note" %}}
+The virtual-filesystem and export-data options exist to make a scan possible
+where no Go toolchain is: they are what lets codescan run compiled to
+WebAssembly. See the [Playground]({{% relref "playground" %}}).
+{{% /notice %}}
+
 ## Names & references
 
 How definitions are named and how `$ref`s render. See
