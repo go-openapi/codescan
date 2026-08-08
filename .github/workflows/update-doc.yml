@@ -40,6 +40,8 @@ jobs:
           sparse-checkout: |
             hack/
             docs/
+            cmd/genspec-wasi/
+            internal/
       -
         name: Get all tags [go-openapi repo]
         if: ${{ github.repository == 'go-openapi/codescan' }}
@@ -73,6 +75,31 @@ jobs:
           mkdir -p themes/codescan-static/js/mermaid11
           curl -sL -o themes/codescan-static/js/mermaid11/mermaid.min.js \
             https://cdn.jsdelivr.net/npm/mermaid@"${MERMAID_VERSION}"/dist/mermaid.min.js
+      -
+        name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      -
+        name: Build the playground
+        env:
+          # The checkout is sparse, so several modules go.work names are absent and every go
+          # command in the workspace would fail on them. The playground needs the root module
+          # alone, which is what turning the workspace off leaves.
+          GOWORK: off
+        run: |
+          cd hack/doc-site/genspec-wasi
+
+          # Node is preinstalled on the runner. npm ci rather than npm install: the lock file is
+          # what makes this reproducible, and a doc build is not the place to pick up a new minor.
+          npm ci
+          npm run dist
+
+          # The pack is served from the Hugo static tree; nothing here is committed. Fail loudly if
+          # it is missing rather than publishing a page whose shortcode reports it is unbuilt.
+          test -f ../hugo/themes/codescan-static/playground/assets/playground.js
+          test -f ../hugo/themes/codescan-static/playground/genspec-wasi.wasm
       -
         name: Prepare config
         run: |
