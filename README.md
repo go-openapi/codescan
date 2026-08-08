@@ -62,6 +62,27 @@ genspec-tui -workdir [my source location]
 
 ![tui_screenshot](docs/genspec-tui.png)
 
+## Generate a spec from the command line
+
+`genspec-wasi` is the headless counterpart: it writes the specification to standard output and takes no
+dependency beyond the library, so it also cross-compiles to WebAssembly and runs under a WASI
+runtime with no Go toolchain installed.
+
+```cmd
+go install github.com/go-openapi/codescan/cmd/genspec-wasi@latest
+```
+
+```cmd
+genspec-wasi -workdir [my source location] ./...
+```
+
+`-format=json` wraps the document with everything the scan observed — diagnostics
+and cross-references, each carrying a source position — for a caller that wants
+to do something with them rather than read them.
+
+See [cmd/genspec-wasi/README.md](cmd/genspec-wasi/README.md) for the WASI build, what a guest needs mounted,
+and how to ship the standard library's types inside the artifact.
+
 ## Change log
 
 See <https://github.com/go-openapi/codescan/releases>
