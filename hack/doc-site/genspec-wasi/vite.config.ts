@@ -13,6 +13,19 @@ export default defineConfig({
   build: {
     target: 'es2022',
     assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        // The entry pair keeps fixed names so a Hugo shortcode can write a <script> and a <link>
+        // without reading a manifest. Everything else stays hashed: the lazily-loaded chunks are
+        // fetched by the entry itself, which knows their names, and hashing is what lets them be
+        // cached hard.
+        entryFileNames: 'assets/playground.js',
+        // Only the entry's own stylesheet, which Vite names after the html entry. Swagger UI's is a
+        // lazy chunk's asset: the entry fetches it by the name in the bundle, so it stays hashed.
+        assetFileNames: (info) =>
+          info.names?.includes('index.css') ? 'assets/playground.css' : 'assets/[name]-[hash][extname]',
+      },
+    },
     // Swagger UI is 1.4 MB in one chunk and the warning is right about that in general and wrong
     // here: the chunk is behind a dynamic import and is never fetched unless its tab is opened.
     // Splitting it further would only mean more requests for the reader who does open it.

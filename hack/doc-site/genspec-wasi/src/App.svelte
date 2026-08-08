@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { providePlayground } from './lib/store.svelte';
   import { createTheme } from './lib/theme.svelte';
   import Toolbar from './components/Toolbar.svelte';
@@ -11,8 +12,19 @@
 
   // The shell owns both stores and hands them down through context, so mounting a second playground
   // on the same page gives it its own tree rather than sharing this one's.
+  // Where the artifact lives is the page's business, not ours: the standalone page and a doc-site
+  // page serve it from different places, and the app should not have to know which it is in.
+  let { wasmUrl }: { wasmUrl?: string } = $props();
+
   const playground = providePlayground();
   const theme = createTheme();
+
+  // Read once, deliberately: the mount point states where the artifact is and does not change its
+  // mind, so untrack says that rather than leaving the linter to guess.
+  const supplied = untrack(() => wasmUrl);
+  if (supplied) {
+    playground.wasmUrl = supplied;
+  }
 
   let showOptions = $state(false);
 

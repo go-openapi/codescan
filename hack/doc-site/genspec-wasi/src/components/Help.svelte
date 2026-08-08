@@ -22,7 +22,7 @@
   title="How to scan your own code"
 >?</button>
 
-<dialog bind:this={dialog} class="cs-root sheet">
+<dialog bind:this={dialog} class="sheet">
   <header>
     <h2>Scanning your own code</h2>
     <button class="cs-btn-quiet" onclick={() => dialog?.close()} aria-label="Close">×</button>
@@ -33,7 +33,7 @@
       <li>
         <p class="what">Make sure it is a module</p>
         <pre>go mod init example.com/api</pre>
-        <p class="why cs-muted">
+        <p class="why">
           Skip this if there is already a <code>go.mod</code>. The scanner resolves import paths
           against the module, so without one there is nothing to resolve them against.
         </p>
@@ -42,7 +42,7 @@
       <li>
         <p class="what">Vendor the dependencies</p>
         <pre>go mod vendor</pre>
-        <p class="why cs-muted">
+        <p class="why">
           There is no module cache in your browser and nothing is downloaded, so a dependency's types
           can only arrive as source. It matters more than it looks: a library that declares things in
           its <em>comments</em> — <code>strfmt</code> and its <code>swagger:strfmt</code> marks —
@@ -52,7 +52,7 @@
 
       <li>
         <p class="what">Open the folder</p>
-        <p class="why cs-muted">
+        <p class="why">
           <strong>Open module…</strong> takes the whole directory in one gesture. It keeps
           <code>.go</code> files, <code>go.mod</code> and <code>vendor/modules.txt</code>, skips
           tests, and re-roots on the outermost <code>go.mod</code> — so it does not matter whether you
@@ -80,7 +80,7 @@
     </table>
 
     <h3>What the two panes are for</h3>
-    <p class="prose cs-muted">
+    <p class="prose">
       The left is your source and the right is what codescan makes of it. Editing rescans after a
       pause. With <strong>Track</strong> on, a line on either side lights up what it produced — or
       what produced it — and a diagnostic lights up both.
@@ -96,6 +96,10 @@
     font-size: var(--cs-fs-lg);
   }
 
+  /* The dialog is a descendant of the shell, so the tokens inherit and the theme follows. What does
+     NOT inherit is anything the host page sets on an element directly: our styles are unlayered and
+     win on specificity, but only for properties we actually state. Hence the colours below, which
+     look redundant and are the difference between readable and not. */
   .sheet {
     width: min(42rem, 92vw);
     max-height: 85vh;
@@ -121,11 +125,13 @@
   h2 {
     flex: 1;
     font-size: var(--cs-fs-lg);
+    color: var(--cs-fg);
   }
 
   h3 {
     margin: var(--cs-s5) 0 var(--cs-s2);
     font-size: var(--cs-fs-md);
+    color: var(--cs-fg);
   }
 
   .body {
@@ -144,17 +150,22 @@
 
   .what {
     font-weight: 600;
+    color: var(--cs-fg);
   }
 
+  /* Full-strength ink, not muted. This is the explanation somebody opened the panel to read, so it
+     is the content rather than an aside, and muting it only made it harder to read. */
   .why,
   .prose {
     font-size: var(--cs-fs-sm);
     line-height: 1.55;
+    color: var(--cs-fg);
   }
 
   pre {
     margin: var(--cs-s1) 0;
     padding: var(--cs-s2) var(--cs-s3);
+    color: var(--cs-fg);
     background: var(--cs-bg-inset);
     border-radius: var(--cs-r2);
     overflow-x: auto;
@@ -162,6 +173,7 @@
 
   code {
     padding: 0 2px;
+    color: var(--cs-fg);
     background: var(--cs-bg-inset);
     border-radius: var(--cs-r1);
   }
@@ -170,6 +182,7 @@
     margin-top: var(--cs-s4);
     padding: var(--cs-s3);
     font-size: var(--cs-fs-sm);
+    color: var(--cs-fg);
     background: var(--cs-accent-soft);
     border-radius: var(--cs-r2);
   }
@@ -183,6 +196,7 @@
   td {
     padding: var(--cs-s1) var(--cs-s2) var(--cs-s1) 0;
     vertical-align: baseline;
+    color: var(--cs-fg);
   }
 
   td:first-child {
@@ -190,14 +204,22 @@
     width: 1%;
   }
 
+  /* The key caps. Their colour was the one thing left unstated, so a doc-site theme's own kbd rule
+     supplied it - a light foreground meant for a dark page, on the light box drawn here. */
   kbd {
     display: inline-block;
     padding: 0 4px;
     font-family: var(--cs-font-mono);
     font-size: var(--cs-fs-xs);
+    font-weight: 600;
+    color: var(--cs-fg);
     background: var(--cs-bg-inset);
     border: 1px solid var(--cs-line-strong);
     border-bottom-width: 2px;
     border-radius: var(--cs-r1);
+    box-shadow: none;
+    text-align: center;
+    line-height: 1.5;
+    top: 0;
   }
 </style>

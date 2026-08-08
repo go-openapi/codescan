@@ -57,6 +57,9 @@ export class Playground {
   // "the scan found nothing", which look identical and mean opposite things.
   scanned = $state(false);
 
+  /** Where the artifact is served from. Set by whoever mounts the app; see src/main.ts. */
+  wasmUrl = $state(new URL(`${import.meta.env.BASE_URL}genspec-wasi.wasm`, location.href).href);
+
   format = $state<Format>('json');
 
   /** Which bundled example is loaded, or '' once the reader opens something of their own. */
@@ -402,7 +405,7 @@ export class Playground {
     this.#worker.postMessage({
       ...this.#delta(files),
       options: $state.snapshot(this.options),
-      wasmUrl: new URL(`${import.meta.env.BASE_URL}genspec-wasi.wasm`, location.href).href,
+      wasmUrl: this.wasmUrl,
     });
   }
 

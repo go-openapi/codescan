@@ -1,0 +1,83 @@
+{{- /*
+  playground: mount the in-browser scanner on this page.
+
+  Usage - no parameters, one per page:
+
+    {{< playground >}}
+
+  Optional:
+
+    {{< playground height="40rem" >}}
+
+  The app is a Svelte front-end around codescan compiled to wasip1/wasm. It runs
+  entirely in the reader's browser: there is no server, and the source they open
+  is never uploaded.
+
+  Assets are loaded only on pages that use this shortcode, which matters more
+  here than for the other heavy asset on the site - the scanner artifact is
+  nearly 20 MB, and the app fetches it on its own, when it first scans.
+
+  The pack is built by `npm run dist` in hack/doc-site/genspec-wasi and is not
+  committed. If it is missing the shortcode says so on the page rather than
+  rendering an empty box, because a silent blank is indistinguishable from a
+  broken build.
+*/ -}}
+
+{{- $height := .Get "height" | default "38rem" -}}
+{{- $js := "playground/assets/playground.js" -}}
+{{- $css := "playground/assets/playground.css" -}}
+
+{{- if not (fileExists (printf "themes/codescan-static/%s" $js)) -}}
+  <div class="playground-missing">
+    <strong>The playground has not been built.</strong>
+    Run <code>npm run dist</code> in <code>hack/doc-site/genspec-wasi</code>, then rebuild the site.
+  </div>
+{{- else -}}
+  <link rel="stylesheet" href="{{ relURL $css }}">
+
+  {{- /*
+    The artifact address is passed in rather than guessed. The app would
+    otherwise look for it beside its own module, which is right here and wrong
+    the moment the pack is served from somewhere else.
+  */ -}}
+  <div
+    class="playground-mount"
+    style="height: {{ $height }}"
+    data-codescan-playground
+    data-wasm="{{ relURL "playground/genspec-wasi.wasm" }}"
+  ></div>
+
+  <noscript>
+    <div class="playground-missing">
+      The playground scans Go source in your browser, so it needs JavaScript.
+      <a href="https://github.com/go-openapi/codescan/tree/master/cmd/genspec-wasi">genspec-wasi</a>
+      does the same thing from a command line.
+    </div>
+  </noscript>
+
+  <script type="module" src="{{ relURL $js }}"></script>
+{{- end -}}
+
+<style>
+  /* The mount is a sized box the app fills. Relearn's content column is narrower than the two panes
+     want, so the box breaks out of it up to the viewport width - a source pane and a spec pane side
+     by side in 45rem leaves neither readable. */
+  .playground-mount {
+    width: 100%;
+    max-width: 100vw;
+    margin: 1.5rem 0;
+    border: 1px solid var(--INTERNAL-MAIN-TEXT-color, #8884);
+    border-radius: 6px;
+    overflow: hidden;
+    resize: vertical;
+    min-height: 20rem;
+  }
+
+  .playground-missing {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    border: 1px dashed #8886;
+    border-radius: 6px;
+    font-size: .9rem;
+  }
+</style>

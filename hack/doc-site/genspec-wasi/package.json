@@ -12,7 +12,9 @@
     "exportdata": "cd ../../.. && go run ./hack/genexportdata -out internal/exportdata/exportdata.zip std",
     "wasm": "npm run exportdata && GOOS=wasip1 GOARCH=wasm go build -tags exportdata -o public/genspec-wasi.wasm ../../../cmd/genspec-wasi",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dist": "npm run wasm && npm run build && node dist-to-hugo.mjs",
+    "dist:pack": "node dist-to-hugo.mjs"
   },
   "dependencies": {
     "@bjorn3/browser_wasi_shim": "^0.4.2",
