@@ -35,8 +35,8 @@ parameters, responses) consumed by the builder layer.
   come from, and what the degraded reading can still see
 - [§clean-godoc](#clean-godoc) — `CleanGoDoc` — filtering godoc syntax out
   of carried-over title / description prose
-- [§loader](#loader) — choosing between the go/packages loader and the
-  toolchain-free one, and what the latter costs
+- [§loader](#loader) — which loader to pick and why, how the choice is
+  reconciled, and what each one costs
 - [§export-data](#export-data) — preparing compiler export data offline, and
   what it buys
 - [§quirks-open](#quirks-open) — deferred follow-ups
@@ -580,6 +580,38 @@ prose** — author-written overrides (harvested separately) are never filtered.
 **Experimental.** Leaving `ToolchainFreeLoader` false and `FS` nil keeps the
 historic `go/packages` behaviour unchanged; everything below applies only once
 one of them is set.
+
+### Which one, and why
+
+Three ways to get a package graph. The short version, before the mechanism:
+
+- **Standard loader** (default) — loads your code with the Go toolchain. Maintained
+  by the Go team, and the **reference for how patterns and imports resolve**: where
+  either of the others disagrees with it, the other one is wrong. Requires Go
+  installed, and uses the build cache.
+- **Pure-Go loader** (`ToolchainFreeLoader`) — loads your code with our own
+  reimplementation. Cuts memory by ~45%, and needs no `go` command and no
+  subprocess — though it still reads `GOROOT/src` for the standard library, so it
+  wants a Go *installation*, not a runnable toolchain. Modules only. It uses no
+  build cache, so **cold costs what warm costs**: about level with the standard
+  loader warm, ~30% faster cold, and the only option whose cost is predictable.
+  Usually the right pick for CI.
+- **Compiled dependencies** (`CompiledDependencies`) — takes dependency types from
+  compiled export data instead of their source. Warm, it is 35–55% faster and
+  2.5–4× smaller. But it must **compile** the closure, not merely type-check it, so
+  on a cold cache it is *an order of magnitude slower* and writes a large build
+  cache. Right for a warm developer loop, wrong for CI. Still rough at one edge: a
+  model declared in a dependency that carries no annotations collapses to a bare
+  name — see [§export-data](#export-data).
+
+Two knobs below drop the GOROOT requirement entirely, at a fidelity cost, and exist
+for environments that have no Go installation at all (a WASI guest, a browser):
+`StubStdlib` and `ExportData`. See [What it costs](#what-it-costs).
+
+Figures are from `hack/loader-benchmark`, which compares a release against the
+working tree over external corpora; its README carries the tables and the method.
+They are indicative, not a promise — the balance moves with corpus size, and on a
+small tree the pure-Go loader is *slower* warm than the standard one.
 
 ### Choosing
 

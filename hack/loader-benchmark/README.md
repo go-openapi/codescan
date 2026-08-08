@@ -12,6 +12,9 @@ release tag and against the working tree.
 Not run in CI, by design. On shared runners a benchmark measures the runner. This is an operator
 tool, run deliberately, roughly once per minor release.
 
+**Looking for which loader to use, rather than for the evidence?** The primer is
+`internal/scanner/README.md#loader`; this document is where its figures come from.
+
 ## Running it
 
 Corpora are external, large, and never vendored here — the point of measuring them is that they are
