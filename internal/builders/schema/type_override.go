@@ -257,8 +257,8 @@ func (s *Builder) inlineGoType(t types.Type, target ifaces.SwaggerTypable) bool 
 //   - several -> records an ambiguity diagnostic and returns (nil, false, true);
 //   - none -> (nil, false, false), leaving the caller to emit unknown-type.
 func (s *Builder) resolveNamedTypeLeaf(name string, pos token.Position) (decl *scanner.EntityDecl, found, ambiguous bool) {
-	if s.Decl != nil && s.Decl.Pkg != nil {
-		if d, ok := s.Ctx.FindDecl(s.Decl.Pkg.PkgPath, name); ok && d != nil {
+	if s.Decl != nil {
+		if d, ok := s.Ctx.FindDecl(s.Decl.PkgPath(), name); ok && d != nil {
 			return d, true, false
 		}
 	}

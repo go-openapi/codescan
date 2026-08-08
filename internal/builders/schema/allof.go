@@ -32,14 +32,14 @@ func (s *Builder) scanEmbeddedFields(
 ) (target *oaispec.Schema, hasAllOf bool, err error) {
 	// `swagger:omit` written on the DECLARATION (the power form) applies to the embeds walked below;
 	// the ergonomic form lives on each embed and is read from its fieldDoc.
-	declOmits := s.declOmitTargets(decl.Comments)
+	declOmits := s.declOmitTargets(decl.Comments())
 
 	for fld := range st.Fields() {
 		if !fld.Anonymous() {
 			continue
 		}
 
-		afld := resolvers.FindASTField(decl.File, fld.Pos())
+		afld := resolvers.FindASTField(decl.File(), fld.Pos())
 		if afld == nil {
 			continue
 		}
@@ -299,7 +299,7 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 	// fell to the warn-and-skip default below), and a format on a string sequence landed on the whole
 	// member instead of on its items.
 	if handled, recurse := s.classifierNamedTypeOverride(
-		decl.Comments, tgt, ftpe, s.Ctx.PosOf(tio.Pos()),
+		decl.Comments(), tgt, ftpe, s.Ctx.PosOf(tio.Pos()),
 	); handled {
 		if recurse {
 			return s.buildFromType(ftpe.Underlying(), tgt)
@@ -307,7 +307,7 @@ func (s *Builder) buildNamedAllOf(ftpe *types.Named, schema *oaispec.Schema) err
 
 		return nil
 	}
-	if handled, recurse := s.applyNamedShapeClassifier(decl.Comments, ftpe, tgt); handled {
+	if handled, recurse := s.applyNamedShapeClassifier(decl.Comments(), ftpe, tgt); handled {
 		if recurse != nil {
 			return recurse()
 		}

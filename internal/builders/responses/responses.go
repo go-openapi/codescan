@@ -67,7 +67,7 @@ func NewBuilder(ctx *scanner.ScanCtx, decl *scanner.EntityDecl) *Builder {
 //
 // The targeting parse lives in the grammar, not the scanner.
 func (r *Builder) ResponseName() string {
-	for _, b := range r.ParseBlocks(r.Decl.Comments) {
+	for _, b := range r.ParseBlocks(r.Decl.Comments()) {
 		if rb, ok := b.(*grammar.ResponseBlock); ok {
 			if rb.Name != "" {
 				return rb.Name
@@ -75,7 +75,7 @@ func (r *Builder) ResponseName() string {
 			break
 		}
 	}
-	return r.Decl.Ident.Name
+	return r.Decl.Name()
 }
 
 func (r *Builder) Build(responses map[string]oaispec.Response) error {
@@ -116,7 +116,7 @@ func (r *Builder) Build(responses map[string]oaispec.Response) error {
 	// skipped.
 	if response.Schema != nil && response.Schema.Ref.String() == "" && !underlyingIsStruct(r.Decl.ObjType()) {
 		handlers.DispatchSchemaLevel0(
-			r.ParseBlock(r.Decl.Comments), nil, response.Schema, "",
+			r.ParseBlock(r.Decl.Comments()), nil, response.Schema, "",
 			r.RecordDiagnostic, handlers.SchemaOptions{},
 		)
 	}
@@ -265,15 +265,11 @@ func namedWrittenRHS(ctx *scanner.ScanCtx, o *types.TypeName) (*scanner.EntityDe
 // The distinction matters wherever a named layer carries meaning: a stdlib recognizer keys on `time.Time`, which
 // peeling discards.
 func writtenRHS(decl *scanner.EntityDecl) (types.Type, bool) {
-	if decl == nil || decl.Spec == nil || decl.Pkg == nil {
-		return nil, false
-	}
-	ti, ok := decl.Pkg.TypesInfo.Types[decl.Spec.Type]
-	if !ok || ti.Type == nil {
+	if decl == nil {
 		return nil, false
 	}
 
-	return ti.Type, true
+	return decl.WrittenRHS()
 }
 
 func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen map[string]bool) error {
@@ -334,7 +330,7 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 
 				return nil
 			}
-			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments)); isf {
+			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments())); isf {
 				applyDeclFormat(sfnm, tpe.Underlying(), typable)
 				resp.WithSchema(&sch)
 
@@ -406,6 +402,12 @@ func (r *Builder) buildNamedField(ftpe *types.Named, typable ifaces.SwaggerTypab
 
 	decl, found := r.Ctx.DeclForType(o.Type())
 	if !found {
+		// See the parameters builder's twin: the type is complete even when its declaration is not
+		// readable, so it is rendered from its underlying shape rather than costing the document.
+		if r.SourcelessFallback(o) {
+			return schema.Delegate(r.Builder, schema.WithType(ftpe.Underlying(), typable))
+		}
+
 		return fmt.Errorf("unable to find package and source file for: %s: %w", ftpe.String(), ErrResponses)
 	}
 
@@ -469,7 +471,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 	// An in: annotation on the embed applies to the response fields it promotes (go-swagger#2701) — body/header routing.
 	// Thread it through the recursion, restoring afterwards so siblings are unaffected.
 	saved := r.inherited
-	if afld := resolvers.FindASTField(decl.File, fld.Pos()); afld != nil {
+	if afld := resolvers.FindASTField(decl.File(), fld.Pos()); afld != nil {
 		r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
 	}
 	// An embed marked `in: body` IS the response body — the embedded struct becomes the body schema, exactly like a
@@ -514,7 +516,7 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		return nil
 	}
 
-	afld := resolvers.FindASTField(decl.File, fld.Pos())
+	afld := resolvers.FindASTField(decl.File(), fld.Pos())
 	if afld == nil {
 		return nil
 	}

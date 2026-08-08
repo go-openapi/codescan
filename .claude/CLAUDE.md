@@ -34,12 +34,51 @@ to builders without direct coupling.
 | File | Contents |
 |------|----------|
 | `options.go` | `Options` struct: packages, work dir, build tags, include/exclude, feature flags |
-| `scan_context.go` | `ScanCtx` / `NewScanCtx` — loads Go packages via `golang.org/x/tools/go/packages` |
+| `scan_context.go` | `ScanCtx` / `NewScanCtx`; `loadPackages` picks a loader from `Options.FS` (see `README.md#loader`) |
+| `load_golist.go` / `load_wasm.go` | the `golang.org/x/tools/go/packages` (`go list`) loader; excluded from `wasm` builds, which have no process model |
 | `index.go` | `TypeIndex` — node classification (meta/route/operation/model/parameters/response) |
 | `declaration.go` | `EntityDecl` — wraps a type/value declaration with its enclosing file/package |
 | `enum_value.go` | `enumBasicLitValue` — converts a `const Foo Kind = "bar"` RHS into its runtime value (enum discovery) |
 | `provenance.go` | `Provenance` — ties a spec JSON pointer to the source position of the Go construct that produced it; emitted via `Options.OnProvenance` (cross-ref linker, source side) |
 | `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |
+
+### `internal/packages/` — toolchain-free package loader (experimental)
+
+Owns **both** ways of resolving a package graph, behind one `Loader`: delegate to
+`golang.org/x/tools/go/packages` (default), or do the same job in pure Go with no `go list` and no
+`exec`. The scanner states a preference and the loader reconciles it — see
+`internal/scanner/README.md#loader`. Keeping the switch here is what makes options like `WithTarget`
+mean the same thing under both. Types (`Config`, `Package`, `Error`, `LoadMode`) are aliases of the
+upstream ones, so the two are interchangeable at the call site.
+
+Split three ways, because the halves are inherited from different places and age differently: the
+loader is a simplified `go/packages` (a shape we own), while `list/` is `cmd/go` (behaviour we must
+reproduce exactly). Quarantining the quirks is what makes them checkable against upstream.
+
+| File | Contents |
+|------|----------|
+| `strategy.go` | `Strategy` (`StrategyGoPackages` / `StrategyToolchainFree`), `WithStrategy`, the `WithFS` override, shared `loadMode` |
+| `golist.go` / `golist_wasm.go` | the go/packages strategy + pinned-env propagation; refused on `wasm`, which has no process model |
+| `loader.go` | `Loader` / `NewLoader` / `Load` (dispatch); `loadFromSource`, `buildContext` (GOOS/GOARCH/cgo tiering), parse + type-check |
+| `goenv.go` | `GoEnv` — the pinned go environment (GOOS/GOARCH/GOFLAGS/GOWORK/GOEXPERIMENT), applied to both strategies |
+| `synthesize.go` | fabricates a package from the names selected through it when its source cannot be read (incl. the cgo `"C"` pseudo-package) |
+| `exportdata.go` | serves dependencies from pre-computed export data (`Options.ExportData`) |
+| `options.go` / `aliases.go` | functional options; type aliases of the upstream vocabulary |
+
+#### `internal/packages/list/` — `go list` semantics
+
+| File | Contents |
+|------|----------|
+| `resolve.go` | `Resolver`: patterns → directories, imports → directories; module-bounded `...` walk, nearest-module import paths, vendor mode, module cache, `replace` |
+| `workspace.go` | `go.work` discovery + `use`/`replace`, so a sibling module resolves to its working copy |
+| `pattern.go` | where a `...` walk starts, and which walked directories a pattern matches |
+| `pkgpattern.go` | the wildcard matcher, **copied verbatim** from the Go distribution (BSD-3-Clause; see `NOTICE`) |
+
+#### `internal/packages/vfs/` — the filesystem seam
+
+`vfs.FS` — the one place every read goes through (build-constraint matching, directory walking, source
+reading), so a virtual tree is honoured everywhere. Its own package because both halves need it and
+neither owns it.
 
 ### `internal/parsers/` — scanner classification + helpers
 
@@ -53,7 +92,8 @@ for the grammar parser and its satellite helpers.
 | File | Contents |
 |------|----------|
 | `matchers.go` | `ExtractAnnotation`, `ModelOverride`, `ResponseOverride`, `ParametersOverride` — the scanner-level annotation classifiers |
-| `regexprs.go` | Regex definitions backing the matchers + `rxRoute` / `rxOperation` for the path-annotation parsers |
+| `annotation_line.go` | The string-scanning primitives behind the matchers — comment-prefix stripping, keyword and argument extraction. No regexes |
+| `regexprs.go` | `rxRoute` / `rxOperation` (+ their heads) for the path-annotation parsers — the only regexes left in the codebase |
 | `parsed_path_content.go` | `ParsedPathContent` + `ParseOperationPathAnnotation` / `ParseRoutePathAnnotation` |
 
 **Subpackages**
@@ -126,6 +166,34 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     decisions"). See `internal/scanner/README.md#prune`.
   - `InputSpec` — overlay: merge discoveries on top of an existing spec.
   - `BuildTags`, `Include`/`Exclude`, `IncludeTags`/`ExcludeTags`, `ExcludeDeps` — scope control.
+  - `GOOS`/`GOARCH`/`GOFLAGS`/`GOWORK`/`GOEXPERIMENT` — the go environment that
+    decides *what* is built. Each changes the emitted spec just as `BuildTags`
+    does, and each is an option rather than inherited state so a scan is
+    reproducible. Empty means "whatever the environment says". Honoured by both
+    loaders. `GOWORK` matters most: inside a workspace a sibling module resolves
+    to its working copy, and missing it synthesizes the sibling empty rather than
+    failing. See `internal/scanner/README.md#loader`.
+  - Toolchain-free loading (experimental; see `internal/scanner/README.md#loader`):
+    - `ToolchainFreeLoader` — scan through `internal/packages` instead of
+      `golang.org/x/tools/go/packages`. Same job, same output; it just needs no
+      installed toolchain and no `exec`, since it never runs `go list`. False
+      (default) keeps the historic behaviour.
+    - `FS` — read source through an `io/fs` filesystem instead of the real one.
+      Implies `ToolchainFreeLoader`: `go list` runs against the real filesystem,
+      so it could not honour `FS` even if asked. **`FS` is the whole world the
+      scan can read**, not just the module: dependencies and GOROOT come through
+      it too, absolute paths map by dropping the leading separator (so a tree
+      serving GOROOT must mirror its absolute layout), and anything unreachable
+      is synthesized — a valid, quietly thinner spec plus `scan.degraded-load` /
+      `scan.synthesized-import`. See `internal/scanner/README.md#virtual-filesystem`.
+    - `StubStdlib` — synthesize the stdlib from the names selected through it
+      rather than reading GOROOT. Trades fidelity for reach: a synthesized type
+      has no fields and no method set, so `json.RawMessage` stops rendering as a
+      byte array and nothing is seen to implement `encoding.TextMarshaler`. Each
+      fabricated import raises `scan.synthesized-import`.
+    - `ExportData` — serve dependencies from pre-computed export data. Costs no
+      fidelity, but is valid only for the toolchain that produced it; uncovered
+      packages fall back to source, then to synthesis.
   - `RefAliases`, `TransparentAliases`, `DescWithRef` — alias handling knobs
     (`DescWithRef` is deprecated; see `EmitRefSiblings`).
   - `$ref`-sibling rendering (see `internal/builders/schema/README.md#ref-override`):

@@ -22,7 +22,7 @@ import (
 // in play, and why the `target.Typed("object", "")` line always fires (no SimpleSchema-style early
 // exit yet).
 func (s *Builder) buildFromStruct(decl *scanner.EntityDecl, st *types.Struct, schema *oaispec.Schema, nameByJSON map[string]propOwner) error {
-	if s.classifierStructPreBuildType(decl.Comments, NewTypable(schema, 0, s.skipExtensions)) {
+	if s.classifierStructPreBuildType(decl.Comments(), NewTypable(schema, 0, s.skipExtensions)) {
 		return nil
 	}
 

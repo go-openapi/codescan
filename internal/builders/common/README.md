@@ -98,9 +98,12 @@ warnings flow into the same accumulator.
 
 `AppendPostDecl(decl)` enqueues decl for post-processing by the spec
 orchestrator's discovery loop. The Builder maintains a
-per-instance dedup index (`postDeclSet`, keyed by `*ast.Ident`) so a
-single decl re-discovered N times during one Build pass only enqueues
-once.
+per-instance dedup index (`postDeclSet`, keyed by the declared type's
+`*types.TypeName`) so a single decl re-discovered N times during one Build
+pass only enqueues once. The key is the type-checker's object rather than
+the declaring identifier: a package cannot declare one name twice, so the
+two are in bijection wherever both exist — and the object answers for a
+declaration whose source was never parsed, where the identifier does not.
 
 A SECOND dedup runs in `spec.Builder.buildDiscovered` at consumption
 time, because two different per-decl Builders may surface the same
@@ -108,8 +111,10 @@ post-decl independently. The double-guard means a discovered decl
 never reaches a second Build pass even when sibling Builders race to
 register it.
 
-Nil and Ident-less decls are silently ignored — defensive against
-the scanner emitting partial decls during error recovery.
+Nil decls are silently ignored — defensive against the scanner emitting
+nothing at all during error recovery. A decl carrying neither a named type
+nor an alias is not tolerated: `Obj()` panics on it, which is the discipline
+the type half already applies everywhere else.
 
 `ResetPostDeclarations()` drops the whole queue for a Build pass. Its
 one caller is the schema builder's SimpleSchema catch-at-exit validator

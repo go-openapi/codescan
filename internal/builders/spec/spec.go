@@ -301,11 +301,11 @@ func (s *Builder) guard(pos token.Position, what string, run func() error) (err 
 // declLabel names an EntityDecl for a diagnostic — the fully-qualified Go type when the package path is known, else
 // the bare identifier.
 func declLabel(d *scanner.EntityDecl) string {
-	if d.Pkg != nil && d.Pkg.PkgPath != "" {
-		return d.Pkg.PkgPath + "." + d.Ident.Name
+	if pkgPath := d.PkgPath(); pkgPath != "" {
+		return pkgPath + "." + d.Name()
 	}
 
-	return d.Ident.Name
+	return d.Name()
 }
 
 func (s *Builder) buildDiscovered() error {
@@ -335,7 +335,7 @@ func (s *Builder) buildDiscovered() error {
 		}
 		s.discovered = nil
 		for _, sd := range queue {
-			if err := s.guard(s.ctx.PosOf(sd.Ident.Pos()), declLabel(sd), func() error {
+			if err := s.guard(s.ctx.PosOf(sd.Pos()), declLabel(sd), func() error {
 				return s.buildDiscoveredSchema(sd)
 			}); err != nil {
 				return err
@@ -353,7 +353,7 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 
 	// Stash the definition's source position for the prune / rename Hints, which fire after the spec node may have been
 	// dropped or renamed.
-	s.declPos[decl.DefKey()] = s.ctx.PosOf(decl.Ident.Pos())
+	s.declPos[decl.DefKey()] = s.ctx.PosOf(decl.Pos())
 
 	// Stash the Go type behind this definition so the prune reachability walk can ask the reverse `swagger:allOf` index
 	// for the subtypes of a discriminated base (see subtypeKeysOf).
@@ -382,7 +382,7 @@ func (s *Builder) buildDiscoveredSchema(decl *scanner.EntityDecl) error {
 	}
 
 	if defPtr != "" {
-		s.ctx.RecordOrigin(defPtr, s.ctx.PosOf(decl.Ident.Pos()))
+		s.ctx.RecordOrigin(defPtr, s.ctx.PosOf(decl.Pos()))
 	}
 
 	s.discovered = append(s.discovered, sb.PostDeclarations()...)
@@ -496,7 +496,7 @@ func (s *Builder) buildResponses() error {
 		if pi != pj {
 			return pi < pj
 		}
-		a, b := s.ctx.PosOf(decls[i].Ident.Pos()), s.ctx.PosOf(decls[j].Ident.Pos())
+		a, b := s.ctx.PosOf(decls[i].Pos()), s.ctx.PosOf(decls[j].Pos())
 		if a.Filename != b.Filename {
 			return a.Filename < b.Filename
 		}
@@ -515,13 +515,13 @@ func (s *Builder) buildResponses() error {
 
 	// build responses dictionary
 	for _, decl := range decls {
-		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+		if err := s.guard(s.ctx.PosOf(decl.Pos()), declLabel(decl), func() error {
 			rb := responses.NewBuilder(s.ctx, decl)
 			name := rb.ResponseName()
 
 			if kept, dup := scanned[name]; dup {
 				if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
-					onDiag(grammar.Warnf(s.ctx.PosOf(decl.Ident.Pos()), grammar.CodeSharedResponseConflict,
+					onDiag(grammar.Warnf(s.ctx.PosOf(decl.Pos()), grammar.CodeSharedResponseConflict,
 						"shared response %q is already registered by %s; this declaration (%s) is dropped (keep-first)",
 						name, kept, declLabel(decl)))
 				}
@@ -538,12 +538,12 @@ func (s *Builder) buildResponses() error {
 			}
 			s.discovered = append(s.discovered, rb.PostDeclarations()...)
 			scanned[name] = declLabel(decl)
-			s.sharedRespPos[name] = s.ctx.PosOf(decl.Ident.Pos())
+			s.sharedRespPos[name] = s.ctx.PosOf(decl.Pos())
 
 			// Cross-ref linkage: anchor the top-level response node to its swagger:response declaration;
 			// headers/body resolve to it.
 			if s.ctx.OriginEnabled() && name != "" {
-				s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Ident.Pos()))
+				s.ctx.RecordOrigin(scanner.JSONPointer("responses", name), s.ctx.PosOf(decl.Pos()))
 			}
 
 			return nil
@@ -577,7 +577,7 @@ func (s *Builder) buildParameters() error {
 
 	// build parameters dictionary
 	for decl := range s.ctx.Parameters() {
-		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+		if err := s.guard(s.ctx.PosOf(decl.Pos()), declLabel(decl), func() error {
 			pb := parameters.NewBuilder(s.ctx, decl)
 			if err := pb.Build(s.operations); err != nil {
 				return err
@@ -585,7 +585,7 @@ func (s *Builder) buildParameters() error {
 			s.discovered = append(s.discovered, pb.PostDeclarations()...)
 
 			pkg := declPkgPath(decl)
-			pos := s.ctx.PosOf(decl.Ident.Pos())
+			pos := s.ctx.PosOf(decl.Pos())
 			for name, prm := range pb.SharedParameters() {
 				sharedCandidates = append(sharedCandidates, sharedParamCandidate{
 					name: name, param: prm, pkg: pkg, pos: pos, label: declLabel(decl),
@@ -672,10 +672,7 @@ func (s *Builder) registerSharedParameters(candidates []sharedParamCandidate) {
 
 // declPkgPath returns the import path of the declaration's package, or "" when unknown.
 func declPkgPath(d *scanner.EntityDecl) string {
-	if d.Pkg != nil {
-		return d.Pkg.PkgPath
-	}
-	return ""
+	return d.PkgPath()
 }
 
 // paramRefIntent is one shared-parameter reference to apply as a #/parameters/{name} $ref on an operation.
@@ -1053,21 +1050,21 @@ func (s *Builder) resolveSamePackageDuplicates() {
 		if ki != kj {
 			return ki < kj
 		}
-		return models[i].Ident.Name < models[j].Ident.Name
+		return models[i].Name() < models[j].Name()
 	})
 
 	seen := make(map[string]*scanner.EntityDecl, len(models))
 	for _, d := range models {
 		key := d.DefKey()
-		if first, dup := seen[key]; dup && first.Ident != d.Ident {
+		if first, dup := seen[key]; dup && first.Obj() != d.Obj() {
 			d.SuppressModelOverride()
 			if onDiag := s.ctx.OnDiagnostic(); onDiag != nil {
 				_, goName := d.Names()
 				onDiag(grammar.Warnf(
-					s.ctx.PosOf(d.Spec.Pos()),
+					s.ctx.PosOf(d.Pos()),
 					grammar.CodeDuplicateModelName,
 					"duplicate swagger:model name %q in package %q (already used by type %q); using Go name %q instead",
-					leafName(key), d.Obj().Pkg().Path(), first.Ident.Name, goName,
+					leafName(key), d.Obj().Pkg().Path(), first.Name(), goName,
 				))
 			}
 			continue
@@ -1083,7 +1080,7 @@ func (s *Builder) buildModels() error {
 	}
 
 	for _, decl := range s.ctx.Models() {
-		if err := s.guard(s.ctx.PosOf(decl.Ident.Pos()), declLabel(decl), func() error {
+		if err := s.guard(s.ctx.PosOf(decl.Pos()), declLabel(decl), func() error {
 			return s.buildDiscoveredSchema(decl)
 		}); err != nil {
 			return err

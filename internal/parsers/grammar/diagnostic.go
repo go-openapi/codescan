@@ -194,6 +194,50 @@ const (
 	// be traced to the family that pulled it in.
 	CodeDiscoveredSubtype Code = "scan.discovered-subtype"
 
+	// CodeSynthesizedImport fires when an import could not be loaded from source and its types were fabricated from the
+	// names the scanned code selects through it.
+	//
+	// A synthesized type carries the right package path and name, so recognition by identity still works (time.Time
+	// remains a date-time), but it has no fields and no methods — so drilling into it, or asking whether it implements an
+	// interface, silently yields less than a real scan would.
+	//
+	// Warning when the import was simply not found, since that is usually a mounting or module-cache problem the caller
+	// wants to fix. Informational (Hint) when the caller withheld the standard library on purpose via StubStdlib: the loss
+	// is then intended, but still worth seeing.
+	// Carries the position of the import that triggered it, once per import path.
+	CodeSynthesizedImport Code = "scan.synthesized-import"
+
+	// CodeCompiledDependencies fires once when a scan takes dependency types from compiled export data
+	// rather than from their source.
+	//
+	// The speed-up is large and the cost is invisible in the output, which is why it is announced
+	// rather than left to be discovered: export data carries types, not comments, so an annotation
+	// written in a DEPENDENCY is not read. That is not a corner case for this project — go-openapi's
+	// own strfmt marks its types with `swagger:strfmt date-time` and friends, and those marks are what
+	// give a strfmt.DateTime field its format. Under compiled dependencies the field keeps its type and
+	// loses its format, silently.
+	//
+	// Informational (Hint); emitted once per scan, not per package.
+	CodeCompiledDependencies Code = "scan.compiled-dependencies"
+
+	// CodeSourcelessType fires when a type is rendered from what its type alone says, because the
+	// package declaring it arrived with no source to read.
+	//
+	// This is the one place where a load strategy shows through into the document. The scan does not
+	// fail over it — a whole spec is not worth losing to one field — but it does not pass in silence
+	// either, because the thinning is invisible in the output: a schema that is merely less specific
+	// than it would have been.
+	//
+	// It takes a conjunction to reach: the declaring package has to arrive without source, one of its
+	// types has to be consumed in the emitted surface, and no identity recognizer may claim it first.
+	// In practice that is a standard-library type with no obvious wire form — time.Duration,
+	// reflect.Type — which is why the answer is neither to guess at one nor to widen the recognizer set
+	// until it covers the standard library. What is lost is a doc comment the author usually did not
+	// want in their API anyway, and the remedy is local: say it with swagger:description.
+	//
+	// Warning; emitted per consumed type.
+	CodeSourcelessType Code = "scan.sourceless-type"
+
 	// CodeOmitUnresolved fires when a `swagger:omit` target names no field of the embedded type it is applied to — a
 	// typo, or a field renamed upstream.
 	//

@@ -17,4 +17,5 @@ use (
 	./cmd/genspec-tui
 	./docs/examples
 	./fixtures
+	./hack/genexportdata/bundle
 )

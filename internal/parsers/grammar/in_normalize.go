@@ -13,8 +13,8 @@ import "strings"
 // When allowFormAlias is true, the routes-inline-param affordance from v1 is enabled: a raw value of `form`
 // (case-insensitive) is accepted and normalised to `formData`.
 //
-// This is documented in observed-quirks Q27 and is intentionally contained to internal/parsers/routebody — every
-// other capture site MUST pass allowFormAlias=false so the canonical OAS v2 vocabulary is the single source of truth.
+// The affordance is intentionally contained to internal/parsers/routebody — every other capture site MUST pass
+// allowFormAlias=false so the canonical OAS v2 vocabulary is the single source of truth.
 //
 // The normalisation here mirrors what the grammar's enum-option parser does for typed KwIn properties (parser.go:740,
 // strings.EqualFold).
@@ -28,8 +28,8 @@ import "strings"
 // All three route through this helper so case-insensitivity is enforced uniformly and the closed vocabulary lives in
 // one place.
 //
-// Q29 (2026-06-03) — go-swagger-generated code emits capitalised forms like `in: Body`; the pre-fix strict-case map
-// lookup silently miscategorised them, dropping fields to the `query` default.
+// Case-insensitivity is not cosmetic: go-swagger-generated code emits capitalised forms like `in: Body`, and a
+// strict-case map lookup miscategorised them in silence, dropping those fields to the `query` default.
 func NormalizeIn(raw string, allowFormAlias bool) (string, bool) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

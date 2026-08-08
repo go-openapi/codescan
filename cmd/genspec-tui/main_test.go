@@ -22,6 +22,11 @@ var optionFlags = map[string]string{ //nolint:gochecknoglobals // table for the 
 	"WorkDir":          "workdir",
 	"Packages":         "packages",
 	"BuildTags":        "build-tags",
+	"GOOS":             "goos",
+	"GOARCH":           "goarch",
+	"GOFLAGS":          "goflags",
+	"GOWORK":           "gowork",
+	"GOEXPERIMENT":     "goexperiment",
 	"Include":          "include",
 	"Exclude":          "exclude",
 	"IncludeTags":      "include-tags",
@@ -35,6 +40,8 @@ var optionsNotOnCLI = map[string]string{ //nolint:gochecknoglobals // table for 
 	"InputSpec":    "overlay mode: needs a spec loaded from disk, not yet exposed",
 	"OnDiagnostic": "wired internally to the diagnostics pane",
 	"OnProvenance": "wired internally to the cross-ref linker",
+	"FS":           "virtual source filesystem: a programmatic seam, not expressible on a command line",
+	"ExportData":   "a filesystem of pre-computed export data: a programmatic seam, like FS",
 }
 
 // The CLI exposed three of ten options for a long time, because nothing failed when a new one landed.

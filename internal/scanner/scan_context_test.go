@@ -174,10 +174,10 @@ func TestScanCtx_FindDecl(t *testing.T) {
 		)
 		require.True(t, ok)
 		assert.NotNil(t, decl)
-		assert.EqualT(t, "User", decl.Ident.Name)
-		assert.NotNil(t, decl.Pkg)
-		assert.NotNil(t, decl.File)
-		assert.NotNil(t, decl.Spec)
+		assert.EqualT(t, "User", decl.ident.Name)
+		assert.NotNil(t, decl.pkg)
+		assert.NotNil(t, decl.file)
+		assert.NotNil(t, decl.spec)
 	})
 
 	t.Run("unknown package returns false", func(t *testing.T) {
@@ -204,7 +204,7 @@ func TestScanCtx_FindModel(t *testing.T) {
 		)
 		require.True(t, ok)
 		assert.NotNil(t, decl)
-		assert.EqualT(t, "User", decl.Ident.Name)
+		assert.EqualT(t, "User", decl.ident.Name)
 	})
 
 	t.Run("finds type not in Models, adds to ExtraModels", func(t *testing.T) {
@@ -217,7 +217,7 @@ func TestScanCtx_FindModel(t *testing.T) {
 		)
 		require.True(t, ok)
 		assert.NotNil(t, decl)
-		assert.EqualT(t, "SimpleOne", decl.Ident.Name)
+		assert.EqualT(t, "SimpleOne", decl.ident.Name)
 
 		// Should have been added to ExtraModels.
 		assert.True(t, sctx.NumExtraModels() > beforeExtra)
@@ -255,7 +255,7 @@ func TestScanCtx_MoveExtraToModel(t *testing.T) {
 	require.True(t, numExtras > 0, "expected at least one extra model")
 
 	// Move it to models.
-	sctx.MoveExtraToModel(decl.Ident)
+	sctx.MoveExtraToModel(decl.ident)
 
 	assert.EqualT(t, numModels+1, len(sctx.app.Models))
 	assert.EqualT(t, numExtras-1, sctx.NumExtraModels())
@@ -278,7 +278,7 @@ func TestScanCtx_DeclForType(t *testing.T) {
 
 		found, ok := sctx.DeclForType(decl.Type)
 		assert.True(t, ok)
-		assert.EqualT(t, "User", found.Ident.Name)
+		assert.EqualT(t, "User", found.ident.Name)
 	})
 
 	t.Run("pointer to named type", func(t *testing.T) {
@@ -293,7 +293,7 @@ func TestScanCtx_DeclForType(t *testing.T) {
 		ptrType := types.NewPointer(decl.Type)
 		found, ok := sctx.DeclForType(ptrType)
 		assert.True(t, ok)
-		assert.EqualT(t, "User", found.Ident.Name)
+		assert.EqualT(t, "User", found.ident.Name)
 	})
 
 	t.Run("basic type returns false", func(t *testing.T) {
@@ -331,7 +331,7 @@ func TestScanCtx_DeclForType_Alias(t *testing.T) {
 
 	found, ok := sctx.DeclForType(decl.Alias)
 	assert.True(t, ok)
-	assert.EqualT(t, "Customer", found.Ident.Name)
+	assert.EqualT(t, "Customer", found.ident.Name)
 }
 
 func TestScanCtx_PkgForType(t *testing.T) {

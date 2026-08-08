@@ -16,6 +16,9 @@ parameters, responses) consumed by the builder layer.
 - [§options](#options) — `Options.DescWithRef` shape and rationale
 - [§descwithref](#descwithref) — the description-only-decoration
   $ref shape and why it has a flag
+- [§declaration](#declaration) — `EntityDecl`'s two halves: what is
+  always available, what needs parsed source, and the accessors that
+  make the difference impossible to ignore
 - [§diagnostics](#diagnostics) — `OnDiagnostic` contract and
   experimental-API caveat
 - [§prune](#prune) — `PruneUnusedModels` reachability and why it
@@ -32,6 +35,10 @@ parameters, responses) consumed by the builder layer.
   come from, and what the degraded reading can still see
 - [§clean-godoc](#clean-godoc) — `CleanGoDoc` — filtering godoc syntax out
   of carried-over title / description prose
+- [§loader](#loader) — choosing between the go/packages loader and the
+  toolchain-free one, and what the latter costs
+- [§export-data](#export-data) — preparing compiler export data offline, and
+  what it buys
 - [§quirks-open](#quirks-open) — deferred follow-ups
 
 ---
@@ -54,6 +61,8 @@ warrant the inline godoc and the deeper notes below:
   [§diagnostics](#diagnostics).
 - `PruneUnusedModels` — drop discovered definitions unreachable from
   any root, on top of `ScanModels`. See [§prune](#prune).
+- `ToolchainFreeLoader` / `FS` — select codescan's own package loader,
+  optionally over a virtual filesystem. See [§loader](#loader).
 
 ## <a id="descwithref"></a>§descwithref — description-only-decoration $ref shape
 
@@ -78,6 +87,105 @@ When the field also carries validation overrides (pattern, enum,
 example, etc.) or user-authored vendor extensions, the `allOf`
 compound is mandatory regardless of `DescWithRef` — the override
 would be lost otherwise.
+
+## <a id="declaration"></a>§declaration — the two halves of `EntityDecl`
+
+A declaration is made of two halves that come from different places and are
+not equally available.
+
+The **type half** — `Type` / `Alias`, and the `Obj`, `ObjType`, `Name`,
+`Pos`, `PkgPath`, `IsAlias` accessors built on them — comes from the
+type-checker. A package whose types were read from compiled export data
+carries it in full, positions included: `time.Duration` reports
+`$GOROOT/src/time/time.go`.
+
+The **syntax half** — the comment group, the declaring identifier, the type
+spec, the enclosing file and the loaded package — comes from parsed source,
+which a package need not have. Nothing that the type half can answer may be
+read from it: a name, a position and a package path all come from the
+object, or the declaration stops working the moment its source is not read.
+
+The syntax half is **unexported**, so its absence is not a nil field a
+caller can forget about. It is reached through accessors, split by whether
+absence is already a legitimate outcome:
+
+| accessor | absent ⇒ | why |
+|---|---|---|
+| `HasSource() bool` | — | the single honest gate |
+| `Comments() *ast.CommentGroup` | `nil` | nil is already "no annotations here" — a declaration with no doc comment answers the same |
+| `File() *ast.File` | `nil` | its one consumer, `resolvers.FindASTField`, yields no field for a nil file |
+| `TypeExpr() (ast.Expr, bool)` | `false` | the written right-hand side; `Underlying` is not a substitute |
+| `Imports() ([]*ast.ImportSpec, bool)` | `false` | an import alias is spelled nowhere else |
+| `PkgImport(path) (*packages.Package, bool)` | `false` | the other half of `Imports`: an unaliased import's own name |
+| `EnumSourcePkg() (*packages.Package, bool)` | `false` | `swagger:enum` members are read from the package's const blocks |
+
+There is deliberately **no `Ident` accessor**. Everything the identifier was
+ever asked — the name, the position, the identity a dedup index keys on —
+the object answers, and it answers for a declaration with no source. The
+identifier survives only inside this package, as the key of the model
+indexes.
+
+### What genuinely needs source
+
+Three things, and only three:
+
+1. **The annotations** (`Comments()`, and a field's `Doc`). A comment exists
+   nowhere but in source.
+2. **The written right-hand side** — `Stamp` in `type StampResp Stamp`.
+   `go/types` keeps no record of it on a defined type: `Underlying` peels
+   every named layer at once, and the named layer is what a stdlib
+   recognizer keys on and what a `swagger:strfmt` one declaration to the
+   right sits on. `WrittenRHS` reads it through `TypeExpr()`.
+3. **A file's imports**, for resolving a godoc doc-link.
+
+### Why `WrittenRHS`'s two refusals are not the same refusal
+
+`WrittenRHS` reports `(nil, false)` for two unrelated reasons, and a caller
+that cannot tell them apart is one silent wrong answer away from trouble:
+
+- **structural** — there is no syntax at all, so there is nothing to read;
+- **semantic** — the right-hand side is a shape the resolution declines
+  (a generic instantiation, a dot-imported name).
+
+`Underlying()` is the honest fallback for the second and a *wrong answer*
+for the first: it peels exactly the named layer the stdlib recognizers key
+on, so `type Stamp time.Time` in a syntax-less package would render as a
+struct instead of `format: date-time`. The schema builder therefore checks
+`HasSource()` before falling back, and refuses rather than guesses when
+there is no source. That branch is unreachable today — every `EntityDecl`
+is built from an AST walk — and it is written out so it cannot start
+springing quietly the day one is not.
+
+### Not `types.Info.Types`
+
+`WrittenRHS` and the embed pairing (`builders/resolvers.Embeds`) both
+resolve a source expression to a type. Neither goes through
+`types.Info.Types`, and that restraint is load-bearing rather than
+stylistic: that map records what each type *expression* denotes, only a
+source type-check produces it, and it cannot be rebuilt by hand because the
+field distinguishing a type from a value is unexported. A package served
+from export data therefore cannot be handed to the builders with its source
+attached for as long as anything downstream reads it.
+
+So the two resolve without it:
+
+- `WrittenRHS` prefers the checker's record when there is one, and
+  otherwise resolves the right-hand side expression against the scopes
+  `go/types` exposes — a package scope is complete whether its types were
+  checked from source or read from export data. It declines a generic
+  instantiation rather than guessing at one.
+- `Embeds` pairs each anonymous entry of a struct's field list or an
+  interface's method list with its type positionally, read from the
+  declared type's underlying. The pairing is exact in both shapes: a
+  struct's fields are built in source order (an entry with N names
+  contributing N fields), and an interface's embedded types are recorded in
+  source order.
+
+Both are checked against the type-checker's own answer over the whole
+fixture corpus rather than argued from the emitted spec, because a
+mispairing produces a plausible wrong answer instead of a failure. The
+end-to-end witness builds each corpus twice, once with `types.Info.Types`
+dropped, and compares the documents.
 
 ## <a id="diagnostics"></a>§diagnostics — `OnDiagnostic` callback
 
@@ -466,6 +574,352 @@ Like `swagger:title` / `swagger:description` (overrides) and `AfterDeclComments`
 this is part of the **clean-godoc cluster**: keep the Go-facing doc clean while
 the API spec carries curated text. Crucially it touches **only godoc-derived
 prose** — author-written overrides (harvested separately) are never filtered.
+
+## <a id="loader"></a>§loader — choosing the package loader
+
+**Experimental.** Leaving `ToolchainFreeLoader` false and `FS` nil keeps the
+historic `go/packages` behaviour unchanged; everything below applies only once
+one of them is set.
+
+### Choosing
+
+Both strategies live behind one `internal/packages.Loader`; the scanner states a
+preference and the loader reconciles it with what the build and the filesystem
+allow:
+
+| `ToolchainFreeLoader` | `FS` | strategy | needs a toolchain |
+|---|---|--------|-------------------|
+| false (default) | nil | `StrategyGoPackages` (`go list`) | yes |
+| **true** | nil | `StrategyToolchainFree`, real filesystem | no |
+| either | non-nil | `StrategyToolchainFree`, reading `FS` | no |
+
+`FS` forces the toolchain-free strategy without being asked, because `packages.Load`
+reaches the filesystem by running `go list` against the real one — a virtual
+filesystem is not something it could honour. So there is no coherent
+configuration being overridden, and no way for the two settings to contradict
+each other. That override lives in the loader, not here, so there is one place
+to get it wrong rather than two.
+
+The flag exists separately because the interesting case is the middle row: running
+codescan's own strategy over an ordinary tree on disk. Before it, the only way to
+reach it was to hand it a virtual filesystem.
+
+Two consequences of that override are worth stating, because both have bitten:
+
+- an option only one strategy can honour is **dropped, not refused**, when the other
+  one runs. `CompiledDependencies` is the case — the go command is what takes
+  dependency types from export data, so under `FS` it does nothing. Anything
+  *announcing* what a load is about to do therefore has to ask
+  `Loader.Strategy()` rather than read the request off `Options`; announcing from
+  the request is how a toolchain-free scan came to be told its dependency types
+  were compiled while it read every one of them from source.
+- `FS` is **the whole world the scan can read**, not just the tree being scanned —
+  see [§virtual-filesystem](#virtual-filesystem).
+
+<a id="virtual-filesystem"></a>
+
+### `FS` is the whole world
+
+Dependencies and the standard library are read through `FS` as well. Neither GOROOT
+nor the module cache lives inside a module, so a filesystem holding only the module
+under scan resolves neither: every import outside it is synthesized from the names
+selected through it, and the spec comes out **valid and quietly thinner** — a lost
+`format`, a lost byte-array rendering.
+
+That is announced rather than fatal: one `scan.synthesized-import` per unresolved
+import, plus `scan.degraded-load`. Measured on the petstore, `FS` rooted at the
+fixtures module against the same scan on the real filesystem:
+
+| | definitions | `orderedAt.format` | diagnostics |
+|---|---|---|---|
+| real filesystem | 4 | `date-time` | none |
+| `FS` at the module root | 4 | *(empty)* | `degraded-load` ×1, `synthesized-import` ×5 |
+
+Both scans succeed. The difference is entirely in what the document says.
+
+**Paths.** Everything the scan derives is interpreted against the root of `FS`,
+following `io/fs` conventions — slash-separated and unrooted. An absolute path is
+mapped onto that convention by dropping its leading separator, which is what lets
+an unrooted tree (`embed.FS`, `fstest.MapFS`) be used at all. It is a convention
+rather than a heuristic: `fs.FS` exposes no way to tell a rooted tree from an
+unrooted one, so there is nothing to detect.
+
+The corollary is that a tree meaning to serve GOROOT or the module cache has to
+**mirror their absolute layout** beneath its own root — `/usr/lib/go/src/…` is
+looked up as `usr/lib/go/src/…` — and is therefore tied to the host it was recorded
+from. Which is precisely why the other two options exist: `ExportData` carries the
+compiler's own types instead of its source (no fidelity cost, valid only for the
+toolchain that produced it), and `StubStdlib` needs nothing mounted at all (reach
+over fidelity).
+
+### The embed.FS recipe
+
+`FS` was built for `embed.FS` first, and what can be embedded decides the shape.
+A module's own source and its `vendor/` directory can, since both are inside the
+module; GOROOT cannot. So the two halves come from different places:
+
+| half | how |
+|---|---|
+| module source + non-stdlib dependencies | `go mod vendor`, then embed the module — read and parsed like any tree |
+| the standard library | `ExportData`, which is itself an `fs.FS` and embeds alongside |
+
+Both ship in one binary, and no absolute-path mirroring is needed — this is the
+configuration that sidesteps the host-tied recorded tree entirely.
+
+Vendoring is doing real work here rather than being a packaging detail: a vendored
+dependency is read **from inside the tree**, so it keeps its own annotations. A
+vendored `go-openapi/strfmt` still supplies its `swagger:strfmt` marks, where a
+dependency reduced to compiled types would have lost them.
+
+`TestEmbeddedTree_SourceAndVendorFromFS_StdlibFromExportData` pins the composition,
+and both halves are load-bearing: dropping the blob synthesizes the standard
+library, dropping the vendored source loses the dependency's `format`.
+
+`StubStdlib` substitutes for the second row where no blob can be produced, at the
+fidelity cost documented on that option.
+
+Putting the switch inside the loader is also what keeps the options honest. `GOOS`
+/ `GOARCH` are the example: the go command reads the target from the environment
+and nowhere else, so a target that is merely stored applies under one strategy and
+vanishes under the other. The loader pushes it into the child environment itself
+(`golist.go`), and `TestGoPackagesStrategyHonoursTarget` fails if it stops.
+
+### What the two loaders agree on
+
+Across the fixture corpus the two produce **byte-identical specs** — 378 package
+trees, mounted at `/` so `GOROOT` and the module cache stay reachable. That
+equivalence is the point: the loader is a substitution, not a second dialect.
+
+Mount narrower than the dependencies reach and the agreement stops, because
+unreachable imports get synthesized rather than read. That is not a loader bug,
+it is `StubStdlib`'s failure mode arriving uninvited — see below.
+
+Note that agreement alone never proves the *choice* was honoured: with a no-op
+flag both sides run the same loader and agree trivially. What witnesses the
+routing is a behaviour only one loader has — `StubStdlib`, which the go/packages
+path documents as inert (`TestLoaderChoice_SelectsTheLoader`).
+
+### What it costs
+
+- **`StubStdlib`** trades fidelity for reach: a synthesized type has the right
+  package path and name (so `time.Time` is still a date-time) but no fields and
+  no method set — so `json.RawMessage` stops rendering as a byte array, and no
+  type is seen to implement `encoding.TextMarshaler`. Quiet by nature: the spec
+  comes out thinner rather than erroring, which is why every synthesized import
+  raises `scan.synthesized-import` (Warning when unresolved, Hint when withheld
+  on purpose).
+- **`ExportData`** costs no fidelity — the types are the ones the compiler
+  computed — but is valid only for the toolchain that produced it. A package it
+  does not cover falls back to source, and then to synthesis. See
+  [§export-data](#export-data).
+
+### The go environment: `GOOS` / `GOARCH` / `GOFLAGS` / `GOWORK` / `GOEXPERIMENT`
+
+Not loader-specific: both strategies honour all five, `go list` through the
+child environment. Each decides *what* gets built rather than where the output
+goes, so each changes the emitted spec exactly as `BuildTags` does.
+
+They are options rather than inherited state on purpose. A scan that picks them
+up from whatever shell it started in is not reproducible, and — as `GOOS` proved
+before `3294669` — an inherited value is easy to apply on one code path and
+forget on another. Empty still means "whatever the environment says", which is
+what the go command would do.
+
+- `GOOS`/`GOARCH` — the platform. Inside a WASI guest the default is `wasip1`,
+  which drops every `_linux.go` file without a word.
+- `GOFLAGS` — default command-line flags (`-tags=integration`). `BuildTags` wins,
+  as an explicit flag does for the go command.
+- `GOWORK` — `off`, a path to a `go.work`, or empty to search upwards. Inside a
+  workspace a sibling module resolves to the copy being worked on rather than to
+  the module cache. Missing that does not fail: the import is looked up in the
+  cache, missed, and **synthesized**, so the sibling arrives with no fields and
+  no method set.
+- `GOEXPERIMENT` — each enabled experiment contributes a `goexperiment.<name>`
+  build tag. The baseline is what the codescan binary was itself built with,
+  since `go/build` computes `ToolTags` at init from its own configuration and
+  cannot be asked about another toolchain — exact when both come from the same
+  Go release, approximate otherwise.
+
+### Pattern resolution
+
+`...` stops at a module boundary, as it does for the go command: a nested `go.mod`
+is a different module and its packages are not part of the pattern. Import paths
+are derived from the module that actually **contains** the directory, not from the
+main module — on this repo, deriving them from the main module turned 25 packages
+into 468 and labelled fixture corpora, sibling modules and a vendored theme as
+belonging to `github.com/go-openapi/codescan`.
+
+Naming a nested module's package explicitly (`./sub/pkg`) is refused by the go
+command and allowed here, with the nested module's own path. Scanning a
+subdirectory module directly is a reasonable thing to ask of a scanner; answering
+with a well-formed path that names a package which does not exist is not.
+
+Vendoring follows the go command's own test — `vendor/modules.txt`, not the directory —
+so a tree that merely contains a `vendor/` folder is not treated as a vendored build, and
+`-mod=mod` opts out. A wildcard reaches the directory named `vendor` but never inside it.
+
+A bare pattern (no `./`) is an import path, never a directory, which is what `go list`
+means by it. `...` is a wildcard anywhere in the pattern, not only as a trailing element.
+
+Two differences run in codescan's favour and are kept on purpose: a tree with **no module**
+still scans (the go command refuses one outright), and another module's **`internal/`**
+packages are readable (the go command rejects the import, which makes a scan fail
+altogether). A module-less tree names its packages relative to the scan directory, never by
+absolute path — a package path reaches the output through `x-go-package`.
+
+An unreadable `go.mod` is fatal rather than degraded. The alternative places no requirement
+at all, so every dependency falls through to synthesis and the real fault disappears behind
+a wall of `scan.synthesized-import` warnings.
+
+A dependency is placeable when the main `go.mod` names it — a `require`, a `replace`, a
+workspace `use`, or the vendor tree. The module graph is never walked, and no dependency's
+own `go.mod` is consulted for requirements, so what any dependency declares as its minimum
+Go version does not enter into resolution: one set of rules applies across the board.
+
+That list is complete when the main module is at go ≥ 1.17 and tidy, since the go command
+then guarantees an explicit require for every module providing a transitively-imported
+package. Where it is not — a main module at go 1.16, or a go.mod that needs updating — the
+dependency's directory is simply absent and synthesis reports it as a warning. Known
+remaining gaps are tracked in `.claude/plans/loader-vs-gopackages.md`.
+
+## <a id="export-data"></a>§export-data — preparing it offline
+
+Parsing and type-checking dependencies is most of what a load does. The compiler
+already did that work and wrote the answers down, so the fast path is to read them
+instead.
+
+`hack/genexportdata` produces the tree:
+
+```sh
+go run ./hack/genexportdata -out ./exportdata std          # the standard library
+go run ./hack/genexportdata -out bundle.zip std ./...      # a single-file archive
+go run ./hack/genexportdata -dir hack/genexportdata/bundle -out ./exportdata std ./...
+```
+
+Point `Options.ExportData` at the result. It is read as an `io/fs`, so a WASI guest
+can be handed the tree — or the zip, since `archive/zip`'s reader is already an
+`fs.FS` — without a toolchain, a GOROOT, or a module cache anywhere in sight.
+
+Underneath it is `go list -deps -export`, which builds whatever is missing and
+reports the build-cache path per package. The tool is worth the indirection for
+three reasons: it copies out the **export section** rather than the whole compiled
+archive (the standard library is 9.3MB instead of 97MB), it can write a zip, and it
+declines to bundle a package whose meaning lives in its comments — see below.
+
+`hack/genexportdata/bundle` is a module whose only content is a list of imports. It
+names what a published archive covers, so the set is reviewable in one place and
+its versions are pinned independently of the module being scanned. It is
+deliberately outside `go.work` for that reason, which is why the tool runs
+`go list` there with `GOWORK=off`.
+
+### Annotated dependencies
+
+Export data holds types and not comments, so the loader decides per dependency and
+decides whole: **a package whose source carries `swagger:` is read from source, in
+the ordinary way; everything else comes from export data and is never parsed.**
+Nothing is lost, and almost nothing is given up — the saving was never in the
+handful of packages a scan actually reads, it is in the closure behind them.
+
+Putting the two halves back together — export-data types with parsed syntax
+bolted on beside them — was once impossible, and that is no longer why the loader
+avoids it. The builders used to read `types.Info.Types`, whose entries cannot be
+constructed outside `go/types` (the field distinguishing a type from a value is
+unexported), so a package assembled that way handed them declarations to read and
+no record of what those declarations denote: not a quieter scan but a panicking
+one. They have since been taken off that map — see
+[§Not `types.Info.Types`](#not-typesinfotypes) — and a spec builds identically
+with `types.Info` reduced to `Defs` alone.
+
+That is what the go/packages strategy runs on, because it has no per-dependency
+lever at all: a `LoadMode` is one value for the whole load, with no hook to say
+"except this one". So it takes every dependency from export data and then hands
+the source back to the few that were worth reading — the same policy reached from
+the other end, after the load rather than during it. The cheap load still says
+where the source *is* (`compiledDepsMode` keeps `NeedFiles`), so this is parsing
+on known paths and nothing is type-checked twice.
+
+The toolchain-free strategy has no use for the assembled form: it already has the
+source, and reading an annotated dependency in full costs one type-check of a
+small package.
+
+**What is given up is not the annotations**: it is a type declared in a dependency
+that says nothing about itself. Nothing marks such a package as worth reading, so a
+model declared in one collapses to its name alone. This bites
+`CompiledDependencies` only — the toolchain-free route's bundle covers the standard
+library, so a non-stdlib dependency misses it and falls through to source.
+
+<a id="compiled-dependencies"></a>
+
+#### Why widening the read-back rule does not fix it
+
+Tried and reverted, 2026-08-08. The obvious fix is to mirror the other route: read
+back every dependency **outside the standard library**, annotated or not, which is
+exactly the line a std-only bundle draws. The definition does come back — and comes
+back **empty, with no warning**, which is worse than its absence, because
+`GetModel` then succeeds and the warning that named it stops firing.
+
+Struct fields are located by **position**:
+
+```go
+afld := resolvers.FindASTField(decl.File(), fld.Pos())   // structFieldCarrier
+```
+
+The `*types.Var` comes from export data; `decl.File()` is the AST we parsed
+ourselves. Both live in one `FileSet`, but as two `token.File` entries for the same
+filename at different bases — so the positions never match, `FindASTField` returns
+nil, and every field is skipped by the branch that exists for promoted fields.
+
+So parse-and-bridge carries **type-level** comments, which is all the annotated-
+dependency case ever needed (`swagger:strfmt` sits above the type), and it cannot
+carry **field-level** correspondence: a struct field is not in package scope, so
+`bridgeDefs` has nothing to map it by.
+
+Closing it needs a name-based field bridge plus a fallback in the field walk — a
+schema-builder change with its own witness fixture, not a loader tweak. **Parked**,
+and it is the prerequisite for `CompiledDependencies` ever becoming the default.
+
+`genexportdata` mirrors that, skipping annotated packages by default and saying so:
+
+```
+skipping github.com/go-openapi/strfmt: carries swagger annotations, which export
+data cannot hold — it has to be read from source
+```
+
+`-with-annotated` includes them anyway. That matters only for an archive shipped
+**without** source — the WebAssembly case — where having the types is better than
+having nothing, and the lost annotations are announced per package. Where the
+source does ship, the entry is simply unused.
+
+### What it buys, and what it does not cost
+### What it buys, and what it does not cost
+
+Full scans of `fixtures/goparsing/petstore` through the toolchain-free loader:
+
+| | scan | spec |
+|---|---|---|
+| source only | 748 ms | — |
+| bundle, `strfmt` skipped | **79 ms** | byte-identical |
+| bundle, `-with-annotated` | 81 ms | byte-identical |
+
+Identical output is not a happy accident, it is the point: a dependency that has
+anything to say is read the same way it always was. The two bundle rows differ by
+noise because `strfmt` is read from source in both — with the source present, its
+export-data entry is never consulted.
+
+Where a dependency's source cannot be found the types still stand, and a
+`scan.compiled-dependencies` Hint names the package rather than letting the spec
+quietly say less.
+
+The data is only valid for the toolchain that produced it, since the export format
+tracks the Go release. Regenerate it when the toolchain moves.
+
+### The go/packages loader benefits too
+
+`CompiledDependencies` reads the same data straight from the build cache, so its
+preparation is simply having built the project — the cold-cache penalty measured
+elsewhere is not extra work, it is the work a normal `go build ./...` already did.
+The difference is that this loader keeps the dependency's source alongside, and
+that one does not; see the option's own documentation.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 

@@ -36,16 +36,23 @@ import (
 type cliFlags struct {
 	set *flag.FlagSet
 
-	workdir          *string
-	packages         *string
-	scanModels       *bool
-	buildTags        *string
-	include          *string
-	exclude          *string
-	includeTags      *string
-	excludeTags      *string
-	nameFromTags     *string
-	nameConcatBudget *float64
+	workdir             *string
+	packages            *string
+	scanModels          *bool
+	buildTags           *string
+	goos                *string
+	goarch              *string
+	goflags             *string
+	gowork              *string
+	goexperiment        *string
+	toolchainFreeLoader *bool
+	stubStdlib          *bool
+	include             *string
+	exclude             *string
+	includeTags         *string
+	excludeTags         *string
+	nameFromTags        *string
+	nameConcatBudget    *float64
 }
 
 // registerFlags declares every flag on fs.
@@ -59,8 +66,20 @@ func registerFlags(fs *flag.FlagSet) *cliFlags {
 		packages:   fs.String("packages", "./...", "comma-separated package patterns to scan, relative to -workdir"),
 		scanModels: fs.Bool("scan-models", true, "also emit definitions for swagger:model types"),
 		buildTags:  fs.String("build-tags", "", "comma-separated go build tags to apply while loading"),
-		include:    fs.String("include", "", "comma-separated patterns; only matching packages are scanned"),
-		exclude:    fs.String("exclude", "", "comma-separated patterns; matching packages are skipped"),
+		goos:       fs.String("goos", "", "GOOS the scanned code is built for (default: this machine's)"),
+		goarch:     fs.String("goarch", "", "GOARCH the scanned code is built for (default: this machine's)"),
+		goflags: fs.String("goflags", "",
+			"default go command flags, as GOFLAGS (e.g. \"-tags=integration\"); -build-tags wins"),
+		gowork: fs.String("gowork", "",
+			`workspace selection, as GOWORK: "off" to disable, a path to a go.work, empty to search upwards`),
+		goexperiment: fs.String("goexperiment", "",
+			"toolchain experiments to enable, as GOEXPERIMENT (e.g. \"jsonv2\")"),
+		toolchainFreeLoader: fs.Bool("toolchain-free-loader", false,
+			"load packages with codescan's own loader instead of the go command (experimental)"),
+		stubStdlib: fs.Bool("stub-stdlib", false,
+			"synthesize the standard library instead of reading GOROOT (needs -toolchain-free-loader)"),
+		include: fs.String("include", "", "comma-separated patterns; only matching packages are scanned"),
+		exclude: fs.String("exclude", "", "comma-separated patterns; matching packages are skipped"),
 		includeTags: fs.String("include-tags", "",
 			"comma-separated swagger tags; only matching operations are emitted"),
 		excludeTags: fs.String("exclude-tags", "",
@@ -75,16 +94,23 @@ func registerFlags(fs *flag.FlagSet) *cliFlags {
 // options assembles the scan config. workDir is passed in already absolute.
 func (c *cliFlags) options(workDir string) codescan.Options {
 	return codescan.Options{
-		WorkDir:          workDir,
-		Packages:         splitPatterns(*c.packages),
-		ScanModels:       *c.scanModels,
-		BuildTags:        *c.buildTags,
-		Include:          splitList(*c.include),
-		Exclude:          splitList(*c.exclude),
-		IncludeTags:      splitList(*c.includeTags),
-		ExcludeTags:      splitList(*c.excludeTags),
-		NameFromTags:     resolveNameFromTags(*c.nameFromTags, c.passed("name-from-tags")),
-		NameConcatBudget: *c.nameConcatBudget,
+		WorkDir:             workDir,
+		Packages:            splitPatterns(*c.packages),
+		ScanModels:          *c.scanModels,
+		BuildTags:           *c.buildTags,
+		GOOS:                *c.goos,
+		GOARCH:              *c.goarch,
+		GOFLAGS:             *c.goflags,
+		GOWORK:              *c.gowork,
+		GOEXPERIMENT:        *c.goexperiment,
+		ToolchainFreeLoader: *c.toolchainFreeLoader,
+		StubStdlib:          *c.stubStdlib,
+		Include:             splitList(*c.include),
+		Exclude:             splitList(*c.exclude),
+		IncludeTags:         splitList(*c.includeTags),
+		ExcludeTags:         splitList(*c.excludeTags),
+		NameFromTags:        resolveNameFromTags(*c.nameFromTags, c.passed("name-from-tags")),
+		NameConcatBudget:    *c.nameConcatBudget,
 	}
 }
 

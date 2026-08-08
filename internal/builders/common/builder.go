@@ -34,9 +34,53 @@ type Builder struct {
 	Decl *scanner.EntityDecl
 
 	postDecls   []*scanner.EntityDecl
-	postDeclSet map[*ast.Ident]struct{} // dedup index keyed by EntityDecl.Ident
+	postDeclSet map[*types.TypeName]struct{} // dedup index keyed by the declared type's identity
 	diagnostics []grammar.Diagnostic
 	blockCache  map[*ast.CommentGroup][]grammar.Block
+}
+
+// SourcelessFallback reports whether a missing declaration should be rendered from the type alone
+// rather than failing the scan, and says so when it should.
+//
+// A declaration lookup comes back empty for two unrelated reasons, and only one of them is a fault.
+// The load may have deliberately not read that package — the standard library under a WebAssembly
+// guest, any unannotated dependency under compiled dependencies — in which case the type is complete
+// and only what its author wrote about it is missing. Or the graph is broken, in which case failing
+// is right and a thinner document would hide it.
+//
+// So the strict sites ask here first. They used to fail on both, which meant one field of a type
+// nobody can render anyway — time.Duration, io.Writer, reflect.Type — took a whole document with it.
+// Worse, they failed inconsistently: the same absent declaration degrades quietly at the soft sites
+// two arms away, so the outcome depended on which position the type happened to appear in rather
+// than on anything about the type.
+//
+// The remedy offered is deliberately not "recognize more standard-library types". A recognizer
+// asserts a wire form for every use of a type, and these are precisely the ones where no such form
+// exists to assert — which is what strfmt.Duration is for. What the author loses is a doc comment
+// they rarely wanted in their API, and swagger:description puts it back where they can see it.
+func (s *Builder) SourcelessFallback(obj *types.TypeName) bool {
+	if obj == nil || obj.Pkg() == nil {
+		return false
+	}
+
+	if _, sourceless := s.Ctx.SourcelessPackage(obj.Pkg().Path()); !sourceless {
+		return false
+	}
+
+	// Located at the declaration that consumed the type, not at the type itself: the author can act on
+	// their own source, and the position of a standard-library declaration they cannot read is no help.
+	var at token.Position
+	if s.Decl != nil {
+		at = s.Ctx.PosOf(s.Decl.Pos())
+	}
+
+	s.RecordDiagnostic(grammar.Warnf(at, grammar.CodeSourcelessType,
+		"%s.%s is rendered from its type alone, because its declaring package was loaded without source: "+
+			"anything the declaration said about it — its doc comment, any swagger annotation — is not in "+
+			"the spec. Write a swagger:description where it is used if it matters.",
+		obj.Pkg().Path(), obj.Name()))
+
+	return true
 }
 
 // New builds a [Builder] bound to ctx and decl.
@@ -227,24 +271,29 @@ func (s *Builder) CleanGoDocSelf(text string) string {
 
 // AppendPostDecl marks decl for post-processing by the spec orchestrator's discovery loop.
 //
-// Idempotent per-Builder: re-appending a decl whose Ident was already seen is a no-op.
-// Nil and Ident-less decls are silently ignored.
+// Idempotent per-Builder: re-appending a decl whose declared type was already seen is a no-op.
+// Nil decls are silently ignored.
+//
+// Dedup is on the type-checker's object rather than on the declaring identifier: a package cannot
+// declare one name twice, so the two are in bijection wherever both exist — and the object exists
+// for a declaration whose source was never parsed, where the identifier does not.
 //
 // # Details
 //
 // See [§postdecls](./README.md#postdecls) — per-Builder dedup index and the second dedup applied
 // at consumption time by spec.Builder.buildDiscovered.
 func (s *Builder) AppendPostDecl(decl *scanner.EntityDecl) {
-	if decl == nil || decl.Ident == nil {
+	if decl == nil {
 		return
 	}
+	obj := decl.Obj()
 	if s.postDeclSet == nil {
-		s.postDeclSet = make(map[*ast.Ident]struct{})
+		s.postDeclSet = make(map[*types.TypeName]struct{})
 	}
-	if _, dup := s.postDeclSet[decl.Ident]; dup {
+	if _, dup := s.postDeclSet[obj]; dup {
 		return
 	}
-	s.postDeclSet[decl.Ident] = struct{}{}
+	s.postDeclSet[obj] = struct{}{}
 	s.postDecls = append(s.postDecls, decl)
 }
 

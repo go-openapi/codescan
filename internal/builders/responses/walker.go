@@ -66,8 +66,8 @@ func collectHeaderItemsLevels(expr ast.Expr, it *oaispec.Items, level int) []hea
 // the grammar parser's prose accumulator, plus the response-level `examples:` block (the only keyword the response decl
 // level accepts).
 func (r *Builder) applyBlockToDecl(resp *oaispec.Response) {
-	block := r.ParseBlock(r.Decl.Comments)
-	resp.Description = r.overriddenDescription(r.CleanGoDoc(block.Prose()), r.Decl.Comments)
+	block := r.ParseBlock(r.Decl.Comments())
+	resp.Description = r.overriddenDescription(r.CleanGoDoc(block.Prose()), r.Decl.Comments())
 	r.applyResponseExamples(block, resp)
 }
 

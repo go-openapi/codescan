@@ -4,7 +4,6 @@
 package schema
 
 import (
-	"go/ast"
 	"go/types"
 
 	"github.com/go-openapi/codescan/internal/builders/resolvers"
@@ -87,6 +86,12 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 	case *types.Struct:
 		decl, found := s.Ctx.GetModel(tpe.Obj().Pkg().Path(), tpe.Obj().Name())
 		if !found {
+			// Nothing to promote from a struct whose declaration cannot be read: the embedding type keeps
+			// its own fields and loses the embedded ones, which is a smaller object rather than a wrong one.
+			if s.SourcelessFallback(tpe.Obj()) {
+				return nil
+			}
+
 			return missingSource(tpe)
 		}
 		s.Ctx.AddDiscoveredModel(decl)
@@ -106,6 +111,12 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 		resolvers.MustNotBeABuiltinType(o)
 		decl, found := s.Ctx.GetModel(o.Pkg().Path(), o.Name())
 		if !found {
+			// As above: an embedded interface whose declaration is unreadable promotes no method-derived
+			// properties rather than taking the document with it.
+			if s.SourcelessFallback(o) {
+				return nil
+			}
+
 			return missingSource(tpe)
 		}
 		s.Ctx.AddDiscoveredModel(decl)
@@ -127,7 +138,7 @@ func (s *Builder) buildNamedEmbedded(tpe *types.Named, schema *oaispec.Schema, n
 //
 // See [§embedded](./README.md#embedded) — interface-side allOf composition rules and the
 // `Ref.String() != "" || Properties >0 || AllOf >0` non-empty guard rationale.
-func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *scanner.EntityDecl, schema *oaispec.Schema,
+func (s *Builder) processEmbeddedType(fld types.Type, embeds []resolvers.Embed, decl *scanner.EntityDecl, schema *oaispec.Schema,
 	nameByJSON map[string]propOwner,
 ) (fieldHasAllOf bool, err error) {
 	// Cross-ref linkage: interface-side embeds compose into allOf members (/allOf/{k}/…), an
@@ -142,7 +153,7 @@ func (s *Builder) processEmbeddedType(fld types.Type, flist []*ast.Field, decl *
 		if ApplyStdlibSpecials(o, ps, s.skipExtensions) {
 			return false, nil
 		}
-		return s.buildNamedInterface(ftpe, flist, decl, schema, nameByJSON)
+		return s.buildNamedInterface(ftpe, embeds, schema, nameByJSON)
 	case *types.Interface:
 		var aliasedSchema oaispec.Schema
 		ps := NewTypable(&aliasedSchema, 0, s.skipExtensions)

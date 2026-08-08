@@ -28,7 +28,7 @@ import (
 // Returns nil when there is no usable decl context.
 func (s *Builder) godocResolver() godoclink.Resolver {
 	decl := s.Decl
-	if decl == nil || decl.File == nil {
+	if decl == nil || !decl.HasSource() {
 		return nil
 	}
 	obj := decl.Obj()
@@ -66,7 +66,7 @@ func (s *Builder) godocResolver() godoclink.Resolver {
 // Nil when there is no usable decl.
 func (s *Builder) godocSelf() *godoclink.SelfRef {
 	decl := s.Decl
-	if decl == nil || decl.Ident == nil || decl.Obj() == nil || decl.Obj().Pkg() == nil {
+	if decl == nil || !decl.HasSource() || decl.Obj() == nil || decl.Obj().Pkg() == nil {
 		return nil
 	}
 	_, goName := decl.Names()
@@ -110,13 +110,17 @@ func (s *Builder) resolveFieldChain(decl *scanner.EntityDecl, fields []string) (
 }
 
 // structAST returns decl's struct AST when it is a struct type declaration.
+//
+// Nothing when the declaration has no source: a field chain resolves against the fields as written,
+// and go/types cannot supply their exposed names.
 func structAST(decl *scanner.EntityDecl) (*ast.StructType, bool) {
-	if decl.Spec == nil {
+	expr, ok := decl.TypeExpr()
+	if !ok {
 		return nil, false
 	}
-	st, ok := decl.Spec.Type.(*ast.StructType)
+	st, isStruct := expr.(*ast.StructType)
 
-	return st, ok
+	return st, isStruct
 }
 
 // fileImports maps each usable import's local name to its package path for the file enclosing decl,
@@ -125,7 +129,12 @@ func structAST(decl *scanner.EntityDecl) (*ast.StructType, bool) {
 // Blank, dot and unresolvable imports are skipped.
 func fileImports(decl *scanner.EntityDecl) map[string]string {
 	out := make(map[string]string)
-	for _, imp := range decl.File.Imports {
+	imports, ok := decl.Imports()
+	if !ok {
+		return out
+	}
+
+	for _, imp := range imports {
 		path, err := strconv.Unquote(imp.Path.Value)
 		if err != nil {
 			continue
@@ -135,8 +144,8 @@ func fileImports(decl *scanner.EntityDecl) map[string]string {
 		switch {
 		case imp.Name != nil:
 			name = imp.Name.Name
-		case decl.Pkg != nil:
-			if p, ok := decl.Pkg.Imports[path]; ok {
+		default:
+			if p, known := decl.PkgImport(path); known {
 				name = p.Name
 			}
 		}

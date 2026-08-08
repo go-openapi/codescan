@@ -37,7 +37,7 @@ const (
 
 func getParameter(sctx *scanner.ScanCtx, nm string) *scanner.EntityDecl {
 	for v := range sctx.Parameters() {
-		if v.Ident.Name == nm {
+		if v.Name() == nm {
 			return v
 		}
 	}

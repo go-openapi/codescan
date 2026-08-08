@@ -56,7 +56,7 @@ func (s *Builder) validateSimpleSchemaOutcome() {
 
 	reason := simpleSchemaViolationReason(shape.Type, refViolation, s.paramIn)
 	s.RecordDiagnostic(grammar.Warnf(
-		s.Ctx.PosOf(s.Decl.Spec.Pos()),
+		s.Ctx.PosOf(s.Decl.Pos()),
 		grammar.CodeUnsupportedInSimpleSchema,
 		"non-body parameter / response header (in=%q) cannot be represented as an OAS v2 SimpleSchema: %s; target reset to empty {}",
 		s.paramIn, reason,

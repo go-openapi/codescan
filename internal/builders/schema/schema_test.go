@@ -1917,3 +1917,30 @@ func TestIssue2540(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEqT(t, expectedJSON, string(b))
 }
+
+// TestBuildFromDeclWithoutSource pins the one place where "the declaration has no source" and "the
+// right-hand side is a shape WrittenRHS declines" must not be answered the same way.
+//
+// Underlying() is the honest fallback for the second and a wrong answer for the first: it peels
+// exactly the named layer the stdlib recognizers key on, so a `type … time.Time` read without its
+// source would render as a struct instead of a date-time. Refusing is what keeps that from being a
+// plausible-looking wrong document.
+//
+// Unreachable through the scanner today — every EntityDecl is built from an AST walk — so the state
+// is constructed here rather than scanned.
+func TestBuildFromDeclWithoutSource(t *testing.T) {
+	const modelsPkg = fixturesModule + "/goparsing/classification/models"
+	ctx := scantest.LoadClassificationPkgsCtx(t)
+
+	found, ok := ctx.FindDecl(modelsPkg, "SomeTimedType")
+	require.True(t, ok)
+
+	// Types and positions, no parsed source: the state a package served from compiled export data is
+	// in.
+	stripped := &scanner.EntityDecl{Type: found.Type, Alias: found.Alias}
+	require.False(t, stripped.HasSource())
+
+	err := NewBuilder(ctx, stripped).Build(WithDefinitions(make(map[string]oaispec.Schema)))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrSchema)
+}

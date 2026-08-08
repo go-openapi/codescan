@@ -457,7 +457,7 @@ func TestParseResponses_Issue2145(t *testing.T) {
 
 func getResponse(sctx *scanner.ScanCtx, nm string) *scanner.EntityDecl {
 	for v := range sctx.Responses() {
-		if v.Ident.Name == nm {
+		if v.Name() == nm {
 			return v
 		}
 	}
