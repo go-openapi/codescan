@@ -528,7 +528,7 @@ func TestMustIfaceFromSource(t *testing.T) {
 }
 
 // TestFindASTField covers the file-less call, which every caller now makes reachable: a declaration
-// whose package carries types but no parsed source hands FindASTField a nil file.
+// whose package carries types but no parsed source hands findASTField a nil file.
 //
 // Without the guard astutil.PathEnclosingInterval dereferences it, so this asserts "no field" rather
 // than a panic — the same answer as a position no field encloses.
@@ -547,17 +547,113 @@ type T struct {
 		require.TrueT(t, ok)
 		want := st.Fields.List[0]
 
-		got := FindASTField(file, want.Names[0].Pos())
+		got := findASTField(file, want.Names[0].Pos())
 		require.NotNil(t, got)
 		assert.EqualT(t, want, got)
 	})
 
 	t.Run("a position no field encloses yields nothing", func(t *testing.T) {
-		assert.Nil(t, FindASTField(file, file.Pos()))
+		assert.Nil(t, findASTField(file, file.Pos()))
 	})
 
 	t.Run("no file yields nothing rather than panicking", func(t *testing.T) {
-		assert.Nil(t, FindASTField(nil, token.Pos(1)))
+		assert.Nil(t, findASTField(nil, token.Pos(1)))
+	})
+}
+
+// TestFindASTFieldFor covers the bridge between a type read from compiled export data and syntax parsed separately.
+//
+// The two halves reach one FileSet by different routes and get a token.File each, so the same declaration holds two
+// unrelated token.Pos values. That is reproduced here rather than described: importerPos fabricates positions the
+// way the export-data importer does — right filename, right line, column always 1 — so the position lookup fails
+// for the same reason it fails in a real scan, and the fallback is what has to answer.
+func TestFindASTFieldFor(t *testing.T) {
+	const src = `package p
+
+type T struct {
+	Name  string
+	Left, Right int
+	Embedded
+	*pkg.Qualified
+}
+
+type Other struct {
+	Name int
+}
+`
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "p.go", src, parser.ParseComments)
+	require.NoError(t, err)
+
+	// The importer's own token.File for the same filename: one line per offset, so every position it hands out is
+	// (line N, column 1). Registered after the parse, so its base differs and no position of one indexes the other.
+	fake := fset.AddFile("p.go", -1, 512)
+	lines := make([]int, 512)
+	for i := range lines {
+		lines[i] = i
+	}
+	require.True(t, fake.SetLines(lines))
+
+	importerPos := func(line int) token.Pos { return token.Pos(fake.Base() + line - 1) }
+	posOf := func(p token.Pos) token.Position { return fset.Position(p) }
+	object := func(name string, line int) types.Object {
+		return types.NewVar(importerPos(line), nil, name, types.Typ[types.String])
+	}
+
+	fields := func(typeName string) []*ast.Field {
+		for _, decl := range file.Decls {
+			spec, isType := decl.(*ast.GenDecl).Specs[0].(*ast.TypeSpec)
+			if !isType || spec.Name.Name != typeName {
+				continue
+			}
+
+			return spec.Type.(*ast.StructType).Fields.List //nolint:forcetypeassert // the fixture declares structs
+		}
+		t.Fatalf("no struct %s in the fixture", typeName)
+
+		return nil
+	}
+	inT := fields("T")
+
+	t.Run("an exact position still wins", func(t *testing.T) {
+		want := inT[0]
+		obj := types.NewVar(want.Names[0].Pos(), nil, "Name", types.Typ[types.String])
+		assert.EqualT(t, want, FindASTFieldFor(file, obj, posOf))
+	})
+
+	t.Run("a name and a line bridge an export-data position", func(t *testing.T) {
+		assert.EqualT(t, inT[0], FindASTFieldFor(file, object("Name", 4), posOf))
+	})
+
+	t.Run("one of several names declared on a line", func(t *testing.T) {
+		assert.EqualT(t, inT[1], FindASTFieldFor(file, object("Right", 5), posOf))
+	})
+
+	t.Run("an embedded field is named after its type", func(t *testing.T) {
+		assert.EqualT(t, inT[2], FindASTFieldFor(file, object("Embedded", 6), posOf))
+	})
+
+	t.Run("through the pointer and qualifier of an embedded type", func(t *testing.T) {
+		assert.EqualT(t, inT[3], FindASTFieldFor(file, object("Qualified", 7), posOf))
+	})
+
+	t.Run("the line is what keeps two structs' identical field names apart", func(t *testing.T) {
+		assert.EqualT(t, fields("Other")[0], FindASTFieldFor(file, object("Name", 11), posOf))
+	})
+
+	t.Run("a name on the wrong line matches nothing", func(t *testing.T) {
+		assert.Nil(t, FindASTFieldFor(file, object("Name", 5), posOf))
+	})
+
+	t.Run("a name the file does not declare matches nothing", func(t *testing.T) {
+		assert.Nil(t, FindASTFieldFor(file, object("Absent", 4), posOf))
+	})
+
+	t.Run("no file, and no way to resolve a position, yield nothing", func(t *testing.T) {
+		assert.Nil(t, FindASTFieldFor(nil, object("Name", 4), posOf))
+		assert.Nil(t, FindASTFieldFor(file, object("Name", 4), nil))
+		assert.Nil(t, FindASTFieldFor(file, types.NewVar(token.NoPos, nil, "Name", types.Typ[types.String]), posOf))
 	})
 }
 

@@ -108,6 +108,7 @@ func (l *Loader) loadFromSource(cfg *Config, patterns ...string) ([]*Package, er
 
 		exportOnlyReported: map[string]bool{},
 		annotated:          map[string]bool{},
+		srcFiles:           map[string][]string{},
 		stubStdlib:         l.opts.stubStdlib,
 
 		exportFS:         l.opts.exportFS,
@@ -323,6 +324,10 @@ type loadState struct {
 	// annotated memoizes whether a dependency's source carries annotations, so the files behind one import are read once
 	// however many packages import it.
 	annotated map[string]bool
+
+	// srcFiles memoizes where a dependency's source is, so the marker scan and any later read-back resolve one import
+	// once. See sourceFiles.
+	srcFiles map[string][]string
 
 	// exportFS serves pre-computed export data.
 	// It is keyed by import path with an ".export" suffix and remans nil when the caller supplied none,

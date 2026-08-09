@@ -39,7 +39,7 @@ func (s *Builder) scanEmbeddedFields(
 			continue
 		}
 
-		afld := resolvers.FindASTField(decl.File(), fld.Pos())
+		afld := resolvers.FindASTFieldFor(decl.File(), fld, s.Ctx.PosOf)
 		if afld == nil {
 			continue
 		}

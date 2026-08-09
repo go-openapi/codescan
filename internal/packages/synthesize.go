@@ -20,8 +20,9 @@ import (
 //
 // A package fabricated from the names actually selected through it is enough for codescan's name-keyed recognizers,
 // which ask (package, type name) and never look at the type's shape.
-// It is not enough for anything structural: a synthesized type has no fields to walk and no methods, so drilling into
-// it, or asking whether it implements an interface, both fail.
+//
+// This is not enough for anything structural: a synthesized type has no fields to walk and no methods,
+// so drilling into it, or asking whether it implements an interface, both fail.
 
 // willStub reports whether an import path will be synthesized rather than loaded.
 func (ld *loadState) willStub(path string) bool {
@@ -127,12 +128,12 @@ const cgoPseudoPackage = "C"
 // Only exported names are worth fabricating: an unexported one could never be referenced from another package, so
 // seeing it means the selector was something else.
 //
-// "C" is the exception, and it is not a small one.
-// C has no notion of exportedness and its identifiers are conventionally lower case, so the rule above discards every
-// single one — C.int, C.size_t, a struct tag.
+// "C" is the exception, and it is noticeable: C has no notion of exportedness and its identifiers are conventionally
+// lower case, so the rule above discards every single one — C.int, C.size_t, a struct tag.
 //
-// A cgo file would then parse, and any C type it used in a declaration would resolve to nothing, which is how a program
-// that merely BUILDS with cgo became unscannable rather than imprecisely scanned.
+// A cgo file would then parse, and any C type it used in a declaration would resolve to nothing.
+// Keeping the C names is what lets a program that merely BUILDS with cgo be scanned imprecisely
+// rather than not at all: a C type is opaque either way, but the Go declarations around it still resolve.
 func (ld *loadState) addSynthesizedName(path, name string) {
 	if !ast.IsExported(name) && path != cgoPseudoPackage {
 		return

@@ -153,33 +153,31 @@ type Options struct {
 	// be compiled first.
 	//
 	// Export data carries the full exported type surface — fields, method sets, interface identity —
-	// but no syntax and no comments. A dependency whose source carries swagger annotations is therefore
-	// read back from source after the load, since those annotations are not optional: go-openapi's own
-	// strfmt marks its types with `swagger:strfmt date-time`, `uuid`, `email` and the rest, and those
-	// marks are the only reason a strfmt.DateTime field acquires a format.
+	// but no syntax and no comments, and a scan needs two different things out of a dependency's source.
 	//
-	// What remains given up is a type declared in a dependency that says nothing about itself. Nothing
-	// marks such a package as worth reading, so its declarations — and their doc comments — are not
-	// there, and a model declared in one collapses to its name alone. Every scan with this on raises a
-	// scan.compiled-dependencies Hint saying so, and any declaration a builder then wanted and could
-	// not find is reported individually, naming the type.
+	// What a dependency SAYS about its own types is found by scanning its files for the annotation
+	// marker after the load; those marks are not optional, since go-openapi's own strfmt is what gives a
+	// strfmt.DateTime field its date-time format. What a dependency DECLARES cannot be anticipated that
+	// way — any package may declare a type the scanned code names as a model — so its declaration is
+	// fetched at the lookup that wants it, and a dependency nothing reaches into is never read at all.
+	//
+	// The document is therefore the same one the ordinary loader produces. Where source is genuinely
+	// out of reach — a virtual filesystem, an export-data archive shipped without it — the type still
+	// renders from what its type alone says, and a scan.sourceless-type Warning names it.
 	//
 	// # Opt-in, and staying that way
 	//
-	// Decided 2026-08-08, after the option stopped losing dependency annotations and stopped failing
-	// on types it could not resolve. Two things keep it from being the default:
+	// Decided 2026-08-08 and reaffirmed once the last output divergence closed. What keeps it from
+	// being the default is cost, not fidelity:
 	//
-	//   - a model declared in an UNANNOTATED dependency still collapses. Splitting model types into a
-	//     shared library that carries no swagger annotations of its own is an ordinary way to lay out a
-	//     Go project, and it is the one case here that silently changes a document rather than thinning
-	//     one field of it. See internal/scanner/README.md#compiled-dependencies for why widening the
-	//     read-back rule does not fix it;
-	//   - the cost is inverted on a cold build cache. Roughly 2.3x faster warm and 6x slower cold,
-	//     because export data has to be compiled before it exists — and CI, where a spec is most often
-	//     regenerated, is cold almost by definition.
+	//   - the cost is INVERTED on a cold build cache. Roughly 2.3x faster warm and an order of
+	//     magnitude slower cold, because export data has to be compiled before it exists — and CI,
+	//     where a spec is most often regenerated, is cold almost by definition;
+	//   - it needs the dependency closure to BUILD rather than merely type-check, since `go list
+	//     -export` compiles it. A tree codescan can scan today is not necessarily a tree it can compile.
 	//
-	// It also needs the dependency closure to BUILD rather than merely type-check, since `go list
-	// -export` compiles it. A tree codescan can scan today is not necessarily a tree it can compile.
+	// Experimental until it has run against more real projects: the agreement is pinned over the whole
+	// fixture corpus (internal/integration/loader_agreement_test.go), which is a corpus, not the world.
 	//
 	// The toolchain-free loader has ExportData below, which is the same idea supplied by hand.
 	//

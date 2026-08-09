@@ -171,8 +171,10 @@ materialising up to 229 MB of build cache to get there — `go list -export` mus
 closure, not merely type-check it. A first scan of a freshly generated tree is precisely its worst
 case, and CI is cold by definition.
 
-It also degrades what it cannot read: a model declared in a dependency carrying no annotations
-collapses to a bare name. See `internal/scanner/README.md#compiled-dependencies`.
+What it does not cost is meaning: it emits the same document as the default path on every corpus
+measured here and across the whole fixture corpus. Whatever the spec needs out of a dependency —
+its own annotations, or a declaration the scanned code names — is read, the second kind at the
+lookup that wants it. See `internal/scanner/README.md#compiled-dependencies`.
 
 ## Caveats
 

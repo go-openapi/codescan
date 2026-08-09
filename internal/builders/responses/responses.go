@@ -513,7 +513,7 @@ func (r *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, r
 	// An in: annotation on the embed applies to the response fields it promotes (go-swagger#2701) — body/header routing.
 	// Thread it through the recursion, restoring afterwards so siblings are unaffected.
 	saved := r.inherited
-	if afld := resolvers.FindASTField(decl.File(), fld.Pos()); afld != nil {
+	if afld := resolvers.FindASTFieldFor(decl.File(), fld, r.Ctx.PosOf); afld != nil {
 		r.inherited = r.ReadEmbedInheritance(afld.Doc, saved)
 	}
 	// An embed marked `in: body` IS the response body — the embedded struct becomes the body schema, exactly like a
@@ -558,7 +558,7 @@ func (r *Builder) processResponseField(fld *types.Var, decl *scanner.EntityDecl,
 		return nil
 	}
 
-	afld := resolvers.FindASTField(decl.File(), fld.Pos())
+	afld := resolvers.FindASTFieldFor(decl.File(), fld, r.Ctx.PosOf)
 	if afld == nil {
 		return nil
 	}

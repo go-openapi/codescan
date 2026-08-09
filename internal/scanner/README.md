@@ -600,13 +600,16 @@ Three ways to get a package graph. The short version, before the mechanism:
   compiled export data instead of their source. Warm, it is 35–55% faster and
   2.5–4× smaller. But it must **compile** the closure, not merely type-check it, so
   on a cold cache it is *an order of magnitude slower* and writes a large build
-  cache. Right for a warm developer loop, wrong for CI. Still rough at one edge: a
-  model declared in a dependency that carries no annotations collapses to a bare
-  name — see [§export-data](#export-data).
+  cache. Right for a warm developer loop, wrong for CI. It produces the same
+  document as the standard loader — a dependency's declarations are fetched on
+  demand when the spec needs them, see
+  [§compiled-dependencies](#compiled-dependencies) — but stays experimental until
+  it has run against more real projects.
 
-Two knobs below drop the GOROOT requirement entirely, at a fidelity cost, and exist
-for environments that have no Go installation at all (a WASI guest, a browser):
-`StubStdlib` and `ExportData`. See [What it costs](#what-it-costs).
+Two knobs below drop the GOROOT requirement entirely, for environments that have no
+Go installation at all (a WASI guest, a browser): `StubStdlib`, which pays for the
+reach in fidelity, and `ExportData`, which pays in preparation. See
+[What it costs](#what-it-costs).
 
 Figures are from `hack/loader-benchmark`, which compares a release against the
 working tree over external corpora; its README carries the tables and the method.
@@ -849,8 +852,10 @@ deliberately outside `go.work` for that reason, which is why the tool runs
 Export data holds types and not comments, so the loader decides per dependency and
 decides whole: **a package whose source carries `swagger:` is read from source, in
 the ordinary way; everything else comes from export data and is never parsed.**
-Nothing is lost, and almost nothing is given up — the saving was never in the
-handful of packages a scan actually reads, it is in the closure behind them.
+Little is given up — the saving was never in the handful of packages a scan
+actually reads, it is in the closure behind them. Nothing is lost either, but not
+by this rule alone: it settles what a dependency *says*, and the section below
+settles what it *declares*.
 
 Putting the two halves back together — export-data types with parsed syntax
 bolted on beside them — was once impossible, and that is no longer why the loader
@@ -870,45 +875,53 @@ the other end, after the load rather than during it. The cheap load still says
 where the source *is* (`compiledDepsMode` keeps `NeedFiles`), so this is parsing
 on known paths and nothing is type-checked twice.
 
-The toolchain-free strategy has no use for the assembled form: it already has the
-source, and reading an annotated dependency in full costs one type-check of a
-small package.
-
-**What is given up is not the annotations**: it is a type declared in a dependency
-that says nothing about itself. Nothing marks such a package as worth reading, so a
-model declared in one collapses to its name alone. This bites
-`CompiledDependencies` only — the toolchain-free route's bundle covers the standard
-library, so a non-stdlib dependency misses it and falls through to source.
+The toolchain-free strategy has no use for the assembled form during the load: it
+already has the source, and reading an annotated dependency in full costs one
+type-check of a small package. It reaches the assembled form afterwards all the
+same, through the on-demand read-back below, which is why both routes now agree
+with an ordinary scan rather than only with each other.
 
 <a id="compiled-dependencies"></a>
 
-#### Why widening the read-back rule does not fix it
+#### What a dependency says, and what it declares
 
-Tried and reverted, 2026-08-08. The obvious fix is to mirror the other route: read
-back every dependency **outside the standard library**, annotated or not, which is
-exactly the line a std-only bundle draws. The definition does come back — and comes
-back **empty, with no warning**, which is worse than its absence, because
-`GetModel` then succeeds and the warning that named it stops firing.
+The marker scan answers the first question, and it is the only one it can answer:
+a `swagger:strfmt` mark is in the dependency's own source or nowhere, so finding
+one means reading. It is the wrong question for the second. Any dependency,
+annotated or not, may declare a type the scanned code goes on to name as a model —
+and a definition renders from its declaration or not at all, so its doc comment,
+field tags and per-field annotations all hang on source nothing in that source
+asked to have read.
 
-Struct fields are located by **position**:
+So the declaration is fetched **at the lookup that wants it**
+(`ScanCtx.readBackOnDemand`), by parsing that one package and bridging it to the
+export-data scope. A dependency nothing reaches into is still never read, which is
+what keeps this affordable: the cost is one parse per declaration wanted, against
+one per dependency loaded.
 
-```go
-afld := resolvers.FindASTField(decl.File(), fld.Pos())   // structFieldCarrier
-```
+The version of this that looks obvious is the one that fails, on both counts.
+Reading back every non-stdlib dependency up front — the line a std-only bundle
+draws — brings the definition back **empty and unwarned**, which is worse than its
+absence because `GetModel` then succeeds and the warning that named it stops
+firing. It also costs a third of the wall clock and a third of the peak RSS, which
+is most of the reason to choose the option at all.
 
-The `*types.Var` comes from export data; `decl.File()` is the AST we parsed
-ourselves. Both live in one `FileSet`, but as two `token.File` entries for the same
-filename at different bases — so the positions never match, `FindASTField` returns
-nil, and every field is skipped by the branch that exists for promoted fields.
+Empty, because struct fields were located by **position**, and the two halves do
+not share one. The `*types.Var` comes from export data; `decl.File()` is the AST we
+parsed. Both reach one `FileSet` and get a `token.File` each for the same filename,
+so no position of one indexes the other and every field is skipped in silence.
 
-So parse-and-bridge carries **type-level** comments, which is all the annotated-
-dependency case ever needed (`swagger:strfmt` sits above the type), and it cannot
-carry **field-level** correspondence: a struct field is not in package scope, so
-`bridgeDefs` has nothing to map it by.
+What export data does preserve is the filename and the **line** — never the column,
+which its fabricated line table pins at 1. Line plus the object's own name
+identifies the field, since a struct cannot declare a name twice and the file is
+already known; embedded fields match on the last identifier of their type
+expression, which is what go/types names them after. That is
+`resolvers.FindASTFieldFor`, reached only when the position lookup fails, so an
+ordinary scan never walks a file twice.
 
-Closing it needs a name-based field bridge plus a fallback in the field walk — a
-schema-builder change with its own witness fixture, not a loader tweak. **Parked**,
-and it is the prerequisite for `CompiledDependencies` ever becoming the default.
+Both halves are needed, and together they close every known divergence: the loader
+agreement A/B over the whole fixture corpus is empty for all three configurations
+(`internal/integration/loader_agreement_test.go`).
 
 `genexportdata` mirrors that, skipping annotated packages by default and saying so:
 
@@ -922,7 +935,6 @@ data cannot hold — it has to be read from source
 having nothing, and the lost annotations are announced per package. Where the
 source does ship, the entry is simply unused.
 
-### What it buys, and what it does not cost
 ### What it buys, and what it does not cost
 
 Full scans of `fixtures/goparsing/petstore` through the toolchain-free loader:
@@ -950,8 +962,13 @@ tracks the Go release. Regenerate it when the toolchain moves.
 `CompiledDependencies` reads the same data straight from the build cache, so its
 preparation is simply having built the project — the cold-cache penalty measured
 elsewhere is not extra work, it is the work a normal `go build ./...` already did.
-The difference is that this loader keeps the dependency's source alongside, and
-that one does not; see the option's own documentation.
+
+The two reach the source by different routes and end up in the same place. The
+toolchain-free strategy has it in hand during the load, so an annotated dependency
+is read from source there and then. `go list` hands over compiled types with no
+syntax, so the same packages get their source handed back after the load
+(`attachAnnotatedDependencies`). Either way, what neither route read is fetched at
+the lookup that wants it, which is why both agree with an ordinary scan.
 
 ## <a id="quirks-open"></a>§quirks-open — deferred follow-ups
 

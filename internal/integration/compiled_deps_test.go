@@ -66,35 +66,5 @@ func TestCompiledDependencies_KeepsDependencyAnnotations(t *testing.T) {
 	assert.NotEmpty(t, format)
 }
 
-// The complement: a dependency the policy declines to parse is announced, but only to whoever asks
-// for one of its declarations.
-//
-// makeplans carries no annotation of its own, so the marker scan passes over it and its source is
-// never read — which is the policy working, not a fault. The fixture then uses one of its types as a
-// model, so the definition collapses and a builder goes looking for a declaration that is not there.
-// That lookup is what earns the notice, and it names the type rather than the load.
-func TestCompiledDependencies_ReportsWhatTheSpecActuallyMissed(t *testing.T) {
-	t.Parallel()
-
-	var sourceless []string
-	doc, err := codescan.Run(&codescan.Options{
-		Packages:             []string{"./bookings/..."},
-		WorkDir:              scantest.FixturesDir() + "/goparsing",
-		ScanModels:           true,
-		CompiledDependencies: true,
-		OnDiagnostic: func(d codescan.Diagnostic) {
-			if strings.Contains(d.Message, "could not be read") {
-				sourceless = append(sourceless, d.Message)
-			}
-		},
-	})
-	require.NoError(t, err)
-
-	assert.NotContains(t, doc.Definitions, "Booking",
-		"the model is declared in a dependency that says nothing about itself, so it is not read")
-
-	require.NotEmpty(t, sourceless, "the collapse shows up in the output as an absence; the notice is what names it")
-	assert.Contains(t, strings.Join(sourceless, "\n"), "makeplans.Booking")
-	assert.Contains(t, strings.Join(sourceless, "\n"), "nothing in its source is annotated",
-		"the reason distinguishes the policy declining to read from source that could not be read")
-}
+// The complement — a dependency that says nothing about itself but declares a type the document carries — is
+// TestDependencyDeclarations_ReadBackOnDemand, which is where the on-demand fetch and the field bridge are pinned.

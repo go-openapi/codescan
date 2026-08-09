@@ -12,24 +12,160 @@ import (
 	"os"
 )
 
+// ReadBackSource parses a package's source onto it and reports whether it now carries syntax.
+//
+// The scanner calls this when a declaration is wanted from a dependency the load took types-only.
+//
+// This gives callers of the [Loader] the ability to call for parsed source on-demand: they are not compelled to
+// resort to an eager full compilation of the entire dependency graph.
+//
+// Both [Loader] strategies pass over such a dependency on the same reasoning — export data holds types and not comments,
+// so a package that says nothing about its own types has nothing to say.
+//
+// Both are asking the wrong question the moment some scanned code names one of its types as a model.
+// What a package SAYS is in its comments, and what it DECLARES is its source,
+// and a definition renders from that declaration or not at all.
+//
+// Asking here rather than reading every dependency up front is what makes it affordable: the cost is one parse per
+// declaration wanted, against one per dependency loaded, typically single digits against several hundred.
+//
+// This is a method on the [Loader] because reading is: [WithFS] means a scan's whole world can be a virtual tree,
+// and a read-back going to the real filesystem would answer from outside it.
+//
+// There is deliberately no marker check because the caller has already established that the source is wanted,
+// by a better question than the marker asks.
+//
+// It is idempotent: asking twice only costs one parse.
+func (l *Loader) ReadBackSource(pkg *Package) bool {
+	return readBackSource(pkg, l.vfs.Open)
+}
+
+func readBackSource(pkg *Package, open func(string) (io.ReadCloser, error)) bool {
+	if pkg == nil || pkg.Types == nil || pkg.Fset == nil {
+		return false
+	}
+	if len(pkg.Syntax) > 0 {
+		return true
+	}
+	if len(pkg.GoFiles) == 0 {
+		return false
+	}
+
+	syntax := parseFilesForComments(pkg.Fset, pkg.GoFiles, open)
+	if len(syntax) == 0 {
+		return false
+	}
+
+	pkg.Syntax = syntax
+	pkg.CompiledGoFiles = pkg.GoFiles
+	pkg.TypesInfo = bridgeDefs(syntax, pkg.Types)
+
+	return true
+}
+
+// parseFilesForComments reads a package's source for what it says, not for what it means.
+//
+// No type-checking follows, so this is parsing alone — the cheap half — and the comments are the entire reason for
+// doing it. Object resolution is skipped for the same reason: the objects are already in the export-data scope.
+//
+// The bytes come from the caller's filesystem rather than from the parser's own read, so a virtual tree is honoured;
+// the path is still handed to [parser.ParseFile], because it is what the positions are recorded against.
+// Those have to match the ones export data carries.
+func parseFilesForComments(fset *token.FileSet, paths []string, open func(string) (io.ReadCloser, error)) []*ast.File {
+	syntax := make([]*ast.File, 0, len(paths))
+
+	for _, path := range paths {
+		src, err := readSource(open, path)
+		if err != nil {
+			continue
+		}
+
+		f, err := parser.ParseFile(fset, path, src, parser.ParseComments|parser.SkipObjectResolution)
+		if f == nil {
+			continue
+		}
+		_ = err // a partially parsed file still carries the declarations above the fault
+
+		syntax = append(syntax, f)
+	}
+
+	return syntax
+}
+
+func readSource(open func(string) (io.ReadCloser, error), path string) ([]byte, error) {
+	f, err := open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	return io.ReadAll(f)
+}
+
+// bridgeDefs joins parsed declarations to the objects export data already holds.
+//
+// It is a name lookup rather than a type-check: a top-level declaration is in the package scope
+// under exactly its own name, which is all [types.Info.Defs] is asked for here.
+//
+// Unexported names are absent from export data and stay unmapped, which is correct.
+// Nothing outside the package can refer to one.
+func bridgeDefs(syntax []*ast.File, tpkg *types.Package) *types.Info {
+	info := &types.Info{Defs: map[*ast.Ident]types.Object{}}
+	scope := tpkg.Scope()
+
+	for _, f := range syntax {
+		for _, decl := range f.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+
+			for _, spec := range gen.Specs {
+				switch sp := spec.(type) {
+				case *ast.TypeSpec:
+					if obj := scope.Lookup(sp.Name.Name); obj != nil {
+						info.Defs[sp.Name] = obj
+					}
+				case *ast.ValueSpec:
+					for _, name := range sp.Names {
+						if obj := scope.Lookup(name.Name); obj != nil {
+							info.Defs[name] = obj
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return info
+}
+
 // attachAnnotatedDependencies gives a dependency its source back when that source has something to say.
 //
 // The two strategies arrive at the same policy from opposite ends, because they have opposite amounts of control.
-// The toolchain-free one resolves imports itself, so it decides per dependency while the load is happening: a package
-// whose source carries the marker is read from source, one that does not is taken from export data untouched. Here
-// `go list` and go/packages own resolution, and the only lever is a LoadMode — one value for the whole load, with no
-// hook to say "except this one". So the choice cannot be made during the load and is made after it: take every
-// dependency from export data, then hand back the source of the few that were worth reading.
 //
-// What makes that possible is that the cheap load still says where the source IS. compiledDepsMode keeps NeedFiles,
-// so a dependency comes back with GoFiles populated, types complete and no syntax — locatable, just unread. Parsing
-// those files is the whole of the work; nothing is type-checked twice, because every declaration the source names is
-// already an object in the export-data scope and the two halves are joined by name.
+// The toolchain-free one resolves imports itself, so it decides per dependency while the load is happening:
+// a package whose source carries the marker is read from source, one that does not is taken from export data untouched.
 //
-// The assembled shape — export-data types beside separately parsed syntax — carries no types.Info.Types, and cannot:
-// its entries are unconstructible outside go/types. That used to rule this out altogether. The builders no longer
-// read that map, and a spec builds identically without it, which is what makes the whole approach available. See
-// [§annotated-dependencies](../scanner/README.md#annotated-dependencies).
+// Under [StrategyGoPackages], `go list` and go/packages own resolution, and the only lever is a [LoadMode]:
+// one value for the whole load, with no hook to say "except this one".
+//
+// So the choice cannot be made during the load and is made after it: take every dependency from export data,
+// then hand back the source of the few that were worth reading.
+//
+// What makes this possible is that the cheap load still says where the source IS.
+// compiledDepsMode keeps packages.NeedFiles, so a dependency comes back with its GoFiles populated,
+// its types complete and no syntax — locatable, just unread.
+// Parsing those files is the whole of the work; nothing is type-checked twice, because every declaration the source
+// names is already an object in the export-data scope and the two halves are joined by name.
+//
+// The assembled shape — export-data types beside separately parsed syntax — carries no [types.Info.Types],
+// and cannot do so: its entries are unconstructible outside go/types.
+//
+// The builders don't read that map, and a spec builds identically without it, which is what makes
+// the whole approach workable.
+//
+// See also [§annotated-dependencies](../scanner/README.md#annotated-dependencies).
 func attachAnnotatedDependencies(roots []*Package, onExportOnly func(ExportOnly)) {
 	seen := make(map[string]bool, len(roots))
 
@@ -87,16 +223,9 @@ func attachSource(pkg *Package, buf []byte, onExportOnly func(ExportOnly)) {
 		return
 	}
 
-	syntax := parseFilesForComments(pkg.Fset, pkg.GoFiles)
-	if len(syntax) == 0 {
+	if !readBackSource(pkg, openOSFile) {
 		announceExportOnly(onExportOnly, pkg.PkgPath, "its source could not be parsed")
-
-		return
 	}
-
-	pkg.Syntax = syntax
-	pkg.CompiledGoFiles = pkg.GoFiles
-	pkg.TypesInfo = bridgeDefs(syntax, pkg.Types)
 }
 
 // announceExportOnly reports a dependency whose types were read but whose source was not.
@@ -124,59 +253,3 @@ func filesCarryMarker(paths []string, buf []byte) bool {
 }
 
 func openOSFile(path string) (io.ReadCloser, error) { return os.Open(path) }
-
-// parseFilesForComments reads a package's source for what it says, not for what it means.
-//
-// No type-checking follows, so this is parsing alone — the cheap half — and the comments are the entire reason for
-// doing it. Object resolution is skipped for the same reason: the objects are already in the export-data scope.
-func parseFilesForComments(fset *token.FileSet, paths []string) []*ast.File {
-	syntax := make([]*ast.File, 0, len(paths))
-
-	for _, path := range paths {
-		f, err := parser.ParseFile(fset, path, nil, parser.ParseComments|parser.SkipObjectResolution)
-		if f == nil {
-			continue
-		}
-		_ = err // a partially parsed file still carries the declarations above the fault
-
-		syntax = append(syntax, f)
-	}
-
-	return syntax
-}
-
-// bridgeDefs joins parsed declarations to the objects export data already holds.
-//
-// It is a name lookup rather than a type-check: a top-level declaration is in the package scope under exactly its own
-// name, which is all TypesInfo.Defs is asked for here. Unexported names are absent from export data and stay
-// unmapped, which is correct — nothing outside the package can refer to one.
-func bridgeDefs(syntax []*ast.File, tpkg *types.Package) *types.Info {
-	info := &types.Info{Defs: map[*ast.Ident]types.Object{}}
-	scope := tpkg.Scope()
-
-	for _, f := range syntax {
-		for _, decl := range f.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok {
-				continue
-			}
-
-			for _, spec := range gen.Specs {
-				switch sp := spec.(type) {
-				case *ast.TypeSpec:
-					if obj := scope.Lookup(sp.Name.Name); obj != nil {
-						info.Defs[sp.Name] = obj
-					}
-				case *ast.ValueSpec:
-					for _, name := range sp.Names {
-						if obj := scope.Lookup(name.Name); obj != nil {
-							info.Defs[name] = obj
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return info
-}
