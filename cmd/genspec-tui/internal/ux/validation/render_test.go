@@ -33,8 +33,8 @@ var errValidatorBroke = stderrors.New("the validator could not run")
 
 func twoFindings() []Finding {
 	return []Finding{
-		{Severity: grammar.SeverityError, Path: "paths./pets.get.responses.200", Message: "description is required"},
-		{Severity: grammar.SeverityWarning, Path: "definitions.User", Message: "unused definition"},
+		{Severity: grammar.SeverityError, Pointer: "/paths/~1pets/get/responses/200", Message: "description is required"},
+		{Severity: grammar.SeverityWarning, Pointer: "/definitions/User", Message: "unused definition"},
 	}
 }
 
@@ -65,7 +65,8 @@ func TestRender_States(t *testing.T) {
 
 		assert.Contains(t, body, "2 findings (1 error, 1 warning)")
 		assert.Contains(t, body, "description is required")
-		assert.Contains(t, body, "paths./pets.get.responses.200", "the reported path is shown verbatim")
+		assert.Contains(t, body, "/paths/~1pets/get/responses/200",
+			"the row shows the pointer, which is where enter will go")
 		assert.Equal(t, 1, line, "the selected row sits under the tally")
 	})
 }
@@ -108,11 +109,12 @@ func TestRender_SelectedAndPlainRowsCarrySameText(t *testing.T) {
 	assert.Equal(t, stripANSI(styledRow(f)), plainRow(f))
 }
 
-// TestRender_FindingWithNoLocation pins that a global finding still renders a row rather than a blank column.
-func TestRender_FindingWithNoLocation(t *testing.T) {
-	body, _ := Render([]Finding{{Severity: grammar.SeverityError, Message: "the whole document is wrong"}}, true, nil, -1, true)
+// TestRender_RootFindingRendersALabel pins that a finding about the whole document renders a row rather than a blank
+// column, since the pointer addressing the document is the empty string.
+func TestRender_RootFindingRendersALabel(t *testing.T) {
+	body, _ := Render([]Finding{{Severity: grammar.SeverityError, Message: "info in body is required"}}, true, nil, -1, true)
 
-	assert.Contains(t, body, "(spec)")
+	assert.Contains(t, body, RootLabel)
 }
 
 // stripANSI removes CSI escapes, leaving the text a user reads.

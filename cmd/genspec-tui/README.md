@@ -269,23 +269,23 @@ findings judged the document that scan has just replaced, and a list of
 complaints about a spec that no longer exists invites navigating to nodes that
 may have moved or gone. Press `v` again.
 
-Navigation is exact for an ordinary object path: a finding about
-`definitions.User.properties.email.type` lands on that node. Two cases land on
-the **enclosing** node instead, and both are the validator's notation rather
-than the conversion:
+Each finding carries the JSON pointer the validator recorded as it walked, taken
+from the result rather than read back out of the message. Navigation is therefore
+exact: an ordinary path, an indexed one
+(`/paths/~1pets/get/parameters/0/type` lands on that parameter rather than on the
+list), an entry of a `required` array, and a fault reached through a `$ref`, which
+is reported against the shared definition holding it.
 
-- **Anything inside an array.** The validator omits array indices, reporting
-  `paths./pets.get.parameters.type` where the node is at
-  `…/parameters/0/type`. You land on the parameter list. This is common —
-  parameter lists are always arrays.
-- **A "required but missing" finding**, whose whole complaint is that the node
-  it names does not exist. `…responses.200.description` lands on the response,
-  which is the only place there is to go.
+A finding about something the document does **not** have is reported on the value
+that should hold it — a response missing its `description` lands on the response.
+At the top of the document that value is the document itself, which RFC 6901
+spells as the empty pointer, so `Enter` goes to the top of the spec and the row is
+labelled `(the whole document)`.
 
-Resolution walks up to the nearest node actually rendered, so an imprecise
-landing is always an *ancestor* of what was reported — never a sibling, and
-never somewhere untrue. (A path template containing a dot would also split
-wrongly, since the notation cannot express one; the same walk-up covers it.)
+Resolution still walks up to the nearest node actually rendered if a pointer ever
+addresses something this view does not show, so an imprecise landing would be an
+*ancestor* of what was reported — never a sibling. Nothing is known to need it
+since validate v0.26.3.
 
 ## Cross-reference navigation
 

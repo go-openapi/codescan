@@ -4,17 +4,21 @@
 package validation
 
 import (
-	stderrors "errors"
 	"fmt"
-	"strings"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
+
+// RootLabel names what the empty pointer addresses.
+//
+// An empty pointer is a location, not the absence of one: RFC 6901 spells the whole document that way, and a finding
+// about something the document does not have at all - no info block, no paths - is reported there. It needs a printable
+// stand-in, since "" would render as nothing at all.
+const RootLabel = "(the whole document)"
 
 // Finding is one validation result.
 //
@@ -24,11 +28,13 @@ import (
 type Finding struct {
 	Severity grammar.Severity
 
-	// Path is the location the validator reported, in its own dotted notation (paths./pets.get.parameters.type).
-	// Shown verbatim, because it is what the validator would print and what a reader will search the spec for.
-	Path string
-
-	// Pointer is Path converted to RFC 6901, for navigation. Empty when the finding named no location at all.
+	// Pointer is where the validator says the offending value is, as an RFC 6901 JSON pointer.
+	//
+	// Taken from the result rather than recovered from the message: the validator records the location as it walks, so
+	// it is the authority on it, and a sentence is a poor place to keep a machine-readable path.
+	//
+	// EMPTY means the whole document, which is what RFC 6901 spells that way - not "nowhere". A finding about
+	// something the document lacks entirely is reported there, so an empty pointer is navigable: see RootLabel.
 	Pointer string
 
 	Message string
@@ -48,82 +54,35 @@ func Run(specJSON []byte) ([]Finding, error) {
 		return nil, fmt.Errorf("cannot load the generated spec: %w", err)
 	}
 
-	errs, warns := validate.NewSpecValidator(doc.Schema(), strfmt.Default).Validate(doc)
+	// Everything comes off the FIRST result, which holds both lists. The second is a warnings-only view of the same
+	// run, and it carries them as its ERRORS - so reading warnings from its Warnings field found an empty slice and the
+	// pane reported a spec with warnings as clean.
+	result, _ := validate.NewSpecValidator(doc.Schema(), strfmt.Default).Validate(doc)
 
-	findings := make([]Finding, 0, len(errs.Errors)+len(warns.Warnings))
-	for _, e := range errs.Errors {
-		findings = append(findings, finding(grammar.SeverityError, e))
+	locatedErrors, locatedWarnings := result.LocatedErrors(), result.LocatedWarnings()
+
+	findings := make([]Finding, 0, len(locatedErrors)+len(locatedWarnings))
+	for _, l := range locatedErrors {
+		findings = append(findings, finding(grammar.SeverityError, l))
 	}
-	for _, w := range warns.Warnings {
-		findings = append(findings, finding(grammar.SeverityWarning, w))
+	for _, l := range locatedWarnings {
+		findings = append(findings, finding(grammar.SeverityWarning, l))
 	}
 
 	return findings, nil
 }
 
-// finding normalises one validator error.
-func finding(severity grammar.Severity, err error) Finding {
-	path := locationOf(err)
-
+// finding normalises one located validator result.
+//
+// The pointer is carried straight through: it is already RFC 6901, and it comes from the validator's own record of
+// where it was when the check failed. Deriving it from the message instead - which is what this did - could not recover
+// an array index, since the notation there has no place to put one, and a parameter list is always an array.
+func finding(severity grammar.Severity, located validate.Located) Finding {
 	return Finding{
 		Severity: severity,
-		Path:     path,
-		Pointer:  pointerFor(path),
-		Message:  err.Error(),
+		Pointer:  located.Pointer,
+		Message:  located.Err.Error(),
 	}
-}
-
-// locationOf extracts the location a validator error names.
-//
-// A *errors.Validation carries it as a field, which is exact. Everything else only has it inside the message,
-// where the validator writes it in double quotes at the front ("paths./pets.get.responses.200" must validate...) - so
-// that is read back rather than guessed at, and anything not in that shape simply has no location.
-func locationOf(err error) string {
-	var v *errors.Validation
-	if stderrors.As(err, &v) {
-		return v.Name
-	}
-
-	msg := err.Error()
-	if !strings.HasPrefix(msg, `"`) {
-		return ""
-	}
-	if end := strings.Index(msg[1:], `"`); end > 0 {
-		return msg[1 : end+1]
-	}
-
-	return ""
-}
-
-// pointerFor converts the validator's dotted path into an RFC 6901 JSON pointer.
-//
-// Exact for an ordinary object path. Two things it cannot recover, both properties of the notation rather than of this
-// conversion, and both measured rather than assumed (see TestValidation_PointerResolutionAccuracy):
-//
-//   - the validator omits ARRAY INDICES, reporting paths./pets.get.parameters.type for a node that lives at
-//     .../parameters/0/type. Since parameter lists are always arrays, this is the common case, not an edge one;
-//   - a required finding names the very node that is missing, so there is nothing to point at.
-//
-// A path template containing a dot would split wrongly too, though that has not been seen in practice.
-//
-// All three are why the caller resolves by walking UP to the nearest ancestor that exists: an imprecise result is
-// always an ancestor of what was reported, never a sibling.
-func pointerFor(path string) string {
-	if path == "" {
-		return ""
-	}
-
-	var b strings.Builder
-	for seg := range strings.SplitSeq(path, ".") {
-		if seg == "" {
-			continue
-		}
-		b.WriteByte('/')
-		// RFC 6901 escaping, and it matters here: every path template contains a slash.
-		b.WriteString(strings.NewReplacer("~", "~0", "/", "~1").Replace(seg))
-	}
-
-	return b.String()
 }
 
 // Tally counts findings by severity, for the pane's summary line.

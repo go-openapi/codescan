@@ -190,12 +190,37 @@ func TestValidation_NothingToValidate(t *testing.T) {
 	assert.Contains(t, m.notice, "nothing to validate")
 }
 
-// TestValidation_UnlocatableFindingHoldsPosition pins the honest miss, matching how the other followers treat theirs.
-func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
+// TestValidation_RootPointerGoesToTheTop covers a finding about something the document does not have at all.
+//
+// The validator reports those at the whole document, which RFC 6901 spells as the EMPTY pointer - so an empty pointer
+// is a location, not the absence of one. It used to be read as "nowhere" and left the pane where it was, which for the
+// commonest finding of all ("info in body is required") meant refusing to navigate to the one place it could.
+func TestValidation_RootPointerGoesToTheTop(t *testing.T) {
 	m := validationModel(t)
 	m.validation = ValidationState{
 		Ran:      true,
-		Findings: []validation.Finding{{Severity: grammar.SeverityError, Message: "something global"}},
+		Findings: []validation.Finding{{Severity: grammar.SeverityError, Message: "info in body is required"}},
+	}
+	m.diagTab = tabValidation
+	m.spec.SetCursor(12) // somewhere down the document, so going to the top is observable
+
+	target, ok := m.validationTarget()
+
+	require.True(t, ok, "the whole document is somewhere to go")
+	assert.Equal(t, validation.RootLabel, target)
+	assert.Equal(t, 0, m.spec.CursorLine(), "the top of the pane is the document")
+}
+
+// TestValidation_UnresolvablePointerHoldsPosition pins the honest miss, matching how the other followers treat theirs.
+//
+// A pointer whose every ancestor is missing too has nothing to walk up to.
+func TestValidation_UnresolvablePointerHoldsPosition(t *testing.T) {
+	m := validationModel(t)
+	m.validation = ValidationState{
+		Ran: true,
+		Findings: []validation.Finding{
+			{Severity: grammar.SeverityError, Pointer: "/nowhere/deep", Message: "about a node this view does not have"},
+		},
 	}
 	m.diagTab = tabValidation
 	before := m.spec.CursorLine()
@@ -203,24 +228,85 @@ func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
 	target, ok := m.validationTarget()
 
 	assert.False(t, ok)
-	assert.Contains(t, target, "names no location")
+	assert.Contains(t, target, "not rendered")
 	assert.Equal(t, before, m.spec.CursorLine(), "the spec follower stays put rather than guessing")
+}
+
+// TestValidation_RequiredEntryLocatesExactly covers a finding whose subject is an entry of a `required` array.
+//
+// It lands on the entry rather than on the definition holding it, which is the text a reader has to go and amend.
+//
+// One fault per spec, deliberately. The validator walks the definitions MAP and breaks out on the first error, so a
+// document with two such faults reports whichever Go's map order reached first - and the second only sometimes. One
+// fault each keeps this test about locations instead of about iteration order.
+//
+// The warning case is only visible at all because warnings are now read off the result that carries them.
+func TestValidation_RequiredEntryLocatesExactly(t *testing.T) {
+	// requiredSpec builds a document whose Pet definition is reachable from a path, since unreferenced definitions are
+	// not checked, with `props` as its properties and one required entry naming `required`.
+	requiredSpec := func(required, props string) string {
+		return `{
+  "swagger": "2.0",
+  "info": {"title": "t", "version": "1"},
+  "paths": {
+    "/pets": {
+      "get": {
+        "operationId": "getPets",
+        "responses": {"200": {"description": "ok", "schema": {"$ref": "#/definitions/Pet"}}}
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {"type": "object", "required": ["` + required + `"], "properties": {` + props + `}}
+  }
+}`
+	}
+
+	for _, tc := range []struct {
+		name     string
+		spec     string
+		severity grammar.Severity
+	}{
+		{
+			name:     "a required property that is never declared",
+			spec:     requiredSpec("notDeclared", `"name": {"type": "string"}`),
+			severity: grammar.SeverityError,
+		},
+		{
+			name:     "a property both required and readOnly",
+			spec:     requiredSpec("readOnlyToo", `"readOnlyToo": {"type": "string", "readOnly": true}`),
+			severity: grammar.SeverityWarning,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			const want = "/definitions/Pet/required/0"
+
+			m := testModel(t, sized(120, 40), diagSize(120, 10), withSpecJSON(tc.spec))
+			findings, err := validation.Run([]byte(tc.spec))
+			require.NoError(t, err)
+
+			i := indexOfPointer(t, findings, want)
+			assert.Equal(t, tc.severity, findings[i].Severity)
+
+			m.validation = ValidationState{Ran: true, Findings: findings, Cursor: i}
+			landed, ok := m.validationTarget()
+			require.True(t, ok)
+			assert.Equal(t, want, landed, "a required entry is a real node, so it must land on itself")
+		})
+	}
 }
 
 // TestValidation_PointerResolutionAccuracy records how precisely findings actually locate.
 //
 // Measured against the validator rather than reasoned about.
 //
-// The conversion from the validator's dotted notation is exact in the ordinary case - a deep definition path lands on
-// the node itself. Two things cost precision, and neither is the notation:
+// Pointers come from the validator's own record of where it was, so every finding lands on the node it names: a deep
+// definition path, an indexed one, and an entry of a required array alike.
 //
-//   - the validator omits ARRAY INDICES, so a finding about one parameter reports ...parameters.type where the node is
-//     at .../parameters/0/type. It therefore lands on the array;
-//   - a "required but missing" finding names a node that by definition is not there, so its parent is the only honest
-//     landing.
+// A finding whose subject is a node's ABSENCE ("schema in body is required") is reported on the value that should hold
+// it, and at the top of the document that is the empty pointer - a location, not the lack of one.
 //
-// Both degrade to the enclosing node, which is why the walk-up exists. This test exists so a change in either direction
-// is noticed.
+// This test exists so a change in either direction is noticed.
 func TestValidation_PointerResolutionAccuracy(t *testing.T) {
 	const spec = `{
   "swagger": "2.0",
@@ -264,22 +350,42 @@ func TestValidation_PointerResolutionAccuracy(t *testing.T) {
 			"an inexact landing must be an ANCESTOR of what was reported, never a sibling: %q vs %q", f.Pointer, landed)
 	}
 
-	// The headline claim: the notation is usable, not merely lossy.
-	assert.Positive(t, exact, "no finding located exactly; the conversion would be useless")
+	// The headline claim, and it is now the strong one: every finding lands on the node it names.
+	assert.Positive(t, exact, "no finding located exactly; navigation would be useless")
+	assert.Zero(t, viaAncestor,
+		"a finding landed on an ancestor: validate >= 0.26.3 addresses a node the document holds, so this reads as an "+
+			"upstream change rather than a fault here")
+	assert.Zero(t, unlocated, "every finding carries a location, the whole document included")
 	t.Logf("exact=%d via-ancestor=%d unlocated=%d", exact, viaAncestor, unlocated)
 
-	// The deep definition path is the one that must be exact - nothing about it is array-shaped or absent.
-	m.validation = ValidationState{Ran: true, Findings: findings}
-	for i, f := range findings {
-		if f.Pointer != "/definitions/User/properties/email/type" {
-			continue
-		}
-		m.validation.Cursor = i
+	// Two shapes must be exact. The deep definition path, which nothing about is array-shaped or absent - and an
+	// INDEXED one, which is the shape the old dotted notation could not express at all: it reported
+	// paths./pets.get.parameters.type for a node living at .../parameters/0/type, so every finding about a parameter
+	// landed on the list.
+	for _, want := range []string{
+		"/paths/~1pets/get/parameters/0/type",     // indexed
+		"/definitions/User/properties/email/type", // deep and plain
+	} {
+		// require, not a bare loop: a shape that stops being reported would otherwise make this pass by never running.
+		i := indexOfPointer(t, findings, want)
+		m.validation = ValidationState{Ran: true, Findings: findings, Cursor: i}
+
 		landed, ok := m.validationTarget()
 		require.True(t, ok)
-		assert.Equal(t, f.Pointer, landed, "a plain object path must land on the node itself")
-
-		return
+		assert.Equal(t, want, landed, "this shape must land on the node itself, not on an ancestor")
 	}
-	t.Fatal("the fixture produced no definition-path finding; the assertion above checked nothing")
+}
+
+// indexOfPointer finds the finding carrying ptr, failing the test when nothing does.
+func indexOfPointer(t *testing.T, findings []validation.Finding, ptr string) int {
+	t.Helper()
+
+	for i, f := range findings {
+		if f.Pointer == ptr {
+			return i
+		}
+	}
+	require.FailNow(t, "no finding reported "+ptr+"; the test would otherwise assert nothing")
+
+	return -1
 }
