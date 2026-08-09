@@ -16,6 +16,17 @@ package operations
 
 // ServeAPI serves the API for this record store
 func ServeAPI(host, basePath string, schemes []string) (err error) {
+	// The operation below is deliberately left invalid — do not copy it.
+	//
+	// Its 200 response nests a `schema:` key underneath `items:`. Swagger 2.0 has no such
+	// key there: the items schema is written inline. The mistake came in with the fixture
+	// and is kept because of what happens to it downstream — unknown keys are collected
+	// into spec.Schema.ExtraProps and marshalled back out untouched, so the wrong key
+	// travels intact into the generated document rather than being dropped or refused.
+	//
+	// It is therefore the specimen for an authoring typo that only a spec validator run
+	// over the output will catch.
+
 	// swagger:operation GET /pets pets getPet
 	//
 	// List all pets
