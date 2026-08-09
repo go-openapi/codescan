@@ -154,16 +154,25 @@ func (m *Model) driveValidationToSpec() string {
 // It reports where it landed, or why it could not.
 //
 // Resolution walks UP the pointer to the nearest ancestor that is actually rendered, the same fallback the rescan
-// cursor restore uses. That is what makes the validator's ambiguous dotted paths usable: a mis-split path costs
-// precision, landing on the enclosing node, instead of failing outright.
+// cursor restore uses. What still needs it is a finding located inside a response or parameter written as a $ref: the
+// pointer addresses the shared definition's contents through the site that refers to it, and the document as authored
+// has nothing below that site. Landing on the $ref is then the honest answer.
 func (m *Model) validationTarget() (string, bool) {
 	if len(m.validation.Findings) == 0 {
 		return "(no findings)", false
 	}
+	if m.specIndex == nil {
+		return "(no spec to navigate)", false
+	}
 
+	// The empty pointer addresses the whole document - that is where a finding about something the document lacks
+	// entirely is reported. The index anchors nodes rather than the document, so the root is answered here: the top of
+	// the pane IS the document.
 	f := m.validation.Findings[m.validation.Cursor]
-	if f.Pointer == "" || m.specIndex == nil {
-		return "(this finding names no location in the spec)", false
+	if f.Pointer == "" {
+		m.spec.JumpTo(0)
+
+		return validation.RootLabel, true
 	}
 
 	for ptr := f.Pointer; ptr != ""; {

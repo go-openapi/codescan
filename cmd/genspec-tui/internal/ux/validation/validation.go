@@ -13,6 +13,13 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
+// RootLabel names what the empty pointer addresses.
+//
+// An empty pointer is a location, not the absence of one: RFC 6901 spells the whole document that way, and a finding
+// about something the document does not have at all - no info block, no paths - is reported there. It needs a printable
+// stand-in, since "" would render as nothing at all.
+const RootLabel = "(the whole document)"
+
 // Finding is one validation result.
 //
 // Severity reuses the scanner's own enum rather than declaring a parallel one: the two kinds of finding are shown by
@@ -24,8 +31,10 @@ type Finding struct {
 	// Pointer is where the validator says the offending value is, as an RFC 6901 JSON pointer.
 	//
 	// Taken from the result rather than recovered from the message: the validator records the location as it walks, so
-	// it is the authority on it, and a sentence is a poor place to keep a machine-readable path. Empty when the
-	// validator did not know where the finding happened - which is a real case, not a parse failure.
+	// it is the authority on it, and a sentence is a poor place to keep a machine-readable path.
+	//
+	// EMPTY means the whole document, which is what RFC 6901 spells that way - not "nowhere". A finding about
+	// something the document lacks entirely is reported there, so an empty pointer is navigable: see RootLabel.
 	Pointer string
 
 	Message string

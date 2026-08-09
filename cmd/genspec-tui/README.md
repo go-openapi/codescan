@@ -270,22 +270,21 @@ complaints about a spec that no longer exists invites navigating to nodes that
 may have moved or gone. Press `v` again.
 
 Each finding carries the JSON pointer the validator recorded as it walked, taken
-from the result rather than read back out of the message. So navigation is exact
-for an ordinary path, and for an indexed one:
+from the result rather than read back out of the message. Navigation is therefore
+exact for an ordinary path and for an indexed one alike:
 `/paths/~1pets/get/parameters/0/type` lands on that parameter rather than on the
-list. Two cases land on the **enclosing** node instead:
+list.
 
-- **A finding whose subject is a node's absence.** `…/responses/200/description
-  in body is required` can only be reported at the node that is not there, so the
-  response is the only place to go. This is narrower than "anything about
-  required": a `required` array naming a property it never declares is located
-  exactly, at the offending entry (`/definitions/Pet/required/0`), because that
-  entry is a real node and is the text to amend.
-- **A finding reached through a `$ref`.** The pointer describes the path the
-  validator travelled, which need not exist in the document as authored — a
-  finding about a default declared on `#/definitions/Book` can be reported under
-  the response that `$ref`s it. The pane renders the unexpanded spec, so you land
-  on the `$ref`.
+A finding about something the document does **not** have — no `info` block, no
+`paths` — is reported against the whole document, which RFC 6901 spells as the
+empty pointer. That is a location, not the absence of one, so `Enter` goes to the
+top of the spec. Such a row is labelled `(the whole document)`.
+
+One case lands on an enclosing node. A finding inside a response or parameter
+written as a `$ref` is addressed through the site that refers to it, so the
+document as authored has nothing below that site and you land on the `$ref`
+itself. The same finding is usually reported a second time against the shared
+definition, and that one resolves exactly.
 
 Resolution walks up to the nearest node actually rendered, so an imprecise
 landing is always an *ancestor* of what was reported — never a sibling, and

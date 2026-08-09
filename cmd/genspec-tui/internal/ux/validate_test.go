@@ -190,12 +190,37 @@ func TestValidation_NothingToValidate(t *testing.T) {
 	assert.Contains(t, m.notice, "nothing to validate")
 }
 
-// TestValidation_UnlocatableFindingHoldsPosition pins the honest miss, matching how the other followers treat theirs.
-func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
+// TestValidation_RootPointerGoesToTheTop covers a finding about something the document does not have at all.
+//
+// The validator reports those at the whole document, which RFC 6901 spells as the EMPTY pointer - so an empty pointer
+// is a location, not the absence of one. It used to be read as "nowhere" and left the pane where it was, which for the
+// commonest finding of all ("info in body is required") meant refusing to navigate to the one place it could.
+func TestValidation_RootPointerGoesToTheTop(t *testing.T) {
 	m := validationModel(t)
 	m.validation = ValidationState{
 		Ran:      true,
-		Findings: []validation.Finding{{Severity: grammar.SeverityError, Message: "something global"}},
+		Findings: []validation.Finding{{Severity: grammar.SeverityError, Message: "info in body is required"}},
+	}
+	m.diagTab = tabValidation
+	m.spec.SetCursor(12) // somewhere down the document, so going to the top is observable
+
+	target, ok := m.validationTarget()
+
+	require.True(t, ok, "the whole document is somewhere to go")
+	assert.Equal(t, validation.RootLabel, target)
+	assert.Equal(t, 0, m.spec.CursorLine(), "the top of the pane is the document")
+}
+
+// TestValidation_UnresolvablePointerHoldsPosition pins the honest miss, matching how the other followers treat theirs.
+//
+// A pointer whose every ancestor is missing too has nothing to walk up to.
+func TestValidation_UnresolvablePointerHoldsPosition(t *testing.T) {
+	m := validationModel(t)
+	m.validation = ValidationState{
+		Ran: true,
+		Findings: []validation.Finding{
+			{Severity: grammar.SeverityError, Pointer: "/nowhere/deep", Message: "about a node this view does not have"},
+		},
 	}
 	m.diagTab = tabValidation
 	before := m.spec.CursorLine()
@@ -203,7 +228,7 @@ func TestValidation_UnlocatableFindingHoldsPosition(t *testing.T) {
 	target, ok := m.validationTarget()
 
 	assert.False(t, ok)
-	assert.Contains(t, target, "names no location")
+	assert.Contains(t, target, "not rendered")
 	assert.Equal(t, before, m.spec.CursorLine(), "the spec follower stays put rather than guessing")
 }
 

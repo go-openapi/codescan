@@ -185,16 +185,16 @@ moved or gone. Press `v` again.
 
 {{% notice style="info" title="Where a finding lands" %}}
 A finding carries the JSON pointer the validator recorded as it walked, so
-navigation is exact for an ordinary path — indexed ones included:
-`/paths/~1pets/get/parameters/0/type` lands on that parameter, not on the list.
+navigation is exact — indexed paths included
+(`/paths/~1pets/get/parameters/0/type` lands on that parameter, not on the list),
+and so are findings about something the document *lacks*: those are reported
+against the whole document, which `Enter` takes you to the top of.
 
-Two cases land on the *enclosing* node instead. A finding whose subject is a
-node's **absence** (`schema in body is required`) can only be reported at the node
-that is not there, so its parent is the only place to go — narrower than "anything
-about required", since a `required` array naming an undeclared property is located
-exactly, at the entry. And a finding the validator reached **through a `$ref`** is
-reported against the path it travelled, which need not exist in the document as
-authored — the pane renders the unexpanded spec, so you land on the `$ref`.
+One case still lands on an enclosing node. A finding inside a response or
+parameter written as a `$ref` is addressed through the site that refers to it, and
+the document as authored has nothing below that site — so you land on the `$ref`.
+The same finding is usually reported a second time against the shared definition,
+which does resolve.
 
 Resolution walks up to the nearest node actually rendered, so an imprecise landing
 is always an *ancestor* of what was reported — never a sibling, and never
