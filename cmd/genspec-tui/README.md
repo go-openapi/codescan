@@ -271,24 +271,21 @@ may have moved or gone. Press `v` again.
 
 Each finding carries the JSON pointer the validator recorded as it walked, taken
 from the result rather than read back out of the message. Navigation is therefore
-exact for an ordinary path and for an indexed one alike:
-`/paths/~1pets/get/parameters/0/type` lands on that parameter rather than on the
-list.
+exact: an ordinary path, an indexed one
+(`/paths/~1pets/get/parameters/0/type` lands on that parameter rather than on the
+list), an entry of a `required` array, and a fault reached through a `$ref`, which
+is reported against the shared definition holding it.
 
-A finding about something the document does **not** have — no `info` block, no
-`paths` — is reported against the whole document, which RFC 6901 spells as the
-empty pointer. That is a location, not the absence of one, so `Enter` goes to the
-top of the spec. Such a row is labelled `(the whole document)`.
+A finding about something the document does **not** have is reported on the value
+that should hold it — a response missing its `description` lands on the response.
+At the top of the document that value is the document itself, which RFC 6901
+spells as the empty pointer, so `Enter` goes to the top of the spec and the row is
+labelled `(the whole document)`.
 
-One case lands on an enclosing node. A finding inside a response or parameter
-written as a `$ref` is addressed through the site that refers to it, so the
-document as authored has nothing below that site and you land on the `$ref`
-itself. The same finding is usually reported a second time against the shared
-definition, and that one resolves exactly.
-
-Resolution walks up to the nearest node actually rendered, so an imprecise
-landing is always an *ancestor* of what was reported — never a sibling, and
-never somewhere untrue.
+Resolution still walks up to the nearest node actually rendered if a pointer ever
+addresses something this view does not show, so an imprecise landing would be an
+*ancestor* of what was reported — never a sibling. Nothing is known to need it
+since validate v0.26.3.
 
 ## Cross-reference navigation
 

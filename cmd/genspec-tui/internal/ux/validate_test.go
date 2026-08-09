@@ -300,13 +300,11 @@ func TestValidation_RequiredEntryLocatesExactly(t *testing.T) {
 //
 // Measured against the validator rather than reasoned about.
 //
-// Pointers come from the validator's own record of where it was, so an ordinary path lands on the node itself - a deep
+// Pointers come from the validator's own record of where it was, so every finding lands on the node it names: a deep
 // definition path, an indexed one, and an entry of a required array alike.
 //
-// One shape still costs precision, and it is not recoverable: a finding whose subject is a node's ABSENCE
-// ("schema in body is required") can only be reported at the node that is not there. Its parent is the only honest
-// landing, and that is what the walk-up is for now. Note this is narrower than "anything about required" - a required
-// array naming an undeclared property is located exactly, at the entry, which is the text a reader has to go and amend.
+// A finding whose subject is a node's ABSENCE ("schema in body is required") is reported on the value that should hold
+// it, and at the top of the document that is the empty pointer - a location, not the lack of one.
 //
 // This test exists so a change in either direction is noticed.
 func TestValidation_PointerResolutionAccuracy(t *testing.T) {
@@ -352,8 +350,12 @@ func TestValidation_PointerResolutionAccuracy(t *testing.T) {
 			"an inexact landing must be an ANCESTOR of what was reported, never a sibling: %q vs %q", f.Pointer, landed)
 	}
 
-	// The headline claim: the notation is usable, not merely lossy.
-	assert.Positive(t, exact, "no finding located exactly; the conversion would be useless")
+	// The headline claim, and it is now the strong one: every finding lands on the node it names.
+	assert.Positive(t, exact, "no finding located exactly; navigation would be useless")
+	assert.Zero(t, viaAncestor,
+		"a finding landed on an ancestor: validate >= 0.26.3 addresses a node the document holds, so this reads as an "+
+			"upstream change rather than a fault here")
+	assert.Zero(t, unlocated, "every finding carries a location, the whole document included")
 	t.Logf("exact=%d via-ancestor=%d unlocated=%d", exact, viaAncestor, unlocated)
 
 	// Two shapes must be exact. The deep definition path, which nothing about is array-shaped or absent - and an

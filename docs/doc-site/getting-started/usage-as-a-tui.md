@@ -185,20 +185,15 @@ moved or gone. Press `v` again.
 
 {{% notice style="info" title="Where a finding lands" %}}
 A finding carries the JSON pointer the validator recorded as it walked, so
-navigation is exact — indexed paths included
-(`/paths/~1pets/get/parameters/0/type` lands on that parameter, not on the list),
-and so are findings about something the document *lacks*: those are reported
-against the whole document, which `Enter` takes you to the top of.
+navigation is exact. Indexed paths included —
+`/paths/~1pets/get/parameters/0/type` lands on that parameter, not on the list —
+and so are faults reached through a `$ref`, which are reported against the shared
+definition that actually holds them.
 
-One case still lands on an enclosing node. A finding inside a response or
-parameter written as a `$ref` is addressed through the site that refers to it, and
-the document as authored has nothing below that site — so you land on the `$ref`.
-The same finding is usually reported a second time against the shared definition,
-which does resolve.
-
-Resolution walks up to the nearest node actually rendered, so an imprecise landing
-is always an *ancestor* of what was reported — never a sibling, and never
-somewhere untrue.
+A finding about something the document *lacks* is reported on the value that
+should hold it: a response missing its `description` lands on the response, and a
+document missing its `info` block lands on the document, which `Enter` takes you
+to the top of.
 {{% /notice %}}
 
 ## Looking up an annotation

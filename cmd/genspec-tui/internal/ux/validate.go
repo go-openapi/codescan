@@ -154,9 +154,9 @@ func (m *Model) driveValidationToSpec() string {
 // It reports where it landed, or why it could not.
 //
 // Resolution walks UP the pointer to the nearest ancestor that is actually rendered, the same fallback the rescan
-// cursor restore uses. What still needs it is a finding located inside a response or parameter written as a $ref: the
-// pointer addresses the shared definition's contents through the site that refers to it, and the document as authored
-// has nothing below that site. Landing on the $ref is then the honest answer.
+// cursor restore uses. Nothing is known to need it: since validate v0.26.3 a pointer addresses a node the document
+// holds, and both the JSON and the YAML index anchor every finding of the fixture corpus. It stays because the
+// guarantee lives in another repository, and landing on an ancestor is a better answer than refusing to move.
 func (m *Model) validationTarget() (string, bool) {
 	if len(m.validation.Findings) == 0 {
 		return "(no findings)", false
