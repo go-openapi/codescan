@@ -70,27 +70,34 @@ type abConfig struct {
 	apply func(*codescan.Options)
 }
 
-// abConfigs returns the configurations to compare against the baseline.
+// abBaseline is the reference every configuration is compared against: every dependency read from
+// source, nothing taken from a compiler's word for it.
 //
-// The baseline is deliberately absent from this list: it is the default Options, and everything
-// here is measured against it.
+// Deliberately not the default Options. Since v0.36.4 the default takes dependency types from export
+// data, and a test asking "does this shortcut change the document?" has to hold the no-shortcut scan
+// as its reference — otherwise the shortcut is on both sides of the comparison and the question
+// answers itself.
+func abBaseline(o *codescan.Options) { o.SkipCompiledDependencies = true }
+
+// abConfigs returns the configurations to compare against [abBaseline].
 func abConfigs(tb testing.TB) []abConfig {
 	tb.Helper()
 
 	configs := []abConfig{
 		{
-			// Axis A. Already covered for the petstore by TestLoaderChoice_AgreeOnTheRealFilesystem;
-			// here it is the control, since it changes the loader without changing where dependency
-			// types come from — so it should never diverge.
+			// Axis A. Already covered for the petstore by TestLoaderChoice_AgreeOnTheRealFilesystem.
+			// It changes the loader, and under it dependency types come from source as they do in the
+			// baseline, so it is the control and should never diverge.
 			name:  "toolchain-free",
 			apply: func(o *codescan.Options) { o.ToolchainFreeLoader = true },
 		},
 		{
-			// Axis B. go/packages takes dependency types from `go list -export` wholesale — a LoadMode
-			// is one value for the whole load — and the annotated ones are read back afterwards, which
-			// is how it reaches the per-dependency outcome the toolchain-free route decides during it.
+			// Axis B, and since v0.36.4 the default. go/packages takes dependency types from `go list
+			// -export` wholesale — a LoadMode is one value for the whole load — and the annotated ones
+			// are read back afterwards, which is how it reaches the per-dependency outcome the
+			// toolchain-free route decides during it.
 			name:  "compiled-dependencies",
-			apply: func(o *codescan.Options) { o.CompiledDependencies = true },
+			apply: func(*codescan.Options) {},
 		},
 	}
 
@@ -285,7 +292,7 @@ func TestLoaderConfigs_AgreeOnTheFixtureCorpus(t *testing.T) {
 		t.Run(target, func(t *testing.T) {
 			t.Parallel()
 
-			baseline := abScan(t, target, nil)
+			baseline := abScan(t, target, abBaseline)
 
 			for _, config := range configs {
 				got := abScan(t, target, config.apply)

@@ -80,6 +80,11 @@ measurement under a label saying otherwise — an error invisible in the output.
 Measured 2026-08-08, go1.26.5, baseline **v0.36.3**, on one machine (Ryzen 7, 31 GB). v0.36.3 has
 exactly one way to load and scan, which is what makes it a baseline.
 
+**Rows are labelled by configuration, not by default, and they predate v0.36.4 flipping the default.**
+So `current` is the source-loading scan, which is now what `SkipCompiledDependencies` selects, and
+`current + CompiledDependencies` is what a plain run does today. The harness flag keeps meaning what
+it says for the same reason — the measurements stay comparable across the change.
+
 | corpus | shape | `.go` files | emitted |
 |---|---|---|---|
 | `dockerctl` | generated client for a container-engine API | ~1490 | 198 defs / 0 paths |
@@ -164,17 +169,23 @@ Cold, the toolchain-free route is 38–44% faster than the baseline and ~25% fas
 default, while holding 45% less memory. It is the only configuration whose cost is *predictable*,
 which for a tool that runs in CI is worth more than a warm best case.
 
-### 4. `CompiledDependencies` earns its opt-in status
+### 4. Compiled dependencies: the default, and when to turn it off
 
 Fastest warm by a wide margin (−45 to −63%), and **4.4× to 6.3× slower than the baseline cold**,
 materialising up to 229 MB of build cache to get there — `go list -export` must *compile* the
 closure, not merely type-check it. A first scan of a freshly generated tree is precisely its worst
 case, and CI is cold by definition.
 
-What it does not cost is meaning: it emits the same document as the default path on every corpus
-measured here and across the whole fixture corpus. Whatever the spec needs out of a dependency —
-its own annotations, or a declaration the scanned code names — is read, the second kind at the
-lookup that wants it. See `internal/scanner/README.md#compiled-dependencies`.
+What it does not cost is meaning: it emits the same document on every corpus measured here and
+across the whole fixture corpus. Whatever the spec needs out of a dependency — its own annotations,
+or a declaration the scanned code names — is read, the second kind at the lookup that wants it. That
+is what made it the default in v0.36.4. See `internal/scanner/README.md#compiled-dependencies`.
+
+Nor does it cost the ability to scan code that does not compile: needing `go list` to build the
+scanned packages would resurrect go-swagger#2874, so a load that fails that way is retried from
+source. The retry costs a second load, and only on a tree that was not going to build.
+
+`SkipCompiledDependencies` opts out, and the cold column is the reason to reach for it.
 
 ## Caveats
 

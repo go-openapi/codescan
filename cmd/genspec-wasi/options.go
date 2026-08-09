@@ -101,11 +101,11 @@ var boolOptions = []boolOption{ //nolint:gochecknoglobals // the flag table, rea
 		func(o *codescan.Options) *bool { return &o.StubStdlib },
 	},
 	{
-		"compiled-dependencies", false,
-		"take dependency types from the compiler's export data rather than their source (-loader=go):\n" +
-			"much faster on a warm cache, at the price of a dependency's comments -- so an annotation\n" +
-			"written in one, such as strfmt's swagger:strfmt marks, is not read",
-		func(o *codescan.Options) *bool { return &o.CompiledDependencies },
+		"skip-compiled-dependencies", false,
+		"read every dependency from source rather than taking its types from the compiler's export\n" +
+			"data: the spec is the same either way, but this is much slower on a warm cache and much\n" +
+			"faster on a cold one. Native builds only -- it needs -loader=go, which WebAssembly cannot run",
+		func(o *codescan.Options) *bool { return &o.SkipCompiledDependencies },
 	},
 }
 

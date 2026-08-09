@@ -13,7 +13,8 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// CompiledDependencies buys a large amount of time by taking dependency types from the compiler.
+// Taking dependency types from the compiler buys a large amount of time, and since v0.36.4 it is what an
+// ordinary scan does.
 //
 // It used to cost dependency source along with it, and this test pinned the loss. It no longer does:
 // a dependency whose source carries annotations is parsed for them after the load, so the case that
@@ -27,10 +28,10 @@ func TestCompiledDependencies_KeepsDependencyAnnotations(t *testing.T) {
 
 	scan := func(compiled bool) (format string, sourceless []string) {
 		doc, err := codescan.Run(&codescan.Options{
-			Packages:             []string{"./petstore/..."},
-			WorkDir:              scantest.FixturesDir() + "/goparsing",
-			ScanModels:           true,
-			CompiledDependencies: compiled,
+			Packages:                 []string{"./petstore/..."},
+			WorkDir:                  scantest.FixturesDir() + "/goparsing",
+			ScanModels:               true,
+			SkipCompiledDependencies: !compiled,
 			OnDiagnostic: func(d codescan.Diagnostic) {
 				if strings.Contains(d.Message, "could not be read") {
 					sourceless = append(sourceless, d.Message)

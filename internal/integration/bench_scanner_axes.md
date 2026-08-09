@@ -197,12 +197,16 @@ Each rung with its own empty `GOCACHE`:
 
 | rung | dockerctl warm | dockerctl cold | go-swagger warm | go-swagger cold |
 |---|---|---|---|---|
-| default (`Deps+Types+Syntax+TypesInfo`) | 0.93 s | 1.46 s | 0.81 s | 1.54 s |
-| `CompiledDependencies` | **0.40 s** | **9.08 s** | **0.22 s** | **8.40 s** |
+| source deps (`Deps+Types+Syntax+TypesInfo`) | 0.93 s | 1.46 s | 0.81 s | 1.54 s |
+| compiled deps | **0.40 s** | **9.08 s** | **0.22 s** | **8.40 s** |
 
-Warm, `CompiledDependencies` is 2.3× *faster* than the default. Cold, it is 6× *slower*. The option
-is not "faster"; it is "faster once the compiler has already done the work", and quoting one figure
-without the other is how a benchmark misleads.
+Warm, compiled dependencies are 2.3× *faster*. Cold, 6× *slower*. This is not "faster"; it is
+"faster once the compiler has already done the work", and quoting one figure without the other is
+how a benchmark misleads.
+
+Rows are named by configuration rather than by default: the second is what a plain scan does since
+v0.36.4, and the first is what `SkipCompiledDependencies` selects. The cold column is the whole of the
+reason that opt-out exists.
 
 The shape is identical in both states — 23 packages export-served either way — so nothing about the
 result changes, only when the compilation is paid for.
@@ -283,8 +287,9 @@ configurations that change *how dependency types arrive*, over the fixture corpu
 `TestLoaderChoice_AgreeOnTheRealFilesystem`, which had the right instinct (whole documents, not spot
 checks) on one fixture and one axis.
 
-Configurations compared against the plain scan: `ToolchainFreeLoader` (the control — it changes the
-loader, not where types come from), `CompiledDependencies`, and `ExportData` when a blob is given.
+Configurations compared against the source scan: `ToolchainFreeLoader` (the control — it changes the
+loader, not where types come from), `compiled-dependencies` (the default), and `ExportData` when a
+blob is given.
 
 Two tiers:
 
@@ -305,29 +310,38 @@ a **difference**. When the stream closes one of those gaps the assertion fails �
 an expectation that quietly survives its own fix is not an expectation. Regenerate the table with
 `CODESCAN_AB_REPORT=1`.
 
-### What it currently finds
+### What it finds
 
-Over all 306 fixture bundles, **12** (configuration, target) pairs diverge. `ToolchainFreeLoader`
-diverges nowhere, which is what makes it a usable control. The other twelve fall into three
-families, and the split is the finding:
+Nothing. Over all 306 fixture bundles, no (configuration, target) pair diverges, and `abExpected` is
+an empty map whose documentation says staying empty is the contract. How dependency types arrive is
+a question about cost, not about meaning — which is what let compiled dependencies become the
+default in v0.36.4.
 
-| family | what happens | affected |
+The reference is deliberately the **source** scan (`abBaseline` sets `SkipCompiledDependencies`)
+rather than the default one. Now that the default takes the shortcut, holding it as the reference
+would put the shortcut on both sides of the comparison.
+
+### What it found before, and why that mattered
+
+Worth keeping, because it is the measurement that decided the design. Twelve pairs diverged, in
+three families:
+
+| family | what happened | affected |
 |---|---|---|
-| **the declaration contract** | the scan **fails**, it does not degrade — a builder asks for the declaration of a type whose package has types and no AST | 4 targets under `compiled-dependencies`, 3 of them also under `export-data` |
-| **a dependency's own annotations are lost** | `format: date-time` / `email` / `uuid` vanish, because the marks live in strfmt's source | 3 targets, `compiled-dependencies` only |
-| **a dependency-declared model collapses** | the definition itself goes, not one keyword — `Booking` is declared in `scan-repo-boundary/makeplans` | 2 targets, `compiled-dependencies` only |
+| **the declaration contract** | the scan **failed**, it did not degrade — a builder asked for the declaration of a type whose package had types and no AST | 4 targets under `compiled-dependencies`, 3 of them also under `export-data` |
+| **a dependency's own annotations were lost** | `format: date-time` / `email` / `uuid` vanished, because the marks live in strfmt's source | 3 targets, `compiled-dependencies` only |
+| **a dependency-declared model collapsed** | the definition itself went, not one keyword — `Booking` is declared in `scan-repo-boundary/makeplans` | 2 targets, `compiled-dependencies` only |
 
-Two things worth carrying back to the plan:
+Two things came out of that:
 
-1. **`CompiledDependencies` does not merely lose formats — on four of these targets the scan
-   errors.** `unable to find package and source file for: time.Duration`,
-   `can't find source file for type: interface{Write(p []byte) (n int, err error)}` (io.Writer),
-   the same for `reflect.Type`, and `unable to find package and source file for:
-   github.com/go-openapi/strfmt.DateTime`. That is a stronger statement than "quietly poorer", and
-   it means the declaration contract is a shipping-blocker for that option rather than a tidiness
-   item.
-2. **The per-dependency policy already fixes the annotation families.** `export-data` loses no
-   format and no definition, because a dependency whose source carries `swagger:` is read from
-   source. Its three remaining divergences are all the declaration contract, all on **stdlib**
-   types, where there is no annotated source to fall back to. That is precisely the split the plan
-   predicted.
+1. **It did not merely lose formats — on four targets the scan errored.** `unable to find package
+   and source file for: time.Duration`, `can't find source file for type: interface{Write(p []byte)
+   (n int, err error)}` (io.Writer), the same for `reflect.Type`, and `unable to find package and
+   source file for: github.com/go-openapi/strfmt.DateTime`. A stronger statement than "quietly
+   poorer", and it made the declaration contract a shipping-blocker rather than a tidiness item.
+   It is what the on-demand read-back and the name-and-line field bridge were built to close; see
+   [§compiled-dependencies](../scanner/README.md#compiled-dependencies).
+2. **The per-dependency policy already fixed the annotation families.** `export-data` lost no format
+   and no definition, because a dependency whose source carries `swagger:` is read from source. Its
+   three remaining divergences were all the declaration contract, all on **stdlib** types, where
+   there is no annotated source to fall back to.

@@ -30,7 +30,13 @@ func (e *extraOptions) register() {
 		"load and type-check without invoking the Go toolchain")
 }
 
+// apply sets the configuration this run measures.
+//
+// -compiled-deps keeps its meaning across both builds — "take dependency types from compiled export
+// data" — even though the field behind it inverted when that became the default. So the flag selects a
+// configuration rather than reporting the library's default, and a run without it measures the opt-out
+// rather than what a caller gets out of the box.
 func (e *extraOptions) apply(opts *codescan.Options) {
-	opts.CompiledDependencies = e.compiledDependencies
+	opts.SkipCompiledDependencies = !e.compiledDependencies
 	opts.ToolchainFreeLoader = e.toolchainFreeLoader
 }

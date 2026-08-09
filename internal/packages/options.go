@@ -163,7 +163,10 @@ func WithStubbedStdlib() Option {
 // and [Loader.ReadBackSource] for a declaration the spec turns out to want. What this option skips is the parsing
 // and type-checking of everything neither of those reaches.
 //
-// The caller above this one announces the trade; see Options.CompiledDependencies.
+// It stays an option here while being the default above, because the loader is the mechanism and the policy is the
+// scanner's. What the scanner adds on top is a retry: `go list -export` BUILDS what it is asked about, so a scanned
+// package that does not compile fails the load outright, and it is reloaded without this option rather than allowed
+// to abort. See Options.SkipCompiledDependencies.
 func WithCompiledDependencies() Option {
 	return func(o *options) { o.compiledDeps = true }
 }

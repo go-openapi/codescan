@@ -128,9 +128,6 @@ func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Pack
 	if opts.StubStdlib {
 		loaderOpts = append(loaderOpts, ownpackages.WithStubbedStdlib())
 	}
-	if opts.CompiledDependencies {
-		loaderOpts = append(loaderOpts, ownpackages.WithCompiledDependencies())
-	}
 	if opts.ExportData != nil {
 		loaderOpts = append(loaderOpts, ownpackages.WithExportData(opts.ExportData))
 	}
@@ -140,16 +137,77 @@ func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Pack
 		cfg.BuildFlags = []string{"-tags", opts.BuildTags}
 	}
 
-	loader := ownpackages.NewLoader(loaderOpts...)
-	// Announced from the resolved strategy, not from the request. Only one strategy can take dependency
-	// types from the compiler, and Options.FS forces the other one whatever was asked for.
-	reportCompiledDependencies(opts, loader.Strategy())
+	if opts.SkipCompiledDependencies {
+		return loadWith(cfg, opts, loaderOpts)
+	}
 
+	pkgs, loader, err := loadWith(cfg, opts, append(loaderOpts, ownpackages.WithCompiledDependencies()))
+	if err != nil || !anyListError(pkgs) {
+		return pkgs, loader, err
+	}
+
+	// Taking dependency types from export data means `go list -export`, and that BUILDS what it is asked about rather
+	// than merely type-checking it. So a scanned package that does not compile comes back as a package that could not
+	// be loaded, where an ordinary load reports a type error on a package whose definitions are still usable.
+	//
+	// That difference is not a detail: it is the whole of go-swagger#2874, where one non-building package sank a whole
+	// `./...` scan. Scanning a tree mid-edit is the ordinary case, not the exotic one.
+	//
+	// So the fast path is abandoned rather than allowed to change the answer. The retry costs a second load, and only
+	// on a tree that was not going to build anyway; nothing is paid for a healthy one.
+	reportCompiledFallback(opts, pkgs)
+
+	return loadWith(cfg, opts, loaderOpts)
+}
+
+// loadWith runs one load and hands back the loader that ran it.
+//
+// The loader outlives its Load: a dependency taken types-only may still be asked for its declarations, and only the
+// loader knows which filesystem to read them through. See ScanCtx.readBackOnDemand.
+func loadWith(cfg *packages.Config, opts *Options, loaderOpts []ownpackages.Option) (
+	[]*packages.Package, *ownpackages.Loader, error,
+) {
+	loader := ownpackages.NewLoader(loaderOpts...)
 	pkgs, err := loader.Load(cfg, opts.Packages...)
 
-	// The loader outlives its Load: a dependency taken types-only may still be asked for its declarations, and only
-	// the loader knows which filesystem to read them through. See ScanCtx.readBackOnDemand.
 	return pkgs, loader, err
+}
+
+// anyListError reports whether any loaded package could not be loaded at all, as opposed to having loaded with errors
+// in it.
+func anyListError(pkgs []*packages.Package) bool {
+	for _, pkg := range pkgs {
+		if hasListError(pkg.Errors) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// reportCompiledFallback says the compiled fast path was abandoned, and why.
+//
+// Worth a word rather than silence: the scan is about to cost roughly twice what it should, and the reason is in the
+// scanned tree rather than in codescan. A caller who sees this on every run wants SkipCompiledDependencies, which
+// skips the wasted first load.
+func reportCompiledFallback(opts *Options, pkgs []*packages.Package) {
+	if opts.OnDiagnostic == nil {
+		return
+	}
+
+	var culprit string
+	for _, pkg := range pkgs {
+		if hasListError(pkg.Errors) {
+			culprit = fmt.Sprintf("%s: %s", pkg.PkgPath, firstListError(pkg.Errors))
+
+			break
+		}
+	}
+
+	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
+		"reading every dependency from source instead: taking their types from compiled export data needs the "+
+			"scanned code to build, and it does not (%s). Set SkipCompiledDependencies to skip this first attempt",
+		culprit))
 }
 
 // loaderStrategy maps the caller's preference onto the loader's vocabulary.
@@ -164,43 +222,18 @@ func loaderStrategy(opts *Options) ownpackages.Strategy {
 	return ownpackages.StrategyGoPackages
 }
 
-// reportCompiledDependencies announces which dependencies are read and which are not.
+// Where compiled dependencies stopped being announced.
 //
-// This used to announce a loss: dependency source went unread wholesale, so a dependency's own
-// annotations were simply not there — strfmt being the case that mattered, since its `swagger:strfmt`
-// marks are what turn a strfmt.DateTime field into a date-time. That is no longer what happens. A
-// dependency whose source carries annotations is read back after the load, and one that is merely
-// asked for a declaration is read back at the lookup.
+// A Hint used to fire once per scan saying dependency types had come from export data, and a Warning
+// fired when the option was asked for under a loader that cannot honour it. Both made sense while this
+// was opt-in: the first described a deviation the caller had chosen, the second an intent the load
+// could not meet.
 //
-// So this says what the load did rather than what it cost. What it can still cost — source that is not
-// there to read at all — is announced where it lands, by the lookup that wanted a declaration and did
-// not find one; see reportSourcelessLookup.
+// Neither survives the option becoming the default. Announcing the default on every scan is noise, and
+// nobody asks for something they did not set, so there is no unmet intent left to report.
 //
-// It takes the RESOLVED strategy rather than reading the request off Options, because the two can
-// disagree: only the go/packages strategy can ask the compiler for dependency types, and a virtual
-// filesystem forces the other one whatever the caller asked for. Announcing from the request meant
-// telling a toolchain-free scan that its dependency types came from export data while it was reading
-// every one of them from source — a diagnostic contradicting the load it describes.
-func reportCompiledDependencies(opts *Options, strategy ownpackages.Strategy) {
-	if !opts.CompiledDependencies || opts.OnDiagnostic == nil {
-		return
-	}
-
-	// Asked for and not delivered. Worth more than silence: the caller chose this for the speed-up and
-	// did not get it, and nothing else in the output would say so.
-	if strategy != ownpackages.StrategyGoPackages {
-		opts.OnDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeCompiledDependencies,
-			"CompiledDependencies is ignored under the %s loader, which resolves imports itself and "+
-				"already decides per dependency whether to read its source; every dependency here is "+
-				"loaded as usual", strategy))
-
-		return
-	}
-
-	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
-		"dependency types come from compiled export data: a dependency is read only if its source carries "+
-			"swagger annotations, or if the spec later needs a declaration out of it"))
-}
+// What could still cost something is announced where it lands rather than up front: the lookup that
+// wanted a declaration and found no source to read it from. See reportSourcelessLookup.
 
 // exportOnlyCollector records "types without source" notices instead of announcing them.
 //

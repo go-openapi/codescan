@@ -173,6 +173,15 @@ malformed input, the petstore, aliased schemas, go123-specific forms, and cross-
     loaders. `GOWORK` matters most: inside a workspace a sibling module resolves
     to its working copy, and missing it synthesizes the sibling empty rather than
     failing. See `internal/scanner/README.md#loader`.
+  - `SkipCompiledDependencies` — opt out (default false) of taking dependency
+    types from the compiler's export data under the go/packages loader. Unset is
+    the default since v0.36.4 and costs no meaning: a dependency's annotations are
+    read back after the load, and a declaration the spec needs is fetched at the
+    lookup that wants it. Set it for cost alone — `go list -export` compiles the
+    closure, so a cold cache is an order of magnitude slower and writes ~229 MB.
+    Code that fails to build needs no opt-out: that load is retried from source,
+    which is what keeps go-swagger#2874 fixed. See
+    `internal/scanner/README.md#compiled-dependencies`.
   - Toolchain-free loading (experimental; see `internal/scanner/README.md#loader`):
     - `ToolchainFreeLoader` — scan through `internal/packages` instead of
       `golang.org/x/tools/go/packages`. Same job, same output; it just needs no

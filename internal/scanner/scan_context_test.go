@@ -537,6 +537,59 @@ func TestNewScanCtx_PartialLoad_WarnsAndContinues(t *testing.T) {
 	assert.Positive(t, warned, "a partial load must surface a Warning, not abort")
 }
 
+// TestNewScanCtx_NonBuildingCode_FallsBackToSource pins what keeps #2874 fixed now that dependency
+// types come from compiled export data by default.
+//
+// That default means `go list -export`, which BUILDS the packages it is asked about. A scanned
+// package that does not compile therefore comes back as one that could not be loaded at all — a
+// ListError, which aborts — where an ordinary load reports a type error on a package whose
+// definitions are still perfectly usable.
+//
+// So the load is retried from source, and the retry is what the previous test observes succeeding.
+// Here it is named: the fallback announces itself, and the scan reaches the same place it always did.
+func TestNewScanCtx_NonBuildingCode_FallsBackToSource(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module probe\n\ngo 1.21\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte("package probe\n\n"+
+		"// Gadget is a model.\n//\n// swagger:model\n"+
+		"type Gadget struct {\n\tName string `json:\"name\"`\n}\n\n"+
+		"var _ int = \"not an int\"\n"), 0o600))
+
+	scan := func(skip bool) []grammar.Diagnostic {
+		var diags []grammar.Diagnostic
+		sctx, err := NewScanCtx(&Options{
+			Packages:                 []string{"./..."},
+			WorkDir:                  dir,
+			ScanModels:               true,
+			SkipCompiledDependencies: skip,
+			OnDiagnostic:             func(d grammar.Diagnostic) { diags = append(diags, d) },
+		})
+		require.NoError(t, err)
+		require.NotNil(t, sctx)
+
+		return diags
+	}
+
+	fellBack := func(diags []grammar.Diagnostic) int {
+		var n int
+		for _, d := range diags {
+			if d.Code == grammar.CodeCompiledDependencies {
+				n++
+				assert.Equal(t, grammar.SeverityHint, d.Severity)
+				assert.Contains(t, d.Message, "needs the scanned code to build")
+			}
+		}
+
+		return n
+	}
+
+	assert.Equal(t, 1, fellBack(scan(false)),
+		"the compiled load could not build this tree, so it was abandoned and said so")
+
+	assert.Zero(t, fellBack(scan(true)),
+		"opting out skips the attempt entirely, so there is nothing to fall back from")
+}
+
 func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 	sctx := &ScanCtx{}
 

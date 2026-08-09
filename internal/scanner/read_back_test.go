@@ -18,18 +18,19 @@ const makeplans = "github.com/go-swagger/scan-repo-boundary/makeplans"
 
 // A dependency taken types-only is read back when a declaration is wanted from it, and only then.
 //
-// That "only then" is what makes the option worth choosing. Reading every dependency back up front would answer the
+// That "only then" is what makes the default affordable. Reading every dependency back up front would answer the
 // same lookups and give away most of the saving — measured on a generated server, a third of the wall clock and a
 // third of the peak RSS — because the closure a scan does not look at is where the saving lives. So the cost is one
 // parse per declaration wanted, and this pins the "one" from both sides.
+//
+// No option is set: taking dependency types from export data is what an ordinary scan does.
 func TestReadBackOnDemand_PaysPerDeclarationWanted(t *testing.T) {
 	t.Parallel()
 
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
-		Packages:             []string{"./goparsing/bookings/..."},
-		WorkDir:              scantest.FixturesDir(),
-		ScanModels:           true,
-		CompiledDependencies: true,
+		Packages:   []string{"./goparsing/bookings/..."},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
 	})
 	require.NoError(t, err)
 
@@ -59,10 +60,9 @@ func TestReadBackOnDemand_MissingDeclaration(t *testing.T) {
 	t.Parallel()
 
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
-		Packages:             []string{"./goparsing/bookings/..."},
-		WorkDir:              scantest.FixturesDir(),
-		ScanModels:           true,
-		CompiledDependencies: true,
+		Packages:   []string{"./goparsing/bookings/..."},
+		WorkDir:    scantest.FixturesDir(),
+		ScanModels: true,
 	})
 	require.NoError(t, err)
 
