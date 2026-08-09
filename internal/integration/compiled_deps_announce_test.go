@@ -15,16 +15,18 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// Only one strategy can take dependency types from the compiler, and the caller does not always get
-// the strategy they asked for — a virtual filesystem forces the toolchain-free one whatever else was
-// requested. So what the scan announces has to come from the strategy that ran, not from the field
-// that was set.
+// Taking dependency types from compiled export data is what an ordinary scan now does, so it is not
+// something to announce.
 //
-// This used to announce the request. A scan combining CompiledDependencies with the toolchain-free
-// loader was told its dependency types came from export data while it read every dependency from
-// source: a diagnostic contradicting the load it described, on the one channel this scanner asks
-// callers to trust.
-func TestCompiledDependencies_AnnouncedFromWhatRan(t *testing.T) {
+// While it was opt-in, a scan said so once: a Hint describing the deviation the caller had chosen, and
+// a Warning when the option was asked for under a loader that cannot honour it. Both were reasonable
+// then and neither is now — the first fires on every scan, and nobody asks for a default.
+//
+// So scan.compiled-dependencies is reserved for the one thing that can still cost the output: a lookup
+// that wanted a declaration and found no source to read it from. That is reportSourcelessLookup, and
+// TestExportOnly_ReportedWhereItCosts covers it. Reaching the code any other way is noise, which is
+// what this pins.
+func TestCompiledDependencies_DefaultSaysNothing(t *testing.T) {
 	t.Parallel()
 
 	collect := func(t *testing.T, apply func(*codescan.Options)) []codescan.Diagnostic {
@@ -48,56 +50,41 @@ func TestCompiledDependencies_AnnouncedFromWhatRan(t *testing.T) {
 		return seen
 	}
 
-	t.Run("honoured: a hint describing what the load did", func(t *testing.T) {
+	t.Run("the default scan is silent about it", func(t *testing.T) {
 		t.Parallel()
 
-		seen := collect(t, func(o *codescan.Options) { o.CompiledDependencies = true })
-
-		require.NotEmpty(t, seen)
-		assert.Equal(t, codescan.SeverityHint, seen[0].Severity)
-		assert.Contains(t, seen[0].Message, "come from compiled export data")
+		assert.Empty(t, collect(t, func(*codescan.Options) {}),
+			"every dependency's source is reachable here, so nothing was lost and there is nothing to say")
 	})
 
-	t.Run("ignored: a warning saying so", func(t *testing.T) {
+	t.Run("opting out is silent too", func(t *testing.T) {
 		t.Parallel()
 
-		seen := collect(t, func(o *codescan.Options) {
-			o.ToolchainFreeLoader = true
-			o.CompiledDependencies = true
-		})
-
-		require.Len(t, seen, 1, "the option had no effect, and that is the whole of what there is to say")
-		assert.Equal(t, codescan.SeverityWarning, seen[0].Severity,
-			"a request that did nothing is more than informational")
-		assert.Contains(t, seen[0].Message, "is ignored under")
-		assert.NotContains(t, seen[0].Message, "come from compiled export data",
-			"the load read every dependency from source; saying otherwise is what this test exists for")
+		assert.Empty(t, collect(t, func(o *codescan.Options) { o.SkipCompiledDependencies = true }))
 	})
 
-	// The override that needs no loader mentioned at all.
-	//
+	// A loader that cannot honour the default is not a loader that has anything to report. It resolves
+	// imports itself and already decides per dependency whether to read its source, so it arrives at the
+	// same place by its own route.
+	t.Run("the toolchain-free loader is silent too", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Empty(t, collect(t, func(o *codescan.Options) { o.ToolchainFreeLoader = true }))
+	})
+
 	// The tree here is deliberately not a working one and must not be read as a model for using FS: an
 	// io/fs is the WHOLE world a scan may read, and a module rooted on its own reaches neither GOROOT
-	// nor the module cache — absolute paths are resolved inside the FS, so every dependency including
-	// the standard library synthesizes. That is beside the point being pinned, which is that FS decides
-	// the strategy and the announcement follows the strategy.
-	t.Run("ignored because a virtual filesystem forced the loader", func(t *testing.T) {
+	// nor the module cache, so every dependency including the standard library synthesizes.
+	//
+	// It earns its place because FS forces the toolchain-free loader without the caller naming one, and
+	// a scan whose dependencies all synthesized is exactly where a stale announcement would resurface.
+	t.Run("a virtual filesystem forces the other loader, still silent", func(t *testing.T) {
 		t.Parallel()
 
-		seen := collect(t, func(o *codescan.Options) {
+		assert.Empty(t, collect(t, func(o *codescan.Options) {
 			o.FS = os.DirFS(scantest.FixturesDir())
 			o.WorkDir = "."
 			o.Packages = []string{"./goparsing/petstore/..."}
-			o.CompiledDependencies = true
-		})
-
-		require.Len(t, seen, 1, "FS overrides the strategy without the caller mentioning a loader at all")
-		assert.Equal(t, codescan.SeverityWarning, seen[0].Severity)
-	})
-
-	t.Run("not asked for, not mentioned", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Empty(t, collect(t, func(*codescan.Options) {}))
+		}))
 	})
 }

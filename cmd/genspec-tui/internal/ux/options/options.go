@@ -149,8 +149,8 @@ func New(cfg *codescan.Options) Overlay {
 				&cfg.StubStdlib, &dep{&cfg.ToolchainFreeLoader, true, "ToolchainFreeLoader"},
 			},
 			{
-				groupLoading, "CompiledDependencies", "dep types from the build cache",
-				&cfg.CompiledDependencies, &dep{&cfg.ToolchainFreeLoader, false, "ToolchainFreeLoader"},
+				groupLoading, "SkipCompiledDependencies", "read dep source, not the build cache",
+				&cfg.SkipCompiledDependencies, &dep{&cfg.ToolchainFreeLoader, false, "ToolchainFreeLoader"},
 			},
 		},
 	}

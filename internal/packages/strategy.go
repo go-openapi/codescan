@@ -16,7 +16,7 @@ import (
 type Strategy int
 
 const (
-	// StrategyGoPackages delegates to golang.org/x/tools/go/packages, which resolves the graph by running `go list`.
+	// StrategyGoPackages delegates to [golang.org/x/tools/go/packages], which resolves the graph by running `go list`.
 	//
 	// Authoritative — it is the go command's own answer — at the price of needing an installed toolchain and the
 	// ability to start a process.

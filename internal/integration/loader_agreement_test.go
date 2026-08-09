@@ -70,27 +70,34 @@ type abConfig struct {
 	apply func(*codescan.Options)
 }
 
-// abConfigs returns the configurations to compare against the baseline.
+// abBaseline is the reference every configuration is compared against: every dependency read from
+// source, nothing taken from a compiler's word for it.
 //
-// The baseline is deliberately absent from this list: it is the default Options, and everything
-// here is measured against it.
+// Deliberately not the default Options. Since v0.36.4 the default takes dependency types from export
+// data, and a test asking "does this shortcut change the document?" has to hold the no-shortcut scan
+// as its reference — otherwise the shortcut is on both sides of the comparison and the question
+// answers itself.
+func abBaseline(o *codescan.Options) { o.SkipCompiledDependencies = true }
+
+// abConfigs returns the configurations to compare against [abBaseline].
 func abConfigs(tb testing.TB) []abConfig {
 	tb.Helper()
 
 	configs := []abConfig{
 		{
-			// Axis A. Already covered for the petstore by TestLoaderChoice_AgreeOnTheRealFilesystem;
-			// here it is the control, since it changes the loader without changing where dependency
-			// types come from — so it should never diverge.
+			// Axis A. Already covered for the petstore by TestLoaderChoice_AgreeOnTheRealFilesystem.
+			// It changes the loader, and under it dependency types come from source as they do in the
+			// baseline, so it is the control and should never diverge.
 			name:  "toolchain-free",
 			apply: func(o *codescan.Options) { o.ToolchainFreeLoader = true },
 		},
 		{
-			// Axis B. go/packages takes dependency types from `go list -export` wholesale — a LoadMode
-			// is one value for the whole load — and the annotated ones are read back afterwards, which
-			// is how it reaches the per-dependency outcome the toolchain-free route decides during it.
+			// Axis B, and since v0.36.4 the default. go/packages takes dependency types from `go list
+			// -export` wholesale — a LoadMode is one value for the whole load — and the annotated ones
+			// are read back afterwards, which is how it reaches the per-dependency outcome the
+			// toolchain-free route decides during it.
 			name:  "compiled-dependencies",
-			apply: func(o *codescan.Options) { o.CompiledDependencies = true },
+			apply: func(*codescan.Options) {},
 		},
 	}
 
@@ -176,72 +183,36 @@ func abCuratedTargets() []string {
 	}
 }
 
-// abExpected records the (configuration, target) pairs that are KNOWN to produce a different spec,
-// with why. Everything not listed must agree exactly. Keys are "<config>|<target>"; regenerate the
-// table with CODESCAN_AB_REPORT=1.
+// abExpected records the (configuration, target) pairs that are KNOWN to produce a different spec, with why.
+// Everything not listed must agree exactly. Keys are "<config>|<target>"; regenerate the table with
+// CODESCAN_AB_REPORT=1.
 //
-// Two families remain, and what left the table says as much as what is still on it.
+// It is empty, and staying empty is the contract: how dependency types arrive is a question about cost, not about
+// meaning, so a configuration that changes the document is a bug in that configuration. Add a row only with the
+// reasoning for why the difference is right, and expect to be asked.
 //
-//		CLOSED — a dependency's own annotations. `swagger:strfmt` marks live in strfmt's source, and
-//		export data carries types, not comments. The go/packages route used to take every dependency
-//		from `go list -export` wholesale; it now reads back the source of the ones whose files carry the
-//		marker, so both routes keep those marks.
+// It was six rows, in two families, and both closed the same way — by separating what a dependency SAYS from what
+// it DECLARES.
 //
-//		CLOSED — a stdlib type whose rendering its declaration never decided. `time.Duration` in a
-//		response header comes out `integer/int64` from its underlying type, byte-identical to the
-//		baseline: the declaration was only ever going to add prose. That the fallback lands exactly on
-//		the full-source answer here is the evidence it is the right fallback.
+//   - A DEPENDENCY'S OWN ANNOTATIONS. `swagger:strfmt` marks live in strfmt's source and export data carries types,
+//     not comments. Closed by reading back, after the load, the dependencies whose files carry the marker.
 //
-//	 1. A STDLIB TYPE LOSES ITS PROSE. The scan no longer FAILS on these — that was the defect worth
-//	    fixing, since one unreadable field took a whole document with it — but the schema is thinner:
-//	    an unreadable interface renders as the open schema rather than a definition. What is lost is
-//	    the declaration's doc comment, which for a stdlib type means the standard library's own prose
-//	    appearing in someone's API. Each raises a scan.sourceless-type Warning naming the type, and
-//	    swagger:description puts a better answer back. Kept as a divergence because it IS one, not
-//	    because it is a fault.
+//   - A DECLARATION THE SCANNED CODE ASKS FOR. The marker scan is the wrong question here: a model declared in an
+//     unannotated dependency, or a stdlib type consumed where no recognizer answers for it, needs source that
+//     nothing in that source asked to have read. Closed by fetching it at the lookup — see
+//     ScanCtx.readBackOnDemand, and TestDependencyDeclarations_ReadBackOnDemand for the witness.
 //
-//	 2. A DEPENDENCY-DECLARED MODEL COLLAPSES. The model is declared in `scan-repo-boundary/makeplans`,
-//	    which carries no annotation anywhere in its source: the marker scan passes over it and the
-//	    definition collapses to a bare `x-go-name`. Only compiled-dependencies is affected — the
-//	    toolchain-free route's bundle covers the standard library, so everything else misses it and
-//	    falls through to source, makeplans included.
+// The obvious version of that second fix is the one that fails, and it is recorded here because it looks right.
+// Reading back every non-stdlib dependency up front brings the definition back EMPTY and silences the warning that
+// named it, because fields are located by POSITION and a *types.Var out of export data indexes a different
+// token.File than the syntax we parsed. It also gives away a third of the wall clock and a third of the peak RSS,
+// which is most of the reason to choose the option. Both halves are needed: on demand, and bridged by name and line
+// (resolvers.FindASTFieldFor).
 //
-//	    DO NOT CLOSE THIS BY WIDENING THE READ-BACK RULE. Tried 2026-08-08: read back every dependency
-//	    outside the standard library, annotated or not, which is exactly the line the other route
-//	    draws. The definition comes back, and comes back EMPTY with no warning — worse than its
-//	    absence, since GetModel then succeeds and the warning that named it stops firing.
-//
-//	    Struct fields are located by POSITION (structFieldCarrier -> resolvers.FindASTField(decl.File(),
-//	    fld.Pos())). The *types.Var comes from export data and the AST from our own parse: two
-//	    token.File entries for one filename, different bases, positions that never match, every field
-//	    silently skipped. Parse-and-bridge carries TYPE-LEVEL comments — all §5.2 needed for strfmt's
-//	    marks — and cannot carry field-level correspondence, because a struct field is not in package
-//	    scope for bridgeDefs to map.
-//
-//	    Closing it needs a name-based field bridge plus a fallback in the field walk: a schema-builder
-//	    change with its own witness, not a loader tweak. Parked, and it is the prerequisite for
-//	    CompiledDependencies ever defaulting on.
-//
-// Either way the assertion below flips to a failure when one of these closes, which is how they
-// announce that they are stale.
+// The assertion below flips to a failure when a listed row stops diverging, which is how a stale expectation
+// announces itself.
 func abExpected() map[string]string {
-	return map[string]string{
-		// (1) a stdlib type with no declaration to read and no identity recognizer to answer for it.
-		// Degrades and warns; used to fail the scan.
-		"compiled-dependencies|./enhancements/opaque-streams/...": "io.Writer renders as the open schema " +
-			"instead of a definition whose description is io.Writer's own method godoc",
-		"export-data|./enhancements/opaque-streams/...": "same as compiled-dependencies: io.Writer has no declaration to read",
-		"compiled-dependencies|./goparsing/go123/...": "reflect.Type renders as the open schema, same cause: " +
-			"a stdlib interface with no syntax behind it; reflect.Value loses its definition outright",
-		"export-data|./goparsing/go123/...": "same as compiled-dependencies: reflect.Type and reflect.Value " +
-			"have no declaration to read",
-
-		// (2) the model itself is declared in a dependency that says nothing about itself.
-		"compiled-dependencies|./goparsing/bookings/...": "the Booking model is declared in " +
-			"scan-repo-boundary/makeplans, which carries no annotation, so the marker scan does not read it " +
-			"back and the definition collapses to a bare `x-go-name: Booking`",
-		"compiled-dependencies|./goparsing/spec/...": "same Booking definition, reached through a different fixture",
-	}
+	return map[string]string{}
 }
 
 // abKey is the key abExpected is written in.
@@ -321,7 +292,7 @@ func TestLoaderConfigs_AgreeOnTheFixtureCorpus(t *testing.T) {
 		t.Run(target, func(t *testing.T) {
 			t.Parallel()
 
-			baseline := abScan(t, target, nil)
+			baseline := abScan(t, target, abBaseline)
 
 			for _, config := range configs {
 				got := abScan(t, target, config.apply)

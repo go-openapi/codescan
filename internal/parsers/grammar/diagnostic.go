@@ -220,12 +220,11 @@ const (
 	// CodeCompiledDependencies fires once when a scan takes dependency types from compiled export data
 	// rather than from their source.
 	//
-	// The speed-up is large and the cost is invisible in the output, which is why it is announced
-	// rather than left to be discovered: export data carries types, not comments, so an annotation
-	// written in a DEPENDENCY is not read. That is not a corner case for this project — go-openapi's
-	// own strfmt marks its types with `swagger:strfmt date-time` and friends, and those marks are what
-	// give a strfmt.DateTime field its format. Under compiled dependencies the field keeps its type and
-	// loses its format, silently.
+	// Announced rather than left to be discovered, because what changes is cost and cost alone: export
+	// data carries types and not comments, so a dependency is read only when the scan needs what its
+	// source says — its own annotations, found by scanning for the marker, or a declaration the spec
+	// turns out to want, fetched at that lookup. Worth saying because the trade is real in the other
+	// direction: the closure has to be compiled first, so a cold build cache pays for this heavily.
 	//
 	// Informational (Hint); emitted once per scan, not per package.
 	CodeCompiledDependencies Code = "scan.compiled-dependencies"

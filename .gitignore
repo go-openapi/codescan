@@ -37,3 +37,8 @@ internal/exportdata/exportdata.zip
 # stray binaries from "go build ./hack/..."
 /genexportdata
 /genspec-wasi
+/loader-benchmark
+
+# loader-benchmark scratch: generated baseline module, built probes, raw measurements
+hack/loader-benchmark/.work/
+hack/loader-benchmark/results/

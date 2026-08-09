@@ -91,6 +91,14 @@ type ScanCtx struct {
 	// from the lookup that actually wanted a declaration out of one. See exportOnlyCollector.
 	exportOnly map[string]string
 
+	// readBack gives a package taken types-only its source back, reading through whichever filesystem the load used.
+	// Supplied by the loader, which is the only thing that knows. See readBackOnDemand.
+	readBack func(*packages.Package) bool
+
+	// readBackFailed records the export-only packages whose source could not be read back on demand, so
+	// a second lookup into one does not re-attempt the parse. See readBackOnDemand.
+	readBackFailed map[string]bool
+
 	// mangler is the shared name mangler used for godoc humanization (the CleanGoDoc option) and
 	// reusable by any builder needing swag-style name transforms.
 	//
@@ -103,7 +111,7 @@ type ScanCtx struct {
 //
 // Which loading strategy runs is the loader's decision, not this one's: Options carries the caller's
 // preference and the loader reconciles it with what the build and the filesystem allow.
-func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Package, error) {
+func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Package, *ownpackages.Loader, error) {
 	loaderOpts := []ownpackages.Option{
 		ownpackages.WithStrategy(loaderStrategy(opts)),
 		ownpackages.WithFS(opts.FS),
@@ -120,9 +128,6 @@ func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Pack
 	if opts.StubStdlib {
 		loaderOpts = append(loaderOpts, ownpackages.WithStubbedStdlib())
 	}
-	if opts.CompiledDependencies {
-		loaderOpts = append(loaderOpts, ownpackages.WithCompiledDependencies())
-	}
 	if opts.ExportData != nil {
 		loaderOpts = append(loaderOpts, ownpackages.WithExportData(opts.ExportData))
 	}
@@ -132,12 +137,77 @@ func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Pack
 		cfg.BuildFlags = []string{"-tags", opts.BuildTags}
 	}
 
-	loader := ownpackages.NewLoader(loaderOpts...)
-	// Announced from the resolved strategy, not from the request. Only one strategy can take dependency
-	// types from the compiler, and Options.FS forces the other one whatever was asked for.
-	reportCompiledDependencies(opts, loader.Strategy())
+	if opts.SkipCompiledDependencies {
+		return loadWith(cfg, opts, loaderOpts)
+	}
 
-	return loader.Load(cfg, opts.Packages...)
+	pkgs, loader, err := loadWith(cfg, opts, append(loaderOpts, ownpackages.WithCompiledDependencies()))
+	if err != nil || !anyListError(pkgs) {
+		return pkgs, loader, err
+	}
+
+	// Taking dependency types from export data means `go list -export`, and that BUILDS what it is asked about rather
+	// than merely type-checking it. So a scanned package that does not compile comes back as a package that could not
+	// be loaded, where an ordinary load reports a type error on a package whose definitions are still usable.
+	//
+	// That difference is not a detail: it is the whole of go-swagger#2874, where one non-building package sank a whole
+	// `./...` scan. Scanning a tree mid-edit is the ordinary case, not the exotic one.
+	//
+	// So the fast path is abandoned rather than allowed to change the answer. The retry costs a second load, and only
+	// on a tree that was not going to build anyway; nothing is paid for a healthy one.
+	reportCompiledFallback(opts, pkgs)
+
+	return loadWith(cfg, opts, loaderOpts)
+}
+
+// loadWith runs one load and hands back the loader that ran it.
+//
+// The loader outlives its Load: a dependency taken types-only may still be asked for its declarations, and only the
+// loader knows which filesystem to read them through. See ScanCtx.readBackOnDemand.
+func loadWith(cfg *packages.Config, opts *Options, loaderOpts []ownpackages.Option) (
+	[]*packages.Package, *ownpackages.Loader, error,
+) {
+	loader := ownpackages.NewLoader(loaderOpts...)
+	pkgs, err := loader.Load(cfg, opts.Packages...)
+
+	return pkgs, loader, err
+}
+
+// anyListError reports whether any loaded package could not be loaded at all, as opposed to having loaded with errors
+// in it.
+func anyListError(pkgs []*packages.Package) bool {
+	for _, pkg := range pkgs {
+		if hasListError(pkg.Errors) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// reportCompiledFallback says the compiled fast path was abandoned, and why.
+//
+// Worth a word rather than silence: the scan is about to cost roughly twice what it should, and the reason is in the
+// scanned tree rather than in codescan. A caller who sees this on every run wants SkipCompiledDependencies, which
+// skips the wasted first load.
+func reportCompiledFallback(opts *Options, pkgs []*packages.Package) {
+	if opts.OnDiagnostic == nil {
+		return
+	}
+
+	var culprit string
+	for _, pkg := range pkgs {
+		if hasListError(pkg.Errors) {
+			culprit = fmt.Sprintf("%s: %s", pkg.PkgPath, firstListError(pkg.Errors))
+
+			break
+		}
+	}
+
+	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
+		"reading every dependency from source instead: taking their types from compiled export data needs the "+
+			"scanned code to build, and it does not (%s). Set SkipCompiledDependencies to skip this first attempt",
+		culprit))
 }
 
 // loaderStrategy maps the caller's preference onto the loader's vocabulary.
@@ -152,42 +222,18 @@ func loaderStrategy(opts *Options) ownpackages.Strategy {
 	return ownpackages.StrategyGoPackages
 }
 
-// reportCompiledDependencies announces which dependencies are read and which are not.
+// Where compiled dependencies stopped being announced.
 //
-// This used to announce a loss: dependency source went unread wholesale, so a dependency's own
-// annotations were simply not there — strfmt being the case that mattered, since its `swagger:strfmt`
-// marks are what turn a strfmt.DateTime field into a date-time. That is no longer what happens; a
-// dependency whose source carries annotations is read back after the load.
+// A Hint used to fire once per scan saying dependency types had come from export data, and a Warning
+// fired when the option was asked for under a loader that cannot honour it. Both made sense while this
+// was opt-in: the first described a deviation the caller had chosen, the second an intent the load
+// could not meet.
 //
-// So this says what the load did rather than what it cost. What it can still cost is announced where
-// it lands, by the lookup that wanted a declaration and did not find one — see reportSourcelessLookup.
+// Neither survives the option becoming the default. Announcing the default on every scan is noise, and
+// nobody asks for something they did not set, so there is no unmet intent left to report.
 //
-// It takes the RESOLVED strategy rather than reading the request off Options, because the two can
-// disagree: only the go/packages strategy can ask the compiler for dependency types, and a virtual
-// filesystem forces the other one whatever the caller asked for. Announcing from the request meant
-// telling a toolchain-free scan that its dependency types came from export data while it was reading
-// every one of them from source — a diagnostic contradicting the load it describes.
-func reportCompiledDependencies(opts *Options, strategy ownpackages.Strategy) {
-	if !opts.CompiledDependencies || opts.OnDiagnostic == nil {
-		return
-	}
-
-	// Asked for and not delivered. Worth more than silence: the caller chose this for the speed-up and
-	// did not get it, and nothing else in the output would say so.
-	if strategy != ownpackages.StrategyGoPackages {
-		opts.OnDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeCompiledDependencies,
-			"CompiledDependencies is ignored under the %s loader, which resolves imports itself and "+
-				"already decides per dependency whether to read its source; every dependency here is "+
-				"loaded as usual", strategy))
-
-		return
-	}
-
-	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
-		"dependency types come from compiled export data: only the dependencies whose source carries "+
-			"swagger annotations are read, so a type declared in one that carries none — and whatever "+
-			"its doc comment said — is not in the spec"))
-}
+// What could still cost something is announced where it lands rather than up front: the lookup that
+// wanted a declaration and found no source to read it from. See reportSourcelessLookup.
 
 // exportOnlyCollector records "types without source" notices instead of announcing them.
 //
@@ -246,7 +292,7 @@ func synthesisReporter(opts *Options) func(ownpackages.Synthesized) {
 
 func NewScanCtx(opts *Options) (*ScanCtx, error) {
 	exportOnly := make(map[string]string)
-	pkgs, err := loadPackages(opts, exportOnly)
+	pkgs, loader, err := loadPackages(opts, exportOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -273,11 +319,13 @@ func NewScanCtx(opts *Options) (*ScanCtx, error) {
 	mangler := mangling.NewNameMangler()
 
 	return &ScanCtx{
-		pkgs:       pkgs,
-		app:        app,
-		exportOnly: exportOnly,
-		opts:       opts,
-		mangler:    &mangler,
+		pkgs:           pkgs,
+		app:            app,
+		exportOnly:     exportOnly,
+		readBack:       loader.ReadBackSource,
+		readBackFailed: make(map[string]bool),
+		opts:           opts,
+		mangler:        &mangler,
 	}, nil
 }
 
@@ -813,6 +861,8 @@ func (s *ScanCtx) FindDecl(pkgPath, name string) (*EntityDecl, bool) {
 		return nil, false
 	}
 
+	s.readBackOnDemand(pkgPath, pkg)
+
 	for _, file := range pkg.Syntax {
 		for _, d := range file.Decls {
 			gd, ok := d.(*ast.GenDecl)
@@ -1007,6 +1057,8 @@ func (s *ScanCtx) FileForPos(pkgPath string, pos token.Pos) (*ast.File, bool) {
 		return nil, false
 	}
 
+	s.readBackOnDemand(pkgPath, pkg)
+
 	target := pkg.Fset.File(pos)
 	if target == nil {
 		return nil, false
@@ -1018,7 +1070,43 @@ func (s *ScanCtx) FileForPos(pkgPath string, pos token.Pos) (*ast.File, bool) {
 		}
 	}
 
+	// Same file, two token.File entries — a position out of compiled export data against syntax we parsed
+	// ourselves. Identity is the right test when both come from one type-check and the only test that
+	// distinguishes two files of the same name, so the name comparison is the fallback rather than the rule.
+	for _, file := range pkg.Syntax {
+		if at := pkg.Fset.File(file.Pos()); at != nil && sameSourceFile(at.Name(), target.Name()) {
+			return file, true
+		}
+	}
+
 	return nil, false
+}
+
+// sameSourceFile reports whether two token.File names denote the same file of one package.
+//
+// Compared by base name, deliberately. The two names reach this point by different routes — one recorded by the
+// compiler into export data, the other the path `go list` handed us — and the routes do not agree on how a path is
+// spelled. Separator, drive-letter case and absolute-versus-relative all vary on Windows, where comparing the strings
+// whole made a cross-package promoted field vanish from the spec without a word.
+//
+// A base name is enough because Go puts every file of a package in one directory, so no two entries of pkg.Syntax can
+// share one. It is also the only part of a path both routes are certain to agree on.
+func sameSourceFile(a, b string) bool {
+	return sourceFileBase(a) == sourceFileBase(b)
+}
+
+// sourceFileBase is the last element of a path written under either convention.
+//
+// Neither path.Base nor filepath.Base will do: each knows one separator, and the two names being compared here can be
+// spelled differently from one another on the same machine. Treating a backslash as a separator on a system where it
+// is a legal filename character only widens the match within one package's file list, where base names are unique
+// anyway.
+func sourceFileBase(name string) string {
+	if i := strings.LastIndexAny(name, `/\`); i >= 0 {
+		return name[i+1:]
+	}
+
+	return name
 }
 
 func (s *ScanCtx) FindComments(pkg *packages.Package, name string) (*ast.CommentGroup, bool) {
@@ -1088,19 +1176,61 @@ func (s *ScanCtx) SourcelessPackage(pkgPath string) (reason string, sourceless b
 	return reason, sourceless
 }
 
+// readBackOnDemand gives a dependency its source back at the moment a declaration is wanted from it.
+//
+// The load's marker scan reads back the dependencies whose files carry a swagger annotation, which is the right
+// question for what a dependency says about ITSELF — a `swagger:strfmt` mark is in the dependency's own source or
+// nowhere. It is the wrong question for what a dependency DECLARES: a type used as a model is named by the
+// scanned code, not by the package declaring it, so an unannotated dependency's model would render from its type
+// alone with its whole declaration — doc comment, field tags, per-field annotations — missing.
+//
+// Asking here rather than widening the marker scan is the difference between paying per declaration wanted and
+// paying per dependency loaded. On a generated client that is single digits against several hundred; measured, it
+// is what keeps compiled dependencies worth choosing. A lookup that misses is the whole of the cost, and a
+// dependency nothing reaches into is never parsed.
+//
+// A package that comes back is no longer sourceless, so it leaves the export-only set and stops answering the
+// diagnostics that describe one. One that does not — no files on disk, unparseable — keeps its reason and is not
+// retried: the parse is idempotent but a failing one is not free.
+//
+// No-op under an ordinary scan, where the set is empty because every package was read from source.
+func (s *ScanCtx) readBackOnDemand(pkgPath string, pkg *packages.Package) {
+	if len(s.exportOnly) == 0 || len(pkg.Syntax) > 0 {
+		return
+	}
+	if _, sourceless := s.exportOnly[pkgPath]; !sourceless {
+		return
+	}
+	if s.readBackFailed[pkgPath] {
+		return
+	}
+
+	if s.readBack == nil || !s.readBack(pkg) {
+		s.readBackFailed[pkgPath] = true
+
+		return
+	}
+
+	delete(s.exportOnly, pkgPath)
+}
+
 // reportSourcelessLookup announces that a declaration was wanted from a package whose types arrived
 // without its source.
 //
 // This is where "types came from export data" stops being a fact about the load and becomes a fact
 // about the spec: something in the API surface reached into this package and found nothing to read.
-// Whatever that declaration said about itself — a swagger:strfmt, a swagger:model, its godoc — is
-// absent from the output, and nothing else in the document shows the gap.
 //
-// The lookups that never happen are the point. A type the recognizers answer for (time.Time,
-// io.Reader and the rest of the canonical set) is resolved from its identity alone, ahead of any
-// declaration lookup, so nothing was lost and nothing is said. What reaches here is the complement:
-// the types codescan consumes and does not recognize, where the author has to decide what they meant
-// — which for time.Duration is precisely why go-openapi offers strfmt.Duration.
+// Whatever that declaration said about itself — a swagger:strfmt, a swagger:model, its godoc ... —
+// is absent from the output, and nothing else in the document shows the gap.
+//
+// The lookups that never happen are the point. A type the recognizers answer for (time.Time, io.Reader
+// and the rest of the auto-detected canonical set) is resolved from its identity alone,
+// ahead of any declaration lookup, so nothing was lost and nothing is said.
+//
+// What reaches here is the complement: the types codescan consumes and does not recognize,
+// where the author has to decide what they meant.
+//
+// For instance, for time.Duration this is precisely why go-openapi offers strfmt.Duration.
 //
 // No-op for a package whose source was read, which is every package under an ordinary scan.
 func (s *ScanCtx) reportSourcelessLookup(pkgPath, name string) {

@@ -145,46 +145,41 @@ type Options struct {
 	// Experimental: see ToolchainFreeLoader.
 	StubStdlib bool
 
-	// CompiledDependencies takes dependency types from the compiler's export data instead of reading
-	// their source, under the go/packages loader.
+	// SkipCompiledDependencies reads every dependency from source, instead of taking its types from the
+	// compiler's export data.
 	//
-	// Parsing and type-checking dependencies is most of what a load does, and on a warm build cache
-	// this removes nearly all of it. On a cold cache it is markedly slower, since the dependencies must
-	// be compiled first.
+	// By default a scan under the go/packages loader takes dependency types from export data, because
+	// parsing and type-checking dependencies is most of what a load does and the compiler already did
+	// it. Set this to opt out and load the graph the way every release before v0.36.4 did.
 	//
-	// Export data carries the full exported type surface — fields, method sets, interface identity —
-	// but no syntax and no comments. A dependency whose source carries swagger annotations is therefore
-	// read back from source after the load, since those annotations are not optional: go-openapi's own
-	// strfmt marks its types with `swagger:strfmt date-time`, `uuid`, `email` and the rest, and those
-	// marks are the only reason a strfmt.DateTime field acquires a format.
+	// Leaving it unset costs no meaning. Export data carries the full exported type surface — fields,
+	// method sets, interface identity — but no syntax and no comments, and a scan wants two different
+	// things out of a dependency's source. What a dependency SAYS about its own types is found by
+	// scanning its files for the annotation marker after the load, which is what keeps go-openapi's own
+	// strfmt marks giving a strfmt.DateTime field its date-time format. What a dependency DECLARES
+	// cannot be anticipated that way, since any package may declare a type the scanned code names as a
+	// model, so its declaration is fetched at the lookup that wants it. A dependency nothing reaches
+	// into is never read at all, and the document is the one the ordinary loader produces —
+	// pinned over the whole fixture corpus by internal/integration/loader_agreement_test.go.
 	//
-	// What remains given up is a type declared in a dependency that says nothing about itself. Nothing
-	// marks such a package as worth reading, so its declarations — and their doc comments — are not
-	// there, and a model declared in one collapses to its name alone. Every scan with this on raises a
-	// scan.compiled-dependencies Hint saying so, and any declaration a builder then wanted and could
-	// not find is reported individually, naming the type.
+	// # When to set it
 	//
-	// # Opt-in, and staying that way
+	// Cost, and only cost. It is roughly 2.3x faster on a warm build cache and an order of magnitude
+	// slower on a cold one, since export data has to be compiled before it exists — around 229 MB of
+	// build cache on a large tree. CI regenerating a spec from a clean checkout is the case this exists
+	// for, and it is the reason to reach for it.
 	//
-	// Decided 2026-08-08, after the option stopped losing dependency annotations and stopped failing
-	// on types it could not resolve. Two things keep it from being the default:
+	// A closure that does not compile is NOT a reason: go/packages falls back to type-checking such a
+	// package from source, and the spec comes out the same.
 	//
-	//   - a model declared in an UNANNOTATED dependency still collapses. Splitting model types into a
-	//     shared library that carries no swagger annotations of its own is an ordinary way to lay out a
-	//     Go project, and it is the one case here that silently changes a document rather than thinning
-	//     one field of it. See internal/scanner/README.md#compiled-dependencies for why widening the
-	//     read-back rule does not fix it;
-	//   - the cost is inverted on a cold build cache. Roughly 2.3x faster warm and 6x slower cold,
-	//     because export data has to be compiled before it exists — and CI, where a spec is most often
-	//     regenerated, is cold almost by definition.
+	// The option applies to the go/packages loader alone. The toolchain-free loader resolves imports
+	// itself and already decides per dependency whether to read its source, so it neither needs this
+	// nor honours it; ExportData below is the same idea supplied by hand for that loader.
 	//
-	// It also needs the dependency closure to BUILD rather than merely type-check, since `go list
-	// -export` compiles it. A tree codescan can scan today is not necessarily a tree it can compile.
-	//
-	// The toolchain-free loader has ExportData below, which is the same idea supplied by hand.
-	//
-	// Experimental: see ToolchainFreeLoader.
-	CompiledDependencies bool
+	// So there is nothing here to opt out of wherever go/packages cannot run. A WebAssembly build has
+	// no process model and therefore no `go list`, and setting FS forces the same loader for the same
+	// reason — in both, dependency types come from source or from ExportData regardless of this field.
+	SkipCompiledDependencies bool
 
 	// ExportData serves DEPENDENCIES from pre-computed export data instead of reading their source,
 	// under the toolchain-free loader.

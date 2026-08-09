@@ -17,26 +17,30 @@ import (
 // Reading a package from the compiler's export data.
 //
 // Type-checking the standard library from source is what a full scan spends nearly all its time on:
-// 190 packages and 1195 files for a fixture as small as the petstore, and a WebAssembly guest pays
+// ~190 packages and ~1195 files for a fixture as small as the petstore, and a WebAssembly guest pays
 // a five to six-fold compute tax on top.
 //
 // None of that work is discovery — the answers were already computed when the toolchain built those packages,
-// and the compiler wrote them down. So read them instead.
+// and the compiler wrote them down. So we read them instead.
 //
-// The saving is in the parsing and type-checking avoided, not in the I/O: filesystem syscalls account for under 2%
-// of a full WASI scan.
+// The saving is in the parsing and type-checking avoided, not in the I/O. When executing inside a WASI host,
+// filesystem syscalls during a scan account for less than 2%.
 
 // exportedPackage builds the *Package a dependency served from export data is seen as.
 //
-// Types only, and no syntax.
+// Types only, and no syntax: a package reached this way is one that says nothing about its own types — see
+// carriesAnnotations — so the load has no reason to read it.
 //
-// A package reached this way is one that says nothing about its own types — see carriesAnnotations — so there is
-// nothing in its source for a scan to read.
+// It is told WHERE its source is even so. Saying nothing about its own types is not the same as declaring nothing:
+// the scanned code can name a type from here and want the declaration for it, and the file list is what lets
+// [Loader.ReadBackSource] answer that later without resolving the import a second time. The marker scan has just
+// resolved it, so this costs a slice.
 func (ld *loadState) exportedPackage(importPath string, tpkg *types.Package) *Package {
 	return &Package{
 		ID:      importPath,
 		Name:    tpkg.Name(),
 		PkgPath: importPath,
+		GoFiles: ld.sourceFiles(importPath),
 		Types:   tpkg,
 		Fset:    ld.fset,
 		Imports: map[string]*Package{},
@@ -81,10 +85,10 @@ const annotationMarker = "swagger:"
 
 // annotationChunk is how much of a file the marker scan reads at a time.
 //
-// Measured over the standard library, this repository's dependencies and a generated client: the median Go source file
-// is under 6 KB and 85–92% of them are under 16 KB, so one read usually covers a whole file. The tail is why there is
-// a bound at all — the standard library carries a single 2.9 MB generated file, and holding that in memory to look for
-// eight bytes is the cost this avoids.
+// NOTE: measured over the standard library, this repository's dependencies and a generated client:
+// the median Go source file is under 6 KB and 85–92% of them are under 16 KB, so one read usually covers a whole file.
+// The tail is why there is a bound at all — the standard library carries a single 2.9 MB generated file,
+// and holding that in memory to look for eight bytes is the cost this avoids.
 const annotationChunk = 16 << 10
 
 // markerCarryOver is how much of one chunk the next one starts with.
@@ -99,38 +103,62 @@ const markerCarryOver = len(annotationMarker) - 1
 // This scan should capture _at least_ what we need as it is an optimization. It doesn't have to resolve the
 // exact regular expression in comments, just to discard all obvious unmatched content.
 func (ld *loadState) scanForAnnotations(importPath string) bool {
+	// One buffer for every file in the package.
+	// The scan holds nothing else, so a 2.9 MB source file costs what a 2 KB one does.
+	var buf [annotationChunk]byte
+
+	for _, path := range ld.sourceFiles(importPath) {
+		if fileCarriesMarker(ld.vfs.Open, path, buf[:]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// sourceFiles locates a dependency's Go source, or says why there is none to locate.
+//
+// Memoized per import path: the marker scan asks for this during the load and a read-back may ask for it again
+// afterwards, and neither wants to resolve the import or stat the directory twice.
+//
+// The two refusals are the ones a scan can still feel later. A package whose source is not there keeps its types and
+// loses whatever its declarations said, which shows up in the output as nothing at all — so it is recorded here and
+// replayed at the lookup that wanted a declaration out of it.
+func (ld *loadState) sourceFiles(importPath string) []string {
+	if known, ok := ld.srcFiles[importPath]; ok {
+		return known
+	}
+
+	files := ld.resolveSourceFiles(importPath)
+	ld.srcFiles[importPath] = files
+
+	return files
+}
+
+func (ld *loadState) resolveSourceFiles(importPath string) []string {
 	dir, _, ok := ld.res.ResolveImport(importPath)
 	if !ok {
-		// No source to consult.
-		// The types still stand; what the package said about them is out of reach, and that is worth saying because it shows
-		// up in the output as nothing at all.
 		ld.reportExportOnly(importPath, "its source is not on the filesystem")
 
-		return false
+		return nil
 	}
 
 	bp, err := ld.ctx.ImportDir(dir, 0)
 	if err != nil {
 		ld.reportExportOnly(importPath, "its source could not be read")
 
-		return false
+		return nil
 	}
 
-	names := make([]string, 0, len(bp.GoFiles)+len(bp.CgoFiles))
-	names = append(names, bp.GoFiles...)
-	names = append(names, bp.CgoFiles...)
-
-	// One buffer for every file in the package. The scan holds nothing else, so a 2.9 MB source file costs what a
-	// 2 KB one does.
-	var buf [annotationChunk]byte
-
-	for _, name := range names {
-		if fileCarriesMarker(ld.vfs.Open, ld.vfs.Join(dir, name), buf[:]) {
-			return true
-		}
+	files := make([]string, 0, len(bp.GoFiles)+len(bp.CgoFiles))
+	for _, name := range bp.GoFiles {
+		files = append(files, ld.vfs.Join(dir, name))
+	}
+	for _, name := range bp.CgoFiles {
+		files = append(files, ld.vfs.Join(dir, name))
 	}
 
-	return false
+	return files
 }
 
 // fileCarriesMarker reports whether the file at path contains the annotation marker, reading it a chunk at a time and
@@ -143,8 +171,7 @@ func (ld *loadState) scanForAnnotations(importPath string) bool {
 // open is the caller's, because the two strategies read through different filesystems: the toolchain-free one honours
 // a virtual tree, while go/packages hands over paths that only ever exist on the real one.
 //
-// A file that cannot be read is skipped, as reading it whole used to do: the package keeps whatever its other files
-// say.
+// A file that cannot be read is skipped: the package keeps whatever its other files say.
 func fileCarriesMarker(open func(string) (io.ReadCloser, error), path string, buf []byte) bool {
 	f, err := open(path)
 	if err != nil {

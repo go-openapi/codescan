@@ -54,6 +54,53 @@ They are options rather than inherited process state so that a scan is
 reproducible: a value picked up from whatever shell started it is easy to apply on
 one code path and forget on another.
 
+### Which loader, and why
+
+Three ways to get a package graph. The table below catalogues the fields; this is
+how to choose between them.
+
+**Standard loader** — the default. Loads your code with the Go toolchain, through
+`golang.org/x/tools/go/packages`. Maintained by the Go team, and the reference for
+how patterns and imports resolve: where either of the others disagrees with it, the
+other one is wrong. Requires Go installed, and uses the build cache.
+
+**Pure-Go loader** (`ToolchainFreeLoader`) — loads your code with codescan's own
+reimplementation. Cuts memory by roughly 45%, and needs no `go` command and no
+subprocess. It still reads `GOROOT/src` for the standard library, so it wants a Go
+*installation* — just not a runnable toolchain. Modules only. It uses no build
+cache, so cold costs what warm costs: about level with the standard loader on a
+warm cache, roughly 30% faster on a cold one, and the only choice whose cost does
+not depend on cache state. Usually the right pick for CI.
+
+**Compiled dependencies** — since v0.36.4 the standard loader takes dependency types
+from the compiler's export data instead of reading their source. It produces the
+same document either way — whatever the spec needs out of a dependency is read at
+the moment it is needed — and on a warm build cache it is the fastest by a wide
+margin, and several times smaller.
+
+It must *compile* the dependency closure rather than type-check it, so on a cold
+cache it is an order of magnitude slower and writes a large build cache. That is
+what `SkipCompiledDependencies` is for, and CI regenerating a spec from a clean
+checkout is the case to reach for it. Code that does not compile is **not** a
+reason: such a load is retried from source automatically.
+
+Two further options drop the `GOROOT` requirement altogether, for environments with
+no Go installation at all — a WASI guest, a browser. `StubStdlib` synthesizes the
+standard library, and pays for the reach in fidelity: a fabricated type has the
+right name and no structure. `ExportData` serves dependencies from a blob you
+prepare in advance, and pays in preparation instead — the types are the compiler's
+own, but the blob is only valid for the toolchain that produced it, and a package
+it does not cover falls back to source and then to synthesis.
+
+{{% notice style="note" %}}
+The percentages are indicative, not a promise: the balance moves with the size of
+the tree being scanned, and on a small one the pure-Go loader is *slower* warm than
+the standard loader. Measure your own corpus with
+[`hack/loader-benchmark`](https://github.com/go-openapi/codescan/tree/master/hack/loader-benchmark),
+which compares a released version against a working tree and carries the tables and
+the method.
+{{% /notice %}}
+
 | Option | Type | Default | Effect |
 |--------|------|---------|--------|
 | `GOOS` / `GOARCH` | `string` | `""` (this machine) | The platform the scanned code is built for. `//go:build` lines and `_linux.go` / `_amd64.go` filename suffixes resolve against them, so they select which files a package is made of. |
@@ -63,8 +110,8 @@ one code path and forget on another.
 | `ToolchainFreeLoader` | `bool` | `false` | Resolve the package graph with codescan's own loader instead of `golang.org/x/tools/go/packages`. Same job and, across the fixture corpus, the same spec; it differs in needing no installed toolchain and no subprocess, since it never runs `go list`. **Experimental.** |
 | `FS` | `fs.FS` | `nil` | Read source through a virtual filesystem — an in-memory tree, an uploaded archive, an `embed.FS` — instead of the real one. Implies `ToolchainFreeLoader`, since `go list` can only read the real filesystem. **`FS` is the whole world the scan can read**: dependencies and GOROOT come through it too, absolute paths map by dropping the leading separator, and anything unreachable is synthesized — a valid but quietly thinner spec, announced by `scan.synthesized-import` and `scan.degraded-load`. **Experimental.** |
 | `StubStdlib` | `bool` | `false` | Synthesize the standard library from the names the code selects, rather than reading GOROOT. Toolchain-free loader only. Identity recognition still works (`time.Time`, `json.RawMessage` are matched on package and name), but a synthesized type has no fields and no method set — so `json.RawMessage` stops rendering as a byte array and nothing is seen to implement `encoding.TextMarshaler`. Trades fidelity for reach, quietly; prefer a full graph where GOROOT is available. **Experimental.** |
-| `ExportData` | `fs.FS` | `nil` | Serve dependencies from pre-computed export data (one `<import path>.export` file per package) under the toolchain-free loader. Unlike `StubStdlib` this costs no fidelity, the types being the ones the compiler computed — but it is valid only for the toolchain that produced it, and an uncovered package falls back to source, then to synthesis. The module under scan is never read this way, and neither is a dependency whose source carries annotations. **Experimental.** |
-| `CompiledDependencies` | `bool` | `false` | Take dependency types from the compiler's export data under the go/packages loader. Markedly faster on a warm build cache and markedly slower on a cold one, since the closure must be compiled first. Annotated dependencies are read back from source, so a `swagger:strfmt` written in a library still counts; a model declared in an *unannotated* dependency collapses to its name. Raises `scan.compiled-dependencies`. **Experimental.** |
+| `ExportData` | `fs.FS` | `nil` | Serve dependencies from pre-computed export data (one `<import path>.export` file per package) under the toolchain-free loader. Unlike `StubStdlib` this costs no fidelity, the types being the ones the compiler computed — but it is valid only for the toolchain that produced it, and an uncovered package falls back to source, then to synthesis. The module under scan is never read this way, and neither is a dependency whose source carries annotations or one the spec later needs a declaration from. **Experimental.** |
+| `SkipCompiledDependencies` | `bool` | `false` | Read every dependency from source, instead of taking its types from the compiler's export data under the go/packages loader. Unset (the default since v0.36.4) costs no meaning: a dependency whose source carries annotations is read back after the load, and one that merely *declares* a type the spec carries is read at the lookup that wants it — so a `swagger:strfmt` written in a library still counts, and a model declared in an unannotated dependency keeps its doc comment and its fields. Set it for cost alone: the default is markedly faster on a warm build cache and markedly slower on a cold one, since `go list -export` compiles the closure before it can read it. A closure that does not compile is handled without this — the load falls back to source and raises `scan.compiled-dependencies`. |
 
 {{% notice style="note" %}}
 The virtual-filesystem and export-data options exist to make a scan possible

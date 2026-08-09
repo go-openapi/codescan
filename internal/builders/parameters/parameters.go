@@ -475,7 +475,7 @@ func (p *Builder) buildEmbeddedField(fld *types.Var, decl *scanner.EntityDecl, o
 	// An in:/required: annotation on the embed itself applies to the parameters it promotes (go-swagger#2701).
 	// Thread it through the recursion as inherited context, restoring afterwards so sibling fields are unaffected.
 	saved := p.inherited
-	if afld := resolvers.FindASTField(decl.File(), fld.Pos()); afld != nil {
+	if afld := resolvers.FindASTFieldFor(decl.File(), fld, p.Ctx.PosOf); afld != nil {
 		p.inherited = p.ReadEmbedInheritance(afld.Doc, saved)
 	}
 	// An embed marked `in: body` IS the body parameter — the embedded struct becomes one body param's schema, exactly
@@ -614,7 +614,7 @@ func (p *Builder) processParamField(fld *types.Var, decl *scanner.EntityDecl, se
 		return "", nil
 	}
 
-	afld := resolvers.FindASTField(decl.File(), fld.Pos())
+	afld := resolvers.FindASTFieldFor(decl.File(), fld, p.Ctx.PosOf)
 	if afld == nil {
 		return "", nil
 	}

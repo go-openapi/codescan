@@ -18,6 +18,20 @@ func (s *ScanCtx) PkgForPath(pkgPath string) (*packages.Package, bool) {
 	return v, ok
 }
 
+// PackagesRead reports how many of the loaded packages carry syntax, against how many were loaded.
+//
+// Test-only, and the only way to see the read-back policy from outside: a package the load took types-only has no
+// syntax until something asks it for a declaration, so the first number is what the scan has actually paid to parse.
+func (s *ScanCtx) PackagesRead() (read, loaded int) {
+	for _, pkg := range s.app.AllPackages {
+		if len(pkg.Syntax) > 0 {
+			read++
+		}
+	}
+
+	return read, len(s.app.AllPackages)
+}
+
 // DropExpressionTypes strips every loaded package's record of what its type expressions denote,
 // keeping the record of what its declarations define.
 //

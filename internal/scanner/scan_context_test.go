@@ -537,6 +537,96 @@ func TestNewScanCtx_PartialLoad_WarnsAndContinues(t *testing.T) {
 	assert.Positive(t, warned, "a partial load must surface a Warning, not abort")
 }
 
+// TestNewScanCtx_NonBuildingCode_FallsBackToSource pins what keeps #2874 fixed now that dependency
+// types come from compiled export data by default.
+//
+// That default means `go list -export`, which BUILDS the packages it is asked about. A scanned
+// package that does not compile therefore comes back as one that could not be loaded at all — a
+// ListError, which aborts — where an ordinary load reports a type error on a package whose
+// definitions are still perfectly usable.
+//
+// So the load is retried from source, and the retry is what the previous test observes succeeding.
+// Here it is named: the fallback announces itself, and the scan reaches the same place it always did.
+func TestNewScanCtx_NonBuildingCode_FallsBackToSource(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module probe\n\ngo 1.21\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte("package probe\n\n"+
+		"// Gadget is a model.\n//\n// swagger:model\n"+
+		"type Gadget struct {\n\tName string `json:\"name\"`\n}\n\n"+
+		"var _ int = \"not an int\"\n"), 0o600))
+
+	scan := func(skip bool) []grammar.Diagnostic {
+		var diags []grammar.Diagnostic
+		sctx, err := NewScanCtx(&Options{
+			Packages:                 []string{"./..."},
+			WorkDir:                  dir,
+			ScanModels:               true,
+			SkipCompiledDependencies: skip,
+			OnDiagnostic:             func(d grammar.Diagnostic) { diags = append(diags, d) },
+		})
+		require.NoError(t, err)
+		require.NotNil(t, sctx)
+
+		return diags
+	}
+
+	fellBack := func(diags []grammar.Diagnostic) int {
+		var n int
+		for _, d := range diags {
+			if d.Code == grammar.CodeCompiledDependencies {
+				n++
+				assert.Equal(t, grammar.SeverityHint, d.Severity)
+				assert.Contains(t, d.Message, "needs the scanned code to build")
+			}
+		}
+
+		return n
+	}
+
+	assert.Equal(t, 1, fellBack(scan(false)),
+		"the compiled load could not build this tree, so it was abandoned and said so")
+
+	assert.Zero(t, fellBack(scan(true)),
+		"opting out skips the attempt entirely, so there is nothing to fall back from")
+}
+
+// TestSameSourceFile covers the comparison that joins a position out of compiled export data to the
+// syntax parsed beside it.
+//
+// The two names come from different places — the compiler wrote one into export data, `go list`
+// handed us the other — and they are not spelled alike. Comparing them whole passed everywhere the
+// two happened to agree and failed on Windows, where a cross-package promoted field then vanished
+// from the spec with no diagnostic: go-swagger#2417's fixture lost "hue" again.
+//
+// The Windows shapes are the point of this test, so they are asserted from any host.
+func TestSameSourceFile(t *testing.T) {
+	t.Parallel()
+
+	same := map[string][2]string{
+		"identical": {"/src/color/color.go", "/src/color/color.go"},
+		"separator": {`D:\a\codescan\color\color.go`, "D:/a/codescan/color/color.go"},
+		"drive-letter case": {
+			`D:\a\codescan\color\color.go`, `d:\a\codescan\color\color.go`,
+		},
+		"absolute against relative": {"/src/color/color.go", "color/color.go"},
+		"bare name":                 {"/src/color/color.go", "color.go"},
+	}
+	for name, pair := range same {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.True(t, sameSourceFile(pair[0], pair[1]), "%q vs %q", pair[0], pair[1])
+		})
+	}
+
+	// Base names stay unique inside a package, since Go keeps every file of one in a single directory.
+	// So two different base names are two different files, whatever the directories say.
+	t.Run("different files do not match", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, sameSourceFile("/src/color/color.go", "/src/color/shade.go"))
+		assert.False(t, sameSourceFile(`D:\a\color\color.go`, `D:\a\color\shade.go`))
+	})
+}
+
 func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 	sctx := &ScanCtx{}
 
