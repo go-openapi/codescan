@@ -590,6 +590,43 @@ func TestNewScanCtx_NonBuildingCode_FallsBackToSource(t *testing.T) {
 		"opting out skips the attempt entirely, so there is nothing to fall back from")
 }
 
+// TestSameSourceFile covers the comparison that joins a position out of compiled export data to the
+// syntax parsed beside it.
+//
+// The two names come from different places — the compiler wrote one into export data, `go list`
+// handed us the other — and they are not spelled alike. Comparing them whole passed everywhere the
+// two happened to agree and failed on Windows, where a cross-package promoted field then vanished
+// from the spec with no diagnostic: go-swagger#2417's fixture lost "hue" again.
+//
+// The Windows shapes are the point of this test, so they are asserted from any host.
+func TestSameSourceFile(t *testing.T) {
+	t.Parallel()
+
+	same := map[string][2]string{
+		"identical": {"/src/color/color.go", "/src/color/color.go"},
+		"separator": {`D:\a\codescan\color\color.go`, "D:/a/codescan/color/color.go"},
+		"drive-letter case": {
+			`D:\a\codescan\color\color.go`, `d:\a\codescan\color\color.go`,
+		},
+		"absolute against relative": {"/src/color/color.go", "color/color.go"},
+		"bare name":                 {"/src/color/color.go", "color.go"},
+	}
+	for name, pair := range same {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.True(t, sameSourceFile(pair[0], pair[1]), "%q vs %q", pair[0], pair[1])
+		})
+	}
+
+	// Base names stay unique inside a package, since Go keeps every file of one in a single directory.
+	// So two different base names are two different files, whatever the directories say.
+	t.Run("different files do not match", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, sameSourceFile("/src/color/color.go", "/src/color/shade.go"))
+		assert.False(t, sameSourceFile(`D:\a\color\color.go`, `D:\a\color\shade.go`))
+	})
+}
+
 func TestScanCtx_findEnumValue_EdgeCases(t *testing.T) {
 	sctx := &ScanCtx{}
 

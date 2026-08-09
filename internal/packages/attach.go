@@ -70,7 +70,10 @@ func readBackSource(pkg *Package, open func(string) (io.ReadCloser, error)) bool
 //
 // The bytes come from the caller's filesystem rather than from the parser's own read, so a virtual tree is honoured;
 // the path is still handed to [parser.ParseFile], because it is what the positions are recorded against.
-// Those have to match the ones export data carries.
+//
+// Those positions have to line up with the ones export data carries, and only the line and the file's base name
+// actually do. The compiler and `go list` do not spell a path the same way — on Windows they differ in separator and
+// in drive-letter case — so nothing downstream may compare these names whole.
 func parseFilesForComments(fset *token.FileSet, paths []string, open func(string) (io.ReadCloser, error)) []*ast.File {
 	syntax := make([]*ast.File, 0, len(paths))
 

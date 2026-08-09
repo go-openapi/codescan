@@ -1074,12 +1074,39 @@ func (s *ScanCtx) FileForPos(pkgPath string, pos token.Pos) (*ast.File, bool) {
 	// ourselves. Identity is the right test when both come from one type-check and the only test that
 	// distinguishes two files of the same name, so the name comparison is the fallback rather than the rule.
 	for _, file := range pkg.Syntax {
-		if at := pkg.Fset.File(file.Pos()); at != nil && at.Name() == target.Name() {
+		if at := pkg.Fset.File(file.Pos()); at != nil && sameSourceFile(at.Name(), target.Name()) {
 			return file, true
 		}
 	}
 
 	return nil, false
+}
+
+// sameSourceFile reports whether two token.File names denote the same file of one package.
+//
+// Compared by base name, deliberately. The two names reach this point by different routes — one recorded by the
+// compiler into export data, the other the path `go list` handed us — and the routes do not agree on how a path is
+// spelled. Separator, drive-letter case and absolute-versus-relative all vary on Windows, where comparing the strings
+// whole made a cross-package promoted field vanish from the spec without a word.
+//
+// A base name is enough because Go puts every file of a package in one directory, so no two entries of pkg.Syntax can
+// share one. It is also the only part of a path both routes are certain to agree on.
+func sameSourceFile(a, b string) bool {
+	return sourceFileBase(a) == sourceFileBase(b)
+}
+
+// sourceFileBase is the last element of a path written under either convention.
+//
+// Neither path.Base nor filepath.Base will do: each knows one separator, and the two names being compared here can be
+// spelled differently from one another on the same machine. Treating a backslash as a separator on a system where it
+// is a legal filename character only widens the match within one package's file list, where base names are unique
+// anyway.
+func sourceFileBase(name string) string {
+	if i := strings.LastIndexAny(name, `/\`); i >= 0 {
+		return name[i+1:]
+	}
+
+	return name
 }
 
 func (s *ScanCtx) FindComments(pkg *packages.Package, name string) (*ast.CommentGroup, bool) {
