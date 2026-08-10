@@ -27,7 +27,7 @@ The package pattern matcher in internal/packages/list/pkgpattern.go, and the tes
 specifies it in internal/packages/list/pkgpattern_test.go, are copied from the Go distribution
 (cmd/internal/pkgpattern, go1.26.5) and carry their original copyright notice.
 
-A verbatim copy of the license below also ships as LICENSE-BSD-go.
+A verbatim copy of their license may be found below.
 
 Copyright 2009 The Go Authors.
 
