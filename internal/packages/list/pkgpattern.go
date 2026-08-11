@@ -1,6 +1,6 @@
 // Copyright 2022 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE-BSD-go file.
+// license that can be found in the NOTICE file.
 //
 // SPDX-License-Identifier: BSD-3-Clause
 

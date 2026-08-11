@@ -30,7 +30,7 @@ go run ./hack/go-loader -go $GO corpus -only work_ -v    # one family, verbosely
 ## `sync` — the copied declarations
 
 `internal/packages/list/pkgpattern.go` and its test are copied verbatim from
-`cmd/internal/pkgpattern` (BSD-3-Clause, see `LICENSE-BSD-go` at the repository root). The
+`cmd/internal/pkgpattern` (BSD-3-Clause, see `NOTICE` at the repository root). The
 reasons are in the file header; the cost is that upstream can change underneath us without
 anyone noticing.
 
