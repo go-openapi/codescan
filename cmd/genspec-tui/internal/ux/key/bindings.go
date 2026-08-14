@@ -33,6 +33,7 @@ const (
 	G        Binding = "g"
 	F        Binding = "f"
 	I        Binding = "i"
+	M        Binding = "m"
 	N        Binding = "n"
 	V        Binding = "v"
 	Y        Binding = "y"

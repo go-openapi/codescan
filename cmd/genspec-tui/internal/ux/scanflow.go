@@ -28,6 +28,10 @@ type ScanState struct {
 	Spin    spinner.Model
 	Elapsed time.Duration
 
+	// What the run cost to produce, for the overlay m opens. Read from the runtime around the work itself, so it is
+	// carried here rather than derived: once the scan has returned, nobody can recover it.
+	Cost scan.Cost
+
 	NumPaths int
 	NumDefs  int
 
@@ -143,12 +147,19 @@ func (m *Model) startScan() tea.Cmd {
 // The diagnostics cursor is clamped rather than reset - a scan that fixed one diagnostic should leave you next to the
 // ones it did not.
 func (m *Model) absorbScan(msg scan.ResultMsg) {
+	// Read before the assignment below drops it: a run that replaced a document was measured while BOTH were live, and
+	// the overlay has to say so or its retained figure reads as a leak.
+	replaced := m.scan.JSON != ""
+
 	m.scan.Running = false
 	m.scan.JSON, m.scan.YAML = msg.JSON, msg.YAML
 	m.scan.NumPaths, m.scan.NumDefs = msg.Paths, msg.Defs
 	m.scan.Elapsed = msg.Elapsed
+	m.scan.Cost = msg.Cost
 	m.scan.Diags = msg.Diags
 	m.scan.Err = msg.Err
+
+	m.runstats.Set(msg.Cost, replaced)
 
 	m.diagCursor = min(max(m.diagCursor, 0), max(len(m.scan.Diags)-1, 0))
 	m.srcIndex = index.BuildSourceIndex(msg.Provenance)

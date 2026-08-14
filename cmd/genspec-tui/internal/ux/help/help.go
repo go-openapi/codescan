@@ -63,6 +63,7 @@ var helpSections = []helpSection{
 		{"v", "validate the generated spec (go-openapi/validate)"},
 		{"V", "switch the diagnostics pane between scan and validation"},
 		{"o", "scanner options"},
+		{"m", "what the last scan cost (time and memory)"},
 		{"ctrl+q  ctrl+c", "quit"},
 	}},
 	{"spec pane", []helpEntry{

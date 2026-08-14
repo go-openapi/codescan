@@ -17,14 +17,15 @@ import (
 
 // ResultMsg carries the outcome of a whole-scope scan.
 //
-// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took,
-// every diagnostic the build emitted in source order, and any hard error from codescan.Run.
+// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took, what it
+// cost to run, every diagnostic the build emitted in source order, and any hard error from codescan.Run.
 type ResultMsg struct {
 	JSON       string
 	YAML       string
 	Paths      int
 	Defs       int
 	Elapsed    time.Duration
+	Cost       Cost
 	Diags      []grammar.Diagnostic
 	Provenance []scanner.Provenance
 	Err        error
@@ -47,6 +48,10 @@ func Run(cfg codescan.Options) tea.Cmd {
 
 // Do performs the scan and rendering, returning the result without timing (runScan stamps the elapsed time around it).
 //
+// It fences the work three times - before the scan, after it, and once the document has been rendered - so the result
+// carries what the run cost as well as what it produced. The inner split is what makes the reading actionable: it
+// separates what codescan spent from what serializing the same document twice, as JSON and again as YAML, spent on top.
+//
 // It is exposed by this package to allow for e2e tests.
 func Do(cfg codescan.Options) ResultMsg {
 	// OnDiagnostic fires synchronously inside codescan.Run, on this same goroutine, so a plain append is race-free.
@@ -65,14 +70,28 @@ func Do(cfg codescan.Options) ResultMsg {
 		provs = append(provs, p)
 	}
 
+	before := fence()
+
+	scanStart := time.Now()
 	sw, err := codescan.Run(&cfg)
+	scanFor := time.Since(scanStart)
+	scanned := fence()
+
 	if err != nil {
-		return ResultMsg{Diags: diags, Provenance: provs, Err: err}
+		return ResultMsg{
+			Diags: diags, Provenance: provs, Err: err,
+			Cost: costOf(before, scanned, scanned, scanFor, 0),
+		}
 	}
+
+	renderStart := time.Now()
 
 	jb, err := json.MarshalIndent(sw, "", "  ")
 	if err != nil {
-		return ResultMsg{Diags: diags, Provenance: provs, Err: err}
+		return ResultMsg{
+			Diags: diags, Provenance: provs, Err: err,
+			Cost: costOf(before, scanned, fence(), scanFor, time.Since(renderStart)),
+		}
 	}
 
 	res := ResultMsg{JSON: string(jb), Defs: len(sw.Definitions), Diags: diags, Provenance: provs}
@@ -82,6 +101,10 @@ func Do(cfg codescan.Options) ResultMsg {
 	if yb, yerr := jsonToYAML(jb); yerr == nil {
 		res.YAML = string(yb)
 	}
+	renderFor := time.Since(renderStart)
+
+	res.Cost = costOf(before, scanned, fence(), scanFor, renderFor)
+
 	return res
 }
 

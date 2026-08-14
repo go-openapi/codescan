@@ -137,6 +137,7 @@ the cursor falls back to its nearest surviving ancestor.
 | `v` / `V` | validate the generated spec / switch the diagnostics pane between scan and validation |
 | `F5` | reload the open file from disk (asks before discarding unsaved edits) |
 | `o` | scanner options popup (`space` toggles, `Esc`/`o` applies and rescans) |
+| `m` | what the last scan cost — wall clock and memory, split between scanning and rendering |
 | `ctrl+q` / `ctrl+c` | quit |
 
 ### Spec pane

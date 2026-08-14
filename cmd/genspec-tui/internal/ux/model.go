@@ -18,6 +18,7 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/options"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/panels"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/reference"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/runstats"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 )
 
@@ -83,6 +84,7 @@ type Model struct {
 	options   options.Overlay
 	confirm   confirm.Overlay
 	reference reference.Overlay
+	runstats  runstats.Overlay
 
 	// What an accepted confirmation will do. The overlay records the answer; naming the action is the model's job.
 	pendingConfirm confirmAction
@@ -157,6 +159,7 @@ func New(cfg codescan.Options) *Model {
 		help:      help.New(),
 		confirm:   confirm.New(),
 		reference: reference.New(),
+		runstats:  runstats.New(),
 	}
 	// Built after the struct exists: the options rows bind to the scan-config booleans by pointer, and those pointers
 	// have to be into m.cfg (valid because m is heap-allocated) rather than into the caller's copy.

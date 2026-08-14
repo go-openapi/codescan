@@ -83,6 +83,9 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 	case key.H, key.Question:
 		m.help.Open()
 		return nil
+	case key.M:
+		m.runstats.Open()
+		return nil
 	case key.O:
 		m.exitFollow()
 		m.refs.Reset()
