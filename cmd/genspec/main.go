@@ -52,6 +52,13 @@ func run(argv []string, stdout, stderr io.Writer) error {
 		return nil
 	}
 
+	// Before anything reads a flag, so that everything downstream sees one settled command line and
+	// needs to know nothing about where a value came from.
+	applied, configPath, err := configured(fs, *cfg.configFile)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errUsage, err)
+	}
+
 	format, err := resolveFormat(*cfg.format, *cfg.output)
 	if err != nil {
 		return err
@@ -61,6 +68,9 @@ func run(argv []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Said now rather than when it was read: the file is free to decide how loud this command is, so
+	// there was nothing to say it through until here.
+	report.configuration(configPath, applied)
 
 	opts, err := cfg.options(fs.Args(), report)
 	if err != nil {

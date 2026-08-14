@@ -13,6 +13,8 @@ require (
 	github.com/go-openapi/spec v0.22.9
 	github.com/go-openapi/strfmt v0.27.0
 	github.com/go-openapi/validate v0.26.3
+	github.com/knadh/koanf/providers/rawbytes v1.0.1
+	github.com/knadh/koanf/v2 v2.3.6
 	go.yaml.in/yaml/v3 v3.0.5
 )
 
@@ -34,8 +36,11 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect

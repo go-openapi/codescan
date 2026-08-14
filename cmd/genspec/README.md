@@ -39,6 +39,49 @@ They share their flag surface: `internal/cliopts` declares every knob the
 library takes, once, so `-name-from-tags` means the same thing whichever one you
 reach for. A guard there fails the build when an option lands with no flag.
 
+## Configuration file
+
+Anything that can be a flag can be preset in a `.codescan.yaml`, found by
+searching upwards from wherever you are — so a project configures itself once
+and the command is run bare:
+
+```yaml
+scan:
+  workdir: ./api
+  exclude-tags: [internal]
+
+emit:
+  scan-models: true
+  name-from-tags: [form, json]
+
+document:
+  format: yaml
+  output: swagger.yaml
+
+diagnostics:
+  validate: true
+  fail-on: warning
+```
+
+Keys are grouped into sections, and inside a section a key **is** the flag it
+sets, spelled exactly as on the command line — so `genspec -h` doubles as the
+reference for the file. The sections are the families below, plus `document`
+and `diagnostics` for this command's own flags.
+
+**Anything typed wins.** That holds for a flag typed with the value it already
+had: `-scan-models=false` means false even where the file says true.
+
+`-config <path>` reads a particular file, which must exist. `-config off`
+ignores whatever is lying around, for a run that has to be reproducible.
+`.codescan.yml` and `.codescan.json` are searched for too — JSON is a subset of
+YAML, so it needs no parser of its own.
+
+One file serves the whole family: a section a command does not know is skipped
+rather than refused, so `genspec-tui`'s settings can sit beside `genspec`'s. A
+key inside a section it *does* know must name one of its flags — which is what
+makes a typo an error rather than a setting that quietly never applied. Run
+with `-verbose` to see which file was read and which keys it skipped.
+
 ## Output
 
 `-output` names the file, or `-` for standard output (the default). `-format`

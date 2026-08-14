@@ -23,6 +23,27 @@
 //	              cross-references
 //	genspec-tui   the same scan, live, with the source and the document side by side
 //
+// # Configuration file
+//
+// Anything that can be a flag can be preset in a .codescan.yaml, found by searching upwards from
+// wherever the command is run. Keys are grouped into sections, and inside a section a key is the
+// flag it sets, spelled exactly as on the command line:
+//
+//	scan:
+//	  workdir: ./api
+//	emit:
+//	  scan-models: true
+//	document:
+//	  format: yaml
+//
+// Anything typed on the command line wins over the file, including a flag typed with the value it
+// already had. -config names a particular file; -config off ignores whatever is lying around.
+//
+// One file serves the whole family: a section a command does not know is skipped rather than
+// refused, so another command's settings may sit beside these. A key inside a section it does know
+// must name one of its flags, which is what makes a typo an error rather than a setting that quietly
+// never applied.
+//
 // # Relationship to go-swagger
 //
 // genspec does the same job as go-swagger's `swagger generate spec`, which drives the same library.

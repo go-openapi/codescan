@@ -10,10 +10,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/SladkyCitron/slogcolor"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/internal/cliconf"
 )
 
 // reporter is where everything the scan observed goes.
@@ -75,12 +77,48 @@ func (r *reporter) onDiagnostic(diag codescan.Diagnostic) {
 		return
 	}
 
-	r.log(diag.Severity, diag.Message,
-		slog.String("code", string(diag.Code)),
+	r.log(diag.Severity, diag.Message, r.attrs(diag)...)
+}
+
+// attrs is what is worth saying about a diagnostic besides its message.
+//
+// A diagnostic with no position - a whole route omitted by a tag rule, a definition pruned - is
+// reported without one, rather than with the zero value dressed up as a location. "file= line=0" is
+// not somewhere a reader can go.
+func (r *reporter) attrs(diag codescan.Diagnostic) []any {
+	attrs := make([]any, 0, 4) //nolint:mnd // a code, and the three parts of a position
+	attrs = append(attrs, slog.String("code", string(diag.Code)))
+	if diag.Pos.Filename == "" {
+		return attrs
+	}
+
+	return append(attrs,
 		slog.String("file", r.relative(diag.Pos.Filename)),
 		slog.Int("line", diag.Pos.Line),
 		slog.Int("column", diag.Pos.Column),
 	)
+}
+
+// configuration reports what a configuration file decided, under -verbose.
+//
+// Under -verbose rather than always, because on a good day this is the least interesting thing that
+// happened. It is the only way to find out that a file was read at all, though - and, through the
+// keys it skipped, that a section was misspelled rather than meant for another command.
+func (r *reporter) configuration(path string, applied cliconf.Result) {
+	if path == "" || !r.hints {
+		return
+	}
+
+	r.logger.Info("configuration read",
+		slog.String("file", r.relative(path)),
+		slog.Int("flags", len(applied.Set)),
+	)
+
+	if len(applied.Ignored) > 0 {
+		r.logger.Info("configuration keys skipped, in sections this command does not know",
+			slog.String("keys", strings.Join(applied.Ignored, ", ")),
+		)
+	}
 }
 
 // record tallies one finding and decides whether it fails the command.

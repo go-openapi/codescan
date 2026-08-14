@@ -64,6 +64,23 @@ func TestReporterMutesHintsButCountsThem(t *testing.T) {
 	assert.Contains(t, out.String(), "hints=1")
 }
 
+// TestReporterOmitsAPositionThereIsNoneOf covers the diagnostics about the document rather than
+// about a place in it: a route dropped by a tag rule, a definition pruned.
+func TestReporterOmitsAPositionThereIsNoneOf(t *testing.T) {
+	t.Parallel()
+
+	report, out := reporterFor(t, "-color=never")
+	report.onDiagnostic(codescan.Diagnostic{
+		Severity: codescan.SeverityWarning,
+		Code:     "scan.ignored-by-tag",
+		Message:  "a route went away",
+	})
+
+	assert.Contains(t, out.String(), "code=scan.ignored-by-tag")
+	assert.NotContains(t, out.String(), "line=0", `"file= line=0" is not somewhere a reader can go`)
+	assert.NotContains(t, out.String(), "file=")
+}
+
 func TestReporterVerboseShowsHints(t *testing.T) {
 	t.Parallel()
 

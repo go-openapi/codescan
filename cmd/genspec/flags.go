@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/internal/cliconf"
 	"github.com/go-openapi/codescan/internal/cliopts"
 )
 
@@ -48,6 +49,10 @@ type config struct {
 	// commands, so that a flag means the same thing whichever one you reach for.
 	scan *cliopts.Values
 
+	// configFile names the file read before the flags, or "off". Its own field rather than one of
+	// the above: it decides where the others come from, so it cannot itself come from there.
+	configFile *string
+
 	input    *string
 	output   *string
 	format   *string
@@ -64,8 +69,9 @@ type config struct {
 
 func registerFlags(fs *flag.FlagSet) *config {
 	return &config{
-		set:  fs,
-		scan: cliopts.Register(fs),
+		set:        fs,
+		scan:       cliopts.Register(fs),
+		configFile: cliconf.Register(fs),
 
 		input: fs.String("input", "",
 			"a specification to merge the scan's discoveries into, as JSON or YAML"),
@@ -101,6 +107,10 @@ func usage(fs *flag.FlagSet, stderr io.Writer) func() {
 			cliopts.DefaultPatterns)
 		fmt.Fprintln(stderr, "The document goes to standard output unless -output names a file; what the scan")
 		fmt.Fprintln(stderr, "observed goes to standard error.")
+		fmt.Fprintln(stderr, "\nFlags may be preset in a "+cliconf.Names[0]+", found by searching upwards from here.")
+		fmt.Fprintln(stderr, "Anything typed on the command line wins over it. Keys are grouped into sections and")
+		fmt.Fprintln(stderr, "named after the flags they set:")
+		fmt.Fprintln(stderr, "\n  scan:\n    workdir: ./api\n  emit:\n    scan-models: true")
 		fmt.Fprintln(stderr, "\nFlags:")
 		fs.PrintDefaults()
 	}
