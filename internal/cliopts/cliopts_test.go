@@ -15,10 +15,10 @@ import (
 
 // notOnTheCommandLine are the value-typed options deliberately without a flag, with the reason.
 //
-// Everything else must be reachable. An entry here is a decision, and reading it should be enough to
+// Everything else must be reachable through flags.
 // judge whether it still holds.
 var notOnTheCommandLine = map[string]string{ //nolint:gochecknoglobals // table for the drift guard
-	"Packages":    "positional arguments, so that `genspec ./api/...` reads like every other Go command",
+	"Packages":    `positional arguments, so that "genspec ./api/..." reads well`,
 	"DescWithRef": "deprecated in favour of EmitRefSiblings",
 	"Debug":       "deprecated no-op; the stderr logger was retired",
 }
@@ -26,7 +26,9 @@ var notOnTheCommandLine = map[string]string{ //nolint:gochecknoglobals // table 
 // coveredByLoader is the option the -loader flag discharges.
 //
 // It is a boolean the tables cannot carry, because the choice has three answers and the useful
-// default is the third one. TestLoaderWritesTheToolchainFreeOption is what proves this excuse.
+// default is the third one.
+//
+// NOTE: TestLoaderWritesTheToolchainFreeOption is what proves this excuse.
 const coveredByLoader = "ToolchainFreeLoader"
 
 // TestFlagsCoverEveryValueTypedOption is what stops a knob being unreachable from the command line.

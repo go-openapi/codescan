@@ -21,10 +21,13 @@ This is the ordinary native command. Everything the library can be told is a
 flag, the document goes to standard output or to `-output`, and what the scan
 observed goes to standard error as colored diagnostics.
 
+> **NOTE** `genspec` is a standalone CLI that works like `go-swagger` "swagger generate spec" command,
+> but is released independently and will benefit fixes and enhancements at a faster pace than `go-swagger` releases.
+> `go-swagger` has a larger scope and more dependencies.
+
 ## Which one to reach for
 
-Three commands run the same scan. The question is about the machine, not about
-the specification:
+Three commands run the same scan. The question is about the machine, not about the specification:
 
 | Command | Use it when |
 |---------|-------------|
@@ -105,7 +108,6 @@ specific answer.
 - **what to emit** — `-scan-models`, `-prune-unused-models`, the alias and
   `allOf` knobs, `-skip-extensions`, the naming knobs, the doc-comment knobs
 
-They are the library's own options under their own names: a flag is the
-kebab-case of the field it writes, without exception. See the [package
-documentation](https://pkg.go.dev/github.com/go-openapi/codescan#Options) for
-what each one means.
+They are the library's own options under their own names: a flag is the kebab-case of the field it writes,
+without exception.
+See the [package documentation](https://pkg.go.dev/github.com/go-openapi/codescan#Options) for what each one means.
