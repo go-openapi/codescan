@@ -79,7 +79,7 @@ jobs:
         name: Initialize theme and assets
         env:
           RELEARN_VERSION: 9.0.3
-          MERMAID_VERSION: 11.16.0
+          MERMAID_VERSION: 11.16.1
         run: |
           cd hack/doc-site/hugo
 
