@@ -52,6 +52,17 @@ without exception. `-loader` (`go|own|auto`) is the tri-state that discharges `T
 Options that are not values — `FS`, `ExportData`, `InputSpec`, the callbacks — are the command's
 business, not the table's.
 
+### `internal/cliconf/` — the configuration-file contract
+
+Where a `.codescan.yaml` is found (searching upwards), what may be in it, and how it loses to
+anything typed. Values arrive as a plain flat map, so the source is the command's business: `cmd/genspec`
+feeds it through koanf; a command that must stay dependency-free calls `cliconf.Parse` (YAML, via the
+`go.yaml.in/yaml/v3` the root module already has). `cliconf.YAML` satisfies koanf's parser interface
+*structurally*, so this package owes koanf no import — which is what keeps it usable from
+`cmd/genspec-wasi` under wasm. Keys are `<section>.<flag-name>`: sections come from
+`cliopts.ConfigSchema()` merged with the command's own, an unknown section is skipped (another
+command's half of a shared file) and an unknown key inside a known section is an error.
+
 ### `internal/packages/` — toolchain-free package loader (experimental)
 
 Owns **both** ways of resolving a package graph, behind one `Loader`: delegate to

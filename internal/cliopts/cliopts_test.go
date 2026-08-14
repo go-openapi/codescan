@@ -89,6 +89,34 @@ func TestExcusedOptionsStillExist(t *testing.T) {
 	}
 }
 
+// TestEveryFlagIsAddressableInAConfigFile is the config-file half of the coverage guard.
+//
+// A flag with no section can be typed but not configured, and nothing else would notice: the file
+// would simply have no way to name it, which reads from the outside exactly like the option not
+// existing.
+func TestEveryFlagIsAddressableInAConfigFile(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	Register(fs)
+
+	schema := ConfigSchema()
+	sections := map[string]bool{sectionScan: true, sectionGo: true, sectionLoad: true, sectionEmit: true}
+
+	fs.VisitAll(func(f *flag.Flag) {
+		section, declared := schema[f.Name]
+		assert.Truef(t, declared,
+			"flag -%s is addressed in no configuration section. Give its table entry a section.", f.Name)
+		assert.Truef(t, sections[section],
+			"flag -%s is addressed in section %q, which is not one of this package's", f.Name, section)
+	})
+
+	registered := 0
+	fs.VisitAll(func(*flag.Flag) { registered++ })
+	assert.Len(t, schema, registered, "the schema and the flag set describe different surfaces")
+}
+
 func TestDefaults(t *testing.T) {
 	t.Parallel()
 
