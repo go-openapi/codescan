@@ -14,6 +14,7 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 
+	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
 )
@@ -77,6 +78,42 @@ func TestRunStats_TakesTheCostFromTheScan(t *testing.T) {
 	m.absorbScan(first)
 	assert.Contains(t, testutils.StripANSI(m.runstats.View()), "replaced a spec",
 		"the second run was measured with the first document still live")
+}
+
+// The whole point of the profiled mode: what the process-wide figures cannot attribute, the tables name.
+func TestRunStats_ProfiledRunNamesWhoSpentIt(t *testing.T) {
+	dir := t.TempDir()
+
+	res := scan.Do(codescan.Options{
+		WorkDir:  fixturesDir(t),
+		Packages: []string{"./goparsing/classification/..."},
+	}, scan.Profiling{Enabled: true, Dir: dir})
+	require.NoError(t, res.Err)
+
+	report := res.Profile
+	require.NotNil(t, report, "a profiled run reports")
+	assert.Len(t, report.MemPaths, scan.MemSnapshots)
+	require.NotEmpty(t, report.Scan.Alloc, "scanning allocates, and the profiler says where")
+	assert.NotEmpty(t, report.Scan.Alloc[0].Name)
+
+	// Tall enough for the whole card: what scrolling does to it is the overlay's own business, and is tested there.
+	m := testModelIn(t, fixturesDir(t), sized(200, 120))
+	_, _ = m.Update(res)
+	_ = m.handleKey(testutils.KeyRune('m'))
+
+	card := testutils.StripANSI(m.runstats.View())
+	assert.Contains(t, card, "profiled")
+	assert.Contains(t, card, "what allocated it — scanning")
+	assert.Contains(t, card, report.Dir, "the artifacts are named where they were written")
+	assert.Contains(t, card, "go tool pprof", "with the command that opens them")
+
+	// Both phases are bracketed, and each says what it caught - a small corpus renders far too fast to sample, and
+	// that is a measurement rather than a gap.
+	assert.Contains(t, card, "where the CPU went — scanning")
+	assert.Contains(t, card, "where the CPU went — rendering")
+	if !report.Render.Sampled() {
+		assert.Contains(t, card, "nothing sampled")
+	}
 }
 
 // A run that failed still costs something, and the reading is the only account of where it went.

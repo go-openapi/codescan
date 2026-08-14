@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 )
@@ -31,7 +32,7 @@ func testModel(t *testing.T, opts ...modelOpt) *Model {
 func testModelIn(t *testing.T, dir string, opts ...modelOpt) *Model {
 	t.Helper()
 
-	m := New(codescan.Options{WorkDir: dir, Packages: []string{"./..."}})
+	m := New(codescan.Options{WorkDir: dir, Packages: []string{"./..."}}, scan.Profiling{})
 	t.Cleanup(m.Close)
 
 	m.width, m.height = 80, 24

@@ -4,6 +4,7 @@
 package runstats
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -27,9 +28,11 @@ type Overlay struct {
 	width, height int
 
 	isOpen bool
+	scroll int
 
-	cost   scan.Cost
-	rescan bool
+	cost    scan.Cost
+	profile *scan.ProfileReport
+	rescan  bool
 }
 
 // New builds a closed overlay.
@@ -42,9 +45,11 @@ func New() Overlay {
 // rescan says whether that run replaced a document the model was already holding, which the card has to disclose: at
 // the closing fence the previous spec and the new one are both live, so the retained figure reads high by about one
 // document. Neither the scan nor this overlay can see that on its own - only the model knows what it was holding.
-func (o *Overlay) Set(c scan.Cost, rescan bool) {
+func (o *Overlay) Set(c scan.Cost, report *scan.ProfileReport, rescan bool) {
 	o.cost = c
+	o.profile = report
 	o.rescan = rescan
+	o.scroll = 0
 }
 
 // SetSize fits the overlay to outer dimensions w×h.
@@ -56,17 +61,30 @@ func (o *Overlay) SetSize(w, h int) {
 // IsOpen reports whether the overlay is currently covering the UI.
 func (o *Overlay) IsOpen() bool { return o.isOpen }
 
-// Open shows the card.
-func (o *Overlay) Open() { o.isOpen = true }
+// Open shows the card, always from the top: it is opened to read the last run, not resumed.
+func (o *Overlay) Open() {
+	o.isOpen = true
+	o.scroll = 0
+}
 
 // Close hides it.
-func (o *Overlay) Close() { o.isOpen = false }
+func (o *Overlay) Close() {
+	o.isOpen = false
+	o.scroll = 0
+}
 
-// HandleKey dismisses the overlay, and swallows everything else.
+// HandleKey scrolls or dismisses the overlay, and swallows everything else.
 //
-// The card is a single screen with nothing to navigate, so - unlike the keymap - there is nothing here for a movement
-// key to do. Quitting belongs to the root model, which checks for it before the overlay ever sees the key.
+// Unprofiled, the card fits a screen and the movement keys do nothing; a profiled run adds three tables, and a table
+// below the fold is a measurement nobody sees. Quitting belongs to the root model, which checks for it before the
+// overlay ever sees the key.
 func (o *Overlay) HandleKey(msg tea.KeyMsg) tea.Cmd {
+	if delta, ok := key.Nav(key.MsgBinding(msg), o.visibleRows(), len(o.lines())); ok {
+		o.scrollBy(delta)
+
+		return nil
+	}
+
 	switch key.MsgBinding(msg) {
 	case key.Esc, key.M, key.Enter:
 		o.Close()
@@ -85,6 +103,11 @@ const (
 	noteWindow = "measured across the whole run: the redraw loop and the file watcher allocate on other goroutines too"
 	noteRescan = "this run replaced a spec still held while it ran, so retained reads high by about one document"
 
+	// A profiled run is measured while being watched: the sampler costs time, and the profiler collects at each fence
+	// to keep its own figures current. The tables below are the accurate account; these figures are not.
+	noteProfiled = "profiled run: these figures carry the profiler's overhead and its collections — read the tables below,\n" +
+		"  which exclude the profiler's own work"
+
 	empty     = "no run measured yet"
 	emptyHint = "the first scan is still running"
 )
@@ -95,22 +118,67 @@ const (
 	valueW = 11
 )
 
-// View renders the card.
+// confidentSamples is the point below which the CPU table is a hint rather than a ranking.
+//
+// The sampler runs at 100 Hz, so this is a second of CPU: under it, the gap between the first row and the third is a
+// couple of samples, and reordering them would take nothing.
+const confidentSamples = 100
+
+// View renders the card, with scrolling once it outgrows the terminal.
 func (o *Overlay) View() string {
-	lines := o.lines()
+	all := o.lines()
+	visible := o.visibleRows()
 
-	body := strings.Join(lines, "\n")
+	shown := all
+	top := 0
+	if len(all) > visible {
+		top = min(max(o.scroll, 0), len(all)-visible)
+		shown = all[top : top+visible]
+	}
 
-	return theme.ModalAt(o.contentWidth(lines)).Render(
-		theme.Accent().Render(title) + "\n\n" +
-			body + "\n\n" +
-			theme.Status().Render(footer),
+	head := title
+	if o.profile != nil {
+		head += " · profiled"
+	}
+
+	return theme.ModalAt(o.contentWidth(all)).Render(
+		theme.Accent().Render(head) + "\n\n" +
+			strings.Join(shown, "\n") + "\n\n" +
+			theme.Status().Render(o.footer(top, len(all))),
 	)
 }
 
-// contentWidth pins the frame to the widest line it can show, so the box does not resize as the figures change.
+// scrollBy moves the window, clamped so it can never scroll past the end.
+func (o *Overlay) scrollBy(delta int) {
+	o.scroll = min(max(o.scroll+delta, 0), max(len(o.lines())-o.visibleRows(), 0))
+}
+
+// visibleRows is how many body rows fit between the modal's chrome.
+func (o *Overlay) visibleRows() int {
+	const chrome = 10 // border 2 + padding 2 + title 2 + footer 2, with slack
+
+	return max(o.height-chrome, 3)
+}
+
+// footer states the range as well as the keys: a profiled run does not fit a screen, and a table below the fold is a
+// measurement nobody knows was taken.
+func (o *Overlay) footer(top, total int) string {
+	visible := o.visibleRows()
+	if total <= visible {
+		return footer
+	}
+
+	return fmt.Sprintf("%d–%d of %d  ·  ↑↓/jk: scroll · %s", top+1, min(top+visible, total), total, footer)
+}
+
+// contentWidth pins the frame to the widest line it can EVER show, not the widest one currently on screen - sizing to
+// the window is what makes a box appear to twitch as its content scrolls under it.
 func (o *Overlay) contentWidth(lines []string) int {
-	return max(lipgloss.Width(strings.Join(lines, "\n")), lipgloss.Width(title), lipgloss.Width(footer))
+	return max(
+		lipgloss.Width(strings.Join(lines, "\n")),
+		lipgloss.Width(title+" · profiled"),
+		lipgloss.Width(o.footer(0, len(lines))),
+	)
 }
 
 // lines renders the card body: the figures, then what they do and do not mean.
@@ -121,6 +189,8 @@ func (o *Overlay) lines() []string {
 
 	c := o.cost
 	lines := []string{
+		o.recap(),
+		"",
 		row("elapsed", humanize.Duration(c.ScanFor+c.RenderFor),
 			"scanning "+humanize.Duration(c.ScanFor)+" · rendering "+humanize.Duration(c.RenderFor)),
 		"",
@@ -137,13 +207,194 @@ func (o *Overlay) lines() []string {
 		row("GC cycles", strconv.FormatUint(uint64(c.GCCycles), 10), ""),
 		row("from the OS", humanize.Bytes(c.Sys), "high-water: the runtime rarely hands it back"),
 		"",
-		theme.Status().Render(noteWindow),
+	}
+
+	// What these figures are not. Under a profiled run the first caveat is answered by the tables below - the noise is
+	// named there - but two new ones apply, since observing the run costs the run something.
+	if o.profile == nil {
+		lines = append(lines, theme.Status().Render(noteWindow))
+	} else {
+		lines = append(lines, theme.Status().Render(noteProfiled))
 	}
 	if o.rescan {
 		lines = append(lines, theme.Status().Render(noteRescan))
 	}
 
+	return append(lines, o.profileLines()...)
+}
+
+// recap is the one line a reader takes away: how the run divided between its two phases.
+//
+// The detail below answers it in absolute terms, but two figures in different units are a comparison the reader has to
+// do in their head, and the answer they are usually after - is this a scanning problem or a rendering problem? - is a
+// ratio. Time and memory can disagree sharply (a phase that churns while barely running, or the reverse), which is
+// exactly why both are here rather than one standing in for the other.
+//
+// Under a profiled run the sampled CPU split joins them, and is the more honest of the two clocks: wall time counts
+// waiting, CPU time counts working.
+func (o *Overlay) recap() string {
+	c := o.cost
+	parts := []string{
+		share("time", int64(c.ScanFor), int64(c.RenderFor)),
+		share("memory", int64(c.AllocScan), int64(c.AllocRender)), //nolint:gosec // allocation figures never approach MaxInt64
+	}
+
+	if p := o.profile; p != nil && (p.Scan.Sampled() || p.Render.Sampled()) {
+		parts = append(parts, share("cpu", int64(p.Scan.CPUTotal), int64(p.Render.CPUTotal)))
+	}
+
+	return "  " + pad("split", labelW) + strings.Join(parts, "   ·   ") +
+		theme.Status().Render("      scanning / rendering")
+}
+
+// share renders one split as two percentages that add up to a hundred.
+//
+// The second is derived from the first rather than rounded on its own: independently rounded halves produce "96% / 5%",
+// which reads as an arithmetic error in a line whose whole job is to be glanced at.
+func share(label string, scanning, rendering int64) string {
+	total := scanning + rendering
+	if total <= 0 {
+		return label + " n/a"
+	}
+
+	pct := (scanning*100 + total/2) / total
+
+	return fmt.Sprintf("%s %d%% / %d%%", label, pct, 100-pct)
+}
+
+// profileLines renders what the profiler saw: for each phase, where the CPU went and what allocated the memory, then
+// where the artifacts are.
+//
+// This is the account the figures above cannot give. A scalar cannot say who spent it, so the caveat about the redraw
+// loop and the watcher can only be stated there; here they are simply rows, and a reader discounts them by name.
+func (o *Overlay) profileLines() []string {
+	p := o.profile
+	if p == nil {
+		return nil
+	}
+
+	lines := []string{""}
+	for _, phase := range []scan.PhaseProfile{p.Scan, p.Render} {
+		lines = append(lines, o.cpu(phase)...)
+		lines = append(lines, o.sites(phase, p.Exact)...)
+	}
+
+	lines = append(lines, theme.Accent().Render("  artifacts"))
+	for _, path := range append([]string{p.Scan.CPUPath, p.Render.CPUPath}, p.MemPaths...) {
+		if path != "" {
+			lines = append(lines, "    "+theme.Status().Render(path))
+		}
+	}
+	if p.Scan.CPUPath != "" {
+		lines = append(lines, "", "    "+theme.Status().Render("go tool pprof -http=: "+p.Scan.CPUPath))
+	}
+	if len(p.MemPaths) == scan.MemSnapshots {
+		lines = append(lines, "    "+theme.Status().Render(
+			"go tool pprof -http=: -base "+p.MemPaths[0]+" "+p.MemPaths[1]))
+	}
+
+	for _, note := range p.Notes {
+		lines = append(lines, "", theme.Status().Render("  "+note))
+	}
+
 	return lines
+}
+
+// cpu renders one phase's CPU table, or says why there is none.
+//
+// A phase with no samples still gets its heading. Rendering is short enough that the sampler often catches nothing at
+// all, and that is worth saying: an absent section reads as an oversight, while "nothing sampled" is a measurement.
+func (o *Overlay) cpu(phase scan.PhaseProfile) []string {
+	heading := theme.Accent().Render("  where the CPU went — " + phase.Label)
+
+	switch {
+	case phase.CPUPath == "":
+		return []string{heading + theme.Status().Render("   not profiled"), ""}
+	case !phase.Sampled():
+		return []string{heading + theme.Status().Render(
+			"   nothing sampled: the phase was shorter than the sampler's 10 ms interval"), ""}
+	}
+
+	samples := "samples"
+	if phase.CPUSamples == 1 {
+		samples = "sample"
+	}
+	lines := []string{heading + theme.Status().Render(fmt.Sprintf("   %s across %d %s, every goroutine included",
+		humanize.Duration(phase.CPUTotal), phase.CPUSamples, samples))}
+
+	// A percentage is only worth as much as the samples under it. At 100 Hz a sub-second phase gives a handful, and a
+	// row drawn from two of them ranks nothing - so the card says which of the two tables this is.
+	if phase.CPUSamples < confidentSamples {
+		lines = append(lines, "    "+theme.Status().Render(
+			"too few to rank functions: profile a larger tree, or read the artifact below"))
+	}
+	for _, f := range phase.CPU {
+		lines = append(lines, "    "+lead(fmt.Sprintf("%.0f%%", f.Share*100), 5)+
+			lead(humanize.Duration(f.Flat), 9)+"   "+shortFunc(f.Name))
+	}
+
+	return append(lines, "")
+}
+
+// sites renders one phase's allocation table, or says why it is empty.
+func (o *Overlay) sites(phase scan.PhaseProfile, exact bool) []string {
+	estimate := "estimated from sampling"
+	if exact {
+		estimate = "every allocation counted"
+	}
+
+	lines := []string{theme.Accent().Render("  what allocated it — "+phase.Label) + theme.Status().Render("   "+estimate)}
+	if len(phase.Alloc) == 0 {
+		return append(lines, "    "+theme.Status().Render("nothing sampled in this phase"), "")
+	}
+
+	for _, s := range phase.Alloc {
+		lines = append(lines, "    "+lead(humanize.Bytes(uint64(max(s.Bytes, 0))), 10)+
+			lead(humanize.SignedCount(s.Objects), 9)+"   "+shortFunc(s.Name))
+	}
+
+	return append(lines, "")
+}
+
+// shortFunc drops everything up to the last path segment of a symbol, so a table of Go function names stays a table.
+//
+// "github.com/go-openapi/codescan/internal/builders/schema.(*Builder).Build" is eighty columns of mostly repository,
+// and the modal is deliberately not wrapped: what a reader needs is the package and the method.
+//
+// A major-version segment is carried along with the segment before it: "go.yaml.in/yaml/v3.is_space" trimmed to
+// "v3.is_space" names no package at all, while "yaml/v3.is_space" says which library is doing the work.
+func shortFunc(name string) string {
+	i := strings.LastIndex(name, "/")
+	if i < 0 {
+		return name
+	}
+
+	if isMajorVersion(name[i+1:]) {
+		if j := strings.LastIndex(name[:i], "/"); j >= 0 {
+			return name[j+1:]
+		}
+
+		return name
+	}
+
+	return name[i+1:]
+}
+
+// isMajorVersion reports whether a path segment is a module major version - "v3", or "v3.is_space" once the symbol is
+// attached to it.
+func isMajorVersion(segment string) bool {
+	rest, _, _ := strings.Cut(segment, ".")
+	if len(rest) < 2 || rest[0] != 'v' {
+		return false
+	}
+
+	for _, r := range rest[1:] {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // row renders one figure: label, value right-aligned in its column, and an optional gloss.

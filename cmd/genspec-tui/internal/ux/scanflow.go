@@ -131,7 +131,7 @@ type debounceMsg struct{ gen int }
 func (m *Model) startScan() tea.Cmd {
 	already := m.scan.Running
 	m.scan.Running = true
-	run := scan.Run(m.cfg)
+	run := scan.Run(m.cfg, m.profiling)
 	if already {
 		return run
 	}
@@ -159,7 +159,7 @@ func (m *Model) absorbScan(msg scan.ResultMsg) {
 	m.scan.Diags = msg.Diags
 	m.scan.Err = msg.Err
 
-	m.runstats.Set(msg.Cost, replaced)
+	m.runstats.Set(msg.Cost, msg.Profile, replaced)
 
 	m.diagCursor = min(max(m.diagCursor, 0), max(len(m.scan.Diags)-1, 0))
 	m.srcIndex = index.BuildSourceIndex(msg.Provenance)

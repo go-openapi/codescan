@@ -503,7 +503,7 @@ func classificationScan(t *testing.T) scan.ResultMsg {
 		classificationRes = scan.Do(codescan.Options{
 			WorkDir:  fixturesDir(t),
 			Packages: []string{"./goparsing/classification/..."},
-		})
+		}, scan.Profiling{})
 	})
 	require.NoError(t, classificationRes.Err)
 	require.NotEmpty(t, classificationRes.Diags, "the corpus must produce diagnostics")

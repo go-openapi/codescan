@@ -26,6 +26,7 @@ type ResultMsg struct {
 	Defs       int
 	Elapsed    time.Duration
 	Cost       Cost
+	Profile    *ProfileReport // nil unless the run was profiled
 	Diags      []grammar.Diagnostic
 	Provenance []scanner.Provenance
 	Err        error
@@ -37,10 +38,10 @@ type ResultMsg struct {
 //
 // It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop. cfg is taken by value so the
 // goroutine has a stable snapshot even if the model mutates its options.
-func Run(cfg codescan.Options) tea.Cmd {
+func Run(cfg codescan.Options, prof Profiling) tea.Cmd {
 	return func() tea.Msg {
 		start := time.Now()
-		res := Do(cfg)
+		res := Do(cfg, prof)
 		res.Elapsed = time.Since(start)
 		return res
 	}
@@ -52,8 +53,11 @@ func Run(cfg codescan.Options) tea.Cmd {
 // carries what the run cost as well as what it produced. The inner split is what makes the reading actionable: it
 // separates what codescan spent from what serializing the same document twice, as JSON and again as YAML, spent on top.
 //
+// A profiled run brackets the same two phases with the profiler as well, so what the sampler says and what the fences
+// say describe the same halves of the same work.
+//
 // It is exposed by this package to allow for e2e tests.
-func Do(cfg codescan.Options) ResultMsg {
+func Do(cfg codescan.Options, prof Profiling) ResultMsg {
 	// OnDiagnostic fires synchronously inside codescan.Run, on this same goroutine, so a plain append is race-free.
 	//
 	// Diagnostics collected before a hard error are still worth surfacing, so we carry them on every return.
@@ -70,6 +74,9 @@ func Do(cfg codescan.Options) ResultMsg {
 		provs = append(provs, p)
 	}
 
+	// The profiler brackets each phase from OUTSIDE the fences: its own snapshots collect and allocate, and a fence
+	// that read after one of them would be reporting the profiler as well as the run.
+	p := newProfiler(prof)
 	before := fence()
 
 	scanStart := time.Now()
@@ -80,9 +87,10 @@ func Do(cfg codescan.Options) ResultMsg {
 	if err != nil {
 		return ResultMsg{
 			Diags: diags, Provenance: provs, Err: err,
-			Cost: costOf(before, scanned, scanned, scanFor, 0),
+			Cost: costOf(before, scanned, scanned, scanFor, 0), Profile: p.done(),
 		}
 	}
+	p.scanDone()
 
 	renderStart := time.Now()
 
@@ -90,7 +98,7 @@ func Do(cfg codescan.Options) ResultMsg {
 	if err != nil {
 		return ResultMsg{
 			Diags: diags, Provenance: provs, Err: err,
-			Cost: costOf(before, scanned, fence(), scanFor, time.Since(renderStart)),
+			Cost: costOf(before, scanned, fence(), scanFor, time.Since(renderStart)), Profile: p.done(),
 		}
 	}
 
@@ -104,6 +112,7 @@ func Do(cfg codescan.Options) ResultMsg {
 	renderFor := time.Since(renderStart)
 
 	res.Cost = costOf(before, scanned, fence(), scanFor, renderFor)
+	res.Profile = p.done()
 
 	return res
 }

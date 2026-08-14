@@ -26,6 +26,10 @@ import (
 type Model struct {
 	cfg codescan.Options
 
+	// What each scan captures about itself, fixed at launch. Not a runtime toggle: the heap sampling rate is set once
+	// for the process, so a run profiled under one rate cannot be compared with a run profiled under another.
+	profiling scan.Profiling
+
 	// Terminal geometry, and the regions recalcLayout carves out of it (kept for mouse hit-testing).
 	width, height      int
 	leftW, topH, diagH int
@@ -143,9 +147,13 @@ const (
 //
 // A file watcher is started best-effort - if it can't initialize, live reload is simply unavailable and the user
 // falls back to r (manual rescan).
-func New(cfg codescan.Options) *Model {
+//
+// prof travels separately from the scan config because it is not one: it says what to observe about a run, not what
+// the run should produce. Its zero value profiles nothing.
+func New(cfg codescan.Options, prof scan.Profiling) *Model {
 	m := &Model{
 		cfg:       cfg,
+		profiling: prof,
 		focused:   paneTree,
 		leftPct:   defaultLeftPct,
 		diagPct:   defaultDiagPct,
