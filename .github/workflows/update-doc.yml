@@ -77,14 +77,32 @@ jobs:
           git fetch origin --prune --update-shallow --tags 'refs/tags/*:refs/tags/*'
       -
         name: Initialize theme and assets
+        # Both downloads end up as javascript served to every visitor, so neither is
+        # taken on trust: -f so an error page is not silently written as the asset,
+        # --proto '=https' --tlsv1.2 so a redirect cannot downgrade the transport, and
+        # a recorded digest so we publish the bytes we reviewed and no others.
+        #
+        # A failed check is not necessarily an attack: bump the version and the digest
+        # together, and recompute with
+        #   curl -fsSL <url> | sha256sum
         env:
           RELEARN_VERSION: 9.0.3
-          MERMAID_VERSION: 11.16.0
+          RELEARN_SHA256: 4e7f8931e63eb2a3a05938e5dfd47a5678447329b98b8486a2d1169cb3d1aba9
+          MERMAID_VERSION: 11.16.1
+          MERMAID_SHA256: 18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954
         run: |
           cd hack/doc-site/hugo
 
+          fetch() {
+            local url="$1" out="$2" want="$3"
+
+            curl -fsSL --proto '=https' --tlsv1.2 -o "${out}" "${url}"
+            echo "${want}  ${out}" | sha256sum -c -
+          }
+
           # Clone theme (not committed)
-          curl -sL -o relearn.tgz https://github.com/McShelby/hugo-theme-relearn/archive/refs/tags/"${RELEARN_VERSION}".tar.gz
+          fetch "https://github.com/McShelby/hugo-theme-relearn/archive/refs/tags/${RELEARN_VERSION}.tar.gz" \
+            relearn.tgz "${RELEARN_SHA256}"
           tar xf relearn.tgz
           rm -rf themes/hugo-relearn
           mv "hugo-theme-relearn-${RELEARN_VERSION}" hugo-relearn
@@ -94,8 +112,8 @@ jobs:
           # >= 11.16, newer than the theme's bundled Mermaid; served as a local
           # static asset so the rendered site makes no runtime CDN calls.
           mkdir -p themes/codescan-static/js/mermaid11
-          curl -sL -o themes/codescan-static/js/mermaid11/mermaid.min.js \
-            https://cdn.jsdelivr.net/npm/mermaid@"${MERMAID_VERSION}"/dist/mermaid.min.js
+          fetch "https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js" \
+            themes/codescan-static/js/mermaid11/mermaid.min.js "${MERMAID_SHA256}"
       -
         name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

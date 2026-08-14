@@ -1,10 +1,20 @@
 const worker = new Worker("./worker.js", { type: "module" });
 const $ = (id) => document.getElementById(id);
 
+// The status line is assembled, not written as markup. Everything in it comes back from the
+// worker — an exit code, and definition names read out of whatever module was scanned — and
+// none of that has any business being parsed as HTML.
+const status = (cls, text) => {
+  const span = document.createElement("span");
+  span.className = cls;
+  span.textContent = text;
+  $("status").replaceChildren(span);
+};
+
 worker.onmessage = (e) => {
   const r = e.data;
   if (!r.ok) {
-    $("status").innerHTML = `<span class="bad">FAILED</span>`;
+    status("bad", "FAILED");
     $("err").textContent = r.error;
 
     return;
@@ -14,9 +24,12 @@ worker.onmessage = (e) => {
     try { return Object.keys(JSON.parse(r.out).definitions || {}); } catch { return null; }
   })();
 
-  $("status").innerHTML = defs
-    ? `<span class="ok">ran, exit ${r.code}, definitions: ${defs.join(", ") || "(none)"}</span>`
-    : `<span class="bad">ran, exit ${r.code}, but stdout was not JSON</span>`;
+  status(
+    defs ? "ok" : "bad",
+    defs
+      ? `ran, exit ${r.code}, definitions: ${defs.join(", ") || "(none)"}`
+      : `ran, exit ${r.code}, but stdout was not JSON`,
+  );
 
   $("timings").textContent = [
     `compile      ${r.compileMs.toFixed(0)} ms   (once; reusable across runs)`,
