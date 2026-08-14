@@ -3,21 +3,17 @@ name: "Update documentation"
 permissions:
   contents: read
 
+# NOTE: no "paths" filter here, on purpose. A workflow filtered out by its paths never
+# starts, so it reports no status at all — fine while nothing waits on it, useless the day
+# the doc build is pinned in the branch protection rules. Filtering happens in the
+# "changes" job below, which fails open, so the build is skipped rather than never run.
 on:
   push:
     tags:
       - v*
     branches: [ "master" ]
-    paths:
-    - docs/**
-    - hack/doc-site/**
-    - .github/workflows/update-doc.yml
 
   pull_request:
-    paths:
-    - docs/**
-    - hack/doc-site/**
-    - .github/workflows/update-doc.yml
 
 concurrency:
   group: "pages"
@@ -28,7 +24,32 @@ defaults:
     shell: bash
 
 jobs:
+  changes:
+    # description: |
+    #   Is there anything here to publish? Fails open: anything unclear rebuilds the site.
+    #
+    #   A tag push lands in that fail-open branch — a freshly created tag has no previous
+    #   commit to compare against — which is what we want, since the rendered pages carry
+    #   the latest release.
+    name: Changes
+    permissions:
+      contents: read
+      # A called workflow cannot hold more than its caller grants, and an omitted scope
+      # is 'none': without this the run is rejected before it starts.
+      pull-requests: read
+    uses: go-openapi/ci-workflows/.github/workflows/changed-paths.yml@81c95ab8bb6a3e0aeccc90a7c9e5fc5b398b1244 # v0.6.0
+    with:
+      preset: doc
+      # The preset knows the go-openapi layout — markdown anywhere, the hugo tree under
+      # hack/doc-site — but not that this repo keeps reference pages under docs/, nor that
+      # a change to this file changes what gets published.
+      extra-paths: |
+        docs/**
+        .github/workflows/update-doc.yml
+
   build-doc:
+    needs: [ changes ]
+    if: ${{ needs.changes.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     steps:
       -

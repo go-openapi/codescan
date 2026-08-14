@@ -13,5 +13,12 @@ on:
 
 jobs:
   test:
-    uses: go-openapi/ci-workflows/.github/workflows/go-test-monorepo.yml@befbc52f24215555cb601b0d824b2987c1d49d0b # v0.4.3
+    uses: go-openapi/ci-workflows/.github/workflows/go-test-monorepo.yml@81c95ab8bb6a3e0aeccc90a7c9e5fc5b398b1244 # v0.6.0
+    with:
+      # From v0.5.0 the shared workflow skips the matrix when nothing relevant changed, and
+      # what it watches is go sources. Ours are not the whole input: the integration tests
+      # compare against captured specs under fixtures/integration/golden, and a corpus that
+      # moves without a line of go moving is exactly the change those tests exist to catch.
+      extra-paths: |
+        fixtures/**
     secrets: inherit
