@@ -67,18 +67,27 @@ updates:
     # The playground app — the only npm package in this repo. Its checks are
     # front-end-test.yml, not the go test matrix.
     #
-    # Two groups, split by what a bump can break:
+    # Three groups, split by what a bump can break:
     #
-    # 1. development-dependencies (vite, vitest, svelte, typescript, …) are
-    #    auto-merged. The name is deliberate: the shared auto-merge workflow
-    #    matches the group name by *substring*, so this opts in to the same
-    #    policy the go development-dependencies group already gets. What guards
-    #    it is svelte-check + vitest + a production build, on both node LTS lines.
+    # 1. development-dependencies (vite, vitest, svelte, …) are auto-merged. The
+    #    name is deliberate: the shared auto-merge workflow matches the group
+    #    name by *substring*, so this opts in to the same policy the go
+    #    development-dependencies group already gets. What guards it is
+    #    svelte-check + vitest + a production build, on both node LTS lines.
     #
     # 2. playground-dependencies (codemirror, swagger-ui-dist, the WASI shim) ship
     #    in the bundle and are only verifiable by looking at the rendered page,
     #    which no CI does. Manual merge, on purpose — the name avoids the
     #    auto-merge substring.
+    #
+    # 3. typescript is a development dependency that is nonetheless carved out of
+    #    group 1, because it is not ours to move: svelte-check pins the compiler
+    #    it will accept as a peer (^5 || ^6 as of svelte-check 4.7), so a major
+    #    bump ahead of that release makes `npm ci` unresolvable — the lane does
+    #    not merely go red, it cannot install. The strategy below already puts a
+    #    major out of reach; the carve-out is what keeps a human in the loop on
+    #    the day the manifest is widened on purpose. Manual merge; the name
+    #    avoids the auto-merge substring.
     #
     # hack/browser is deliberately left out: a throwaway conformance probe with a
     # single dependency, not worth a weekly pull request.
@@ -86,10 +95,25 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 3
+    # Move the lock file, never the manifest. The playground is a demonstration, not a
+    # product: what it needs from a weekly bump is the patched version of what it already
+    # declares, and nothing else. The default strategy widens the declared range instead
+    # — which is how the compiler reached a major the tools around it could not resolve —
+    # so the ranges in package.json become the real ceiling.
+    #
+    # The cost is stated plainly: a fix that only exists above a declared range is not
+    # proposed here at all, and takes widening the caret by hand.
+    versioning-strategy: "lockfile-only"
     groups:
       development-dependencies:
         dependency-type: "development"
+        exclude-patterns:
+          - "typescript"
 
       playground-dependencies:
         dependency-type: "production"
+
+      compiler-dependencies:
+        patterns:
+          - "typescript"

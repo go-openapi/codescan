@@ -14,40 +14,53 @@ name: front-end test
 permissions:
   contents: read
 
+# NOTE: no "paths" filter here, on purpose. A workflow filtered out by its paths never
+# starts, and a required check that never starts leaves the pull request waiting on
+# "Expected — waiting for status to be reported". Filtering happens in the "changes"
+# job below instead, so "front-end tests completed" reports on every run and can be
+# pinned in the branch protection rules.
 on:
   push:
     branches: [ "master" ]
-    paths:
-    - hack/doc-site/genspec-wasi/**
-    # The producer of the -format=json envelope the app consumes. A change here can
-    # invalidate the app without touching a line of it, so the lane runs. What decides
-    # whether the contract still holds is a Go test next to the envelope, since nothing
-    # in this workflow reads Go.
-    - cmd/genspec-wasi/**
-    - .github/workflows/front-end-test.yml
 
   pull_request:
-    paths:
-    - hack/doc-site/genspec-wasi/**
-    # The producer of the -format=json envelope the app consumes. A change here can
-    # invalidate the app without touching a line of it, so the lane runs. What decides
-    # whether the contract still holds is a Go test next to the envelope, since nothing
-    # in this workflow reads Go.
-    - cmd/genspec-wasi/**
-    - .github/workflows/front-end-test.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-defaults:
-  run:
-    shell: bash
-    working-directory: hack/doc-site/genspec-wasi
-
 jobs:
+  changes:
+    # description: |
+    #   Is there anything here for npm to check? Fails open: anything unclear runs the
+    #   whole lane.
+    name: Changes
+    permissions:
+      contents: read
+      # A called workflow cannot hold more than its caller grants, and an omitted scope
+      # is 'none': without this the run is rejected before it starts.
+      pull-requests: read
+    uses: go-openapi/ci-workflows/.github/workflows/changed-paths.yml@81c95ab8bb6a3e0aeccc90a7c9e5fc5b398b1244 # v0.6.0
+    with:
+      preset: front-end
+      # The producer of the -format=json envelope the app consumes. A change here can
+      # invalidate the app without touching a line of it, so the lane runs. What decides
+      # whether the contract still holds is a Go test next to the envelope, since nothing
+      # in this workflow reads Go.
+      extra-paths: |
+        cmd/genspec-wasi/**
+
   test:
+    name: test
+    needs: [ changes ]
+    if: ${{ needs.changes.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        # On the job and not on the workflow: the gate below checks out nothing, and a
+        # working directory that does not exist fails the shell before it runs a line.
+        working-directory: hack/doc-site/genspec-wasi
     strategy:
       fail-fast: false
       matrix:
@@ -82,3 +95,40 @@ jobs:
       -
         name: Build
         run: npm run build
+
+  front-end-test-complete:
+    # description: |
+    #   This is the gate pinned in the branch protection rules, so it MUST report on every
+    #   run, including the runs where everything else was skipped.
+    #
+    #   Hence "always()" — with the default condition the job would inherit the skip of its
+    #   dependencies and never report — and an assertion on the negative: fail on 'failure'
+    #   and 'cancelled', pass on 'skipped'. A job correctly skipped is then indistinguishable
+    #   from a job that had nothing to do.
+    #
+    #   "changes" belongs in "needs" too: a job skipped because ITS dependency failed reports
+    #   'skipped', so leaving the failing one out would turn the gate green over an unchecked
+    #   pull request.
+    name: front-end tests completed
+    needs: [ changes, test ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Report upstream job results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "::group::upstream job results"
+          printenv RESULTS
+          echo "::endgroup::"
+      -
+        name: Fail on any unsuccessful upstream job
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "::error title=front-end-tests::at least one job failed or was cancelled"
+          exit 1
+      -
+        name: Tests completed
+        run: |
+          echo "::notice title=Success::All front-end tests passed"
