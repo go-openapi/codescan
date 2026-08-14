@@ -84,9 +84,10 @@ updates:
     #    group 1, because it is not ours to move: svelte-check pins the compiler
     #    it will accept as a peer (^5 || ^6 as of svelte-check 4.7), so a major
     #    bump ahead of that release makes `npm ci` unresolvable — the lane does
-    #    not merely go red, it cannot install. Merging that one is waiting for
-    #    the tool that consumes it, which is a human decision. Manual merge; the
-    #    name avoids the auto-merge substring.
+    #    not merely go red, it cannot install. The strategy below already puts a
+    #    major out of reach; the carve-out is what keeps a human in the loop on
+    #    the day the manifest is widened on purpose. Manual merge; the name
+    #    avoids the auto-merge substring.
     #
     # hack/browser is deliberately left out: a throwaway conformance probe with a
     # single dependency, not worth a weekly pull request.
@@ -95,6 +96,15 @@ updates:
       interval: "weekly"
       day: "friday"
     open-pull-requests-limit: 3
+    # Move the lock file, never the manifest. The playground is a demonstration, not a
+    # product: what it needs from a weekly bump is the patched version of what it already
+    # declares, and nothing else. The default strategy widens the declared range instead
+    # — which is how the compiler reached a major the tools around it could not resolve —
+    # so the ranges in package.json become the real ceiling.
+    #
+    # The cost is stated plainly: a fix that only exists above a declared range is not
+    # proposed here at all, and takes widening the caret by hand.
+    versioning-strategy: "lockfile-only"
     groups:
       development-dependencies:
         dependency-type: "development"
