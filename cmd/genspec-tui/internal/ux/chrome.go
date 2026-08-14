@@ -5,10 +5,10 @@ package ux
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/humanize"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
@@ -56,7 +56,7 @@ func (m *Model) headerLine() string {
 	case m.scan.Running:
 		tail = m.scan.Spin.View() + theme.Status().Render("scanning")
 	case m.scan.Elapsed > 0:
-		tail = theme.Status().Render("ready (" + humanDuration(m.scan.Elapsed) + ")")
+		tail = theme.Status().Render("ready (" + humanize.Duration(m.scan.Elapsed) + ")")
 	}
 
 	// Measured, not guessed. Assembled around the work dir rather than through a format string, so nothing in the data
@@ -72,24 +72,6 @@ func (m *Model) headerLine() string {
 	// Last resort, for a terminal too narrow even for the inelastic fields: clip. Overflow wraps onto a second row,
 	// which pushes every pane down one and misaligns the mouse hit-testing against what is drawn.
 	return lipgloss.NewStyle().MaxWidth(m.width).Render(line)
-}
-
-// humanDuration renders d compactly: "947ms", "3s", "1m 3s" (minute form drops a zero-second remainder, e.g. "2m").
-func humanDuration(d time.Duration) string {
-	switch {
-	case d < time.Second:
-		return fmt.Sprintf("%dms", d.Milliseconds())
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Round(time.Second).Seconds()))
-	default:
-		d = d.Round(time.Second)
-		mins := int(d / time.Minute)
-		secs := int((d % time.Minute) / time.Second)
-		if secs == 0 {
-			return fmt.Sprintf("%dm", mins)
-		}
-		return fmt.Sprintf("%dm %ds", mins, secs)
-	}
 }
 
 // statusLine renders the bottom line, clipped to the terminal.

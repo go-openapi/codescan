@@ -279,24 +279,6 @@ func TestStatusLineFits(t *testing.T) {
 	}
 }
 
-func TestHumanDuration(t *testing.T) {
-	for _, tc := range []struct {
-		in   time.Duration
-		want string
-	}{
-		{947 * time.Millisecond, "947ms"},
-		{0, "0ms"},
-		{time.Second, "1s"},
-		{3200 * time.Millisecond, "3s"},
-		{59 * time.Second, "59s"},
-		{time.Minute, "1m"},
-		{2 * time.Minute, "2m"},
-		{63 * time.Second, "1m 3s"},
-	} {
-		assert.Equal(t, tc.want, humanDuration(tc.in), "%s", tc.in)
-	}
-}
-
 func TestShortenPath(t *testing.T) {
 	assert.Equal(t, "/a/b", shortenPath("/a/b", 10), "a path that fits is untouched")
 	assert.Equal(t, "…c/ddd", shortenPath("/aaa/bbb/ccc/ddd", 6))

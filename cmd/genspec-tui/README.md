@@ -63,6 +63,15 @@ the scan runs under, plus codescan's own loader:
 | `-toolchain-free-loader` | `false` | load packages with codescan's own loader instead of the go command (experimental) |
 | `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-toolchain-free-loader`) |
 
+A third group observes the run rather than configuring it — see
+[What a scan cost](#what-a-scan-cost-m):
+
+| Flag | Default | Meaning |
+|------|---------|---------|
+| `-profile` | `false` | profile every scan: a CPU profile and per-phase allocation profiles, reported under `m` and written for `go tool pprof` |
+| `-profile-dir` | a fresh temp dir | where `-profile` writes its `.pprof` files |
+| `-mem-profile-rate` | `0` | with `-profile`, `runtime.MemProfileRate`: `0` samples every 512 KiB, `1` records every allocation exactly |
+
 Every boolean scanner option can be toggled live with `o`; the spec re-renders
 on close, which makes the popup the fastest way to see what a flag such as
 `EmitRefSiblings` actually changes. The rows are grouped (discovery & scope ·
@@ -137,6 +146,7 @@ the cursor falls back to its nearest surviving ancestor.
 | `v` / `V` | validate the generated spec / switch the diagnostics pane between scan and validation |
 | `F5` | reload the open file from disk (asks before discarding unsaved edits) |
 | `o` | scanner options popup (`space` toggles, `Esc`/`o` applies and rescans) |
+| `m` | what the last scan cost — wall clock and memory, split between scanning and rendering; the profiles too under `-profile` |
 | `ctrl+q` / `ctrl+c` | quit |
 
 ### Spec pane
@@ -212,6 +222,91 @@ The entries cover the twenty `swagger:` annotations. Individual body keywords
 (`required`, `minLength`, `enum`, …) are not documented one by one — there are
 too many for a popup to be the right place — so each annotation's entry says
 instead which family of keywords its body accepts.
+
+## What a scan cost (`m`)
+
+`m` opens a card describing the run that just finished: how long it took, what
+it allocated, what it left live, and how much the process holds from the OS.
+Time and memory are both split between **scanning** (codescan) and **rendering**
+(serializing the same document twice, as JSON and again as YAML), because the
+run is fenced three times — before the scan, after it, and after rendering. Under
+`-profile` the same two phases are bracketed by the profiler, so what the sampler
+says and what the fences say describe the same halves of the same work.
+
+A `split` line at the top recaps the whole thing as ratios — `time 96% / 4% ·
+memory 86% / 14%`, and `cpu` too under `-profile` — because the question a reader
+usually arrives with is *which phase is this?*, and two figures in different
+units is a comparison they would otherwise do in their head. Time and memory can
+disagree sharply, which is why both are there.
+
+It is a modal rather than another status-line field: the status line already
+carries the pane hints, the follow badge and the search prompt, and this is a
+figure most sessions never ask for.
+
+Two things those figures are not, both stated on the card:
+
+- **The window is process-wide.** `runtime.ReadMemStats` accounts for the whole
+  process, and while a scan runs the redraw loop, the spinner and the file
+  watcher allocate on other goroutines.
+- **A rescan holds two documents.** The previous spec is only released once the
+  new one lands, so on a rescan the retained figure reads high by about one
+  document. That is arithmetic, not a leak.
+
+### Profiled runs (`-profile`)
+
+A scalar cannot say who spent it, which is the ceiling on everything above.
+Start with `-profile` and each scan is also profiled: the card then reports
+**where the CPU went** and **what allocated it, per phase**, by function. The
+process-wide caveat stops mattering, because the noise arrives named — a redraw
+row you discount rather than a confound you cannot separate.
+
+```sh
+genspec-tui -profile -workdir ../my-api
+
+# every allocation counted rather than sampled every 512 KiB — accurate, and slow
+genspec-tui -profile -mem-profile-rate=1 -workdir ../my-api
+```
+
+The card grows scrolling when it outgrows the terminal (`↑↓`/`jk`, `PgUp`/`PgDn`,
+`Home`/`End`), and names the artifacts it wrote, with the commands that open them:
+
+```sh
+go tool pprof -http=: <dir>/cpu-scan.pprof
+go tool pprof -http=: -base <dir>/mem-before.pprof <dir>/mem-after-scan.pprof
+```
+
+Five artifacts are written: a CPU profile per phase (`cpu-scan`, `cpu-render`)
+and three heap snapshots — before, after scanning, after rendering — so `-base`
+reproduces either phase in the real tool. What the in-TUI tables give you
+is the answer without leaving the session; the flame graph is one command away.
+
+Caveats worth knowing before reading a table:
+
+- **Sampling.** At the default rate the heap profiler records one allocation per
+  512 KiB, and the figures are scaled back up the way pprof does. The card says
+  `estimated from sampling`, or `every allocation counted` under
+  `-mem-profile-rate=1`.
+- **Samples, not measurements.** The CPU profiler runs at 100 Hz, so a scan under
+  a second yields a few dozen samples and cannot rank functions; the card says so
+  rather than dressing a handful of samples up as a ranking. Both phases are
+  bracketed, but rendering is often shorter than the sampler's 10 ms interval and
+  simply catches nothing — which the card states, because an absent section reads
+  as an oversight while "nothing sampled" is a measurement.
+- **The observer is excluded.** Stopping one phase's CPU profile flushes it
+  through a compressor and starting the next allocates its buffers, all of it
+  between two fences. Those allocations are dropped from the tables rather than
+  reported: in the short phase they would otherwise crowd out its real sites.
+- **Observing costs.** A profiled run collects at each fence and carries the
+  sampler's overhead, so the summary figures at the top of the card are worse
+  than the same run unprofiled. The tables are the accurate account.
+- **Not a runtime toggle.** The heap sampling rate is a property of the process
+  and is fixed at launch: two runs in one session are then comparable.
+- **One at a time.** The CPU profiler is a process-wide singleton, so if a second
+  scan starts while one is in flight (changing an option mid-scan), it runs
+  without a CPU profile and says so.
+- **The last run only.** Every scan writes the same five filenames, so a rescan
+  overwrites its predecessor. Copy them elsewhere before saving a file if you want
+  to compare two runs.
 
 ## Reloading
 

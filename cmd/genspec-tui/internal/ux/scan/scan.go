@@ -17,14 +17,16 @@ import (
 
 // ResultMsg carries the outcome of a whole-scope scan.
 //
-// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took,
-// every diagnostic the build emitted in source order, and any hard error from codescan.Run.
+// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took, what it
+// cost to run, every diagnostic the build emitted in source order, and any hard error from codescan.Run.
 type ResultMsg struct {
 	JSON       string
 	YAML       string
 	Paths      int
 	Defs       int
 	Elapsed    time.Duration
+	Cost       Cost
+	Profile    *ProfileReport // nil unless the run was profiled
 	Diags      []grammar.Diagnostic
 	Provenance []scanner.Provenance
 	Err        error
@@ -36,10 +38,10 @@ type ResultMsg struct {
 //
 // It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop. cfg is taken by value so the
 // goroutine has a stable snapshot even if the model mutates its options.
-func Run(cfg codescan.Options) tea.Cmd {
+func Run(cfg codescan.Options, prof Profiling) tea.Cmd {
 	return func() tea.Msg {
 		start := time.Now()
-		res := Do(cfg)
+		res := Do(cfg, prof)
 		res.Elapsed = time.Since(start)
 		return res
 	}
@@ -47,8 +49,15 @@ func Run(cfg codescan.Options) tea.Cmd {
 
 // Do performs the scan and rendering, returning the result without timing (runScan stamps the elapsed time around it).
 //
+// It fences the work three times - before the scan, after it, and once the document has been rendered - so the result
+// carries what the run cost as well as what it produced. The inner split is what makes the reading actionable: it
+// separates what codescan spent from what serializing the same document twice, as JSON and again as YAML, spent on top.
+//
+// A profiled run brackets the same two phases with the profiler as well, so what the sampler says and what the fences
+// say describe the same halves of the same work.
+//
 // It is exposed by this package to allow for e2e tests.
-func Do(cfg codescan.Options) ResultMsg {
+func Do(cfg codescan.Options, prof Profiling) ResultMsg {
 	// OnDiagnostic fires synchronously inside codescan.Run, on this same goroutine, so a plain append is race-free.
 	//
 	// Diagnostics collected before a hard error are still worth surfacing, so we carry them on every return.
@@ -65,14 +74,32 @@ func Do(cfg codescan.Options) ResultMsg {
 		provs = append(provs, p)
 	}
 
+	// The profiler brackets each phase from OUTSIDE the fences: its own snapshots collect and allocate, and a fence
+	// that read after one of them would be reporting the profiler as well as the run.
+	p := newProfiler(prof)
+	before := fence()
+
+	scanStart := time.Now()
 	sw, err := codescan.Run(&cfg)
+	scanFor := time.Since(scanStart)
+	scanned := fence()
+
 	if err != nil {
-		return ResultMsg{Diags: diags, Provenance: provs, Err: err}
+		return ResultMsg{
+			Diags: diags, Provenance: provs, Err: err,
+			Cost: costOf(before, scanned, scanned, scanFor, 0), Profile: p.done(),
+		}
 	}
+	p.scanDone()
+
+	renderStart := time.Now()
 
 	jb, err := json.MarshalIndent(sw, "", "  ")
 	if err != nil {
-		return ResultMsg{Diags: diags, Provenance: provs, Err: err}
+		return ResultMsg{
+			Diags: diags, Provenance: provs, Err: err,
+			Cost: costOf(before, scanned, fence(), scanFor, time.Since(renderStart)), Profile: p.done(),
+		}
 	}
 
 	res := ResultMsg{JSON: string(jb), Defs: len(sw.Definitions), Diags: diags, Provenance: provs}
@@ -82,6 +109,11 @@ func Do(cfg codescan.Options) ResultMsg {
 	if yb, yerr := jsonToYAML(jb); yerr == nil {
 		res.YAML = string(yb)
 	}
+	renderFor := time.Since(renderStart)
+
+	res.Cost = costOf(before, scanned, fence(), scanFor, renderFor)
+	res.Profile = p.done()
+
 	return res
 }
 

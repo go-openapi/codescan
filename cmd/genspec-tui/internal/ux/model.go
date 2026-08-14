@@ -18,12 +18,17 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/options"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/panels"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/reference"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/runstats"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 )
 
 // Model is the root bubbletea model.
 type Model struct {
 	cfg codescan.Options
+
+	// What each scan captures about itself, fixed at launch. Not a runtime toggle: the heap sampling rate is set once
+	// for the process, so a run profiled under one rate cannot be compared with a run profiled under another.
+	profiling scan.Profiling
 
 	// Terminal geometry, and the regions recalcLayout carves out of it (kept for mouse hit-testing).
 	width, height      int
@@ -83,6 +88,7 @@ type Model struct {
 	options   options.Overlay
 	confirm   confirm.Overlay
 	reference reference.Overlay
+	runstats  runstats.Overlay
 
 	// What an accepted confirmation will do. The overlay records the answer; naming the action is the model's job.
 	pendingConfirm confirmAction
@@ -141,9 +147,13 @@ const (
 //
 // A file watcher is started best-effort - if it can't initialize, live reload is simply unavailable and the user
 // falls back to r (manual rescan).
-func New(cfg codescan.Options) *Model {
+//
+// prof travels separately from the scan config because it is not one: it says what to observe about a run, not what
+// the run should produce. Its zero value profiles nothing.
+func New(cfg codescan.Options, prof scan.Profiling) *Model {
 	m := &Model{
 		cfg:       cfg,
+		profiling: prof,
 		focused:   paneTree,
 		leftPct:   defaultLeftPct,
 		diagPct:   defaultDiagPct,
@@ -157,6 +167,7 @@ func New(cfg codescan.Options) *Model {
 		help:      help.New(),
 		confirm:   confirm.New(),
 		reference: reference.New(),
+		runstats:  runstats.New(),
 	}
 	// Built after the struct exists: the options rows bind to the scan-config booleans by pointer, and those pointers
 	// have to be into m.cfg (valid because m is heap-allocated) rather than into the caller's copy.

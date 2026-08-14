@@ -767,7 +767,7 @@ func scanPetstore(t *testing.T) *Model {
 			WorkDir:    fixturesDir(t),
 			Packages:   []string{"./goparsing/petstore/..."},
 			ScanModels: true,
-		})
+		}, scan.Profiling{})
 	})
 	res := petstoreRes
 	require.NoError(t, res.Err, "the petstore fixture must scan cleanly")

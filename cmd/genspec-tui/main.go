@@ -10,12 +10,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 )
 
 // cliFlags holds the raw flag values.
@@ -42,6 +44,11 @@ type cliFlags struct {
 	excludeTags         *string
 	nameFromTags        *string
 	nameConcatBudget    *float64
+
+	// Observation of the run rather than configuration of it, which is why these are not codescan options.
+	profile        *bool
+	profileDir     *string
+	memProfileRate *int
 }
 
 // registerFlags declares every flag on fs.
@@ -77,7 +84,44 @@ func registerFlags(fs *flag.FlagSet) *cliFlags {
 			`ordered struct tags a field's name derives from (default "json"; pass empty to use the Go field name)`),
 		nameConcatBudget: fs.Float64("name-concat-budget", 0,
 			"readability cutoff for collision-renaming by concatenation (0 = codescan's default of 0.65)"),
+		profile: fs.Bool("profile", false,
+			"profile every scan (CPU + allocations), reported under m and written for go tool pprof"),
+		profileDir: fs.String("profile-dir", "",
+			"where -profile writes its .pprof files (default: a fresh temp directory)"),
+		memProfileRate: fs.Int("mem-profile-rate", 0,
+			"with -profile, runtime.MemProfileRate: 0 samples every 512 KiB, 1 records every allocation exactly"),
 	}
+}
+
+// profiling reads the profile flags, and applies the ones the runtime wants set before anything is measured.
+//
+// The heap sampling rate is a property of the process, not of a scan: the runtime expects it constant for the
+// program's lifetime, and the profiles record the rate they were taken under. Setting it here, once, is what makes two
+// runs in the same session comparable.
+func (c *cliFlags) profiling() (scan.Profiling, error) {
+	if !*c.profile {
+		return scan.Profiling{}, nil
+	}
+
+	if rate := *c.memProfileRate; rate > 0 {
+		runtime.MemProfileRate = rate
+	}
+
+	dir := *c.profileDir
+	if dir == "" {
+		tmp, err := os.MkdirTemp("", "genspec-tui-profile-")
+		if err != nil {
+			return scan.Profiling{}, fmt.Errorf("cannot create a profile directory: %w", err)
+		}
+		dir = tmp
+	}
+
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return scan.Profiling{}, err
+	}
+
+	return scan.Profiling{Enabled: true, Dir: abs}, nil
 }
 
 // options assembles the scan config. workDir is passed in already absolute.
@@ -163,7 +207,12 @@ func run() error {
 		return err
 	}
 
-	model := ux.New(cli.options(dir))
+	prof, err := cli.profiling()
+	if err != nil {
+		return err
+	}
+
+	model := ux.New(cli.options(dir), prof)
 	defer model.Close()
 
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
