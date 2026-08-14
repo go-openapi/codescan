@@ -3,7 +3,7 @@
 
 //go:build !wasm
 
-package main
+package cliopts
 
 // canExec reports whether this build can start a subprocess.
 func canExec() bool { return true }
