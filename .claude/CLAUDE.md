@@ -42,6 +42,16 @@ to builders without direct coupling.
 | `provenance.go` | `Provenance` — ties a spec JSON pointer to the source position of the Go construct that produced it; emitted via `Options.OnProvenance` (cross-ref linker, source side) |
 | `classify/` | Classification predicates usable from both scanner and builders (e.g. `IsAllowedExtension`) |
 
+### `internal/cliopts/` — the command-line option surface
+
+Every knob on `codescan.Options` as a flag, declared once and shared by the commands (`cmd/genspec`,
+`cmd/genspec-wasi`) so a flag means the same thing whichever one you reach for. Entries are keyed by
+the field's *setter*, never by a name derived from the field, and a guard in the package tests fails
+when a value-typed option lands with no flag (or excuse). Flag names are the kebab-case of the field
+without exception. `-loader` (`go|own|auto`) is the tri-state that discharges `ToolchainFreeLoader`.
+Options that are not values — `FS`, `ExportData`, `InputSpec`, the callbacks — are the command's
+business, not the table's.
+
 ### `internal/packages/` — toolchain-free package loader (experimental)
 
 Owns **both** ways of resolving a package graph, behind one `Loader`: delegate to

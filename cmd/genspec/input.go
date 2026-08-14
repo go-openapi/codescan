@@ -1,0 +1,38 @@
+// SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
+// SPDX-License-Identifier: Apache-2.0
+
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/spec"
+)
+
+// loadInput reads the specification the scan's discoveries are merged into.
+//
+// What the scan finds is written on top of this document rather than beside it, so it is the place
+// for everything a scanner cannot know: the host, the security definitions, a hand-written path the
+// annotations do not describe.
+func loadInput(path string) (*spec.Swagger, error) {
+	if path == "" {
+		return nil, nil //nolint:nilnil // no input is not an input that is empty: the scan starts from nothing
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read -input: %w", err)
+	}
+	if info.IsDir() {
+		return nil, fmt.Errorf("%w: -input %q is a directory, not a specification", errUsage, path)
+	}
+
+	document, err := loads.Spec(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load -input %q: %w", path, err)
+	}
+
+	return document.Spec(), nil
+}
