@@ -23,6 +23,12 @@
 //	              cross-references
 //	genspec-tui   the same scan, live, with the source and the document side by side
 //
+// # Relationship to go-swagger
+//
+// genspec does the same job as go-swagger's `swagger generate spec`, which drives the same library.
+// It is released on its own, so fixes and enhancements reach it at codescan's pace rather than
+// go-swagger's; go-swagger has a wider scope, and the dependencies that come with it.
+//
 // # Exit status
 //
 // A specification is written whenever one could be produced, so a non-zero status describes what was
