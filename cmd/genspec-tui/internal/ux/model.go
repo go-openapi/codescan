@@ -30,6 +30,11 @@ type Model struct {
 	// for the process, so a run profiled under one rate cannot be compared with a run profiled under another.
 	profiling scan.Profiling
 
+	// Where the starting options came from, for the opening notice: a session that behaves unlike the command line
+	// says so would otherwise leave the reader to discover the file themselves.
+	configPath string
+	configSet  int
+
 	// Terminal geometry, and the regions recalcLayout carves out of it (kept for mouse hit-testing).
 	width, height      int
 	leftW, topH, diagH int
@@ -140,6 +145,27 @@ const (
 	minDiagH = 5
 )
 
+// Startup is everything the command settled before the UI existed: what to scan, what to observe about the scan, and
+// where those answers came from.
+//
+// One struct rather than a growing argument list, because these arrive together and are decided together - the
+// configuration file presets the flags, the flags fill the options, and the options overlay takes over from there. A
+// caller that only wants a scan leaves the rest zero.
+type Startup struct {
+	// Options is what the first scan runs with. Everything in it is a live setting afterwards: the options overlay
+	// writes to the model's own copy, so this decides the session's starting point, not its limits.
+	Options codescan.Options
+
+	// Profiling says what each scan captures about itself. Fixed for the session - see [scan.Profiling].
+	Profiling scan.Profiling
+
+	// ConfigPath is the configuration file that preset the flags, and ConfigSet the flags it decided. Carried only to
+	// be reported: by the time the model exists the answers are already in Options, and what is worth saying is that
+	// they did not all come from the command line.
+	ConfigPath string
+	ConfigSet  []string
+}
+
 // New builds the root model around a ready-made scan config; the source tree browses cfg.WorkDir.
 //
 // Taking the whole Options rather than a handful of arguments means a new CLI flag needs no signature change here
@@ -147,27 +173,26 @@ const (
 //
 // A file watcher is started best-effort - if it can't initialize, live reload is simply unavailable and the user
 // falls back to r (manual rescan).
-//
-// prof travels separately from the scan config because it is not one: it says what to observe about a run, not what
-// the run should produce. Its zero value profiles nothing.
-func New(cfg codescan.Options, prof scan.Profiling) *Model {
+func New(start Startup) *Model {
 	m := &Model{
-		cfg:       cfg,
-		profiling: prof,
-		focused:   paneTree,
-		leftPct:   defaultLeftPct,
-		diagPct:   defaultDiagPct,
-		scan:      NewScanState(),
-		search:    NewSearchBox(),
-		watch:     NewSourceWatch(cfg.WorkDir),
-		tree:      panels.NewTree(cfg.WorkDir),
-		fileView:  panels.NewFileView(),
-		spec:      panels.NewSpec(),
-		diag:      panels.NewDiagnostics(),
-		help:      help.New(),
-		confirm:   confirm.New(),
-		reference: reference.New(),
-		runstats:  runstats.New(),
+		cfg:        start.Options,
+		profiling:  start.Profiling,
+		configPath: start.ConfigPath,
+		configSet:  len(start.ConfigSet),
+		focused:    paneTree,
+		leftPct:    defaultLeftPct,
+		diagPct:    defaultDiagPct,
+		scan:       NewScanState(),
+		search:     NewSearchBox(),
+		watch:      NewSourceWatch(start.Options.WorkDir),
+		tree:       panels.NewTree(start.Options.WorkDir),
+		fileView:   panels.NewFileView(),
+		spec:       panels.NewSpec(),
+		diag:       panels.NewDiagnostics(),
+		help:       help.New(),
+		confirm:    confirm.New(),
+		reference:  reference.New(),
+		runstats:   runstats.New(),
 	}
 	// Built after the struct exists: the options rows bind to the scan-config booleans by pointer, and those pointers
 	// have to be into m.cfg (valid because m is heap-allocated) rather than into the caller's copy.
@@ -189,6 +214,10 @@ func (m *Model) Init() tea.Cmd {
 	if m.watch.Listening() {
 		cmds = append(cmds, waitForFS(m.watch.Events()))
 	}
+	if cmd := m.announceConfig(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+
 	return tea.Batch(cmds...)
 }
 
@@ -269,6 +298,30 @@ func (m *Model) View() string {
 		top + "\n" +
 		m.diag.View(m.focused == paneDiag) + "\n" +
 		m.statusLine()
+}
+
+// announceConfig says, once, that a file decided some of what this session started with.
+//
+// On the status line rather than in the diagnostics pane: it is a fact about the command, not about the code being
+// scanned, and it expires like every other notice. Silent when there was no file, which is the ordinary case.
+func (m *Model) announceConfig() tea.Cmd {
+	if m.configPath == "" {
+		return nil
+	}
+	if m.configSet == 0 {
+		return m.notify("read %s (it set nothing)", m.configPath)
+	}
+
+	return m.notify("read %s (%d %s)", m.configPath, m.configSet, plural(m.configSet, "setting"))
+}
+
+// plural renders a count's noun, so a notice does not say "1 settings".
+func plural(n int, noun string) string {
+	if n == 1 {
+		return noun
+	}
+
+	return noun + "s"
 }
 
 // copyFocused copies the focused panel's raw content to the clipboard.
