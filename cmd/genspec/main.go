@@ -54,7 +54,7 @@ func run(argv []string, stdout, stderr io.Writer) error {
 
 	// Before anything reads a flag, so that everything downstream sees one settled command line and
 	// needs to know nothing about where a value came from.
-	applied, configPath, err := configured(fs, *cfg.configFile)
+	applied, configPath, err := configured(fs, cfg.configFile)
 	if err != nil {
 		return fmt.Errorf("%w: %w", errUsage, err)
 	}

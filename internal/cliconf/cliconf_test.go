@@ -288,13 +288,16 @@ func TestStringifyRefusesWhatAFlagCannotTake(t *testing.T) {
 	require.Error(t, err, "and inside a list too")
 }
 
-func TestRegisterDeclaresTheFlag(t *testing.T) {
+func TestRegisterDeclaresTheFlags(t *testing.T) {
 	t.Parallel()
 
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	config := Register(fs)
+	flags := Register(fs)
 
 	require.NoError(t, fs.Parse([]string{"-config", "somewhere.yaml"}))
-	assert.Equal(t, "somewhere.yaml", *config)
+
+	named, err := flags.named()
+	require.NoError(t, err)
+	assert.Equal(t, "somewhere.yaml", named)
 }

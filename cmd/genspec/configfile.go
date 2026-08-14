@@ -43,8 +43,10 @@ var commandSections = cliconf.Schema{ //nolint:gochecknoglobals // the schema, r
 
 // notConfigurable are the flags a file deliberately cannot set, with the reason.
 var notConfigurable = map[string]string{ //nolint:gochecknoglobals // table for the drift guard
-	cliconf.Flag: "names the file itself, which cannot be read from inside it",
-	"version":    "asks the command a question rather than configuring it",
+	cliconf.Flag:      "names the file itself, which cannot be read from inside it",
+	cliconf.ShortFlag: "the short form of -" + cliconf.Flag,
+	cliconf.NoFlag:    "decides whether there is a file at all, from outside it",
+	"version":         "asks the command a question rather than configuring it",
 }
 
 // configSchema is the whole of what a configuration file may address here.
@@ -61,7 +63,7 @@ func configSchema() (cliconf.Schema, error) {
 //
 // Called after parsing and before anything reads a flag, so that everything downstream sees one
 // settled command line and needs to know nothing about where a value came from.
-func configured(fs *flag.FlagSet, named string) (cliconf.Result, string, error) {
+func configured(fs *flag.FlagSet, which *cliconf.Flags) (cliconf.Result, string, error) {
 	var applied cliconf.Result
 
 	// Searched from where the command was run, not from -workdir: the file is free to set -workdir,
@@ -71,7 +73,7 @@ func configured(fs *flag.FlagSet, named string) (cliconf.Result, string, error) 
 		return applied, "", fmt.Errorf("cannot tell where this is running from: %w", err)
 	}
 
-	path, err := cliconf.Discover(named, here)
+	path, err := which.Discover(here)
 	if err != nil || path == "" {
 		return applied, "", err
 	}

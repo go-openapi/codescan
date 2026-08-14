@@ -4,6 +4,8 @@
 package cliconf
 
 import (
+	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,13 +24,25 @@ func write(t *testing.T, dir, name string) string {
 	return path
 }
 
+// discover parses argv into the configuration flags and asks them where the file is.
+func discover(t *testing.T, start string, argv ...string) (string, error) {
+	t.Helper()
+
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	flags := Register(fs)
+	require.NoError(t, fs.Parse(argv))
+
+	return flags.Discover(start)
+}
+
 func TestDiscoverFindsAFileWhereItStands(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	want := write(t, dir, Names[0])
 
-	got, err := Discover("", dir)
+	got, err := discover(t, dir)
 
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -44,7 +58,7 @@ func TestDiscoverWalksUp(t *testing.T) {
 	deep := filepath.Join(root, "internal", "api", "handlers")
 	require.NoError(t, os.MkdirAll(deep, 0o750))
 
-	got, err := Discover("", deep)
+	got, err := discover(t, deep)
 
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -62,7 +76,7 @@ func TestDiscoverStopsAtTheNearest(t *testing.T) {
 	require.NoError(t, os.MkdirAll(nearer, 0o750))
 	want := write(t, nearer, Names[0])
 
-	got, err := Discover("", nearer)
+	got, err := discover(t, nearer)
 
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -75,7 +89,7 @@ func TestDiscoverPrefersTheNamesInOrder(t *testing.T) {
 	want := write(t, dir, Names[0])
 	write(t, dir, Names[1])
 
-	got, err := Discover("", dir)
+	got, err := discover(t, dir)
 
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -86,7 +100,7 @@ func TestDiscoverPrefersTheNamesInOrder(t *testing.T) {
 func TestDiscoverFindingNothingIsNotAFailure(t *testing.T) {
 	t.Parallel()
 
-	got, err := Discover("", t.TempDir())
+	got, err := discover(t, t.TempDir())
 
 	require.NoError(t, err)
 	assert.Empty(t, got)
@@ -98,7 +112,7 @@ func TestDiscoverIgnoresADirectoryNamedLikeAConfig(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.Mkdir(filepath.Join(dir, Names[0]), 0o750))
 
-	got, err := Discover("", dir)
+	got, err := discover(t, dir)
 
 	require.NoError(t, err)
 	assert.Empty(t, got, "a directory is not a file, whatever it is called")
@@ -110,7 +124,7 @@ func TestDiscoverTakesTheFileItIsGiven(t *testing.T) {
 	dir := t.TempDir()
 	want := write(t, dir, "elsewhere.yaml")
 
-	got, err := Discover(want, t.TempDir())
+	got, err := discover(t, t.TempDir(), "-config", want)
 
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -121,21 +135,75 @@ func TestDiscoverTakesTheFileItIsGiven(t *testing.T) {
 func TestDiscoverRefusesAFileThatIsNotThere(t *testing.T) {
 	t.Parallel()
 
-	_, err := Discover(filepath.Join(t.TempDir(), "absent.yaml"), t.TempDir())
+	_, err := discover(t, t.TempDir(), "-config", filepath.Join(t.TempDir(), "absent.yaml"))
 
 	require.ErrorIs(t, err, ErrBadConfig)
 	assert.Contains(t, err.Error(), "absent.yaml")
 }
 
-// TestDiscoverOffFindsNothingEvenWhereThereIsSomething is the reproducible-run escape hatch.
-func TestDiscoverOffFindsNothingEvenWhereThereIsSomething(t *testing.T) {
+// TestDiscoverNoConfigFindsNothingEvenWhereThereIsSomething is the reproducible-run escape hatch.
+func TestDiscoverNoConfigFindsNothingEvenWhereThereIsSomething(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	write(t, dir, Names[0])
 
-	got, err := Discover(Off, dir)
+	got, err := discover(t, dir, "-no-config")
 
 	require.NoError(t, err)
 	assert.Empty(t, got)
+}
+
+func TestDiscoverTakesTheShortFlag(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	want := write(t, dir, "elsewhere.yaml")
+
+	got, err := discover(t, t.TempDir(), "-c", want)
+
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+// TestDiscoverAcceptsBothSpellingsOfTheSameFile: -c is -config, so saying both is repetition rather
+// than a contradiction.
+func TestDiscoverAcceptsBothSpellingsOfTheSameFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	want := write(t, dir, "elsewhere.yaml")
+
+	got, err := discover(t, t.TempDir(), "-config", want, "-c", want)
+
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+// TestDiscoverRefusesTwoDifferentFiles is why the two spellings are stored apart: sharing one
+// variable would have let whichever the parser read last win in silence.
+func TestDiscoverRefusesTwoDifferentFiles(t *testing.T) {
+	t.Parallel()
+
+	_, err := discover(t, t.TempDir(), "-config", "one.yaml", "-c", "another.yaml")
+
+	require.ErrorIs(t, err, ErrBadConfig)
+	assert.Contains(t, err.Error(), "one.yaml")
+	assert.Contains(t, err.Error(), "another.yaml")
+}
+
+// TestDiscoverRefusesAFileAndNoFileAtOnce covers the contradiction the pair of flags makes possible.
+//
+// Refused rather than resolved: there is no reading of "use this file, and use no file" that the
+// caller can have meant, and picking one would be inventing an intention.
+func TestDiscoverRefusesAFileAndNoFileAtOnce(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := write(t, dir, Names[0])
+
+	_, err := discover(t, dir, "-c", path, "-no-config")
+
+	require.ErrorIs(t, err, ErrBadConfig)
+	assert.Contains(t, err.Error(), NoFlag)
 }

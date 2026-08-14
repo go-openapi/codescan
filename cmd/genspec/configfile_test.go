@@ -93,16 +93,41 @@ diagnostics:
 	assert.Contains(t, stdout, "\n  ", "-compact=false was typed, so the file does not get a say")
 }
 
-func TestConfigOffIgnoresTheFile(t *testing.T) {
+func TestNoConfigIgnoresTheFile(t *testing.T) {
 	t.Parallel()
 
 	path := configFile(t, "document:\n  compact: true\n")
 
-	stdout, _, err := exec(t, "-config=off", "-workdir", petstore(t), "-quiet", "./...")
+	stdout, _, err := exec(t, "-no-config", "-workdir", petstore(t), "-quiet", "./...")
 	require.NoError(t, err)
 	require.FileExists(t, path)
 
 	assert.Contains(t, stdout, "\n  ", "the file exists, and was not consulted")
+}
+
+// TestShortConfigFlagPinsTheFile covers the spelling a caller reaches for often enough to want short.
+func TestShortConfigFlagPinsTheFile(t *testing.T) {
+	t.Parallel()
+
+	path := configFile(t, "scan:\n  workdir: "+petstore(t)+"\ndocument:\n  compact: true\n")
+
+	stdout, _, err := exec(t, "-c", path, "-quiet", "./...")
+
+	require.NoError(t, err)
+	assert.NotContains(t, stdout, "\n  ", "the file -c named was read")
+}
+
+// TestConfigAndNoConfigContradictEachOther: the pair of flags can be asked something with no
+// answer, and saying so beats picking one.
+func TestConfigAndNoConfigContradictEachOther(t *testing.T) {
+	t.Parallel()
+
+	path := configFile(t, "scan:\n  workdir: .\n")
+
+	_, _, err := exec(t, "-c", path, "-no-config", "./...")
+
+	require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	assert.Equal(t, exitUsage, exitStatus(err))
 }
 
 // TestConfigFileIsFoundByWalkingUp covers the path a user actually takes: a file in the project,

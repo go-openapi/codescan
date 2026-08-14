@@ -71,8 +71,9 @@ and `diagnostics` for this command's own flags.
 **Anything typed wins.** That holds for a flag typed with the value it already
 had: `-scan-models=false` means false even where the file says true.
 
-`-config <path>` reads a particular file, which must exist. `-config off`
-ignores whatever is lying around, for a run that has to be reproducible.
+`-config <path>` — or `-c <path>` — reads a particular file, which must exist.
+`--no-config` reads none, whatever is lying around, for a run that has to be
+reproducible. Asking for both at once is an error rather than a coin toss.
 `.codescan.yml` and `.codescan.json` are searched for too — JSON is a subset of
 YAML, so it needs no parser of its own.
 

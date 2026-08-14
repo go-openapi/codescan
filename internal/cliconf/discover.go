@@ -10,14 +10,20 @@ import (
 	"path/filepath"
 )
 
-// Flag is what the configuration file is named on the command line.
-const Flag = "config"
-
-// Off is what -config is given to use no file at all, whatever is lying around.
+// The flags every command registers for its configuration file.
 //
-// Spelled as a value rather than as a second flag, the way GOWORK spells it: a run that must be
-// reproducible says so in one place, and there is no pair of flags that can disagree.
-const Off = "off"
+// Three spellings of two questions: which file, and whether to read one at all. -c is the short form
+// of -config, because naming a file is the thing done often enough to be worth two keystrokes;
+// -no-config is the way to say none, and it is a switch rather than a magic value so that it reads
+// as what it is at a glance.
+const (
+	// Flag names the file to read.
+	Flag = "config"
+	// ShortFlag is the short form of [Flag].
+	ShortFlag = "c"
+	// NoFlag says to read no configuration file at all.
+	NoFlag = "no-config"
+)
 
 // Names are the file names looked for, in order, when -config says nothing.
 //
@@ -30,36 +36,78 @@ var Names = []string{ //nolint:gochecknoglobals // the search list, read once at
 	".codescan.json",
 }
 
-const flagHelp = `configuration file to read before the flags ("off" for none; default: the nearest ` +
-	`.codescan.yaml, searching upwards)`
+// Flags is where the configuration-file flags land.
+//
+// A type rather than a pair of pointers, because the two questions can be answered in ways that
+// contradict each other, and something has to hold the answer to "then what".
+type Flags struct {
+	// long and short hold the same answer, separately, so that giving both can be noticed rather
+	// than resolved by whichever the parser happened to read last.
+	long  *string
+	short *string
 
-// Register declares the -config flag and returns where its value lands.
-func Register(fs *flag.FlagSet) *string {
-	return fs.String(Flag, "", flagHelp)
+	none *bool
+}
+
+// Register declares the configuration-file flags and returns where their values land.
+func Register(fs *flag.FlagSet) *Flags {
+	return &Flags{
+		long: fs.String(Flag, "",
+			"configuration file to read before the flags (default: the nearest .codescan.yaml,\n"+
+				"searching upwards)"),
+		short: fs.String(ShortFlag, "", "shorthand for -"+Flag),
+		none:  fs.Bool(NoFlag, false, "read no configuration file, whatever is lying around"),
+	}
 }
 
 // Discover reports which file to read, if any.
 //
-// A named file must exist: a caller who said -config meant that file, and silently scanning for
-// another one - or for none - would answer a question they did not ask. Searching, on the other
-// hand, is allowed to find nothing, which is the ordinary case.
+// A named file must exist: a caller who named one meant that file, and silently searching for
+// another - or for none - would answer a question they did not ask. Searching, on the other hand, is
+// allowed to find nothing, which is the ordinary case.
 //
 // The search walks up from start, so running a command from anywhere inside a project finds the
-// project's own file. It stops at the first hit rather than merging what it passes: a file that is
+// project's own file. It stops at the first hit rather than merging what it passes: a file
 // half-overridden by one three directories up is not something anybody can read off the page.
-func Discover(explicit, start string) (string, error) {
-	switch explicit {
-	case Off:
+func (f *Flags) Discover(start string) (string, error) {
+	named, err := f.named()
+	if err != nil {
+		return "", err
+	}
+
+	if *f.none {
+		if named != "" {
+			// Named by either spelling, so the message names both rather than guessing which was typed.
+			return "", fmt.Errorf("%w: -%s/-%s names %q, and -%s says to read none",
+				ErrBadConfig, Flag, ShortFlag, named, NoFlag)
+		}
+
 		return "", nil
-	case "":
+	}
+
+	if named == "" {
 		return search(start)
 	}
 
-	if _, err := os.Stat(explicit); err != nil {
-		return "", fmt.Errorf("%w: -%s %q: %w", ErrBadConfig, Flag, explicit, err)
+	if _, err := os.Stat(named); err != nil {
+		return "", fmt.Errorf("%w: -%s %q: %w", ErrBadConfig, Flag, named, err)
 	}
 
-	return explicit, nil
+	return named, nil
+}
+
+// named reports the file the caller asked for, by either spelling.
+func (f *Flags) named() (string, error) {
+	long, short := *f.long, *f.short
+
+	if long != "" && short != "" && long != short {
+		return "", fmt.Errorf("%w: -%s says %q and -%s says %q", ErrBadConfig, Flag, long, ShortFlag, short)
+	}
+	if long != "" {
+		return long, nil
+	}
+
+	return short, nil
 }
 
 // search walks up from dir looking for a file named like a configuration.

@@ -49,9 +49,9 @@ type config struct {
 	// commands, so that a flag means the same thing whichever one you reach for.
 	scan *cliopts.Values
 
-	// configFile names the file read before the flags, or "off". Its own field rather than one of
+	// configFile is which file is read before the flags, if any. Its own field rather than one of
 	// the above: it decides where the others come from, so it cannot itself come from there.
-	configFile *string
+	configFile *cliconf.Flags
 
 	input    *string
 	output   *string

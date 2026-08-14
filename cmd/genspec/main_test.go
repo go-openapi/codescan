@@ -66,7 +66,7 @@ func scanned(t *testing.T, dir string, argv ...string) map[string]any {
 
 	// Flags first, patterns last: everything after the first positional argument is a pattern, which
 	// is the flag package's rule and not one this command is free to soften.
-	argv = append([]string{"-workdir", dir, "-quiet", "-config=off"}, argv...)
+	argv = append([]string{"-workdir", dir, "-quiet", "-no-config"}, argv...)
 
 	stdout, _, err := exec(t, append(argv, "./...")...)
 	require.NoError(t, err)
@@ -92,7 +92,7 @@ func TestRunWritesToAFile(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "swagger.json")
 
-	stdout, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-config=off", "-output", path, "./...")
+	stdout, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-no-config", "-output", path, "./...")
 	require.NoError(t, err)
 	assert.Empty(t, stdout, "the document went to the file, so nothing goes to standard output")
 
@@ -112,7 +112,7 @@ func TestRunInfersYAMLFromTheOutputName(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "swagger.yaml")
 
-	_, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-config=off", "-output", path, "./...")
+	_, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-no-config", "-output", path, "./...")
 	require.NoError(t, err)
 
 	written, err := os.ReadFile(path)
@@ -125,7 +125,7 @@ func TestRunInfersYAMLFromTheOutputName(t *testing.T) {
 func TestRunCompactDropsTheIndentation(t *testing.T) {
 	t.Parallel()
 
-	stdout, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-config=off", "-compact", "./...")
+	stdout, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-no-config", "-compact", "./...")
 	require.NoError(t, err)
 
 	assert.NotContains(t, stdout, "\n  ", "compact means one line, not a differently indented one")
@@ -152,7 +152,7 @@ func TestRunOverlaysTheInputSpecification(t *testing.T) {
 func TestRunRefusesADirectoryAsInput(t *testing.T) {
 	t.Parallel()
 
-	_, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-config=off", "-input", t.TempDir(), "./...")
+	_, _, err := exec(t, "-workdir", petstore(t), "-quiet", "-no-config", "-input", t.TempDir(), "./...")
 
 	require.ErrorIs(t, err, errUsage)
 	assert.Equal(t, exitUsage, exitStatus(err))
@@ -163,7 +163,7 @@ func TestRunRefusesADirectoryAsInput(t *testing.T) {
 func TestRunValidateFailsOnAnInvalidDocument(t *testing.T) {
 	t.Parallel()
 
-	stdout, stderr, err := exec(t, "-workdir", unannotated(t), "-validate", "-config=off", "-color=never", "./...")
+	stdout, stderr, err := exec(t, "-workdir", unannotated(t), "-validate", "-no-config", "-color=never", "./...")
 
 	require.ErrorIs(t, err, errInvalidSpec)
 	assert.Equal(t, exitInvalidSpec, exitStatus(err))
@@ -174,7 +174,7 @@ func TestRunValidateFailsOnAnInvalidDocument(t *testing.T) {
 func TestRunFailsOnTheThresholdItWasGiven(t *testing.T) {
 	t.Parallel()
 
-	_, _, err := exec(t, "-workdir", unannotated(t), "-fail-on=warning", "-config=off", "-color=never", "./...")
+	_, _, err := exec(t, "-workdir", unannotated(t), "-fail-on=warning", "-no-config", "-color=never", "./...")
 
 	require.ErrorIs(t, err, errDiagnostics)
 	assert.Equal(t, exitDiagnostics, exitStatus(err))
@@ -185,7 +185,7 @@ func TestRunFailsOnTheThresholdItWasGiven(t *testing.T) {
 func TestRunIsSilentByDefaultOnACleanScan(t *testing.T) {
 	t.Parallel()
 
-	_, stderr, err := exec(t, "-workdir", petstore(t), "-color=never", "-config=off", "./...")
+	_, stderr, err := exec(t, "-workdir", petstore(t), "-color=never", "-no-config", "./...")
 
 	require.NoError(t, err)
 	assert.Empty(t, stderr)
@@ -194,7 +194,7 @@ func TestRunIsSilentByDefaultOnACleanScan(t *testing.T) {
 func TestRunQuietSaysNothing(t *testing.T) {
 	t.Parallel()
 
-	stdout, stderr, err := exec(t, "-workdir", unannotated(t), "-quiet", "-config=off", "-verbose", "./...")
+	stdout, stderr, err := exec(t, "-workdir", unannotated(t), "-quiet", "-no-config", "-verbose", "./...")
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, stdout, "-quiet is about the diagnostics, not about the document")
@@ -204,7 +204,7 @@ func TestRunQuietSaysNothing(t *testing.T) {
 func TestRunReportsPositionsRelativeToTheWorkingDirectory(t *testing.T) {
 	t.Parallel()
 
-	_, stderr, err := exec(t, "-workdir", unannotated(t), "-color=never", "-config=off", "./...")
+	_, stderr, err := exec(t, "-workdir", unannotated(t), "-color=never", "-no-config", "./...")
 
 	require.NoError(t, err)
 	require.NotEmpty(t, stderr, "this fixture has something to say about itself")
@@ -244,7 +244,7 @@ func TestRunRejectsAnUnknownFlag(t *testing.T) {
 func TestRunRejectsAnUnreadableWorkdir(t *testing.T) {
 	t.Parallel()
 
-	_, _, err := exec(t, "-workdir", filepath.Join(t.TempDir(), "nowhere"), "-quiet", "-config=off", "./...")
+	_, _, err := exec(t, "-workdir", filepath.Join(t.TempDir(), "nowhere"), "-quiet", "-no-config", "./...")
 
 	require.Error(t, err)
 	assert.Equal(t, exitFailed, exitStatus(err))

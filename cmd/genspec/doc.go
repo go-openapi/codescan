@@ -37,7 +37,7 @@
 //	  format: yaml
 //
 // Anything typed on the command line wins over the file, including a flag typed with the value it
-// already had. -config names a particular file; -config off ignores whatever is lying around.
+// already had. -config, or -c, names a particular file; -no-config reads none.
 //
 // One file serves the whole family: a section a command does not know is skipped rather than
 // refused, so another command's settings may sit beside these. A key inside a section it does know
