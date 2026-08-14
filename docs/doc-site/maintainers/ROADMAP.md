@@ -34,12 +34,12 @@ timeline
     ✅ v0.36.0 (July 2026) : TUI
                     : interactive spec building with TUI tool
                     : polymorphic subtypes discovery
-    🔶 v0.36.x (August 2026) : faster code scanner
-                    : ✅ Optimized incremental type scanner
-                    : ✅ toolchain-independent loader
-                    : ✅ playground UI (wasi build)
-                    : 🔶 more go-swagger backlog fixes & tunable knobs
+    ✅ v0.36.x (August 2026) : faster code scanner
+                    : Optimized incremental type scanner
+                    : toolchain-independent loader
+                    : playground UI (wasi build)
                     : dedicated CLI, independent from go-swagger
+                    : more go-swagger backlog fixes & tunable knobs
     ⬜ v0.37.0 (September 2026) : decouple from `Spec`
                     : go1.26+
                     : Internal document model
