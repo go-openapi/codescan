@@ -39,6 +39,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/internal/cliopts"
 	"github.com/go-openapi/codescan/internal/exportdata"
 )
 
@@ -55,12 +56,10 @@ func main() {
 type config struct {
 	set *flag.FlagSet
 
-	workdir    *string
-	bools      map[string]*bool
-	buildTags  *string
-	goos       *string
-	goarch     *string
-	loader     *string
+	// scan is every knob the library takes, declared once in internal/cliopts and shared with the
+	// other commands. What follows is this command's own: where the document goes, and in what shape.
+	scan *cliopts.Values
+
 	exportData *string
 	format     *string
 	output     *string
@@ -70,14 +69,8 @@ type config struct {
 
 func registerFlags(fs *flag.FlagSet) *config {
 	return &config{
-		set:       fs,
-		workdir:   fs.String("workdir", ".", "directory the scan runs from; patterns are relative to it"),
-		bools:     registerBools(fs),
-		buildTags: fs.String("build-tags", "", "comma-separated go build tags to apply while loading"),
-		goos:      fs.String("goos", "", "GOOS the scanned code is built for (default: this machine's)"),
-		goarch:    fs.String("goarch", "", "GOARCH the scanned code is built for (default: this machine's)"),
-		loader: fs.String("loader", "auto",
-			`package loader: "go" runs go list, "own" needs no toolchain, "auto" picks own where there is no exec`),
+		set:  fs,
+		scan: cliopts.Register(fs),
 		exportData: fs.String("export-data", "",
 			"directory or .zip of pre-computed export data for dependencies (see hack/genexportdata):\n"+
 				"full fidelity, none of the cost of type-checking them from source"),
@@ -144,18 +137,10 @@ func resolveFormat(format string) (bool, error) {
 }
 
 func (c *config) options(patterns []string, stderr io.Writer, sink *collector) (*codescan.Options, error) {
-	if len(patterns) == 0 {
-		patterns = []string{"./..."}
+	opts := &codescan.Options{Packages: cliopts.Patterns(patterns)}
+	if err := c.scan.Apply(opts); err != nil {
+		return nil, err
 	}
-
-	opts := &codescan.Options{
-		Packages:  patterns,
-		WorkDir:   *c.workdir,
-		BuildTags: *c.buildTags,
-		GOOS:      *c.goos,
-		GOARCH:    *c.goarch,
-	}
-	applyBools(opts, c.bools)
 
 	switch {
 	case *c.exportData != "":
@@ -171,16 +156,11 @@ func (c *config) options(patterns []string, stderr io.Writer, sink *collector) (
 		}
 	}
 
-	useOwn, err := resolveLoader(*c.loader)
-	if err != nil {
-		return nil, err
-	}
-	opts.ToolchainFreeLoader = useOwn
-	if useOwn {
+	if opts.ToolchainFreeLoader {
 		// The loader reads the host filesystem directly, so -workdir has to name a place that exists
 		// there rather than a place relative to wherever the process happens to be. Under WASI it never
 		// is: a guest starts at "/", which is not a preopen, so only an absolute path names a mount.
-		abs, err := absolutePath(*c.workdir)
+		abs, err := absolutePath(opts.WorkDir)
 		if err != nil {
 			return nil, err
 		}
@@ -201,23 +181,6 @@ func (c *config) options(patterns []string, stderr io.Writer, sink *collector) (
 	}
 
 	return opts, nil
-}
-
-// resolveLoader reports whether to use codescan's own loader.
-//
-// "auto" asks whether this build can start a subprocess at all: on wasm it cannot, so `go list` is
-// not an option and the choice makes itself.
-func resolveLoader(mode string) (bool, error) {
-	switch mode {
-	case "own":
-		return true, nil
-	case "go":
-		return false, nil
-	case "auto":
-		return !canExec(), nil
-	default:
-		return false, fmt.Errorf("%w: -loader %q is not one of go, own, auto", errBadFlag, mode)
-	}
 }
 
 // absolutePath resolves p against the working directory, in the host's own notion of a path.

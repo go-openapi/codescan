@@ -68,9 +68,31 @@ diagnostics and spec validation — is on the doc site:
 
 ## Generate a spec from the command line
 
-`genspec-wasi` is the headless counterpart: it writes the specification to standard output and takes no
-dependency beyond the library, so it also cross-compiles to WebAssembly and runs under a WASI
-runtime with no Go toolchain installed.
+`genspec` is the headless counterpart: it writes the specification to standard output, or to the file
+`-output` names, and reports what the scan observed as colored diagnostics on standard error.
+
+```cmd
+go install github.com/go-openapi/codescan/cmd/genspec@latest
+```
+
+```cmd
+genspec -workdir [my source location] ./...
+```
+
+Every option the library takes is a flag. Beyond those, it writes YAML as readily as JSON
+(`-output swagger.yaml` is enough), merges its discoveries into an existing document with `-input`,
+and checks what it produced with `-validate`. Its exit status says which of those went wrong.
+
+It does the same job as go-swagger's `swagger generate spec`, which drives this same library, but is
+released on its own — so fixes and enhancements reach it at this project's pace, and it carries only
+the dependencies a spec generator needs.
+
+See [cmd/genspec/README.md](cmd/genspec/README.md).
+
+### Where there is no Go toolchain
+
+`genspec-wasi` runs the same scan taking no dependency beyond the library, so it cross-compiles to
+WebAssembly and runs under a WASI runtime with no Go toolchain installed and no subprocess.
 
 ```cmd
 go install github.com/go-openapi/codescan/cmd/genspec-wasi@latest

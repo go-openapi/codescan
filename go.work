@@ -14,6 +14,7 @@ go 1.25.0
 // the oldstable CI job out.
 use (
 	.
+	./cmd/genspec
 	./cmd/genspec-tui
 	./docs/examples
 	./fixtures

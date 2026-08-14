@@ -36,6 +36,7 @@ internal/exportdata/exportdata.zip
 
 # stray binaries from "go build ./hack/..."
 /genexportdata
+/genspec
 /genspec-wasi
 /loader-benchmark
 
