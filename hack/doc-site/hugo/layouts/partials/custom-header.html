@@ -223,11 +223,22 @@
       }
       return el.dataset.rrSrc;
     }
+    function errBox(message) {
+      var pre = document.createElement('pre');
+      pre.className = 'railroad-err';
+      pre.textContent = message;
+      return pre;
+    }
     var rrSeq = 0;
     async function renderAll(mermaid) {
+      // 'strict' is what makes the innerHTML below safe: Mermaid runs its own
+      // sanitizer over the SVG it returns, and refuses HTML in labels and click
+      // bindings in the source. 'loose' turns that off, which turned a diagram
+      // source into a script-injection vector — a repo-authored one, but the
+      // difference costs us nothing: railroad diagrams carry no HTML labels.
       mermaid.initialize({
         startOnLoad: false,
-        securityLevel: 'loose',
+        securityLevel: 'strict',
         theme: siteIsDark() ? 'dark' : 'default',
       });
       var blocks = [].slice.call(document.querySelectorAll('.railroad-diagram'));
@@ -239,8 +250,9 @@
           var out = await mermaid.render('rrsvg-' + (rrSeq++), 'railroad-ebnf-beta\n' + ebnf);
           el.innerHTML = out.svg;
         } catch (e) {
-          el.innerHTML = '<pre class="railroad-err">railroad render failed: ' +
-            (e && e.message ? e.message : e) + '</pre>';
+          // textContent, not innerHTML: a renderer error message is the one string
+          // here we do not author, and it has no business being parsed as markup.
+          el.replaceChildren(errBox('railroad render failed: ' + (e && e.message ? e.message : e)));
         }
       }
     }
@@ -251,7 +263,7 @@
       s.onload = function () { cb(window.mermaid); };
       s.onerror = function () {
         document.querySelectorAll('.railroad-diagram').forEach(function (el) {
-          el.innerHTML = '<pre class="railroad-err">railroad: failed to load Mermaid</pre>';
+          el.replaceChildren(errBox('railroad: failed to load Mermaid'));
         });
       };
       document.head.appendChild(s);
