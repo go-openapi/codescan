@@ -196,6 +196,12 @@ func TestProfilerDisabled(t *testing.T) {
 }
 
 func TestProfilerCapturesARun(t *testing.T) {
+	// At the default rate the heap profiler samples one allocation per 512 KiB, so a megabyte of test allocations is a
+	// Poisson draw with a mean of two: it comes back empty about one run in seven, whatever the machine or the
+	// toolchain. Counting every allocation makes the assertion below about attribution rather than about luck, and the
+	// runtime honours rate 1 from the next allocation - there is no threshold left over from the old rate.
+	countEveryAllocation(t)
+
 	dir := t.TempDir()
 
 	p := newProfiler(Profiling{Enabled: true, Dir: dir})
