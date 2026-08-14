@@ -8,10 +8,10 @@ require (
 	github.com/go-openapi/spec v0.22.9
 	github.com/go-openapi/swag/mangling v0.28.0
 	github.com/go-openapi/swag/yamlutils v0.28.0
-	github.com/go-openapi/testify/v2 v2.6.0
+	github.com/go-openapi/testify/v2 v2.6.1
 	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/mod v0.39.0
-	golang.org/x/tools v0.48.0
+	golang.org/x/mod v0.40.0
+	golang.org/x/tools v0.49.0
 )
 
 require (
