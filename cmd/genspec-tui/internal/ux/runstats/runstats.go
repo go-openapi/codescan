@@ -376,45 +376,26 @@ func (o *Overlay) sites(phase scan.PhaseProfile, exact bool) []string {
 	return append(lines, "")
 }
 
-// shortFunc drops everything up to the last path segment of a symbol, so a table of Go function names stays a table.
+// shortFunc keeps the last two path segments of a symbol, so a table of Go function names stays a table without
+// becoming a table of ambiguities.
 //
 // "github.com/go-openapi/codescan/internal/builders/schema.(*Builder).Build" is eighty columns of mostly repository,
-// and the modal is deliberately not wrapped: what a reader needs is the package and the method.
-//
-// A major-version segment is carried along with the segment before it: "go.yaml.in/yaml/v3.is_space" trimmed to
-// "v3.is_space" names no package at all, while "yaml/v3.is_space" says which library is doing the work.
+// and the modal is deliberately not wrapped. One segment is too few, though: our own package loader and the one it
+// stands in for both end in "packages", and a run through each is exactly what a reader compares. Two segments tell
+// "internal/packages" from "go/packages" - and carry a major version along with the library it belongs to, since
+// "v3.is_space" names nothing while "yaml/v3.is_space" says which library is doing the work.
 func shortFunc(name string) string {
 	i := strings.LastIndex(name, "/")
 	if i < 0 {
 		return name
 	}
 
-	if isMajorVersion(name[i+1:]) {
-		if j := strings.LastIndex(name[:i], "/"); j >= 0 {
-			return name[j+1:]
-		}
-
+	j := strings.LastIndex(name[:i], "/")
+	if j < 0 {
 		return name
 	}
 
-	return name[i+1:]
-}
-
-// isMajorVersion reports whether a path segment is a module major version - "v3", or "v3.is_space" once the symbol is
-// attached to it.
-func isMajorVersion(segment string) bool {
-	rest, _, _ := strings.Cut(segment, ".")
-	if len(rest) < 2 || rest[0] != 'v' {
-		return false
-	}
-
-	for _, r := range rest[1:] {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-
-	return true
+	return name[j+1:]
 }
 
 // row renders one figure: label, value right-aligned in its column, and an optional gloss.

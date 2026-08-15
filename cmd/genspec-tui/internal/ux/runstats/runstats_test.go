@@ -190,7 +190,7 @@ func TestOverlayReportsAProfiledRun(t *testing.T) {
 
 	assert.Contains(t, got, "where the CPU went — scanning")
 	assert.Contains(t, got, "where the CPU went — rendering", "both phases are profiled, and both are reported")
-	assert.Contains(t, got, "scanner.(*ScanCtx).Load → types.(*Checker).checkFiles",
+	assert.Contains(t, got, "internal/scanner.(*ScanCtx).Load → go/types.(*Checker).checkFiles",
 		"the boundary names both halves: what the time went into, and where to go and change it")
 	assert.NotContains(t, got, "github.com/go-openapi/codescan/internal/builders")
 	assert.Contains(t, got, "schema.(*Builder).Build", "a charge that never left our code is one name, with no arrow")
@@ -212,6 +212,29 @@ func TestOverlayReportsAProfiledRun(t *testing.T) {
 	assert.Contains(t, got, "/tmp/genspec-tui-profile-42/cpu-render.pprof")
 	assert.Contains(t, got, "go tool pprof -http=: -base /tmp/p/mem-before.pprof /tmp/p/mem-after-scan.pprof",
 		"the command that reproduces the scanning phase in the real tool")
+}
+
+// Two packages named the same thing is the ordinary case, not an exotic one: our own loader stands in for
+// x/tools', and a run through each is exactly what a reader puts side by side.
+func TestOverlayKeepsPackagesApart(t *testing.T) {
+	report := aProfile()
+	report.Scan.CPU = []scan.Func{
+		{
+			Name:   "github.com/go-openapi/codescan/internal/packages.(*loadState).loadDir",
+			Callee: "go/types.(*Config).Check",
+			Spent:  500 * time.Millisecond, Share: 0.5,
+		},
+		{Name: "golang.org/x/tools/go/packages.(*loader).refine", Spent: 500 * time.Millisecond, Share: 0.5},
+	}
+
+	o := runstats.New()
+	o.Set(aRun(), report, false)
+	o.SetSize(200, 120)
+
+	got := testutils.StripANSI(o.View())
+
+	assert.Contains(t, got, "internal/packages.(*loadState).loadDir")
+	assert.Contains(t, got, "go/packages.(*loader).refine")
 }
 
 // Exactness is a property of the run's sampling rate, and the reader has to be told which one they are looking at.

@@ -297,9 +297,9 @@ where codescan hands the work to somebody else's code.
 
 ```
   38%    720ms   the runtime itself — collecting, allocating, scheduling
-  26%    490ms   packages.(*loadState).loadDir → types.(*Config).Check
-  25%    480ms   packages.(*loadState).loadDir → parser.ParseFile
-   3%     60ms   vfs.(*FS).ReadDir → os.(*unixDirent).Info
+  26%    490ms   internal/packages.(*loadState).loadDir → go/types.(*Config).Check
+  25%    480ms   internal/packages.(*loadState).loadDir → go/parser.ParseFile
+   3%     60ms   packages/vfs.(*FS).ReadDir → os.(*unixDirent).Info
 ```
 
 Read the pair as *what the time went into* → *where to go and change it*. Three
@@ -316,6 +316,10 @@ rules follow from it:
 
 Function literals fold into the function they were written in: `refine.func2.1`
 and `refine.func3` are one piece of work seen at two of its entrances.
+
+Symbols keep their last two path segments, because one is not enough to compare
+runs by: `internal/packages` is this project's own loader and `go/packages` is
+the one it stands in for, and both end in `packages`.
 
 The allocation table is charged differently — to the innermost frame outside the
 runtime, the one that actually asked for the memory. `types.(*Checker).recordTypeAndValue`
