@@ -29,12 +29,15 @@ func Unannotated(t *testing.T) string {
 	return filepath.Join(fixtures(t), "enhancements", "additional-properties")
 }
 
+// configFileMode is what a configuration file is written with: the command reads it and nobody else needs to.
+const configFileMode = 0o600
+
 // ConfigFile writes a configuration file in a fresh directory and reports its path.
 func ConfigFile(t *testing.T, content string) string {
 	t.Helper()
 
 	path := filepath.Join(t.TempDir(), cliconf.Names[0])
-	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	require.NoError(t, os.WriteFile(path, []byte(content), configFileMode))
 
 	return path
 }

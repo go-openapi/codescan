@@ -3,9 +3,11 @@
 
 package sentinel
 
-type SentinelError string
+// Error is what this command refuses over, as a constant: comparable, so errors.Is answers on identity, and
+// declarable in a const block, so no package variable is mutable in the meantime.
+type Error string
 
-func (e SentinelError) Error() string {
+func (e Error) Error() string {
 	return string(e)
 }
 
@@ -15,11 +17,11 @@ func (e SentinelError) Error() string {
 // so that a shell can tell "the scan failed" from "the scan is fine and you asked me to be strict about it".
 const (
 	// ErrUsage is a command line that does not make sense.
-	ErrUsage SentinelError = "incorrect usage"
+	ErrUsage Error = "incorrect usage"
 
 	// ErrDiagnostics is a run whose findings reached the severity -fail-on names.
-	ErrDiagnostics SentinelError = "reported findings reached the -fail-on threshold"
+	ErrDiagnostics Error = "reported findings reached the -fail-on threshold"
 
 	// ErrInvalidSpec is a document that -validate found invalid.
-	ErrInvalidSpec SentinelError = "the specification is not valid"
+	ErrInvalidSpec Error = "the specification is not valid"
 )

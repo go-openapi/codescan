@@ -153,7 +153,10 @@ const (
 // caller that only wants a scan leaves the rest zero.
 type Startup struct {
 	// Options is what the first scan runs with. Everything in it is a live setting afterwards: the options overlay
-	// writes to the model's own copy, so this decides the session's starting point, not its limits.
+	// writes to this very struct, so it decides the session's starting point, not its limits - and the caller hands it
+	// over rather than keeping a hand on it.
+	//
+	// Required: a session with nothing to scan is not one.
 	Options *codescan.Options
 
 	// Profiling says what each scan captures about itself. Fixed for the session - see [scan.Profiling].
@@ -194,8 +197,9 @@ func New(start Startup) *Model {
 		reference:  reference.New(),
 		runstats:   runstats.New(),
 	}
-	// Built after the struct exists: the options rows bind to the scan-config booleans by pointer, and those pointers
-	// have to be into m.cfg (valid because m is heap-allocated) rather than into the caller's copy.
+	// The options rows bind to the scan-config booleans by pointer, so the overlay writes straight into the config every
+	// scan is started from. A scan is handed a copy of it (see [scan.Run]), which is what keeps a toggle from reaching
+	// a run already in flight.
 	m.options = options.New(m.cfg)
 
 	return m

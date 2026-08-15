@@ -8,14 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/go-openapi/codescan/cmd/genspec/internal/clitest/fixtures"
-	"github.com/go-openapi/codescan/cmd/genspec/internal/config"
 	"github.com/go-openapi/codescan/cmd/genspec/internal/sentinel"
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
 	"github.com/go-openapi/testify/v2/assert"
@@ -385,19 +383,6 @@ func TestConfigFileWalkUp(t *testing.T) {
 /********************************/
 /* exec helpers */
 /********************************/
-
-// parseInto registers the command line and parses argv into it.
-func parseInto(t *testing.T, argv ...string) *config.Config {
-	t.Helper()
-
-	fs := flag.NewFlagSet("genspec", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-
-	cfg := config.NewWithFlags(fs, os.Stdout, os.Stderr)
-	require.NoError(t, fs.Parse(argv))
-
-	return cfg
-}
 
 // exec runs the command as the process would, and reports what it wrote and what it returned.
 //

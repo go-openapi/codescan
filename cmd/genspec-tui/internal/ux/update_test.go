@@ -4,6 +4,7 @@
 package ux
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -177,5 +178,35 @@ func TestUpdate_UnknownMessageGoesToTheFocusedPane(t *testing.T) {
 		m.focused = p
 		_, cmd := m.Update(struct{ nothing bool }{})
 		assert.Nil(t, cmd, "pane %d ignores a message it has no use for", p)
+	}
+}
+
+// A scan runs on a goroutine of the runtime's while the event loop keeps taking keys, and nothing stops the options
+// overlay from being opened and toggled meanwhile.
+//
+// Both reach the model's configuration, so this one only says anything under -race - which is how CI runs it.
+func TestScan_OptionsAreToggledWhileAScanRuns(t *testing.T) {
+	m := testModelIn(t, filepath.Join(fixturesDir(t), "goparsing", "petstore"))
+
+	// Running already, so startScan hands back the bare scan command rather than batching a spinner tick with it -
+	// which is also the case that matters: a rescan fired while the previous one is still in flight.
+	m.scan.Running = true
+	run := m.startScan() // built on the event loop...
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		_ = run() // ...and executed elsewhere, as the bubbletea runtime does
+	}()
+
+	_ = m.handleKey(testutils.KeyRune('o'))
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			_ = m.handleKey(testutils.KeyRune(' '))
+		}
 	}
 }

@@ -47,7 +47,7 @@ no longer the spelling to reach for.
 
 ### Flags
 
-Every codescan option is a flag here, declared once in `internal/cliopts` and
+Every codescan option is a flag here, declared once in `cmd/internal/cliopts` and
 shared with [`genspec`](../genspec) and `genspec-wasi` — so a flag means the same
 thing whichever command you reach for, and `-h` lists the current set rather than
 this README going stale. They fall in four groups: `scan` (which code), `go`

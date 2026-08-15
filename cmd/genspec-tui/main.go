@@ -57,9 +57,8 @@ func run(argv []string, stderr io.Writer) error {
 	cfg := config.NewWithFlags(fs)
 	if err := fs.Parse(argv); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(stderr, err)
-
-			// genspec-tui -h exit code is 0: mute the default parse error here
+			// -h has already printed the usage, and asking for it is not an error: nothing more to say, and
+			// nothing to say it about.
 			return nil
 		}
 

@@ -50,9 +50,8 @@ func run(argv []string, stdout, stderr io.Writer) error {
 	cfg := config.NewWithFlags(fs, stdout, stderr)
 	if err := fs.Parse(argv); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(stderr, err)
-
-			// genspec -h exit code is 0: the error is handled by exitCode
+			// -h has already printed the usage, and asking for it is not an error: carried out only so that
+			// exitStatus can answer 0 for it.
 			return err
 		}
 

@@ -36,12 +36,16 @@ type ResultMsg struct {
 //
 // Whole scope means one spec for the entire scanned set, rather than one per package.
 //
-// It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop. cfg is taken by value so the
-// goroutine has a stable snapshot even if the model mutates its options.
+// It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop, which is why cfg is snapshotted
+// HERE rather than inside the command: the caller hands over the model's live configuration, and the options overlay
+// writes to it from the event loop while the scan reads it. Taking the copy on the caller's goroutine, before the
+// command exists, is what keeps the two apart - a copy taken inside the command would be the race it is meant to avoid.
 func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
+	snapshot := *cfg
+
 	return func() tea.Msg {
 		start := time.Now()
-		res := Do(cfg, prof)
+		res := Do(&snapshot, prof)
 		res.Elapsed = time.Since(start)
 		return res
 	}
@@ -58,6 +62,12 @@ func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
 //
 // It is exposed by this package to allow for e2e tests.
 func Do(cfg *codescan.Options, prof *Profiling) ResultMsg {
+	// Worked on by value, because the two callbacks below are installed on it: the caller's Options is the model's live
+	// configuration, and a run that wrote its own collectors into it would both mutate what the options overlay shows
+	// and hand a second, overlapping run the first one's slices to append into.
+	local := *cfg
+	cfg = &local
+
 	// OnDiagnostic fires synchronously inside codescan.Run, on this same goroutine, so a plain append is race-free.
 	//
 	// Diagnostics collected before a hard error are still worth surfacing, so we carry them on every return.
