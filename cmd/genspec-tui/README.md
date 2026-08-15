@@ -288,6 +288,40 @@ go tool pprof -http=: <dir>/cpu-scan.pprof
 go tool pprof -http=: -base <dir>/mem-before.pprof <dir>/mem-after-scan.pprof
 ```
 
+#### What the CPU table is charged to
+
+A leaf frame answers "what was executing", which for this program is mostly the
+allocator and the collector — true, and nothing anyone can act on. So a sample is
+charged to the **call of ours that led there, and what it called**: the boundary
+where codescan hands the work to somebody else's code.
+
+```
+  38%    720ms   the runtime itself — collecting, allocating, scheduling
+  26%    490ms   packages.(*loadState).loadDir → types.(*Config).Check
+  25%    480ms   packages.(*loadState).loadDir → parser.ParseFile
+   3%     60ms   vfs.(*FS).ReadDir → os.(*unixDirent).Info
+```
+
+Read the pair as *what the time went into* → *where to go and change it*. Three
+rules follow from it:
+
+- A row covers **everything under the boundary**, so these are not flat times.
+  Every sample is still charged exactly once, so the shares partition the phase.
+- Garbage collection, the allocator and the scheduler have no call of ours above
+  them, and get **one row** rather than eight naming the runtime's internals. It
+  is not a bottleneck to look up: it is the price of the allocation table below,
+  which is where something can be done about it.
+- Work on a goroutine we did not start (the loader's own) is charged to what that
+  goroutine is *doing*, not to the `errgroup` wrapper every one of them roots in.
+
+Function literals fold into the function they were written in: `refine.func2.1`
+and `refine.func3` are one piece of work seen at two of its entrances.
+
+The allocation table is charged differently — to the innermost frame outside the
+runtime, the one that actually asked for the memory. `types.(*Checker).recordTypeAndValue`
+at 123 MB says the type-checker's own result set is the memory, which a boundary
+row would have hidden inside `types.(*Config).Check`.
+
 Five artifacts are written: a CPU profile per phase (`cpu-scan`, `cpu-render`)
 and three heap snapshots — before, after scanning, after rendering — so `-base`
 reproduces either phase in the real tool. What the in-TUI tables give you
@@ -308,7 +342,10 @@ Caveats worth knowing before reading a table:
 - **The observer is excluded.** Stopping one phase's CPU profile flushes it
   through a compressor and starting the next allocates its buffers, all of it
   between two fences. Those allocations are dropped from the tables rather than
-  reported: in the short phase they would otherwise crowd out its real sites.
+  reported: in the short phase they would otherwise crowd out its real sites. The
+  sampler catches the profiler writing the profile, too — those samples are
+  dropped from the CPU total as well, so the shares describe the run rather than
+  the observation of it.
 - **Observing costs.** A profiled run collects at each fence and carries the
   sampler's overhead, so the summary figures at the top of the card are worse
   than the same run unprofiled. The tables are the accurate account.

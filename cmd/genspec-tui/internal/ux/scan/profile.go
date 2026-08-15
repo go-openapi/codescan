@@ -79,10 +79,23 @@ type PhaseProfile struct {
 // Sampled reports whether the CPU sampler caught anything in this phase.
 func (p PhaseProfile) Sampled() bool { return len(p.CPU) > 0 }
 
-// Func is one function's flat share of the CPU samples.
+// Func is one charge against a phase's CPU samples: what the time is counted against, and how much of it.
 type Func struct {
-	Name  string
-	Flat  time.Duration
+	// Name is the frame the time is charged to - the deepest frame of ours on the stack, or the outermost frame of a
+	// goroutine that has none. Empty when Runtime is set.
+	Name string
+
+	// Callee is what Name called: the boundary where our code hands the work to somebody else's. Empty when the
+	// sample was taken in our own code, or on a goroutine with no frame of ours at all.
+	Callee string
+
+	// Runtime says the stack was machinery all the way down - garbage collection, the allocator, the scheduler. Not a
+	// function anyone can act on, but the price of what the allocation table reports, which is why it is a row of its
+	// own rather than eight rows of runtime internals crowding out the program.
+	Runtime bool
+
+	// Spent is the CPU time charged here: everything below the boundary, not only what Name's own body ran.
+	Spent time.Duration
 	Share float64
 }
 
@@ -102,6 +115,27 @@ const MemSnapshots = 3
 // topN is how many rows of each table the card shows. Past this the tail is noise a reader would not act on, and the
 // artifacts are on disk for anyone who wants all of it.
 const topN = 8
+
+// What a frame is, by the only thing a profile knows about it: its name.
+const (
+	// ourModule is what marks a frame as this project's own - the library, the loader, this command. Everything under
+	// it is code that can be changed here; everything else is somebody else's, and the boundary between the two is
+	// what the CPU table is about.
+	ourModule = "github.com/go-openapi/codescan"
+
+	// profilerPrefix marks a stack as the profiler measuring itself.
+	profilerPrefix = "runtime/pprof."
+)
+
+// isMachinery reports whether a frame is the program's plumbing rather than the program.
+//
+// Every allocation goes through the same handful of runtime helpers and every sample is taken somewhere; naming them
+// labels the tables with the fact that memory was allocated and that a CPU was busy, which is what the tables are
+// already about. The stdlib's internal/ tree is the same thing under another name: internal/runtime/maps is the map
+// implementation, not the code that decided to use a map.
+func isMachinery(fn string) bool {
+	return strings.HasPrefix(fn, "runtime.") || strings.HasPrefix(fn, "internal/")
+}
 
 // cpuProfiler serializes profiled runs.
 //
@@ -440,10 +474,10 @@ func frameName(stack []uintptr) (name string, ours bool) {
 	for {
 		f, more := frames.Next()
 		if f.Function != "" {
-			if strings.HasPrefix(f.Function, "runtime/pprof.") {
+			if strings.HasPrefix(f.Function, profilerPrefix) {
 				return "", true
 			}
-			if caller == "" && !strings.HasPrefix(f.Function, "runtime.") && !strings.HasPrefix(f.Function, "internal/") {
+			if caller == "" && !isMachinery(f.Function) {
 				caller = f.Function
 			}
 			if innermost == "" {
@@ -467,10 +501,12 @@ func frameName(stack []uintptr) (name string, ours bool) {
 	}
 }
 
-// cpuFuncs reduces a parsed CPU profile to the functions that spent the time, flat, biggest first.
+// cpuFuncs reduces a parsed CPU profile to what spent the time, biggest first.
 //
 // The second sample value is the one to read: a CPU profile carries samples/count and cpu/nanoseconds, and time is
 // what a reader is comparing against the wall clock on the card.
+//
+// The profiler's own samples are dropped rather than ranked, so both the shares and the total below describe the run.
 func cpuFuncs(prof *profile.Profile) ([]Func, time.Duration, int64) {
 	const (
 		count = 0 // index of samples/count in a CPU profile's sample values
@@ -482,27 +518,35 @@ func cpuFuncs(prof *profile.Profile) ([]Func, time.Duration, int64) {
 	}
 
 	var total, samples int64
-	byFunc := make(map[string]int64)
+	byCharge := make(map[charged]int64)
 	for _, s := range prof.Sample {
 		if len(s.Value) <= nanos || len(s.Location) == 0 {
 			continue
 		}
+		c, profilers := charge(s.Location)
+		if profilers {
+			continue
+		}
+
 		v := s.Value[nanos]
 		total += v
 		samples += s.Value[count]
-		byFunc[leafName(s.Location[0])] += v
+		byCharge[c] += v
 	}
 	if total == 0 {
 		return nil, 0, 0
 	}
 
-	out := make([]Func, 0, len(byFunc))
-	for name, v := range byFunc {
-		out = append(out, Func{Name: name, Flat: time.Duration(v), Share: float64(v) / float64(total)})
+	out := make([]Func, 0, len(byCharge))
+	for c, v := range byCharge {
+		out = append(out, Func{
+			Name: c.name, Callee: c.callee, Runtime: c.machinery,
+			Spent: time.Duration(v), Share: float64(v) / float64(total),
+		})
 	}
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].Flat != out[j].Flat {
-			return out[i].Flat > out[j].Flat
+		if out[i].Spent != out[j].Spent {
+			return out[i].Spent > out[j].Spent
 		}
 
 		return out[i].Name < out[j].Name
@@ -511,11 +555,108 @@ func cpuFuncs(prof *profile.Profile) ([]Func, time.Duration, int64) {
 	return out[:min(len(out), topN)], time.Duration(total), samples
 }
 
-// leafName names the function a sample was taken in.
-func leafName(loc *profile.Location) string {
-	if loc == nil || len(loc.Line) == 0 || loc.Line[0].Function == nil {
-		return "(unknown)"
+// charged is what a sample is counted against, before any numbers are attached to it.
+type charged struct {
+	name, callee string
+	machinery    bool
+}
+
+// charge says what a sample should be counted against.
+//
+// A CPU profile's leaf frame answers "what was executing", which for this program is mostly the allocator and the
+// collector: true, and nothing anyone can act on. What a reader can act on is the call of ours that led there, so a
+// sample is charged to the DEEPEST frame under ourModule, together with what that frame called - the boundary where
+// our code hands the work to somebody else's.
+//
+// Every sample is charged exactly once, so the shares still partition the phase. They stop being flat times, though: a
+// row covers everything below the boundary, which is the point of reading it this way - "60% under types.Config.Check"
+// is the answer, and the breakdown inside go/types is not ours to act on.
+//
+// Two kinds of stack have no boundary on them. Work on a goroutine we did not start (the loader's own, the watcher's)
+// is charged to its outermost frame, which names whose goroutine it is. A stack that is machinery all the way down is
+// reported as itself: GC and the allocator are not a bottleneck to look up but the price of the allocation table
+// below, and one row saying so is worth more than eight naming the runtime's internals.
+func charge(locs []*profile.Location) (charged, bool) {
+	var mine, callee, outermost, previous string
+
+	for _, loc := range locs {
+		for _, line := range loc.Line {
+			if line.Function == nil || line.Function.Name == "" {
+				continue
+			}
+			fn := line.Function.Name
+
+			// However far out it sits, a pprof frame marks the whole stack as the profiler's own work.
+			if strings.HasPrefix(fn, profilerPrefix) {
+				return charged{}, true
+			}
+			if mine == "" && strings.HasPrefix(fn, ourModule) {
+				mine, callee = fn, previous
+			}
+			if !isMachinery(fn) && !startsAGoroutine(fn) {
+				outermost = fn
+			}
+			previous = fn
+		}
 	}
 
-	return loc.Line[0].Function.Name
+	switch {
+	case mine != "":
+		return charged{name: enclosing(mine), callee: enclosing(callee)}, false
+	case outermost != "":
+		return charged{name: enclosing(outermost)}, false
+	default:
+		return charged{machinery: true}, false
+	}
+}
+
+// startsAGoroutine reports whether a frame is how somebody's work was parallelized rather than what the work is.
+//
+// A library that fans out through errgroup roots every one of its goroutines in the same wrapper, so taking the
+// outermost frame verbatim answers "who started this" - which the reader can already see - instead of "what is it
+// doing". The frame under the wrapper is the one that names the work.
+func startsAGoroutine(fn string) bool {
+	return strings.HasPrefix(fn, "golang.org/x/sync/errgroup.") || strings.HasPrefix(fn, "sync.")
+}
+
+// enclosing names the function a closure was written in.
+//
+// "packages.(*loader).refine.func2.1" and "packages.(*loader).refine.func3" are one piece of work seen at two of its
+// entrances; kept apart they are two rows the reader has to add up, and neither name says more than the function they
+// were written in. The literals are folded back into it.
+func enclosing(fn string) string {
+	// Only the symbol is walked: the path in front of it is free to carry dots of its own (go.yaml.in/yaml/v3).
+	start := 0
+	if i := strings.LastIndex(fn, "/"); i >= 0 {
+		start = i + 1
+	}
+
+	// A literal needs a package and a function in front of it to be folded into: "main.func1" is written at package
+	// level, and trimming it would leave a row named after nothing but the package.
+	at, depth := start, 0
+	for segment := range strings.SplitSeq(fn[start:], ".") {
+		if depth >= 2 && isFuncLiteral(segment) {
+			return fn[:at-1]
+		}
+		at += len(segment) + 1
+		depth++
+	}
+
+	return fn
+}
+
+// isFuncLiteral reports whether a symbol segment is the compiler's name for a function literal: func1, func2...
+func isFuncLiteral(segment string) bool {
+	rest, ok := strings.CutPrefix(segment, "func")
+	if !ok || rest == "" {
+		return false
+	}
+
+	for _, r := range rest {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+
+	return true
 }

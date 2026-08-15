@@ -106,7 +106,12 @@ const (
 	// A profiled run is measured while being watched: the sampler costs time, and the profiler collects at each fence
 	// to keep its own figures current. The tables below are the accurate account; these figures are not.
 	noteProfiled = "profiled run: these figures carry the profiler's overhead and its collections — read the tables below,\n" +
-		"  which exclude the profiler's own work"
+		"  which exclude the profiler's own work.\n" +
+		"  CPU is charged to the call of ours that led there, so a row covers everything under it"
+
+	// What the runtime's own row says. It is not a function to look up: it is the cost of the memory the table under
+	// it accounts for, which is where a reader can do something about it.
+	runtimeRow = "the runtime itself — collecting, allocating, scheduling"
 
 	empty     = "no run measured yet"
 	emptyHint = "the first scan is still running"
@@ -330,10 +335,25 @@ func (o *Overlay) cpu(phase scan.PhaseProfile) []string {
 	}
 	for _, f := range phase.CPU {
 		lines = append(lines, "    "+lead(fmt.Sprintf("%.0f%%", f.Share*100), 5)+
-			lead(humanize.Duration(f.Flat), 9)+"   "+shortFunc(f.Name))
+			lead(humanize.Duration(f.Spent), 9)+"   "+charged(f))
 	}
 
 	return append(lines, "")
+}
+
+// charged names what a row's time was counted against.
+//
+// The pair is the actionable unit: the callee says what the time went into, and the frame of ours says where to go and
+// change it. Naming only one of the two leaves the reader to find the other.
+func charged(f scan.Func) string {
+	switch {
+	case f.Runtime:
+		return theme.Status().Render(runtimeRow)
+	case f.Callee != "":
+		return shortFunc(f.Name) + theme.Status().Render(" → ") + shortFunc(f.Callee)
+	default:
+		return shortFunc(f.Name)
+	}
 }
 
 // sites renders one phase's allocation table, or says why it is empty.
