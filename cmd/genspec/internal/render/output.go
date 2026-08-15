@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package render
 
 import (
 	"encoding/json"
@@ -13,29 +13,45 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// documentMode is what a written specification is created with.
+// documentMode is the file mode a specification is created with.
 const documentMode os.FileMode = 0o644
 
-// render marshals the document in the format asked for.
+// Config holds the spec rendering settings.
+type Config struct {
+	CompactJSON bool
+	WantsYAML   bool
+	Output      string
+	Stdout      io.Writer
+}
+
+// Spec marshals the specification document in the format asked for.
 //
 // The JSON rendering is produced either way: it is what YAML is derived from, and what -validate
 // checks, so a caller reading the document and a caller validating it are looking at the same bytes.
-func render(doc *spec.Swagger, format string, compact bool) (rendered, asJSON []byte, err error) {
-	asJSON, err = marshalJSON(doc, compact)
+func Spec(doc *spec.Swagger, cfg Config) (asJSON []byte, err error) {
+	asJSON, err = marshalJSON(doc, cfg.CompactJSON)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if format != formatYAML {
-		return asJSON, asJSON, nil
+	if !cfg.WantsYAML {
+		if err = write(asJSON, cfg.Output, cfg.Stdout); err != nil {
+			return nil, err
+		}
+
+		return asJSON, nil
 	}
 
-	rendered, err = marshalYAML(asJSON)
+	rendered, err := marshalYAML(asJSON)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return rendered, asJSON, nil
+	if err = write(rendered, cfg.Output, cfg.Stdout); err != nil {
+		return asJSON, err
+	}
+
+	return asJSON, nil
 }
 
 func marshalJSON(doc *spec.Swagger, compact bool) ([]byte, error) {
@@ -64,6 +80,10 @@ func marshalYAML(asJSON []byte) ([]byte, error) {
 // write puts the rendered document where -output says.
 func write(rendered []byte, output string, stdout io.Writer) error {
 	if output == "" || output == "-" {
+		if stdout == nil {
+			return nil
+		}
+
 		_, err := fmt.Fprintf(stdout, "%s\n", rendered)
 
 		return err

@@ -24,11 +24,11 @@ import (
 
 // Model is the root bubbletea model.
 type Model struct {
-	cfg codescan.Options
+	cfg *codescan.Options
 
 	// What each scan captures about itself, fixed at launch. Not a runtime toggle: the heap sampling rate is set once
 	// for the process, so a run profiled under one rate cannot be compared with a run profiled under another.
-	profiling scan.Profiling
+	profiling *scan.Profiling
 
 	// Where the starting options came from, for the opening notice: a session that behaves unlike the command line
 	// says so would otherwise leave the reader to discover the file themselves.
@@ -154,10 +154,10 @@ const (
 type Startup struct {
 	// Options is what the first scan runs with. Everything in it is a live setting afterwards: the options overlay
 	// writes to the model's own copy, so this decides the session's starting point, not its limits.
-	Options codescan.Options
+	Options *codescan.Options
 
 	// Profiling says what each scan captures about itself. Fixed for the session - see [scan.Profiling].
-	Profiling scan.Profiling
+	Profiling *scan.Profiling
 
 	// ConfigPath is the configuration file that preset the flags, and ConfigSet the flags it decided. Carried only to
 	// be reported: by the time the model exists the answers are already in Options, and what is worth saying is that
@@ -196,7 +196,7 @@ func New(start Startup) *Model {
 	}
 	// Built after the struct exists: the options rows bind to the scan-config booleans by pointer, and those pointers
 	// have to be into m.cfg (valid because m is heap-allocated) rather than into the caller's copy.
-	m.options = options.New(&m.cfg)
+	m.options = options.New(m.cfg)
 
 	return m
 }
@@ -221,7 +221,7 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// Update implements tea.Model.
+// Update implements [tea.Model].
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:

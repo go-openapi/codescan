@@ -763,11 +763,11 @@ func scanPetstore(t *testing.T) *Model {
 	t.Helper()
 
 	petstoreOnce.Do(func() {
-		petstoreRes = scan.Do(codescan.Options{
+		petstoreRes = scan.Do(&codescan.Options{
 			WorkDir:    fixturesDir(t),
 			Packages:   []string{"./goparsing/petstore/..."},
 			ScanModels: true,
-		}, scan.Profiling{})
+		}, &scan.Profiling{})
 	})
 	res := petstoreRes
 	require.NoError(t, res.Err, "the petstore fixture must scan cleanly")

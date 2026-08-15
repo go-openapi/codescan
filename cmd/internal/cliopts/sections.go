@@ -3,7 +3,7 @@
 
 package cliopts
 
-import "github.com/go-openapi/codescan/internal/cliconf"
+import "github.com/go-openapi/codescan/cmd/internal/cliconf"
 
 // The sections a configuration file addresses these flags in.
 //

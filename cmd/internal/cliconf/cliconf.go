@@ -14,9 +14,9 @@ import (
 
 // Schema says which section of a configuration file each flag is addressed in.
 //
-// It is what makes a key checkable: without it every key would have to be believed, and a
-// misspelled one would read as a setting that quietly never applied. Commands build theirs by
-// merging what the shared flag tables declare with what they add themselves.
+// It is what makes a key checkable: without it every key would have to be believed, and a misspelled one
+// would read as a setting that quietly never applied.
+// Commands build theirs by merging what the shared flag tables declare with what they add themselves.
 type Schema map[string]string
 
 // Merge returns s with more added, leaving both alone.
@@ -63,8 +63,7 @@ type Result struct {
 // Apply writes a configuration file's values onto a flag set.
 //
 // Flags the caller typed are left alone. Everything else goes through [flag.FlagSet.Set], so the
-// file is parsed by the same code as the command line and cannot mean anything an argument could
-// not.
+// file is parsed by the same code as the command line and cannot mean anything an argument could not.
 func Apply(fs *flag.FlagSet, values map[string]any, schema Schema) (Result, error) {
 	var result Result
 

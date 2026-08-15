@@ -4,7 +4,6 @@
 package ux
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -130,11 +129,19 @@ func TestUpdate_CopyResult(t *testing.T) {
 	t.Run("failure names the error", func(t *testing.T) {
 		m := testModel(t, sized(100, 40))
 
-		_, _ = m.Update(copyResultMsg{err: errors.New("no clipboard tool")})
+		_, _ = m.Update(copyResultMsg{err: errClipboardTest})
 
 		assert.Contains(t, m.notice, "no clipboard tool")
 	})
 }
+
+type testError string
+
+func (e testError) Error() string {
+	return string(e)
+}
+
+const errClipboardTest testError = "no clipboard tool"
 
 func TestUpdate_ClearNotice(t *testing.T) {
 	m := testModel(t, sized(100, 40))

@@ -188,7 +188,7 @@ func TestCPUFuncsOnNothingSampled(t *testing.T) {
 
 // The disabled profiler is the common case: it must cost nothing and produce no report.
 func TestProfilerDisabled(t *testing.T) {
-	p := newProfiler(Profiling{})
+	p := newProfiler(&Profiling{})
 
 	p.scanDone()
 
@@ -204,7 +204,7 @@ func TestProfilerCapturesARun(t *testing.T) {
 
 	dir := t.TempDir()
 
-	p := newProfiler(Profiling{Enabled: true, Dir: dir})
+	p := newProfiler(&Profiling{Enabled: true, Dir: dir})
 	sink := make([][]byte, 0, 128)
 	for range 128 {
 		sink = append(sink, make([]byte, 8*1024))
@@ -225,8 +225,8 @@ func TestProfilerCapturesARun(t *testing.T) {
 // The CPU profiler is a process-wide singleton, so a second profiled run cannot have it - and must not take it from
 // the first, nor fail the scan it belongs to.
 func TestProfilerYieldsTheCPUSingleton(t *testing.T) {
-	first := newProfiler(Profiling{Enabled: true, Dir: t.TempDir()})
-	second := newProfiler(Profiling{Enabled: true, Dir: t.TempDir()})
+	first := newProfiler(&Profiling{Enabled: true, Dir: t.TempDir()})
+	second := newProfiler(&Profiling{Enabled: true, Dir: t.TempDir()})
 
 	require.NotNil(t, second.done())
 	assert.Contains(t, second.report.Notes[0], "another profiled scan is in flight")

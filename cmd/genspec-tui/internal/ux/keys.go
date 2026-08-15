@@ -10,55 +10,8 @@ import (
 )
 
 func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
-	// Quitting is app policy, so it is decided here rather than in each mode that captures keys - which is what let
-	// ctrl+q mean "quit" in the help overlay, "apply and close" in the options popup, and nothing at all in the search
-	// input, while the keymap advertised it under "anywhere".
-	if key.MsgBinding(msg).Quit() {
-		return tea.Quit
-	}
-
-	// Modal overlays capture all keys until they dismiss themselves.
-	//
-	// An overlay only ever RECORDS what it wants; the apply steps below are where the model decides what that means, in
-	// the same order overlays() ranks them.
-	if o := m.activeOverlay(); o != nil {
-		cmd := o.HandleKey(msg)
-		if confirmed := m.applyConfirm(); confirmed != nil {
-			return confirmed
-		}
-		if rescan := m.applyOptions(); rescan != nil {
-			return rescan
-		}
-
+	if cmd, shortCircuit := m.shortCircuitKeyBindings(msg); shortCircuit {
 		return cmd
-	}
-	if m.search.Active() {
-		return m.handleSearchKey(msg)
-	}
-	// The editor captures everything except a handful of app keys.
-	if m.leftMode == modeView && m.focused == paneTree && m.fileView.Editing() {
-		return m.handleEditKey(msg)
-	}
-
-	// Then the focused pane gets first refusal; whatever it declines falls through to the global bindings below.
-	if cmd, handled := m.routePaneKey(msg); handled {
-		return cmd
-	}
-
-	if cmd, handled := m.handleSearchControl(msg); handled {
-		return cmd
-	}
-
-	if cmd, handled := m.handleSplitKey(msg); handled {
-		return cmd
-	}
-
-	// Checked on the raw spelling, before the lowercasing switch below turns `V` into `v` and revalidates instead of
-	// switching tab.
-	if msg.String() == "V" {
-		m.toggleDiagTab()
-
-		return nil
 	}
 
 	switch key.MsgBinding(msg) {
@@ -126,6 +79,62 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 	}
 
 	return m.updateFocused(msg)
+}
+
+func (m *Model) shortCircuitKeyBindings(msg tea.KeyMsg) (tea.Cmd, bool) {
+	// Quitting is app policy, so it is decided here rather than in each mode that captures keys - which is what let
+	// ctrl+q mean "quit" in the help overlay, "apply and close" in the options popup, and nothing at all in the search
+	// input, while the keymap advertised it under "anywhere".
+	if key.MsgBinding(msg).Quit() {
+		return tea.Quit, true
+	}
+
+	// Modal overlays capture all keys until they dismiss themselves.
+	//
+	// An overlay only ever RECORDS what it wants; the apply steps below are where the model decides what that means, in
+	// the same order overlays() ranks them.
+	if o := m.activeOverlay(); o != nil {
+		cmd := o.HandleKey(msg)
+		if confirmed := m.applyConfirm(); confirmed != nil {
+			return confirmed, true
+		}
+		if rescan := m.applyOptions(); rescan != nil {
+			return rescan, true
+		}
+
+		return cmd, true
+	}
+
+	if m.search.Active() {
+		return m.handleSearchKey(msg), true
+	}
+	// The editor captures everything except a handful of app keys.
+	if m.leftMode == modeView && m.focused == paneTree && m.fileView.Editing() {
+		return m.handleEditKey(msg), true
+	}
+
+	// Then the focused pane gets first refusal; whatever it declines falls through to the global bindings below.
+	if cmd, handled := m.routePaneKey(msg); handled {
+		return cmd, true
+	}
+
+	if cmd, handled := m.handleSearchControl(msg); handled {
+		return cmd, true
+	}
+
+	if cmd, handled := m.handleSplitKey(msg); handled {
+		return cmd, true
+	}
+
+	// Checked on the raw spelling, before the lowercasing switch below turns `V` into `v` and revalidates instead of
+	// switching tab.
+	if msg.String() == "V" {
+		m.toggleDiagTab()
+
+		return nil, true
+	}
+
+	return nil, false
 }
 
 // handleSearchControl handles the case-sensitive search keys.

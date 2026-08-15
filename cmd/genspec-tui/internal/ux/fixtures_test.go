@@ -31,7 +31,7 @@ func testModel(t *testing.T, opts ...modelOpt) *Model {
 func testModelIn(t *testing.T, dir string, opts ...modelOpt) *Model {
 	t.Helper()
 
-	m := New(Startup{Options: codescan.Options{WorkDir: dir, Packages: []string{"./..."}}})
+	m := New(Startup{Options: &codescan.Options{WorkDir: dir, Packages: []string{"./..."}}})
 	t.Cleanup(m.Close)
 
 	m.width, m.height = 80, 24

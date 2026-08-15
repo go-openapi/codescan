@@ -125,8 +125,8 @@ type profiler struct {
 }
 
 // newProfiler starts a profiled run, or returns the disabled profiler when one was not asked for (or cannot be had).
-func newProfiler(p Profiling) *profiler {
-	if !p.Enabled {
+func newProfiler(p *Profiling) *profiler {
+	if p == nil || !p.Enabled {
 		return &profiler{}
 	}
 

@@ -38,7 +38,7 @@ type ResultMsg struct {
 //
 // It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop. cfg is taken by value so the
 // goroutine has a stable snapshot even if the model mutates its options.
-func Run(cfg codescan.Options, prof Profiling) tea.Cmd {
+func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
 	return func() tea.Msg {
 		start := time.Now()
 		res := Do(cfg, prof)
@@ -57,7 +57,7 @@ func Run(cfg codescan.Options, prof Profiling) tea.Cmd {
 // say describe the same halves of the same work.
 //
 // It is exposed by this package to allow for e2e tests.
-func Do(cfg codescan.Options, prof Profiling) ResultMsg {
+func Do(cfg *codescan.Options, prof *Profiling) ResultMsg {
 	// OnDiagnostic fires synchronously inside codescan.Run, on this same goroutine, so a plain append is race-free.
 	//
 	// Diagnostics collected before a hard error are still worth surfacing, so we carry them on every return.
@@ -80,7 +80,7 @@ func Do(cfg codescan.Options, prof Profiling) ResultMsg {
 	before := fence()
 
 	scanStart := time.Now()
-	sw, err := codescan.Run(&cfg)
+	sw, err := codescan.Run(cfg)
 	scanFor := time.Since(scanStart)
 	scanned := fence()
 

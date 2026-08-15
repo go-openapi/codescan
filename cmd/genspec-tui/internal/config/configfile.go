@@ -1,31 +1,28 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package config
 
 import (
 	"flag"
 	"fmt"
 	"os"
 
-	"github.com/go-openapi/codescan/internal/cliconf"
-	"github.com/go-openapi/codescan/internal/cliopts"
+	"github.com/go-openapi/codescan/cmd/internal/cliconf"
+	"github.com/go-openapi/codescan/cmd/internal/cliopts"
 )
 
 // sectionProfile is where this command's own flags are addressed.
 //
-// The library's flags bring their own sections (scan, go, load, emit); what the TUI adds is not about the TUI at all -
-// it is about observing a run - so it reads as profile.* rather than tui.*. A section named after this command would
-// also be the wrong home the day another one profiles a scan.
+// The library's flags bring their own sections (scan, go, load, emit).
+// What the TUI adds specifically is about observing a run: it reads as profile.* rather than tui.*.
 const sectionProfile = "profile"
 
 // commandSections says where each of this command's flags is addressed.
 //
-// A literal rather than something derived, because these flags are registered inline: there is no table to read a
-// section off. TestEveryFlagIsAddressableInAConfigFile is what keeps it in step.
-//
 //nolint:gochecknoglobals // the schema, read once at startup
 var commandSections = cliconf.Schema{
+	// NOTE: TestEveryFlagIsAddressableInAConfigFile is what keeps this list in step.
 	"profile":          sectionProfile,
 	"profile-dir":      sectionProfile,
 	"mem-profile-rate": sectionProfile,
@@ -40,6 +37,7 @@ var notConfigurable = map[string]string{
 	cliconf.NoFlag:    "decides whether there is a file at all, from outside it",
 	"packages": "the historic spelling of the positional patterns, kept working for scripts; a file " +
 		"that could set it would be reviving the flag rather than retiring it",
+	"version": "asks the command a question rather than configuring it",
 }
 
 // configSchema is the whole of what a configuration file may address here.
@@ -55,8 +53,10 @@ func configSchema() (cliconf.Schema, error) {
 // configured reads a configuration file, if there is one, and presets the flags with it.
 //
 // Called after parsing and before anything reads a flag, so that everything downstream sees one settled command line
-// and needs to know nothing about where a value came from. What the file decides is what the session STARTS with; the
-// options overlay owns everything after that, which is why nothing here is consulted a second time.
+// and needs to know nothing about where a value came from.
+//
+// What the file decides is what the session STARTS with.
+// The options overlay owns everything after that, which is why nothing here is consulted a second time.
 func configured(fs *flag.FlagSet, which *cliconf.Flags) (cliconf.Result, string, error) {
 	var applied cliconf.Result
 
@@ -92,10 +92,11 @@ func configured(fs *flag.FlagSet, which *cliconf.Flags) (cliconf.Result, string,
 
 // read loads a configuration file.
 //
-// Through cliconf's own parser rather than koanf, which cmd/genspec uses: koanf earns its place there for what it will
-// be asked for next - environment variables, several sources merged - and this command reads one file, once, to decide
-// what the first scan of a session starts with. Both produce the same flat, section-qualified map, so the choice costs
-// nothing but a dependency.
+// Through cliconf's own parser rather than koanf, which cmd/genspec uses:
+// koanf earns its place there for what it will be asked for next: environment variables and several sources merged.
+//
+// This command reads one file, once, to decide what the first scan of a session starts with.
+// Both produce the same flat, section-qualified map, so the choice costs nothing but a dependency.
 func read(path string) (map[string]any, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

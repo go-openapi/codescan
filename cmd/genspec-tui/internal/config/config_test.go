@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package config
 
 import (
 	"flag"
@@ -11,10 +11,9 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/go-openapi/codescan/cmd/internal/cliconf"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
-
-	"github.com/go-openapi/codescan/internal/cliconf"
 )
 
 // The scan options are declared in internal/cliopts and guarded there: the drift guard this command used to carry
@@ -137,35 +136,37 @@ func TestTheSharedOptionsAreAllRegistered(t *testing.T) {
 	assert.True(t, opts.ToolchainFreeLoader, "-loader own is the tri-state spelling of it")
 }
 
-func TestProfilingIsOffUnlessAsked(t *testing.T) {
+func TestProfiling(t *testing.T) {
 	t.Parallel()
 
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse(nil))
+	t.Run("profiling should be disabled by default", func(t *testing.T) {
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse(nil))
 
-	prof, err := cli.profiling()
-	require.NoError(t, err)
+		_, prof, err := cli.PrepareScan()
+		require.NoError(t, err)
 
-	assert.False(t, prof.Enabled)
-	assert.Empty(t, prof.Dir, "nothing is created for a session that did not ask to be profiled")
-}
+		assert.Nil(t, prof)
+	})
 
-func TestProfilingTakesADirectory(t *testing.T) {
-	t.Parallel()
+	t.Run("profiling should accept a directory arg", func(t *testing.T) {
+		t.Parallel()
 
-	dir := t.TempDir()
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", dir}))
+		dir := t.TempDir()
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", dir}))
 
-	prof, err := cli.profiling()
-	require.NoError(t, err)
-
-	assert.True(t, prof.Enabled)
-	assert.Equal(t, dir, prof.Dir)
+		_, prof, err := cli.PrepareScan()
+		require.NoError(t, err)
+		require.NotNil(t, prof)
+		assert.True(t, prof.Enabled)
+		assert.Equal(t, dir, prof.Dir)
+	})
 }
 
 // The heap sampling rate is a property of the process, so it is applied once, here, rather than per scan.
 func TestProfilingAppliesTheSamplingRate(t *testing.T) {
+	// NOT PARALLEL
 	saved := runtime.MemProfileRate
 	t.Cleanup(func() { runtime.MemProfileRate = saved })
 
@@ -251,7 +252,7 @@ func TestConfigFileSkipsAnotherCommandsSection(t *testing.T) {
 
 // inConfiguredDir writes a configuration file into a fresh directory and runs the test from inside it, which is how
 // the file is found: the search walks up from where the command was started.
-func inConfiguredDir(t *testing.T, content string) (*config, string) {
+func inConfiguredDir(t *testing.T, content string) (*Config, string) {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -281,11 +282,11 @@ func requireSameFile(t *testing.T, want, got string) {
 	require.True(t, os.SameFile(wantInfo, gotInfo), "%q and %q should name the same file", want, got)
 }
 
-func newTestFlags(t *testing.T) *config {
+func newTestFlags(t *testing.T) *Config {
 	t.Helper()
 
 	fs := flag.NewFlagSet("genspec-tui", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	return registerFlags(fs)
+	return NewWithFlags(fs)
 }
