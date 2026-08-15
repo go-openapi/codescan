@@ -17,11 +17,10 @@ import (
 
 // ResultMsg carries the outcome of a whole-scope scan.
 //
-// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took, what it
+// The spec rendered as JSON, path and definition counts for the header, how long the scan took, what it
 // cost to run, every diagnostic the build emitted in source order, and any hard error from codescan.Run.
 type ResultMsg struct {
 	JSON       string
-	YAML       string
 	Paths      int
 	Defs       int
 	Elapsed    time.Duration
@@ -55,7 +54,7 @@ func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
 //
 // It fences the work three times - before the scan, after it, and once the document has been rendered - so the result
 // carries what the run cost as well as what it produced. The inner split is what makes the reading actionable: it
-// separates what codescan spent from what serializing the same document twice, as JSON and again as YAML, spent on top.
+// separates what codescan spent from what serializing the document spent on top.
 //
 // A profiled run brackets the same two phases with the profiler as well, so what the sampler says and what the fences
 // say describe the same halves of the same work.
@@ -116,9 +115,6 @@ func Do(cfg *codescan.Options, prof *Profiling) ResultMsg {
 	if sw.Paths != nil {
 		res.Paths = len(sw.Paths.Paths)
 	}
-	if yb, yerr := jsonToYAML(jb); yerr == nil {
-		res.YAML = string(yb)
-	}
 	renderFor := time.Since(renderStart)
 
 	res.Cost = costOf(before, scanned, fence(), scanFor, renderFor)
@@ -127,13 +123,23 @@ func Do(cfg *codescan.Options, prof *Profiling) ResultMsg {
 	return res
 }
 
-// jsonToYAML reserializes ordered JSON bytes as YAML.
+// RenderYAML reserializes a rendered JSON document as YAML.
+//
+// Called when the YAML view is first asked for rather than alongside the JSON, because it costs more than the document
+// it is made from - a full reparse into map[string]any, then the emitter - and most sessions never open it. On a large
+// specification that was the larger half of every rescan, spent on a view nobody had looked at.
 //
 // Map keys come out alphabetically (yaml v3's deterministic order), which is good enough for a human-readable viewer.
-func jsonToYAML(jb []byte) ([]byte, error) {
+func RenderYAML(jsonBody string) (string, error) {
 	var v any
-	if err := json.Unmarshal(jb, &v); err != nil {
-		return nil, err
+	if err := json.Unmarshal([]byte(jsonBody), &v); err != nil {
+		return "", err
 	}
-	return yaml.Marshal(v)
+
+	yb, err := yaml.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	return string(yb), nil
 }

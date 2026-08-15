@@ -316,9 +316,9 @@ func TestE2E_SyntaxLeavesTheSpecIntact(t *testing.T) {
 	m.spec.SetSize(200, 40)
 
 	for _, format := range []string{"JSON", "YAML"} {
-		m.setSpecFormat(format)
 		body := m.scan.JSON
 		if format == "YAML" {
+			switchToYAML(t, m)
 			body = m.scan.YAML
 		}
 		require.NotEmpty(t, body)

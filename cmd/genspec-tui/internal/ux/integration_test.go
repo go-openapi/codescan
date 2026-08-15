@@ -137,13 +137,12 @@ func TestE2E_CycleVisitsEverySiteExactlyOnce(t *testing.T) {
 // This is what makes ctrl+j/ctrl+y safe mid-investigation.
 func TestE2E_YAMLFindsTheSameSites(t *testing.T) {
 	m := scanPetstore(t)
-	require.NotEmpty(t, m.scan.YAML, "the scan produced a YAML render")
+	require.Empty(t, m.scan.YAML, "the scan renders JSON only: YAML is converted when it is asked for")
 
 	jsonHolders := holderSet(m, "/definitions/pet")
 	require.NotEmpty(t, jsonHolders)
 
-	m.setSpecFormat("YAML")
-	require.Equal(t, "YAML", m.spec.Format())
+	switchToYAML(t, m)
 
 	assert.Equal(t, jsonHolders, holderSet(m, "/definitions/pet"),
 		"the same nodes reference pet in either render")
@@ -778,6 +777,19 @@ func scanPetstore(t *testing.T) *Model {
 	_, _ = m.Update(res)
 
 	return m
+}
+
+// switchToYAML flips the spec pane to YAML the way the runtime does: the toggle hands back a command, and the message
+// it produces comes back in through Update. The conversion is on demand, so nothing is rendered until it lands.
+func switchToYAML(t *testing.T, m *Model) {
+	t.Helper()
+
+	cmd := m.setSpecFormat("YAML")
+	require.NotNil(t, cmd, "the first switch of a session renders the document")
+	_, _ = m.Update(cmd())
+
+	require.Equal(t, "YAML", m.spec.Format())
+	require.NotEmpty(t, m.scan.YAML)
 }
 
 // specLines is the rendered document the indexes were built from.

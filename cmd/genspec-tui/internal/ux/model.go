@@ -254,7 +254,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.absorbScan(msg)
 		m.syncFollowIfActive() // refresh the follower against the rebuilt spec
 
-		return m, nil
+		return m, m.ensureYAML() // the YAML view, if that is the one being looked at
+
+	case specYAMLMsg:
+		return m, m.absorbYAML(msg)
 
 	case fsEventMsg:
 		// A change arrived: start (restart) the debounce window and keep listening for the next event.

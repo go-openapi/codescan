@@ -169,7 +169,7 @@ the cursor falls back to its nearest surviving ancestor.
 | `↑` `↓` / `j` `k` | move the cursor |
 | `PgUp` / `PgDn` | move it a page (the view never leaves the cursor behind) |
 | `Home` / `End` | first / last line |
-| `ctrl+j` / `ctrl+y` | render as JSON / YAML — keeps you on the same **node**, not the same line |
+| `ctrl+j` / `ctrl+y` | render as JSON / YAML — keeps you on the same **node**, not the same line. The YAML is converted the first time it is asked for, since it costs more than the JSON it is made from |
 | `/` | search; `n` / `N` step through matches |
 | `f` | toggle follow mode (spec drives, the source pane mirrors) |
 | `F3` / `shift+F3` | next / previous **reference** to the node under the cursor |
@@ -241,8 +241,8 @@ instead which family of keywords its body accepts.
 `m` opens a card describing the run that just finished: how long it took, what
 it allocated, what it left live, and how much the process holds from the OS.
 Time and memory are both split between **scanning** (codescan) and **rendering**
-(serializing the same document twice, as JSON and again as YAML), because the
-run is fenced three times — before the scan, after it, and after rendering. Under
+(serializing the document as JSON), because the run is fenced three times —
+before the scan, after it, and after rendering. Under
 `-profile` the same two phases are bracketed by the profiler, so what the sampler
 says and what the fences say describe the same halves of the same work.
 

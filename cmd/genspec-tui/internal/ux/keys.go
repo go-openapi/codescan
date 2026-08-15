@@ -22,11 +22,9 @@ func (m *Model) handleKey(msg tea.KeyMsg) tea.Cmd {
 		m.focused = (m.focused + paneCount - 1) % paneCount
 		return m.syncEditFocus()
 	case key.CtrlJ:
-		m.setSpecFormat("JSON")
-		return nil
+		return m.setSpecFormat("JSON")
 	case key.CtrlY:
-		m.setSpecFormat("YAML")
-		return nil
+		return m.setSpecFormat("YAML")
 	case key.R:
 		return m.startScan()
 	case key.F5:

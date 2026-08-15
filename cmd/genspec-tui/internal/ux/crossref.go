@@ -133,7 +133,7 @@ func (m *Model) refreshSpec() {
 	if body == "" {
 		m.specIndex, m.refIndex = nil, nil
 		m.spec.SetSpans(nil)
-		m.spec.SetContent("(no spec generated yet)")
+		m.spec.SetContent(m.emptySpec())
 		m.rebuildGutters()
 		return
 	}
@@ -174,21 +174,39 @@ func (m *Model) restoreCursorTo(ptr string) {
 	}
 }
 
+// emptySpec is what the spec pane shows when it has no body to render.
+//
+// A view waiting for its own conversion is not an empty document, and saying so is what keeps the first switch to YAML
+// on a large specification from reading as "the scan produced nothing".
+func (m *Model) emptySpec() string {
+	if m.scan.YAMLPending {
+		return "(rendering YAML…)"
+	}
+
+	return "(no spec generated yet)"
+}
+
 // setSpecFormat switches the spec render between JSON and YAML.
 //
 // refreshSpec keeps the cursor on the same NODE across the re-render. This additionally recentres it:
 // switching format is a deliberate change of view, and the node has usually moved far enough
 // that a minimal scroll would leave it pinned against an edge.
 //
+// Switching to YAML is also what renders it: the document is converted on demand, so the first switch of a session
+// hands back the command that does it and the view says so meanwhile.
+//
 // A no-op when the format is already active.
-func (m *Model) setSpecFormat(format string) {
+func (m *Model) setSpecFormat(format string) tea.Cmd {
 	if m.spec.Format() == format {
-		return
+		return nil
 	}
 
 	m.spec.SetFormat(format)
+	cmd := m.ensureYAML()
 	m.refreshSpec()
 	m.spec.JumpTo(m.spec.CursorLine())
+
+	return cmd
 }
 
 // cycleRefs steps through the places the node under the spec cursor is referenced.

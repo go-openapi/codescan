@@ -170,6 +170,44 @@ func TestWaitForFS(t *testing.T) {
 	assert.Nil(t, waitForFS(ch)(), "a closed channel ends the loop")
 }
 
+// The YAML view costs more than the JSON it is made from, and most sessions never open it - so it is rendered when it
+// is asked for, and kept until the document it was made from is replaced.
+func TestSpecYAML_RendersOnDemandAndIsKept(t *testing.T) {
+	m := scanPetstore(t)
+	require.Empty(t, m.scan.YAML)
+
+	switchToYAML(t, m)
+	rendered := m.scan.YAML
+
+	assert.Nil(t, m.setSpecFormat("JSON"), "going back needs no work")
+	assert.Nil(t, m.setSpecFormat("YAML"), "nor does coming back: the render is still the right one")
+	assert.Equal(t, rendered, m.scan.YAML)
+}
+
+// Between asking for YAML and getting it there is a frame to draw, and an empty one reads as a scan that produced
+// nothing.
+func TestSpecYAML_SaysItIsRendering(t *testing.T) {
+	m := scanPetstore(t)
+
+	require.NotNil(t, m.setSpecFormat("YAML"))
+
+	assert.Contains(t, testutils.StripANSI(m.spec.View(false)), "rendering YAML")
+}
+
+// A conversion outlived by a rescan describes a document nobody is looking at any more.
+func TestSpecYAML_DropsAConversionARescanOvertook(t *testing.T) {
+	m := scanPetstore(t)
+
+	cmd := m.setSpecFormat("YAML")
+	require.NotNil(t, cmd)
+	converted := cmd() // finished, not yet delivered
+
+	_, _ = m.Update(petstoreRes) // ...and a rescan lands first
+	_, _ = m.Update(converted)
+
+	assert.Empty(t, m.scan.YAML, "the render was of the document that has just been replaced")
+}
+
 // Anything the model does not recognise belongs to whichever panel has focus.
 func TestUpdate_UnknownMessageGoesToTheFocusedPane(t *testing.T) {
 	m := testModel(t, sized(100, 40), viewing("user.go", "a\nb\n"), focusedOn(paneTree))

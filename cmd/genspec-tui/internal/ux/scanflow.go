@@ -36,7 +36,17 @@ type ScanState struct {
 	NumDefs  int
 
 	JSON string
+
+	// YAML is the same document for the other view, rendered on demand: it costs more than the JSON it is made from,
+	// and most sessions never open it. Empty until the YAML view is first asked for, and dropped by the next scan.
 	YAML string
+
+	// YAMLPending says a conversion is in flight, so the view can say so and a second toggle does not start another.
+	YAMLPending bool
+
+	// Gen counts the scans, so a conversion that lands after a rescan is discarded instead of shown against the
+	// document that replaced the one it was made from.
+	Gen int
 
 	Diags []grammar.Diagnostic
 	Err   error // hard error from the last codescan.Run, shown in the diag pane
@@ -152,7 +162,11 @@ func (m *Model) absorbScan(msg scan.ResultMsg) {
 	replaced := m.scan.JSON != ""
 
 	m.scan.Running = false
-	m.scan.JSON, m.scan.YAML = msg.JSON, msg.YAML
+	m.scan.JSON = msg.JSON
+	// The YAML view is of the document this run has just replaced, so it goes with it - and a conversion still in
+	// flight is now for the wrong document, which Gen is what tells absorbYAML.
+	m.scan.YAML, m.scan.YAMLPending = "", false
+	m.scan.Gen++
 	m.scan.NumPaths, m.scan.NumDefs = msg.Paths, msg.Defs
 	m.scan.Elapsed = msg.Elapsed
 	m.scan.Cost = msg.Cost
@@ -166,6 +180,52 @@ func (m *Model) absorbScan(msg scan.ResultMsg) {
 	m.retireValidation() // the findings judged the document this scan has just replaced
 
 	m.applyScan()
+}
+
+// specYAMLMsg carries a finished YAML conversion back to the event loop.
+type specYAMLMsg struct {
+	gen  int
+	yaml string
+	err  error
+}
+
+// ensureYAML starts the YAML conversion when the view needs a body it does not have yet.
+//
+// A command rather than a call, because the conversion is the expensive half of rendering a large specification and
+// the event loop is what draws the frame that says so. Nothing is started when the view is not showing YAML, when
+// there is no document yet, or when one is already in flight or done.
+func (m *Model) ensureYAML() tea.Cmd {
+	if m.spec.Format() != "YAML" || m.scan.JSON == "" || m.scan.YAML != "" || m.scan.YAMLPending {
+		return nil
+	}
+
+	m.scan.YAMLPending = true
+	gen, body := m.scan.Gen, m.scan.JSON
+
+	return func() tea.Msg {
+		yb, err := scan.RenderYAML(body)
+
+		return specYAMLMsg{gen: gen, yaml: yb, err: err}
+	}
+}
+
+// absorbYAML takes in a finished conversion, and renders the view it was asked for.
+func (m *Model) absorbYAML(msg specYAMLMsg) tea.Cmd {
+	if msg.gen != m.scan.Gen {
+		// A rescan replaced the document this was made from while it was being converted.
+		return nil
+	}
+
+	m.scan.YAMLPending = false
+	if msg.err != nil {
+		return m.notify("could not render YAML: %v", msg.err)
+	}
+
+	m.scan.YAML = msg.yaml
+	m.refreshSpec()
+	m.syncFollowIfActive()
+
+	return nil
 }
 
 // tickSpinner advances the scan spinner, and only while a scan is actually running.
