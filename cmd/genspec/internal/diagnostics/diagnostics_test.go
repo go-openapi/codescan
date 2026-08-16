@@ -137,6 +137,27 @@ func TestReporter(t *testing.T) {
 			unrelated.relative(filepath.FromSlash("/src/api/models.go")),
 			"with no Root to relate it to, the absolute path is still better than nothing")
 	})
+
+	t.Run("should keep a path it cannot relate to the root", func(t *testing.T) {
+		// A relative path cannot be expressed against an absolute root without knowing where it stands, and
+		// whatever the scanner recorded is still more use to a reader than nothing at all.
+		t.Parallel()
+
+		report := &Reporter{Root: filepath.FromSlash("/src")}
+
+		assert.Equal(t, filepath.FromSlash("api/models.go"), report.relative(filepath.FromSlash("api/models.go")))
+	})
+
+	t.Run("should write a severity it does not know about", func(t *testing.T) {
+		// The three are what codescan reports today. A fourth would be worth reading rather than worth dropping,
+		// so it is written at the level a reader can least afford to miss it at.
+		t.Parallel()
+
+		report, out := reporterFor(t, ReporterConfig{Failing: true})
+		report.OnDiagnostic(diagnostic(codescan.Severity(42), "from a severity nobody has declared"))
+
+		assert.Contains(t, out.String(), "from a severity nobody has declared")
+	})
 }
 
 type reporterTestCase struct {

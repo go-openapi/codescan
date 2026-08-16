@@ -9,6 +9,7 @@ import (
 	"io"
 	"iter"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -183,6 +184,62 @@ func TestOptionsRefusesAnUnknownLoader(t *testing.T) {
 		opts, err = cfg.options([]string{"./api/..."}, &diagnostics.Reporter{})
 		require.NoError(t, err)
 		assert.Equal(t, []string{"./api/..."}, opts.Packages)
+	})
+}
+
+// PrepareScan settles the whole command line at once, so a value none of the resolvers can make sense of has to come
+// back from here rather than reach a scan and be discovered halfway through one.
+func TestPrepareScan(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		argv []string
+	}{
+		{"should refuse a format it does not know", []string{"-format", "toml"}},
+		{"should refuse a colour policy it does not know", []string{"-color", "sometimes"}},
+		{"should refuse a threshold it does not know", []string{"-fail-on", "hint"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := parseInto(t, append([]string{"-no-config"}, c.argv...)...)
+
+			_, _, err := cfg.PrepareScan()
+
+			require.ErrorIs(t, err, sentinel.ErrUsage)
+		})
+	}
+
+	t.Run("should refuse an -input it cannot read", func(t *testing.T) {
+		// The one refusal that comes from the options rather than from a flag's own value.
+		t.Parallel()
+
+		cfg := parseInto(t, "-no-config", "-input", filepath.Join(t.TempDir(), "absent.json"))
+
+		_, _, err := cfg.PrepareScan()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot read -input")
+	})
+
+	t.Run("should settle a command line with nothing wrong with it", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := parseInto(t, "-no-config", "-workdir", ".", "./api/...")
+
+		opts, report, err := cfg.PrepareScan()
+		require.NoError(t, err)
+
+		here, err := filepath.Abs(".")
+		require.NoError(t, err)
+
+		require.NotNil(t, report)
+		assert.Equal(t, []string{"./api/..."}, opts.Packages)
+		assert.Equal(t, ".", opts.WorkDir, "the scan runs from where the command did, so it is left as it was given")
+		assert.Equal(t, here, report.Root,
+			"resolved only for the reporter, which relates the scanner's absolute positions back to it")
+		assert.NotNil(t, opts.OnDiagnostic, "and everything the scan observes has somewhere to go")
 	})
 }
 

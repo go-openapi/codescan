@@ -6,8 +6,10 @@ package config
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/go-openapi/codescan/cmd/internal/cliconf"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -39,6 +41,63 @@ func TestEveryFlagIsAddressableInAConfigFile(t *testing.T) {
 			"flag -%s is addressed in no configuration section. Add it to commandSections, or excuse "+
 				"it in notConfigurable with a reason.", f.Name)
 	})
+}
+
+// read is the koanf half. What it hands back is checked through the flags it presets, end to end; what is worth
+// stating here is that a file it cannot use is refused as a bad file, rather than read as an empty one.
+func TestReadConfigFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should read a file into section-qualified keys", func(t *testing.T) {
+		// The flat shape cliconf.Parse produces, so that the two readers are interchangeable and the commands that
+		// cannot take koanf lose nothing.
+		t.Parallel()
+
+		values, err := read(configFile(t, "document:\n  compact: true\nemit:\n  scan-models: false\n"))
+		require.NoError(t, err)
+
+		assert.Equal(t, true, values["document"+cliconf.Delimiter+"compact"])
+		assert.Equal(t, false, values["emit"+cliconf.Delimiter+"scan-models"])
+	})
+
+	t.Run("should refuse a file it cannot read", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := read(t.TempDir())
+
+		require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	})
+
+	t.Run("should refuse a file it cannot parse", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := read(configFile(t, "document:\n\tcompact: true\n")) // tabs do not indent YAML
+
+		require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	})
+}
+
+// configured is what stands between the file and the flags. Whether the keys are obeyed is checked end to end; what
+// it owes on its own is to name the file when it gives up on one.
+func TestConfigured(t *testing.T) {
+	t.Parallel()
+
+	path := configFile(t, "document:\n\tcompact: true\n") // tabs do not indent YAML
+	cfg := parseInto(t, "-config", path)
+
+	_, named, err := configured(cfg.set, cfg.configFile)
+
+	require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	assert.Equal(t, path, named, "the file it was reading, which a caller that only searched for it cannot know")
+}
+
+func configFile(t *testing.T, content string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), cliconf.Names[0])
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+	return path
 }
 
 func TestConfigSchemaCoversBothHalves(t *testing.T) {
