@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	subtypesFixtureRoot = "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes"
+	subtypesFixtureRoot = "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes"
 	teslaCarIdentity    = subtypesFixtureRoot + "/base.TeslaCar"
 	plainBaseIdentity   = subtypesFixtureRoot + "/base.PlainBase"
 	vehicleIdentity     = subtypesFixtureRoot + "/edges.Vehicle"
@@ -30,7 +30,7 @@ func newSubtypesBuilder(t *testing.T) *Builder {
 	t.Helper()
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
 		Packages: []string{"./enhancements/discriminated-subtypes/..."},
-		WorkDir:  "../../../fixtures",
+		WorkDir:  "../../../testdata",
 	})
 	require.NoError(t, err)
 
@@ -178,12 +178,12 @@ func TestDiscriminatedSubtypesOf(t *testing.T) {
 func TestSubtypeIndex_Nested(t *testing.T) {
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
 		Packages: []string{"./enhancements/discriminated-subtypes-nested/..."},
-		WorkDir:  "../../../fixtures",
+		WorkDir:  "../../../testdata",
 	})
 	require.NoError(t, err)
 	idx := NewBuilder(nil, ctx, false).subtypes()
 
-	const nested = "github.com/go-openapi/codescan/fixtures/enhancements/discriminated-subtypes-nested"
+	const nested = "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
 
 	t.Run("an interface embed establishes a subtype relation", func(t *testing.T) {
 		// A struct embeds its base as an anonymous field, an interface as an anonymous interface — the index must read both

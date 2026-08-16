@@ -88,7 +88,7 @@ definition** (e.g. `swagger:type string` + `swagger:model` → a
 `{type: string}` definition) and referencing fields `$ref` it. The
 field-level inline form above is the behaviour *without* `swagger:model`.
 
-**Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
+**Full example.** `testdata/enhancements/named-struct-tags-ref/types.go`.
 
 ## Deprecated / legacy forms
 

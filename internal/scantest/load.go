@@ -18,7 +18,7 @@ var (
 	go118ClassificationCtx *scanner.ScanCtx //nolint:gochecknoglobals // test package cache shared across test functions
 )
 
-// FixturesDir returns the absolute path to the repo-level fixtures/ directory, so tests can run
+// FixturesDir returns the absolute path to the repo-level testdata/ directory, so tests can run
 // from any package depth without fragile relative paths.
 func FixturesDir() string {
 	_, thisFile, _, ok := runtime.Caller(0)
@@ -26,7 +26,7 @@ func FixturesDir() string {
 		panic("scantest: unable to resolve caller for fixtures path")
 	}
 	// thisFile is <repo>/internal/scantest/load.go
-	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "fixtures"))
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "testdata"))
 }
 
 func LoadPetstorePkgsCtx(t testing.TB, enableDebug bool) *scanner.ScanCtx {

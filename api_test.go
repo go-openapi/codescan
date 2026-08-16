@@ -20,7 +20,7 @@ func TestApplication_DeprecatedDebugOption(t *testing.T) {
 	// Verify Run still accepts it without error and produces a spec.
 	_, err := Run(&Options{
 		Packages:   []string{"./goparsing/petstore/..."},
-		WorkDir:    "fixtures",
+		WorkDir:    "testdata",
 		ScanModels: true,
 		Debug:      true,
 	})

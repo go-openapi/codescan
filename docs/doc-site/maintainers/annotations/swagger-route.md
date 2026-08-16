@@ -75,7 +75,7 @@ tags). The `Parameters:` and `Responses:` sub-languages are documented in
     go="concepts/routes/routes.go" goregion="route"
     json="concepts/routes/testdata/route.json" >}}
 
-**Full example.** `fixtures/enhancements/routes-full-petstore-shape/handlers.go`.
+**Full example.** `testdata/enhancements/routes-full-petstore-shape/handlers.go`.
 
 ## Deprecated / legacy forms
 

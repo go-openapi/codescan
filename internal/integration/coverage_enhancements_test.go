@@ -16,7 +16,7 @@ import (
 )
 
 // These tests mirror the baseline coverage-enhancement tests.
-// They scan dedicated fixtures under fixtures/enhancements/ and compare the result to the golden
+// They scan dedicated fixtures under testdata/enhancements/ and compare the result to the golden
 // JSON captured on the baseline worktree, so we can catch any behavioural drift introduced by the
 // refactor.
 
@@ -413,7 +413,7 @@ func TestCoverage_EnumDocs(t *testing.T) {
 //	E. `swagger:enum` + matching consts + inline on   — override question
 //	   the field
 //
-// `fixtures/enhancements/enum-overrides/types.go` for the fixture.
+// `testdata/enhancements/enum-overrides/types.go` for the fixture.
 // The golden snapshot becomes the v1-behavior contract the v2 migration either preserves or
 // consciously diverges from.
 func TestCoverage_EnumOverrides(t *testing.T) {

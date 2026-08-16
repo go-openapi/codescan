@@ -1,0 +1,163 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/shapes": {
+      "get": {
+        "summary": "Lists shapes.",
+        "operationId": "listShapes",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/shapeResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Circle": {
+      "title": "Circle is a first-level leaf: a subtype of Shape directly.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Shape"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "radius": {
+              "description": "Radius of the circle",
+              "type": "number",
+              "format": "double",
+              "x-go-name": "Radius"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
+    },
+    "Coords": {
+      "description": "Coords is reached from Triangle only — through an ordinary $ref, two levels\ndown the hierarchy.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "description": "X coordinate",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "X"
+        },
+        "y": {
+          "description": "Y coordinate",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Y"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
+    },
+    "Polygon": {
+      "title": "Polygon is a subtype of Shape AND a discriminated base of its own.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Shape"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "polygonType": {
+              "description": "The kind of polygon",
+              "type": "string",
+              "x-go-name": "PolygonType"
+            },
+            "sides": {
+              "description": "Number of sides",
+              "type": "integer",
+              "format": "int64",
+              "x-go-name": "Sides"
+            }
+          },
+          "discriminator": "polygonType"
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
+    },
+    "Shape": {
+      "type": "object",
+      "title": "Shape is the root of the hierarchy.",
+      "properties": {
+        "area": {
+          "description": "Area of the shape",
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Area"
+        },
+        "shapeType": {
+          "description": "The kind of shape",
+          "type": "string",
+          "x-go-name": "ShapeType"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested",
+      "discriminator": "shapeType"
+    },
+    "Square": {
+      "description": "Square is a second-level leaf, reachable only once Polygon has itself been\npulled in.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Polygon"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "side": {
+              "description": "Length of a side",
+              "type": "number",
+              "format": "double",
+              "x-go-name": "Side"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
+    },
+    "Triangle": {
+      "title": "Triangle is a second-level leaf that pulls a further model of its own.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Polygon"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "corners": {
+              "description": "Corner coordinates",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coords"
+              },
+              "x-go-name": "Corners"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
+    },
+    "Unrelated": {
+      "description": "Unrelated is a swagger:model nothing references, in a hierarchy-bearing\npackage: the negative control.",
+      "type": "object",
+      "properties": {
+        "v": {
+          "type": "string",
+          "x-go-name": "V"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/discriminated-subtypes-nested"
+    }
+  },
+  "responses": {
+    "shapeResp": {
+      "description": "shapeResp carries the root of the hierarchy in its body.",
+      "schema": {
+        "$ref": "#/definitions/Shape"
+      }
+    }
+  }
+}

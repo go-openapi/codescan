@@ -88,4 +88,4 @@ The same composition applies when the embedding struct is a
 arm only when it is a `swagger:model` (a definition exists to point at);
 an embedded `swagger:response` has its fields inlined instead.
 
-**Full example.** `fixtures/enhancements/allof-edges/types.go`.
+**Full example.** `testdata/enhancements/allof-edges/types.go`.

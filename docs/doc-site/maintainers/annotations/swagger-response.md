@@ -69,4 +69,4 @@ body.
 Routes can then reference it via `response:genericError` in their
 `Responses:` body.
 
-**Full example.** `fixtures/enhancements/routes-full-petstore-shape/handlers.go`.
+**Full example.** `testdata/enhancements/routes-full-petstore-shape/handlers.go`.

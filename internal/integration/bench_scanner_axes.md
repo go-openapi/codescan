@@ -301,8 +301,8 @@ go test ./internal/integration/ -run TestLoaderConfigs_AgreeOnTheFixtureCorpus
 CODESCAN_AB_CORPUS=1 go test ./internal/integration/ -run TestLoaderConfigs -timeout 60m
 
 # with the export-data configuration too
-go run ./hack/genexportdata -dir fixtures -out /tmp/fixtures-exportdata.zip std
-CODESCAN_AB_EXPORTDATA=/tmp/fixtures-exportdata.zip go test ./internal/integration/ -run TestLoaderConfigs
+go run ./hack/genexportdata -dir testdata -out /tmp/testdata-exportdata.zip std
+CODESCAN_AB_EXPORTDATA=/tmp/testdata-exportdata.zip go test ./internal/integration/ -run TestLoaderConfigs
 ```
 
 A configuration that legitimately differs is recorded in `abExpected` with a reason, and asserted as

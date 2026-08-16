@@ -25,7 +25,7 @@ func TestBuilder_guard_RecoversPanicWithLocatedDiagnostic(t *testing.T) {
 	var diags []grammar.Diagnostic
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
 		Packages:     []string{"./enhancements/emit-x-go-type/..."},
-		WorkDir:      "../../../fixtures",
+		WorkDir:      "../../../testdata",
 		OnDiagnostic: func(d grammar.Diagnostic) { diags = append(diags, d) },
 	})
 	require.NoError(t, err)

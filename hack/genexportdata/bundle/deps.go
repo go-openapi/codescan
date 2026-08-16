@@ -11,8 +11,8 @@
 package bundle
 
 import (
-	_ "github.com/go-openapi/runtime"
-	_ "github.com/go-openapi/spec"
-	_ "github.com/go-openapi/strfmt"
-	_ "github.com/go-openapi/swag"
+	_ "github.com/go-openapi/runtime" // blank to trigger go list
+	_ "github.com/go-openapi/spec"    // blank to trigger go list
+	_ "github.com/go-openapi/strfmt"  // blank to trigger go list
+	_ "github.com/go-openapi/swag"    // blank to trigger go list
 )

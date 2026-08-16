@@ -29,7 +29,7 @@ updates:
     # 4. other dependencies require a manual merge
     #
     # One entry per workspace member, mirroring go.work's use list. Naming them is
-    # what makes the coverage checkable: bumps have reached fixtures/ from the
+    # what makes the coverage checkable: bumps have reached testdata/ from the
     # single "/" entry before now, but that relies on the updater following
     # go.work rather than on anything stated here, and docs/examples and
     # hack/genexportdata/bundle have never shown up in a pull request at all.
@@ -38,7 +38,7 @@ updates:
       - "/"
       - "/cmd/genspec-tui"
       - "/docs/examples"
-      - "/fixtures"
+      - "/testdata"
       - "/hack/genexportdata/bundle"
     schedule:
       interval: "weekly"

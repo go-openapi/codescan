@@ -149,7 +149,7 @@ declaration (`GenericSlice[T any] []T`) has one. Unwrapping to
 `Underlying()` substitutes type params with concrete types
 (`[]int`) so the schema reflects the substituted shape.
 
-Fixture: `fixtures/enhancements/generic-instantiation/`.
+Fixture: `testdata/enhancements/generic-instantiation/`.
 
 ---
 
@@ -253,7 +253,7 @@ shape applied in `buildNamedAllOf` and elsewhere. The order matters
 because, e.g., a UUID-named type carrying `swagger:strfmt date`
 should emit `{string, date}` — the classifier wins.
 
-Fixtures: `fixtures/enhancements/text-marshal/explicit_override/`
+Fixtures: `testdata/enhancements/text-marshal/explicit_override/`
 demonstrates classifier-beats-heuristic; `text-marshal/uuid_wrapping_time/`
 demonstrates heuristic-still-fires when no override exists.
 
@@ -607,7 +607,7 @@ true via `embedNestName(afld, fd) == ""`); a json-named embed keeps its
 nested-property shape (go-swagger#2038), an explicit `swagger:allOf` is
 already in this shape, and interface embeds are out of scope (they compose
 via allOf regardless — see [§embedded](#embedded)). Default off ⇒ output
-unchanged. Pinned by `fixtures/enhancements/default-allof-embeds/` +
+unchanged. Pinned by `testdata/enhancements/default-allof-embeds/` +
 `integration/coverage_default_allof_embeds_test.go`.
 
 The `swagger:allOf` arg, when present, is recorded as
@@ -766,7 +766,7 @@ An explicit `swagger:strfmt` / `swagger:type` still wins; the classifier runs fi
 adjusts the format and the `x-go-type` stamp survives; a type override replaces the schema outright
 and the stamp goes with it.
 
-Witnessed by `TestMathBig` over `fixtures/enhancements/math-big/`.
+Witnessed by `TestMathBig` over `testdata/enhancements/math-big/`.
 
 ## <a id="embedded"></a>§embedded — embed routing, struct/interface specials asymmetry
 
@@ -944,7 +944,7 @@ the comma first conflates the two and dropped a field Go marshals; `jsonTagIgnor
 in `resolvers` now does the whole-tag comparison, and `-` is accepted as a name
 from the `json` tag only (no other tag type has an encoding rule to appeal to).
 
-**Witness.** `fixtures/enhancements/json-tag-fidelity` is differential: the fixture
+**Witness.** `testdata/enhancements/json-tag-fidelity` is differential: the fixture
 module marshals its own types and commits the key sets as `wire.golden.json`, and
 `TestJSONTagFidelity` asserts the emitted property sets equal them. Neither side
 hard-codes an expectation — the oracle is encoding/json itself.
@@ -1029,8 +1029,8 @@ locked by `TestOverridingOneIgnore` and left in place for now; the Hint points a
 which removes the field for real. Removing the eviction is a separate decision — see
 `.claude/plans/swagger-omit.md` §7.
 
-Fixtures: `fixtures/enhancements/swagger-omit` (the annotation, both renderings, all three Hints,
-plus the go-swagger#1992 shape verbatim) and `fixtures/enhancements/default-allof-embeds-override`
+Fixtures: `testdata/enhancements/swagger-omit` (the annotation, both renderings, all three Hints,
+plus the go-swagger#1992 shape verbatim) and `testdata/enhancements/default-allof-embeds-override`
 (the same overrides *without* the annotation — the documented limit).
 
 ## <a id="embed-depth"></a>§embed-depth — ambiguous-embed diagnostic mechanism
@@ -1051,7 +1051,7 @@ of embedded-type recursion in a single `buildFromStruct` /
   Emits `CodeAmbiguousEmbed` (`SeverityWarning`). Last-write-wins
   behaviour is preserved; only the signal is added.
 
-Fixture: `fixtures/enhancements/diagnostics/types.go` covers all
+Fixture: `testdata/enhancements/diagnostics/types.go` covers all
 three cases.
 
 ---
@@ -1105,7 +1105,7 @@ already named for its JSON shape, or a codebase with its own
 canonical-name discipline. A `swagger:name X` override still wins
 verbatim regardless (see below); the flag only changes the
 no-override fallback. The on/off contract is pinned by
-`fixtures/enhancements/interface-no-mangle/` +
+`testdata/enhancements/interface-no-mangle/` +
 `integration/coverage_skip_jsonify_interface_test.go`.
 
 ### `swagger:name X` is verbatim
@@ -1119,7 +1119,7 @@ empty does it call `s.interfaceJSONName(fld.Name())`.
 This contract matters for non-camelCase user input — a user who
 writes `swagger:name UserIdentifier` wants `UserIdentifier`, not
 `userIdentifier`. The regression-detector for this is
-`fixtures/enhancements/interface-name-verbatim/` +
+`testdata/enhancements/interface-name-verbatim/` +
 `integration/coverage_interface_name_verbatim_test.go`: PascalCase,
 snake_case, SCREAMING_CASE, and hyphenated user inputs all assert on
 the exact spelling reaching the spec.
@@ -1834,7 +1834,7 @@ harmless on those.
 The check matches v1's de-facto `\S+`-anchored capture, which
 silently rejected prose lines that happened to open with
 `swagger:<kind>` followed by a sentence. The
-`fixtures/enhancements/named-basic` fixture documents this trap
+`testdata/enhancements/named-basic` fixture documents this trap
 with a `swagger:type so the scanner emits ...` prose line preceding
 the real `swagger:type string` annotation — without the filter, the
 prose's "so" would pre-empt the real arg "string".
@@ -1953,7 +1953,7 @@ only faithful answer, and no rule about enums can change it.
 The author's remedy is a type whose *wire form* is a string:
 `type Letter string` with `LetterA Letter = "a"`. Left visible
 rather than papered over; the `byte` / `rune` cases in
-`fixtures/bugs/3412/constforms` pin the behaviour.
+`testdata/bugs/3412/constforms` pin the behaviour.
 
 See [§enum-const-values](../validations/README.md#enum-const-values)
 for the coercion rules on the values themselves.
@@ -2017,7 +2017,7 @@ since `AnnType` uses TrimSpace and can carry prose on noise lines);
 tries `SwaggerSchemaForType(name, …)` first, falls back to
 `buildFromType(c.propType.Underlying(), …)` on unknown leaves like
 `"array"` so item shapes are computed from the Go type. Fixture
-`fixtures/enhancements/raw-message-override/` (case C); golden
+`testdata/enhancements/raw-message-override/` (case C); golden
 `enhancements_raw_message_override.json`.
 
 ### ✅ Wrapper-decl `swagger:type` honoured at top-level definition
@@ -2036,7 +2036,7 @@ before any wrapper-side classifier could.
 `string`, …) terminate; unknown leaves (`array`) fall back to
 `s.Decl.ObjType().Underlying()` so items / properties are filled
 from the Go-level shape. Isolation fixture
-`fixtures/enhancements/wrapper-decl-type-override/` —
+`testdata/enhancements/wrapper-decl-type-override/` —
 `BareWrapperObject` / `BareWrapperArray`.
 
 ### ✅ `in: header` parameters now inline named-basic types
@@ -2062,7 +2062,7 @@ is caller-driven (parameter/header build mode); `swagger:alias` on
 the decl is a per-type author override. Either triggers
 `SwaggerSchemaForType(underlying basic name)` on the typable.
 
-Isolation fixture `fixtures/enhancements/header-named-basic/` and
+Isolation fixture `testdata/enhancements/header-named-basic/` and
 test `internal/integration/coverage_header_named_basic_test.go`
 pin the post-fix shape. Responses won't pick up the same fix until
 M2 wires `WithSimpleSchema` on header-field builds; the response
@@ -2128,7 +2128,7 @@ When a field whose type is marked `swagger:enum TypeName` carries its own
 `enum:` override, the inherited `x-go-enum-desc` is stripped along with the
 replaced values — and **no diagnostic is raised**, so the per-value docs
 `TypeName` contributed vanish without a trace. Reproduced by
-`fixtures/enhancements/enum-overrides` case E (`NotificationE`).
+`testdata/enhancements/enum-overrides` case E (`NotificationE`).
 
 Whether the docs should be filtered through (when the override *subsets* the
 type's values) or dropped with a Hint (when it narrows to *different* ones) is a

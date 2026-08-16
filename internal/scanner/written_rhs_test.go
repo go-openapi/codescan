@@ -36,7 +36,7 @@ func TestWrittenRHS_AgreesWithTheTypeChecker(t *testing.T) {
 		"./enhancements/...",
 		"./bugs/...",
 	} {
-		sctx, err := NewScanCtx(&Options{Packages: []string{root}, WorkDir: "../../fixtures"})
+		sctx, err := NewScanCtx(&Options{Packages: []string{root}, WorkDir: "../../testdata"})
 		if err != nil {
 			continue
 		}
@@ -76,7 +76,7 @@ func TestWrittenRHS_AgreesWithTheTypeChecker(t *testing.T) {
 
 func TestWrittenRHS(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
-	const modelsPkg = "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+	const modelsPkg = "github.com/go-openapi/codescan/testdata/goparsing/classification/models"
 
 	t.Run("resolves without the checker's expression records", func(t *testing.T) {
 		// The state a dependency served from compiled export data is in: complete types, no record

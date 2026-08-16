@@ -23,7 +23,7 @@ package integration_test
 //
 //	default            the curated targets below — the fixtures whose meaning comes from a
 //	                   dependency, which is where these configurations can bite
-//	CODESCAN_AB_CORPUS=1   every fixture bundle under fixtures/{enhancements,bugs,goparsing}
+//	CODESCAN_AB_CORPUS=1   every fixture bundle under testdata/{enhancements,bugs,goparsing}
 //
 // Set CODESCAN_AB_REPORT=1 to print the divergences instead of asserting them, which is how the
 // expectation table below is regenerated.
@@ -55,10 +55,10 @@ const (
 	// envABExportData points at an export-data blob covering the fixtures module, which is what the
 	// export-data configuration needs. Without it that configuration is not compared.
 	//
-	//	go run ./hack/genexportdata -dir fixtures -out /tmp/fixtures-exportdata.zip std
+	//	go run ./hack/genexportdata -dir testdata -out /tmp/testdata-exportdata.zip std
 	//
 	// `std` rather than `./...`: the wider pattern needs `go list -export` to BUILD the fixtures'
-	// dependency closure, and fixtures/go.sum is missing go.mod entries for two of go-openapi/swag's
+	// dependency closure, and testdata/go.sum is missing go.mod entries for two of go-openapi/swag's
 	// submodules, so it fails before writing anything. std is also the interesting half — it is the
 	// bulk of any closure and carries no annotations, so it is what export data is for.
 	envABExportData = "CODESCAN_AB_EXPORTDATA"
@@ -126,7 +126,7 @@ func abExportDataBlob(tb testing.TB) fs.FS {
 	path := os.Getenv(envABExportData)
 	if path == "" {
 		tb.Logf("export-data configuration not compared: set %s to a blob covering the fixtures module\n"+
-			"    go run ./hack/genexportdata -dir fixtures -out /tmp/fixtures-exportdata.zip std", envABExportData)
+			"    go run ./hack/genexportdata -dir testdata -out /tmp/testdata-exportdata.zip std", envABExportData)
 
 		return nil
 	}

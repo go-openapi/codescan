@@ -744,7 +744,7 @@ func fixturesDir(t *testing.T) string {
 	require.True(t, ok, "cannot resolve the caller's file path")
 
 	// thisFile is <repo>/cmd/genspec-tui/internal/ux/model_e2e_test.go
-	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "..", "fixtures"))
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "..", "testdata"))
 }
 
 // petstoreScan caches the scan across the whole package.

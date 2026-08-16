@@ -45,14 +45,14 @@ Internal tree:
 | `internal/builders/godoclink` | godoc-syntax cleanup + schema-name recomposition backing `Options.CleanGoDoc` (two-phase markers) |
 | `internal/ifaces` | `SwaggerTypable`, `ValidationBuilder`, `OperationValidationBuilder`, `ValueParser`, `Objecter` — decouples parsers from builders |
 | `internal/scantest` | Test utilities: golden compare, fixture loading, mocks, classification helpers |
-| `internal/integration` | Black-box integration tests against `fixtures/integration/golden/*.json` |
+| `internal/integration` | Black-box integration tests against `testdata/integration/golden/*.json` |
 
 Fixtures:
 
-- `fixtures/goparsing/...` — classification / petstore / go118-119-123 variants / invalid inputs.
-- `fixtures/enhancements/...` — one sub-directory per focused branch-coverage scenario.
-- `fixtures/integration/golden/*.json` — captured Swagger output for golden comparisons.
-- `fixtures/bugs/...` — minimised repros for specific upstream bug IDs.
+- `testdata/goparsing/...` — classification / petstore / go118-119-123 variants / invalid inputs.
+- `testdata/enhancements/...` — one sub-directory per focused branch-coverage scenario.
+- `testdata/integration/golden/*.json` — captured Swagger output for golden comparisons.
+- `testdata/bugs/...` — minimised repros for specific upstream bug IDs.
 
 ### Key API
 

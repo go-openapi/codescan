@@ -25,7 +25,7 @@ func benchmarkLoad(b *testing.B, strategy packages.Strategy) {
 
 	for b.Loop() {
 		_, err := packages.NewLoader(packages.WithStrategy(strategy)).
-			Load(&packages.Config{Dir: "../../fixtures/goparsing/petstore"}, "./...")
+			Load(&packages.Config{Dir: "../../testdata/goparsing/petstore"}, "./...")
 		require.NoError(b, err)
 	}
 }

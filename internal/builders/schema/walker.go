@@ -77,7 +77,7 @@ func (s *Builder) overridesFor(cg *ast.CommentGroup) (title, desc common.Overrid
 func (s *Builder) applyDeclCommentBlock(schema *oaispec.Schema) (skip bool) {
 	block := s.ParseBlock(s.Decl.Comments())
 	// `swagger:ignore` only short-circuits when it is the FIRST annotation on the comment group.
-	// Fixture fixtures/enhancements/top-level-kinds/IgnoredModel deliberately places `swagger:model`
+	// Fixture testdata/enhancements/top-level-kinds/IgnoredModel deliberately places `swagger:model`
 	// first and `swagger:ignore` second to pin this behaviour: the ignore is silently overridden
 	// because only the source-order-first annotation drives the short-circuit.
 	//

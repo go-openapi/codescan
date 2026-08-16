@@ -324,7 +324,7 @@ func TestNewTypeIndex_ExcludeDeps(t *testing.T) {
 			"./goparsing/classification/models",
 			"./goparsing/classification/operations",
 		},
-		WorkDir:     "../../fixtures",
+		WorkDir:     "../../testdata",
 		ExcludeDeps: true,
 	})
 	require.NoError(t, err)
@@ -345,7 +345,7 @@ func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 				"./goparsing/classification/models",
 				"./goparsing/classification/operations",
 			},
-			WorkDir:     "../../fixtures",
+			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			Include:     []string{"models"},
 		})
@@ -364,7 +364,7 @@ func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 				"./goparsing/classification/models",
 				"./goparsing/classification/operations",
 			},
-			WorkDir:     "../../fixtures",
+			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			Exclude:     []string{"operations$"},
 		})
@@ -383,7 +383,7 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 				"./goparsing/classification",
 				"./goparsing/classification/operations",
 			},
-			WorkDir:     "../../fixtures",
+			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			IncludeTags: []string{"orders"},
 		})
@@ -401,7 +401,7 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 				"./goparsing/classification",
 				"./goparsing/classification/operations",
 			},
-			WorkDir:     "../../fixtures",
+			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			ExcludeTags: []string{"orders"},
 		})
@@ -419,7 +419,7 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 func TestCollectOperationPathAnnotations(t *testing.T) {
 	sctx, err := NewScanCtx(&Options{
 		Packages: []string{"./goparsing/classification/operations_annotation"},
-		WorkDir:  "../../fixtures",
+		WorkDir:  "../../testdata",
 	})
 	require.NoError(t, err)
 
@@ -435,7 +435,7 @@ func TestCollectOperationPathAnnotations_TagFiltering(t *testing.T) {
 	t.Run("include tag filters operations", func(t *testing.T) {
 		sctx, err := NewScanCtx(&Options{
 			Packages:    []string{"./goparsing/classification/operations_annotation"},
-			WorkDir:     "../../fixtures",
+			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			IncludeTags: []string{"Events"},
 		})
@@ -454,7 +454,7 @@ func TestCollectOperationPathAnnotations_TagFiltering(t *testing.T) {
 	t.Run("exclude tag filters operations", func(t *testing.T) {
 		sctx, err := NewScanCtx(&Options{
 			Packages:    []string{"./goparsing/classification/operations_annotation"},
-			WorkDir:     "../../fixtures",
+			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			ExcludeTags: []string{"pets"},
 		})
@@ -475,7 +475,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 		// processPackage → build → NewTypeIndex → NewScanCtx.
 		_, err := NewScanCtx(&Options{
 			Packages: []string{"./goparsing/invalid_model_param"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
@@ -484,7 +484,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 	t.Run("model and response conflict propagates error", func(t *testing.T) {
 		_, err := NewScanCtx(&Options{
 			Packages: []string{"./goparsing/invalid_model_response"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
@@ -493,7 +493,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 	t.Run("param and model conflict propagates error", func(t *testing.T) {
 		_, err := NewScanCtx(&Options{
 			Packages: []string{"./goparsing/invalid_param_model"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
@@ -502,7 +502,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 	t.Run("response and model conflict propagates error", func(t *testing.T) {
 		_, err := NewScanCtx(&Options{
 			Packages: []string{"./goparsing/invalid_response_model"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
@@ -515,7 +515,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 				"./goparsing/petstore/enums",
 				"./goparsing/petstore/enums", // duplicate
 			},
-			WorkDir: "../../fixtures",
+			WorkDir: "../../testdata",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, sctx)
@@ -530,7 +530,7 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 				"./goparsing/petstore/enums",
 				"./goparsing/invalid_model_param",
 			},
-			WorkDir: "../../fixtures",
+			WorkDir: "../../testdata",
 		})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))

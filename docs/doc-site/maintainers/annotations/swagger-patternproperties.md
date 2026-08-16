@@ -60,4 +60,4 @@ Each regex is RE2-hygiene-checked: one that does not compile raises a
 `CodeInvalidAnnotation` warning but is **preserved**; a structurally
 malformed pair list is dropped with a diagnostic.
 
-**Full example.** `fixtures/enhancements/pattern-properties-typed/api.go`.
+**Full example.** `testdata/enhancements/pattern-properties-typed/api.go`.

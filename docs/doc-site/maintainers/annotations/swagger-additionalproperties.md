@@ -61,4 +61,4 @@ scalar, `swagger:strfmt`, a special type), the marker is dropped with a
 `CodeShapeMismatch` diagnostic. It has no OAS-2 SimpleSchema form, so it
 never applies on a non-body parameter or response header.
 
-**Full example.** `fixtures/enhancements/additional-properties/api.go`.
+**Full example.** `testdata/enhancements/additional-properties/api.go`.

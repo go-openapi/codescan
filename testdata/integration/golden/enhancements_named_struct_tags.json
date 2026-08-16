@@ -1,0 +1,30 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "Contact": {
+      "description": "Contact references both tagged struct types so the scanner walks the\nbuildNamedStruct strfmt and typeName branches on distinct fields.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "x-go-name": "Code"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "phone": {
+          "type": "string",
+          "format": "phone",
+          "x-go-name": "Phone"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/named-struct-tags"
+    }
+  }
+}

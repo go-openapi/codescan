@@ -18,7 +18,7 @@ func TestEntityDecl(t *testing.T) {
 	t.Run("Obj", func(t *testing.T) {
 		t.Run("named type returns TypeName", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 				"User",
 			)
 			require.True(t, ok)
@@ -41,7 +41,7 @@ func TestEntityDecl(t *testing.T) {
 	t.Run("ObjType", func(t *testing.T) {
 		t.Run("named type returns types.Named", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 				"User",
 			)
 			require.True(t, ok)
@@ -55,12 +55,12 @@ func TestEntityDecl(t *testing.T) {
 			// Load the spec fixture which has type aliases (Customer = User).
 			specCtx, err := NewScanCtx(&Options{
 				Packages: []string{"./goparsing/spec"},
-				WorkDir:  "../../fixtures",
+				WorkDir:  "../../testdata",
 			})
 			require.NoError(t, err)
 
 			decl, ok := specCtx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/spec",
+				"github.com/go-openapi/codescan/testdata/goparsing/spec",
 				"Customer",
 			)
 			require.True(t, ok)
@@ -84,7 +84,7 @@ func TestEntityDecl(t *testing.T) {
 	t.Run("Names", func(t *testing.T) {
 		t.Run("model with swagger:model annotation uses Go name", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 				"User",
 			)
 			require.True(t, ok)
@@ -96,7 +96,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("type without model annotation returns Go name for both", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 				"SimpleOne",
 			)
 			require.True(t, ok)
@@ -108,7 +108,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("model with override name returns override", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 				"BaseStruct",
 			)
 			require.True(t, ok)
@@ -123,7 +123,7 @@ func TestEntityDecl(t *testing.T) {
 		// A package served from compiled export data has types and positions but no parsed source.
 		// Blanking the syntax half reproduces that state: everything the type half promises must
 		// still answer, and none of it may panic.
-		const modelsPkg = "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+		const modelsPkg = "github.com/go-openapi/codescan/testdata/goparsing/classification/models"
 
 		found, ok := sctx.FindDecl(modelsPkg, "BaseStruct")
 		require.True(t, ok)
@@ -144,7 +144,7 @@ func TestEntityDecl(t *testing.T) {
 	})
 
 	t.Run("the syntax half answers when there is source", func(t *testing.T) {
-		const modelsPkg = "github.com/go-openapi/codescan/fixtures/goparsing/classification/models"
+		const modelsPkg = "github.com/go-openapi/codescan/testdata/goparsing/classification/models"
 
 		decl, ok := sctx.FindDecl(modelsPkg, "SomeTimedType")
 		require.True(t, ok)
@@ -177,7 +177,7 @@ func TestEntityDecl(t *testing.T) {
 		// The state a package served from compiled export data is in: types, no parsed source. Every
 		// syntax accessor has to say so rather than dereference nothing.
 		found, ok := sctx.FindDecl(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"SomeTimedType",
 		)
 		require.True(t, ok)
@@ -204,7 +204,7 @@ func TestEntityDecl(t *testing.T) {
 	t.Run("Pos agrees with the declaring identifier", func(t *testing.T) {
 		for _, name := range []string{"User", "BaseStruct", "SomeStringType", "SomeStringTypeAlias"} {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 				name,
 			)
 			require.True(t, ok)
@@ -226,7 +226,7 @@ func TestEntityDecl(t *testing.T) {
 	t.Run("HasAnnotation caching", func(t *testing.T) {
 		t.Run("HasModelAnnotation caches result", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 				"User",
 			)
 			require.True(t, ok)
@@ -239,7 +239,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("HasResponseAnnotation caches result", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 				"GenericError",
 			)
 			require.True(t, ok)
@@ -251,7 +251,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("HasParameterAnnotation caches result", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 				"MyFileParams",
 			)
 			require.True(t, ok)
@@ -263,7 +263,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("HasModelAnnotation returns false for non-model", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 				"SimpleOne",
 			)
 			require.True(t, ok)
@@ -273,7 +273,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("HasResponseAnnotation returns false for non-response", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 				"SimpleOne",
 			)
 			require.True(t, ok)
@@ -283,7 +283,7 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("HasParameterAnnotation returns false for non-parameter", func(t *testing.T) {
 			decl, ok := sctx.FindDecl(
-				"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+				"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 				"SimpleOne",
 			)
 			require.True(t, ok)

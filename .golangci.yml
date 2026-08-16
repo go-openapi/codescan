@@ -59,6 +59,8 @@ linters:
       # diffable against upstream. Reformatting it to our house style would
       # make every future re-sync a manual merge.
       - internal/packages/list/pkgpattern.*\.go$
+      # we check some non-strictly conformant comments (e.g. "deprecated instead of Deprecated") on-purpose
+      - testdata
     rules:
       # hack/ holds developer tools, not library code: printing a report to
       # stdout is what they are for.
@@ -91,7 +93,6 @@ formatters:
   exclusions:
     generated: lax
     paths:
-      - fixtures
       - testdata
       - third_party$
       - builtin$

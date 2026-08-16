@@ -1,0 +1,234 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/omits": {
+      "get": {
+        "tags": [
+          "omits"
+        ],
+        "summary": "Lists the omit shapes.",
+        "operationId": "listOmits",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/omitResp"
+          }
+        }
+      }
+    },
+    "/things": {
+      "post": {
+        "tags": [
+          "things"
+        ],
+        "summary": "Creates a thing.",
+        "operationId": "createThing",
+        "parameters": [
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/omitResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "BehindRef": {
+      "description": "BehindRef composes an annotated model, where the omission cannot be expressed: Swagger 2.0 has no\nway to subtract a property from a $ref, so it is dropped with a Hint.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ModelBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "extra": {
+              "type": "string",
+              "x-go-name": "Extra"
+            }
+          }
+        }
+      ],
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "DeclLevel": {
+      "description": "DeclLevel uses the power form on the declaration: a dotted path names the embed chain, a bare\nname resolves against the promoted set.",
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "string",
+          "x-go-name": "Extra"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "Decorated": {
+      "description": "Decorated is the override case: the outer field wins in Go, and omitting the promoted twin keeps\nthe allOf rendering from carrying both.",
+      "type": "object",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "description": "ID is assigned by the server.",
+          "type": "integer",
+          "format": "int64",
+          "readOnly": true
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "DeepPath": {
+      "description": "DeepPath reaches through two embeds with a qualified path, and drops a field promoted from the\nnested level.",
+      "type": "object",
+      "properties": {
+        "Shallow": {
+          "type": "string"
+        },
+        "Visible": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "string",
+          "x-go-name": "Extra"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "EmbedLevel": {
+      "description": "EmbedLevel uses the ergonomic form: the annotation sits on the embed, and the targets are plain\nfield names of that type.",
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "string",
+          "x-go-name": "Extra"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "ModelBase": {
+      "type": "object",
+      "title": "ModelBase is an annotated model, so composing it into an allOf member emits a $ref.",
+      "properties": {
+        "a": {
+          "type": "string",
+          "x-go-name": "A"
+        },
+        "b": {
+          "type": "string",
+          "x-go-name": "B"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "Retyped": {
+      "description": "Retyped is the override case that produces an unsatisfiable allOf without the omission: integer\nAND string for the same property.",
+      "type": "object",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "type": "string"
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "Shadowed": {
+      "description": "Shadowed re-declares a promoted field with `json:\"-\"`, which does NOT hide it in Go — the Hint\npoints at swagger:omit.",
+      "type": "object",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    },
+    "Unresolved": {
+      "description": "Unresolved names a field that does not exist — the typo case, reported as a Hint and otherwise\nignored.",
+      "type": "object",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "Name": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "string",
+          "x-go-name": "Extra"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/swagger-omit"
+    }
+  },
+  "responses": {
+    "omitResp": {
+      "description": "omitResp carries the models so they are reachable without ScanModels.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "behindRef": {
+            "$ref": "#/definitions/BehindRef"
+          },
+          "declLevel": {
+            "$ref": "#/definitions/DeclLevel"
+          },
+          "decorated": {
+            "$ref": "#/definitions/Decorated"
+          },
+          "deepPath": {
+            "$ref": "#/definitions/DeepPath"
+          },
+          "embedLevel": {
+            "$ref": "#/definitions/EmbedLevel"
+          },
+          "retyped": {
+            "$ref": "#/definitions/Retyped"
+          },
+          "shadowed": {
+            "$ref": "#/definitions/Shadowed"
+          },
+          "unresolved": {
+            "$ref": "#/definitions/Unresolved"
+          }
+        }
+      }
+    }
+  }
+}

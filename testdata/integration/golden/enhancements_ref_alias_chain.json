@@ -1,0 +1,88 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "BaseBody": {
+      "type": "object",
+      "title": "BaseBody is the concrete named struct at the bottom of the alias chain.",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    },
+    "CountTyped": {
+      "description": "CountTyped probes the `swagger:type` override on an alias of\nany. `swagger:type` takes a Go-type name (per\n`SwaggerSchemaForType`); honoured via\n`classifierNamedTypeOverride`.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    },
+    "Datestamp": {
+      "description": "Datestamp aliases any with a user-provided `swagger:strfmt`\nannotation. Expected: the alias surfaces as `{string, date}` —\nthe decl-entry strfmt classifier fires before the any-recognizer\nwould otherwise empty the schema.",
+      "type": "string",
+      "format": "date",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    },
+    "Envelope": {
+      "description": "Envelope references the aliases via its fields so the scanner also\nwalks the schemaBuilder.buildAlias path for each chain member.",
+      "type": "object",
+      "properties": {
+        "createdAt": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "drift": {
+          "description": "Drift uses an unannotated alias of any — the field site\ndissolves the alias to the underlying.",
+          "x-go-name": "Drift"
+        },
+        "first": {
+          "$ref": "#/definitions/LinkA"
+        },
+        "meta": {
+          "$ref": "#/definitions/Wildcard"
+        },
+        "second": {
+          "$ref": "#/definitions/LinkB"
+        },
+        "stamp": {
+          "$ref": "#/definitions/Datestamp"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    },
+    "LinkA": {
+      "title": "LinkA is a direct alias of BaseBody.",
+      "$ref": "#/definitions/BaseBody"
+    },
+    "LinkB": {
+      "title": "LinkB is an alias of an alias — chain depth two.",
+      "$ref": "#/definitions/LinkA"
+    },
+    "Timestamp": {
+      "description": "Timestamp aliases time.Time so that buildDeclAlias takes its isStdTime\nbranch.",
+      "type": "string",
+      "format": "date-time",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    },
+    "UserIDStrf": {
+      "description": "Expected: the alias surfaces as `{string, uuid}` — the\ndecl-entry strfmt classifier wins over the primitive underlying.",
+      "type": "string",
+      "format": "uuid",
+      "title": "UserIDStrf probes `swagger:strfmt` on an alias of a primitive.",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    },
+    "Wildcard": {
+      "title": "Wildcard aliases any so that buildDeclAlias takes its isAny branch.",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/ref-alias-chain"
+    }
+  }
+}

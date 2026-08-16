@@ -1,0 +1,158 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/quotes": {
+      "get": {
+        "tags": [
+          "quotes"
+        ],
+        "summary": "Returns a quote.",
+        "operationId": "getQuote",
+        "parameters": [
+          {
+            "type": "integer",
+            "x-go-name": "Threshold",
+            "x-go-type": "math/big.Int",
+            "description": "Threshold is an arbitrary-precision integer in the query string.",
+            "name": "threshold",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "Tolerance",
+            "x-go-type": "math/big.Float",
+            "description": "Tolerance is an arbitrary-precision float in the query string.",
+            "name": "tolerance",
+            "in": "query"
+          },
+          {
+            "x-go-name": "Body",
+            "description": "Body carries the whole model.",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/BigModel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/quoteResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AliasedModel": {
+      "description": "Both land on `integer`, by two different routes. An alias IS math/big.Int — the same type object —\nso the recognizer fires on it directly. A defined type is a different type carrying none of\nbig.Int's methods, and it is recognized because the scanner keeps the type the declaration was\n*written over*: `type Tally big.Int` means big.Int here for the same reason `type MyTime time.Time`\nhas always meant a date-time rather than a drilled struct.",
+      "type": "object",
+      "title": "AliasedModel reaches the recognizer through an alias and through a defined type.",
+      "properties": {
+        "aliased": {
+          "type": "integer",
+          "x-go-name": "Aliased",
+          "x-go-type": "math/big.Int"
+        },
+        "defined": {
+          "$ref": "#/definitions/Tally"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/math-big"
+    },
+    "BigModel": {
+      "description": "Every field is deliberately named UNLIKE its type: the emitted `x-go-name` is the Go FIELD name\nand `x-go-type` is the Go type, and naming a field after its type would make the two extensions\nindistinguishable in the golden and hide a regression in either.",
+      "type": "object",
+      "title": "BigModel carries each math/big type twice, once through a pointer and once by value.",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "x-go-name": "Count",
+          "x-go-type": "math/big.Int"
+        },
+        "distance": {
+          "type": "string",
+          "x-go-name": "Distance",
+          "x-go-type": "math/big.Float"
+        },
+        "ledger": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "x-go-type": "math/big.Int"
+          },
+          "x-go-name": "Ledger"
+        },
+        "magnitude": {
+          "type": "string",
+          "x-go-name": "Magnitude",
+          "x-go-type": "math/big.Float"
+        },
+        "proportion": {
+          "type": "string",
+          "x-go-name": "Proportion",
+          "x-go-type": "math/big.Rat"
+        },
+        "share": {
+          "type": "string",
+          "x-go-name": "Share",
+          "x-go-type": "math/big.Rat"
+        },
+        "total": {
+          "type": "integer",
+          "x-go-name": "Total",
+          "x-go-type": "math/big.Int"
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "x-go-type": "math/big.Rat"
+          },
+          "x-go-name": "Weights"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/math-big"
+    },
+    "OverriddenModel": {
+      "type": "object",
+      "title": "OverriddenModel is the control: an explicit annotation still wins over the recognizer.",
+      "properties": {
+        "balance": {
+          "description": "Balance overrides the TYPE rather than the format. A type override replaces the schema\noutright and the recognizer's x-go-type stamp goes with it, whereas a format override adjusts\nthe format and the stamp survives. Witnessed rather than asserted, because the difference\nfollows from how the two branches are written.",
+          "type": "string",
+          "x-go-name": "Balance"
+        },
+        "principal": {
+          "description": "Principal states a wire format, so the recognizer must not overrule it.",
+          "type": "string",
+          "format": "bigdecimal",
+          "x-go-name": "Principal",
+          "x-go-type": "math/big.Float"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/math-big"
+    },
+    "Tally": {
+      "type": "integer",
+      "title": "Tally is a defined type over big.Int, carrying none of its methods.",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/math-big",
+      "x-go-type": "math/big.Int"
+    }
+  },
+  "responses": {
+    "quoteResponse": {
+      "description": "QuoteResponse reaches the math/big types from a response body and a response header.",
+      "schema": {
+        "$ref": "#/definitions/BigModel"
+      },
+      "headers": {
+        "X-Remaining": {
+          "type": "integer",
+          "description": "Remaining is an arbitrary-precision count in a header.",
+          "x-go-type": "math/big.Int"
+        }
+      }
+    }
+  }
+}

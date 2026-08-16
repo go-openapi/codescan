@@ -14,7 +14,7 @@ import (
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// fixturesTest_Petstore_PetModel mirrors fixtures/goparsing/petstore/models/pet.go — a swagger:model with
+// fixturesTest_Petstore_PetModel mirrors testdata/goparsing/petstore/models/pet.go — a swagger:model with
 // title/description, multiple validations (required, pattern, min/maxLength), and several un-annotated fields.
 func TestFixtures_Petstore_PetModel(t *testing.T) {
 	src := strings.TrimSpace(`
@@ -70,7 +70,7 @@ maximum length: 50
 }
 
 // TestFixtures_Petstore_ItemsPrefix_NestedArrayValidation mirrors the PhotoURLs field in
-// fixtures/goparsing/petstore/models/pet.go which uses `items pattern: \.(jpe?g|png)$` for per-item validation.
+// testdata/goparsing/petstore/models/pet.go which uses `items pattern: \.(jpe?g|png)$` for per-item validation.
 func TestFixtures_Petstore_ItemsPrefix_NestedArrayValidation(t *testing.T) {
 	src := strings.TrimSpace(`
 The photo urls for the pet.
@@ -160,7 +160,7 @@ Responses:
 }
 
 // TestFixtures_OperationsAnnotation_YAMLBody mirrors
-// fixtures/goparsing/classification/operations_annotation/operations.go's first operation: a YAML-fenced body holding
+// testdata/goparsing/classification/operations_annotation/operations.go's first operation: a YAML-fenced body holding
 // parameters/responses.
 func TestFixtures_OperationsAnnotation_YAMLBody(t *testing.T) {
 	src := strings.TrimSpace(`
@@ -211,7 +211,7 @@ responses:
 	assert.False(t, yamls[0].Truncated)
 }
 
-// TestFixtures_Meta_PetstoreV1 mirrors fixtures/goparsing/meta/v1/doc.go — the canonical meta block: prose,
+// TestFixtures_Meta_PetstoreV1 mirrors testdata/goparsing/meta/v1/doc.go — the canonical meta block: prose,
 // single-line keywords, raw blocks, extensions, info-extensions, security, security-definitions, with `swagger:meta` at
 // the *bottom* (godoc convention).
 func TestFixtures_Meta_PetstoreV1(t *testing.T) {
@@ -427,7 +427,7 @@ required: true
 }
 
 // TestFixtures_AllowedHTTPMethods covers the closed HTTP method vocabulary inspired by
-// fixtures/enhancements/all-http-methods.
+// testdata/enhancements/all-http-methods.
 func TestFixtures_AllowedHTTPMethods(t *testing.T) {
 	methods := []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE"}
 	for _, m := range methods {

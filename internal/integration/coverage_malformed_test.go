@@ -12,7 +12,7 @@ import (
 )
 
 // Bucket-B error-path tests.
-// Each subfixture under fixtures/enhancements/ malformed/ carries exactly one annotation that the
+// Each subfixture under testdata/enhancements/ malformed/ carries exactly one annotation that the
 // scanner cannot reconcile, so Run() must return a non-nil error.
 // No goldens are produced — these tests exist purely to pin the error surface.
 
