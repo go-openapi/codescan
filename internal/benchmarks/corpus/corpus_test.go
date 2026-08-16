@@ -120,8 +120,12 @@ func TestFindRejectsAnUnknownName(t *testing.T) {
 	assert.Contains(t, err.Error(), names()[0], "the error names what there is to choose from")
 }
 
-// TestSafeJoin pins the path rule directly, including the forms an archive can carry that never
-// reach an extraction because tar normalises them first.
+// TestSafeJoin pins the path rule directly.
+//
+// The rule has to be the SAME on every platform, which is what the last three cases are about: a
+// leading `/` is not "absolute" to Windows, and `\` and `:` are separators and drive markers there
+// while being ordinary filename characters here. Judging the name in the host's terms let Windows
+// accept what Linux refused — the divergence CI caught.
 func TestSafeJoin(t *testing.T) {
 	dest := t.TempDir()
 
@@ -131,13 +135,16 @@ func TestSafeJoin(t *testing.T) {
 		assert.Equal(t, filepath.Join(dest, "dockerctl", "go.mod"), got)
 	})
 
-	for _, name := range []string{
-		"../escaped.go",
-		"dockerctl/../../escaped.go",
-		"/absolute/escaped.go",
-		"..",
+	for name, why := range map[string]string{
+		"../escaped.go":              "climbs out of the destination",
+		"dockerctl/../../escaped.go": "climbs out after cleaning",
+		"..":                         "is the parent itself",
+		"":                           "names nothing",
+		"/absolute/escaped.go":       "is rooted (not IsAbs on Windows)",
+		`dockerctl\..\..\escaped.go`: "climbs out through Windows separators",
+		"C:/escaped.go":              "carries a Windows volume",
 	} {
-		t.Run("refuses "+name, func(t *testing.T) {
+		t.Run("refuses "+name+" — "+why, func(t *testing.T) {
 			_, err := safeJoin(dest, name)
 			require.ErrorIs(t, err, errUnsafePath)
 		})

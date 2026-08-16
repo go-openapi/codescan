@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -235,18 +236,39 @@ func writeFile(r io.Reader, target string, size int64) error {
 }
 
 // safeJoin resolves an archive entry name against dest, refusing anything that
-// would land outside it.
+// is not a plain relative path inside it.
+//
+// The name is judged in the SLASH form the tar format defines, never in the
+// host's. A host-shaped check accepts on one platform what it refuses on another:
+// filepath.IsAbs("/x") is false on Windows, which needs a volume — so the entry
+// that Linux refused as absolute was silently accepted there. Backslash and colon
+// go the same way, being a separator and a drive marker on Windows and ordinary
+// filename characters here, so both are refused everywhere rather than in one
+// place.
 //
 // Refusing rather than clamping: the usual sanitisation rewrites `../x` to `x`
 // and carries on, which for an archive this repository rolls itself would turn a
 // broken corpus into a quietly misplaced one.
 func safeJoin(dest, name string) (string, error) {
-	clean := filepath.Clean(filepath.FromSlash(name))
-	if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+	if name == "" || strings.ContainsAny(name, `\:`) || strings.HasPrefix(name, "/") {
 		return "", fmt.Errorf("%w: %q", errUnsafePath, name)
 	}
 
-	return filepath.Join(dest, clean), nil
+	clean := path.Clean(name)
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", fmt.Errorf("%w: %q", errUnsafePath, name)
+	}
+
+	target := filepath.Join(dest, filepath.FromSlash(clean))
+
+	// The same refusal restated on the joined path. Redundant after the checks
+	// above, and worth keeping: it is the containment property this function
+	// exists to guarantee, asserted on the value it actually returns.
+	if !strings.HasPrefix(target, filepath.Clean(dest)+string(os.PathSeparator)) {
+		return "", fmt.Errorf("%w: %q", errUnsafePath, name)
+	}
+
+	return target, nil
 }
 
 // fileDigest returns the SHA-256 of a file, hex-encoded.
