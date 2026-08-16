@@ -42,3 +42,6 @@ annotation to both its tutorial and its entry here.
 - **[The commands]({{% relref "commands" %}})** — how the three CLI tools are put
   together: why each lives where it does, where their shared flag surface is
   declared, and what keeps it whole.
+- **[Performance]({{% relref "performance" %}})** — what a scan costs: what the
+  grammar and the loader each changed since the code left go-swagger, and how the
+  loader options compare warm and cold.
