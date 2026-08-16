@@ -1,19 +1,20 @@
 ---
 title: "Project"
-weight: 4
+weight: 30
 description: |
   Repo-level information for github.com/go-openapi/codescan.
-  Cross-org contributing and maintainer guides live in the shared
-  go-openapi doc-site.
+
+  Contributing guidelines & maintainers documentation.
 ---
 
-This section holds material specific to this repository:
+Everything else on this site is about *using* codescan. This section is about the repository it
+comes from — who publishes it, under what licence, and where to send a patch.
 
 * [README](./readme/) — repo overview and announcements
 * [License](./license/) — Apache-2.0
 
-Cross-org documentation that applies to every go-openapi repo lives in the
-shared doc-site:
+codescan follows the conventions of every go-openapi repository rather than inventing its own, so
+how to contribute to it is documented once, for all of them, in the shared doc-site:
 
 * [Contributing guidelines][contributing-doc-site]
 * [Maintainers documentation][maintainers-doc-site]

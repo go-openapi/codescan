@@ -81,8 +81,10 @@ Two-layer config, mirroring the pattern used by other go-openapi doc sites:
    build timestamp), generated from `codescan.yaml.template`
 
 Both files are passed together via `--config hugo.yaml,codescan.yaml`. The
-dynamic values land under `params.codescan.*` and are referenced from the
-markdown content.
+dynamic values land under `params.codescan.*`, and the `version` shortcode is
+what renders them — a build that omits `codescan.yaml` renders nothing there
+rather than failing, which is what makes a bare `hugo` usable for a quick local
+check.
 
 ## Deployment
 

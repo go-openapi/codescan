@@ -5,6 +5,8 @@ description: Generate Swagger 2.0 specifications from annotated Go source code.
 weight: 1
 ---
 
+{{< version >}}
+
 `github.com/go-openapi/codescan` is a Go source code scanner that produces
 [Swagger 2.0][swagger2] (OpenAPI 2.0) specifications.
 
@@ -26,6 +28,8 @@ The only exposed API is `Run()` and `Options`.
 
 ### Getting started
 
+To use codescan in your go program:
+
 ```cmd
 go get github.com/go-openapi/codescan
 ```
@@ -40,73 +44,36 @@ swaggerSpec, err := codescan.Run(&codescan.Options{
 })
 ```
 
+Or as a command, to run in a build or a pipeline:
+
+```cmd
+go install github.com/go-openapi/codescan/cmd/genspec@latest
+```
+
+Or as a terminal front-end, to watch a spec take shape as you annotate:
+
+```cmd
+go install github.com/go-openapi/codescan/cmd/genspec-tui@latest
+```
+
+Try it out now from your browser in our [Playground]({{% relref "/playground" %}}).
+
+### Relationship to go-swagger
+
+`go-swagger` is a CLI tool that consumes the codescan library.
+It works exactly on the same set of annotations.
+
+The main differences with the newer `genspec` CLI shipped by this project are:
+
+* release cadence (expect slightly less frequent updates on go-swagger, which has more dependencies and constraints)
+* package distribution: at this moment, the codescan CLI tools do not ship as distro packages or docker images
+* exposed CLI knobs and default settings (defaults need to be backward-compatible for go-swagger users)
+
+`genspec` and `genspec-tui` are intended for users who want tools leaner than go-swagger, or who want to
+experiment with the latest features.
+
 ### Where to go next
-
-{{< cards >}}
-{{% card title="About" %}}
-What codescan is, why scan source to a spec, and how it relates to go-swagger.
-
-→ [about]({{% relref "/about" %}})
-{{% /card %}}
-
-{{% card title="Getting started" %}}
-Install the scanner, annotate a package, and produce your first spec.
-
-→ [getting-started]({{% relref "/getting-started" %}})
-{{% /card %}}
-
-{{% card title="Tutorials" %}}
-Learn by spec concept — model definitions, routes, validations — annotated Go
-next to the spec it produces.
-
-→ [tutorials]({{% relref "/tutorials" %}})
-{{% /card %}}
-
-{{% card title="Shaping the output" %}}
-How-to guides for the rendering knobs: $ref vs inline, aliases, nullable
-pointers, extensions.
-
-→ [shaping-the-output]({{% relref "/shaping-the-output" %}})
-{{% /card %}}
-
-{{% card title="Annotation index" %}}
-Every annotation at a glance, linked to its worked example and its full
-reference.
-
-→ [annotation-index]({{% relref "/annotation-index" %}})
-{{% /card %}}
-
-{{% card title="Reference (maintainers)" %}}
-The complete compendium — annotations, keywords, sub-languages and the formal
-grammar.
-
-→ [maintainers]({{% relref "/maintainers" %}})
-{{% /card %}}
-
-{{% card title="Project" %}}
-Repo overview, license and links to the shared go-openapi guides.
-
-→ [project]({{% relref "/project" %}})
-{{% /card %}}
-{{< /cards >}}
-
-## Licensing
-
-`SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers`
-
-This library ships under the [Apache-2.0 license](./project/license/).
-
-## Contributing
-
-Issues and pull requests welcome.
-
-See the shared [go-openapi contributing guidelines][contributing-doc-site] and
-the per-repo notes in [project/](./project/).
-
----
 
 {{< children type="card" description="true" >}}
 
 [swagger2]: https://swagger.io/specification/v2/
-[contributing-doc-site]: https://go-openapi.github.io/doc-site/contributing/contributing/index.html
-[maintainers-doc-site]: https://go-openapi.github.io/doc-site/maintainers/index.html

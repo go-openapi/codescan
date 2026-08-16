@@ -1,14 +1,15 @@
 ---
 title: Scan a package
-weight: 1
+weight: 5
 description: |
   The smallest end-to-end use of codescan: annotate a package, scan it, and
   get back a Swagger 2.0 document.
 ---
 
-This example scans a tiny annotated "petstore" package and produces a Swagger
+This tutorial scans a tiny annotated "petstore" package and produces a Swagger
 2.0 spec. It is the worked version of
-[usage as a library](../../getting-started/usage-as-a-library/).
+[Usage as a library]({{% relref "usage-as-a-library" %}}) — start here, then take
+one concept at a time from the pages that follow.
 
 ## The annotated API
 

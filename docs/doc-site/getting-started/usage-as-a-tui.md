@@ -1,31 +1,32 @@
 ---
 title: Usage as a terminal UI
-weight: 2
+weight: 10
 description: |
-  Drive codescan interactively: browse an annotated source tree, watch the spec
-  it produces re-render on every save, and follow any node back to the code that
-  made it.
+  Drive codescan interactively: browse an annotated source tree, watch the spec it produces.
+
+  It re-renders on every save, and follow any node back to the code that made it.
 ---
 
-`genspec-tui` is an interactive terminal front-end for codescan. It puts the Go
-source on the left, the Swagger document that source produces on the right, and
-the scanner's diagnostics underneath — all regenerated every time you save.
+`genspec-tui` is an interactive terminal front-end for codescan.
 
-Its reason to exist is that loop: **change an annotation, save, see the spec
-change.** Predicting what an annotation will produce is the slow part of writing
-one, and reading a golden file after a build is a poor substitute for watching
-the node appear.
+It puts the Go source on the left, the Swagger document that source produces on the right,
+and the scanner's diagnostics underneath — all regenerated every time you save.
 
-Beyond the loop, it links the two sides together. You can ask "which Go
-declaration produced this node?" and "what did this field turn into?" and get an
-answer by *position* — not by matching names by eye.
+Its reason to exist is that loop: **change an annotation, save, see the spec change.**
+
+Predicting what an annotation will produce is the slow part of writing one,
+and reading a golden file after a build is a poor substitute for watching the node appear.
+
+Beyond the loop, it links the two sides together. You can ask "which Go declaration produced this node?" or
+"what did this field turn into?" and get an answer by *position* — not by matching names by eye.
 
 ![An open Go file on the left, the spec it produces on the right, and the scan's diagnostics underneath](images/tui/scan.png)
 
 {{% notice style="note" %}}
-The TUI is a **separate Go module** inside the codescan repository, so bubbletea
-and its dependency tree never reach the lean library. Installing it pulls none of
-that into your own project.
+The TUI is a separate Go module inside the codescan repository, so bubbletea and
+its dependency tree never reach the library — installing it pulls none of that
+into your own project. Why the commands are split that way is in
+[The commands]({{% relref "commands" %}}).
 {{% /notice %}}
 
 ## Install and run
@@ -39,17 +40,24 @@ go install github.com/go-openapi/codescan/cmd/genspec-tui@latest
 genspec-tui
 
 # or point it somewhere, and narrow the scope
-genspec-tui -workdir ../my-api -packages ./internal/models/...,./internal/api/...
+genspec-tui -workdir ../my-api ./internal/models/... ./internal/api/...
 ```
 
-The flags carry what a checkbox cannot — the scan's scope and the names it
-derives — from the same [`codescan.Options`]({{% relref "options" %}}) the library
-takes:
+The selected packages are a positional argument, resolved against `-workdir`; naming none scans `./...`.
+
+> `-packages`, taking one comma-separated list, is the older spelling and still works
+
+The TUI registers the **same flags as the other commands** — one per field of
+[`codescan.Options`]({{% relref "options-reference" %}}) — and reads the same
+[`.codescan.yaml`]({{% relref "setting-options" %}}), so a session starts where
+your build leaves off. What the flags decide is the *first* scan; almost all of
+them are also live toggles, below.
+
+The ones worth knowing at the point of starting a session:
 
 | Flag | Default | Meaning |
 |------|---------|---------|
 | `-workdir` | `.` | module directory the scan runs in (`WorkDir`) |
-| `-packages` | `./...` | comma-separated package patterns, relative to `-workdir` |
 | `-scan-models` | `true` | also emit definitions for `swagger:model` types |
 | `-build-tags` | — | comma-separated build tags to apply while loading |
 | `-include` / `-exclude` | — | patterns selecting which packages are scanned |
@@ -70,18 +78,18 @@ A second group settles what gets built, and how it is loaded — the environment
 | `-goflags` | — | default go command flags, as `GOFLAGS` — `-build-tags` wins over a `-tags` given here |
 | `-gowork` | search upwards | workspace selection, as `GOWORK`: `off` to ignore a `go.work`, or the path to one |
 | `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` |
-| `-toolchain-free-loader` | `false` | load packages with codescan's own loader rather than the go command (experimental) |
-| `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-toolchain-free-loader`) |
+| `-loader` | `auto` | `go` runs `go list`; `own` uses codescan's own loader and needs no toolchain; `auto` picks `own` wherever the build cannot exec (experimental) |
+| `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-loader=own`) |
 
-Everything else is a **live toggle** rather than a flag. Press `o` for the options
+Everything the flags set is also a **live toggle**. Press `o` for the options
 popup, `space` to flip a row, `Esc` to apply — the spec re-renders on close, which
 makes the popup the fastest way to find out what a knob such as `EmitRefSiblings`
 actually changes. Rows that only bite in combination say so: `PruneUnusedModels`
 reads `(needs ScanModels)` until that one is on.
 
-The three booleans above are in both places, so you can start a session one way
-and change your mind without restarting. The one option with no route in at all is
-`InputSpec` (overlay mode).
+Being in both places is the point: you can start a session one way and change your
+mind without restarting. The one option with no route in at all is `InputSpec`
+(overlay mode).
 
 ## Scanning: the edit-save-see loop
 
@@ -196,6 +204,57 @@ document missing its `info` block lands on the document, which `Enter` takes you
 to the top of.
 {{% /notice %}}
 
+## What a scan cost: `m`
+
+`m` opens a card describing the run that just finished — how long it took, what
+it allocated, what it left live, and how much the process holds from the OS.
+
+![The run-cost card: a split line recapping time and memory as ratios, then elapsed, allocated, retained, live objects, GC cycles and memory held from the OS — each split between scanning and rendering](images/tui/stats.png)
+
+Time and memory are split between **scanning** and **rendering** the document,
+and recapped as ratios on the `split` line, because the question a reader
+arrives with is usually *which phase is this?* The two can disagree sharply,
+which is why both are there.
+
+**Allocated** is what the run churned through, garbage included; **retained** is
+what it left behind. A scan that allocates half a gigabyte and retains a few
+megabytes is not the same problem as one that keeps what it takes, and one
+number could not tell you which you have.
+
+Two things the card says about itself, worth repeating: the window is
+process-wide, so the redraw loop and the file watcher are in the figures; and a
+rescan holds two documents at once, so the retained figure reads high by about
+one. That is arithmetic, not a leak.
+
+A scalar cannot say *who* spent it, which is what `-profile` is for. Start the
+session with it and each scan is profiled as well as timed, so the card also
+reports where the CPU went and what allocated it, by function and per phase:
+
+```cmd
+genspec-tui -profile -workdir ../my-api
+
+# every allocation counted rather than sampled every 512 KiB — accurate, and slow
+genspec-tui -profile -mem-profile-rate=1 -workdir ../my-api
+```
+
+![The profiled card: the same figures plus a cpu ratio, then a "where the CPU went" table charging each sample to the call of ours that led there, and a "what allocated it" table by function](images/tui/profile.png)
+
+CPU is charged to **the call of ours that led there**, not to the leaf frame. A
+leaf answers "what was executing", which for this program is mostly the
+allocator and the collector — true, and nothing anyone can act on. Charged our
+way, a row names the boundary where codescan hands the work to somebody else's
+code, and covers everything under it.
+
+Profiling is not free, and the card says so rather than letting you compare
+across runs by accident: under `-profile` the scalars at the top carry the
+profiler's own overhead and its collections, while the tables below exclude
+them. The card scrolls when it outgrows the terminal (`↑↓`/`jk`, `PgUp`/`PgDn`,
+`Home`/`End`).
+
+It names the `.pprof` files it wrote and the `go tool pprof` commands that open
+them. All three flags are addressed in the `profile` section of a
+[`.codescan.yaml`]({{% relref "setting-options" %}}).
+
 ## Looking up an annotation
 
 ![The annotation reference popup: the annotation, what it does, its syntax, and the keywords its body accepts](images/tui/annotation-reference.png)
@@ -234,6 +293,7 @@ header carries a standing `h: help` banner.
 | `K` | what the `swagger:` annotation on this line means |
 | `v` / `V` | validate the spec / switch diagnostics tab |
 | `o` | scanner options |
+| `m` | what the last scan cost |
 | `r` / `F5` | rescan now / re-read the open file from disk |
 | `c` | copy the focused pane to the clipboard |
 | `ctrl+q` | quit |
@@ -273,8 +333,9 @@ change up.
   do not. Where they are missing nothing misfires — there is simply no
   previous-reference key, and no resize keys.
 - **Split sizes last for the session only.** They survive rescans and terminal
-  resizes, but not a restart; persisting them needs a config file, which the TUI
-  does not have.
+  resizes, but not a restart. The TUI does read a
+  [`.codescan.yaml`]({{% relref "setting-options" %}}) — but what a file can set
+  is flags, and where the splits sit is not one of them.
 
 The [module README][tui-readme]
 carries the full list.
@@ -283,7 +344,9 @@ carries the full list.
 
 - [Usage as a library]({{% relref "usage-as-a-library" %}}) — drive the same
   scanner from your own program, a `go:generate` step, or a test.
-- [Options reference]({{% relref "options" %}}) — every knob the `o` popup
+- [Usage as a headless CLI]({{% relref "usage-as-a-headless-cli" %}}) — the same
+  scan in a build, with the settings you converged on here.
+- [Options reference]({{% relref "options-reference" %}}) — every knob the `o` popup
   toggles, and what it does to the document.
 - [Tutorials]({{% relref "/tutorials" %}}) — annotate a package from meta to
   definitions, with the TUI open beside you.

@@ -1,21 +1,21 @@
 ---
 title: Tutorials
-weight: 20
+weight: 40
 description: |
-  Learn codescan by spec concept — model definitions, routes and operations,
-  validations, examples, and document metadata — each shown as annotated Go
-  next to the Swagger it produces.
+  Learn codescan by spec concept: model definitions, routes and operations,
+  validations, examples, and document metadata.
+
+  Each demonstrated as annotated Go next to the Swagger it produces.
 ---
 
-These tutorials teach codescan **by spec concept**, not annotation by
-annotation. Each page takes one thing you want in your OpenAPI document — a
-model definition, a route, a validated field — and shows the Go annotation that
-produces it next to the resulting JSON, side by side.
+These tutorials teach codescan **by spec concept**, not annotation by annotation.
+
+Each page takes one thing you want in your OpenAPI document — a model definition, a route, a validated field
+— and shows the Go annotation that produces it next to the resulting JSON, side by side.
 
 Every Go snippet on these pages comes from the test-covered
 [`docs/examples`](https://github.com/go-openapi/codescan/tree/master/docs/examples)
-module, and every JSON pane is a golden file a test regenerates — so the
-examples cannot drift from what the scanner actually emits.
+module, and every JSON pane is a golden file a test regenerates — so what you see published here _has been tested_.
 
 ## Reading the panes
 

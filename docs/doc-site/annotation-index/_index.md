@@ -1,13 +1,15 @@
 ---
 title: Annotation index
-weight: 40
+weight: 60
 description: |
-  Every swagger:* annotation at a glance — what it produces and where it
-  attaches — linked to both its worked example and its full reference.
+  Every swagger:* annotation at a glance.
+
+  What it produces and where it attaches — linked to both its worked example and its full reference.
 ---
 
-The complete `swagger:*` vocabulary, one row each. **By example** jumps to the
-tutorial that shows the annotation as runnable Go next to the spec it produces;
+The complete `swagger:*` vocabulary, one row each.
+
+**By example** jumps to the tutorial that shows the annotation as runnable Go next to the spec it produces;
 **Reference** jumps to the exhaustive rule in the Maintainers compendium.
 
 | Annotation | Attaches to | Produces | By example | Reference |

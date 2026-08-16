@@ -1,0 +1,23 @@
+{{- /*
+  Renders which documentation set the reader is looking at, from the build-time parameters
+  codescan.yaml carries: the version message, the latest release tag, the Go version the module
+  requires, and when the site was built.
+
+  Those parameters come from codescan.yaml, which is generated from codescan.yaml.template and passed
+  alongside hugo.yaml (`--config hugo.yaml,codescan.yaml`). A build that does not pass it - a quick
+  local render - simply gets nothing here rather than an error or a page full of empty values.
+*/ -}}
+{{- with site.Params.codescan -}}
+{{- $release := .latestrelease -}}
+{{- $go := .goversion -}}
+{{- $built := .buildtime -}}
+{{- $message := .versionmessage -}}
+{{- if or $release $go $built $message -}}
+<div class="codescan-version">
+  {{- with $message }}<strong>{{ . }}</strong>{{ end -}}
+  {{- with $release }} Latest release <code>{{ . }}</code>.{{ end -}}
+  {{- with $go }} Requires Go {{ . }} or later.{{ end -}}
+  {{- with $built }} <span class="codescan-version-built">Built {{ (time .).Format "2006-01-02" }}.</span>{{ end -}}
+</div>
+{{- end -}}
+{{- end -}}
