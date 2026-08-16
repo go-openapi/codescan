@@ -23,6 +23,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -105,7 +106,16 @@ func Ensure() ([]Corpus, error) {
 }
 
 // Find returns one corpus by name.
+//
+// The name is checked before anything is unpacked. Otherwise a typo pays for the
+// whole archive before being told it was a typo — and, less obviously, the test
+// covering that refusal would unpack 55 MB on every CI job of every platform,
+// which is exactly what the measurement gate exists to prevent.
 func Find(name string) (Corpus, error) {
+	if !slices.Contains(names(), name) {
+		return Corpus{}, fmt.Errorf("%w: %q (have %s)", errNoSuchCorpus, name, strings.Join(names(), ", "))
+	}
+
 	corpora, err := Ensure()
 	if err != nil {
 		return Corpus{}, err
@@ -117,7 +127,7 @@ func Find(name string) (Corpus, error) {
 		}
 	}
 
-	return Corpus{}, fmt.Errorf("%w: %q (have %s)", errNoSuchCorpus, name, strings.Join(names(), ", "))
+	return Corpus{}, fmt.Errorf("%w: %q missing from %s", errNoSuchCorpus, name, archiveName)
 }
 
 // archivePath locates the archive from this file's own position in the tree.
