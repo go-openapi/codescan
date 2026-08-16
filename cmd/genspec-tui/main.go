@@ -30,7 +30,7 @@ func main() {
 	// Discard it globally for the lifetime of the program.
 	log.SetOutput(io.Discard)
 
-	err := run(os.Args[1:], os.Stderr)
+	err := run(os.Args[1:], os.Stdout, os.Stderr)
 	if err != nil && !errors.Is(err, flag.ErrHelp) {
 		fmt.Fprintln(os.Stderr, cmd+":", err)
 	}
@@ -48,7 +48,7 @@ func main() {
 //
 // NOTE: [os.Exit] happens in main because exiting from in here would skip the deferred Close, leaving the file watcher
 // running until the process dies anyway.
-func run(argv []string, stderr io.Writer) error {
+func run(argv []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.Usage = usage(fs, stderr)
@@ -66,7 +66,7 @@ func run(argv []string, stderr io.Writer) error {
 	}
 
 	if cfg.WantsVersion() {
-		fmt.Fprintln(os.Stdout, cliopts.Version(cmd))
+		fmt.Fprintln(stdout, cliopts.Version(cmd))
 
 		return nil
 	}

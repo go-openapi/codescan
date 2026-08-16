@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
+	"github.com/go-openapi/codescan/cmd/internal/cliopts"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -21,59 +22,36 @@ import (
 //
 // What is left to check here is what this command adds on top, and how the two halves meet.
 
-func TestEveryFlagIsAddressableInAConfigFile(t *testing.T) {
+func TestOptions(t *testing.T) {
 	t.Parallel()
 
-	cli := newTestFlags(t)
+	t.Run("should take the patterns from the arguments", func(t *testing.T) {
+		// Positional, as they are for genspec and for every other Go command.
+		t.Parallel()
 
-	schema, err := configSchema()
-	require.NoError(t, err)
+		for _, c := range []struct {
+			name string
+			args []string
+			want []string
+		}{
+			{"named as arguments", []string{"./api/...", "./models"}, []string{"./api/...", "./models"}},
+			{"none names everything", nil, []string{"./..."}},
+		} {
+			t.Run(c.name, func(t *testing.T) {
+				t.Parallel()
 
-	cli.set.VisitAll(func(f *flag.Flag) {
-		if reason, excused := notConfigurable[f.Name]; excused {
-			assert.NotContainsf(t, schema, f.Name,
-				"-%s is excused from configuration (%s) but the schema addresses it anyway", f.Name, reason)
+				cli := newTestFlags(t)
+				require.NoError(t, cli.set.Parse(c.args))
 
-			return
+				opts, err := cli.options(cli.set.Args())
+				require.NoError(t, err)
+				assert.Equal(t, c.want, opts.Packages)
+			})
 		}
-
-		assert.Containsf(t, schema, f.Name,
-			"flag -%s is addressed in no configuration section. Add it to commandSections, or excuse it in "+
-				"notConfigurable with a reason.", f.Name)
 	})
-}
 
-// The patterns are positional, as they are for genspec and for every other Go command.
-func TestPatternsComeFromTheArguments(t *testing.T) {
-	t.Parallel()
-
-	for _, c := range []struct {
-		name string
-		args []string
-		want []string
-	}{
-		{"named as arguments", []string{"./api/...", "./models"}, []string{"./api/...", "./models"}},
-		{"none names everything", nil, []string{"./..."}},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			cli := newTestFlags(t)
-			require.NoError(t, cli.set.Parse(c.args))
-
-			opts, err := cli.options(cli.set.Args())
-			require.NoError(t, err)
-			assert.Equal(t, c.want, opts.Packages)
-		})
-	}
-}
-
-// -packages is the spelling the README carried since the first release, so it keeps working - and loses to an
-// argument, which is the spelling that replaced it.
-func TestPackagesFlagStillWorks(t *testing.T) {
-	t.Parallel()
-
-	t.Run("stands in when nothing is named", func(t *testing.T) {
+	t.Run("should still answer to -packages", func(t *testing.T) {
+		// The spelling the README carried since the first release, so it keeps working.
 		t.Parallel()
 
 		cli := newTestFlags(t)
@@ -84,7 +62,8 @@ func TestPackagesFlagStillWorks(t *testing.T) {
 		assert.Equal(t, []string{"./api/...", "./models"}, opts.Packages, "entries are trimmed")
 	})
 
-	t.Run("an argument wins", func(t *testing.T) {
+	t.Run("should let an argument beat -packages", func(t *testing.T) {
+		// Which is the spelling that replaced it.
 		t.Parallel()
 
 		cli := newTestFlags(t)
@@ -94,52 +73,122 @@ func TestPackagesFlagStillWorks(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []string{"./new/..."}, opts.Packages)
 	})
+
+	t.Run("should resolve -workdir once, here", func(t *testing.T) {
+		// The tree, the watcher and every reported position hang off WorkDir, and a relative one would leave each of
+		// them to resolve it against whatever they happened to be near.
+		t.Parallel()
+
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-workdir", "."}))
+
+		opts, err := cli.options(nil)
+		require.NoError(t, err)
+
+		assert.True(t, filepath.IsAbs(opts.WorkDir), "got %q", opts.WorkDir)
+	})
+
+	t.Run("should reach the whole shared surface", func(t *testing.T) {
+		// Which is the point of the move: the TUI used to register fourteen of these and silently lack the rest.
+		t.Parallel()
+
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{
+			"-scan-models=false",
+			"-prune-unused-models",
+			"-emit-ref-siblings",
+			"-clean-go-doc",
+			"-name-from-tags", "form,json",
+			"-loader", "own",
+		}))
+
+		opts, err := cli.options(nil)
+		require.NoError(t, err)
+
+		assert.False(t, opts.ScanModels)
+		assert.True(t, opts.PruneUnusedModels)
+		assert.True(t, opts.EmitRefSiblings)
+		assert.True(t, opts.CleanGoDoc)
+		assert.Equal(t, []string{"form", "json"}, opts.NameFromTags)
+		assert.True(t, opts.ToolchainFreeLoader, "-loader own is the tri-state spelling of it")
+	})
+
+	t.Run("should refuse a value it does not accept", func(t *testing.T) {
+		// Refused here rather than carried into a session, where a scan would fail on every rescan for a reason the
+		// command line could have given straight away.
+		t.Parallel()
+
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-loader=cargo"}))
+
+		_, err := cli.options(nil)
+
+		require.ErrorIs(t, err, cliopts.ErrBadFlag)
+	})
 }
 
-// The tree, the watcher and every reported position hang off WorkDir, and a relative one would leave each of them to
-// resolve it against whatever they happened to be near.
-func TestWorkdirIsResolved(t *testing.T) {
-	t.Parallel()
+// PrepareScan is the whole command line settled at once, and the only place that knows a value could have come from
+// anywhere but a flag.
+func TestPrepareScan(t *testing.T) {
+	// NOT PARALLEL: the file is found by searching upwards from the working directory.
 
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse([]string{"-workdir", "."}))
+	t.Run("should settle the file, then what was typed, then the arguments", func(t *testing.T) {
+		profiles := t.TempDir()
+		cli, path := inConfiguredDir(t, `
+scan:
+  workdir: ./api
+emit:
+  scan-models: false
+profile:
+  profile-dir: `+profiles+`
+  profile: true
+`)
+		require.NoError(t, cli.set.Parse([]string{"-scan-models=true", "./handlers/..."}))
 
-	opts, err := cli.options(nil)
-	require.NoError(t, err)
+		opts, prof, err := cli.PrepareScan()
+		require.NoError(t, err)
 
-	assert.True(t, filepath.IsAbs(opts.WorkDir), "got %q", opts.WorkDir)
-}
+		assert.Equal(t, []string{"./handlers/..."}, opts.Packages, "the arguments name what to scan")
+		assert.Equal(t, "api", filepath.Base(opts.WorkDir), "the file says from where")
+		assert.True(t, filepath.IsAbs(opts.WorkDir), "resolved once, here, got %q", opts.WorkDir)
+		assert.True(t, opts.ScanModels, "and what was typed wins over what the file asked for")
 
-// The whole shared surface is reachable here, which is the point of the move: the TUI used to register fourteen of
-// these and silently lack the rest.
-func TestTheSharedOptionsAreAllRegistered(t *testing.T) {
-	t.Parallel()
+		require.NotNil(t, prof, "the file asked for a profiled session")
+		assert.True(t, prof.Enabled)
+		assert.Equal(t, profiles, prof.Dir, "and said where to keep it")
 
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse([]string{
-		"-scan-models=false",
-		"-prune-unused-models",
-		"-emit-ref-siblings",
-		"-clean-go-doc",
-		"-name-from-tags", "form,json",
-		"-loader", "own",
-	}))
+		requireSameFile(t, path, cli.ConfigPath())
+		assert.ElementsMatch(t, []string{"profile", "profile-dir", "workdir"}, cli.ConfigSet(),
+			"scan-models is not among them: it was typed, so the file never got to set it - what is reported is "+
+				"what the session took from the file, not what the file asked for")
+	})
 
-	opts, err := cli.options(nil)
-	require.NoError(t, err)
+	t.Run("should refuse a file it cannot obey", func(t *testing.T) {
+		cli, _ := inConfiguredDir(t, "emit:\n  scan-modles: false\n")
+		require.NoError(t, cli.set.Parse(nil))
 
-	assert.False(t, opts.ScanModels)
-	assert.True(t, opts.PruneUnusedModels)
-	assert.True(t, opts.EmitRefSiblings)
-	assert.True(t, opts.CleanGoDoc)
-	assert.Equal(t, []string{"form", "json"}, opts.NameFromTags)
-	assert.True(t, opts.ToolchainFreeLoader, "-loader own is the tri-state spelling of it")
+		_, _, err := cli.PrepareScan()
+
+		require.ErrorIs(t, err, cliconf.ErrUnknownKey)
+		assert.Empty(t, cli.ConfigPath(), "and reports having read nothing, because it read nothing it could use")
+	})
+
+	t.Run("should answer about a command line it was never given", func(t *testing.T) {
+		// The version and profile flags are read straight off the parsed command line, and are asked before there is
+		// necessarily one - which is what the nil guards on them are for.
+		var cli Config
+
+		assert.False(t, cli.WantsVersion())
+		assert.False(t, cli.WantsProfile())
+		assert.Empty(t, cli.ConfigPath())
+		assert.Empty(t, cli.ConfigSet())
+	})
 }
 
 func TestProfiling(t *testing.T) {
-	t.Parallel()
+	// NOT PARALLEL: the sampling rate below is the process's, not a scan's.
 
-	t.Run("profiling should be disabled by default", func(t *testing.T) {
+	t.Run("should be disabled unless it is asked for", func(t *testing.T) {
 		cli := newTestFlags(t)
 		require.NoError(t, cli.set.Parse(nil))
 
@@ -149,9 +198,7 @@ func TestProfiling(t *testing.T) {
 		assert.Nil(t, prof)
 	})
 
-	t.Run("profiling should accept a directory arg", func(t *testing.T) {
-		t.Parallel()
-
+	t.Run("should keep the profiles where -profile-dir says", func(t *testing.T) {
 		dir := t.TempDir()
 		cli := newTestFlags(t)
 		require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", dir}))
@@ -162,25 +209,70 @@ func TestProfiling(t *testing.T) {
 		assert.True(t, prof.Enabled)
 		assert.Equal(t, dir, prof.Dir)
 	})
+
+	t.Run("should resolve a relative -profile-dir", func(t *testing.T) {
+		// The profiles are written after a scan, and a relative directory would be read against wherever the process
+		// stands when it comes to write them.
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", "profiles"}))
+
+		prof, err := cli.profiling()
+		require.NoError(t, err)
+
+		assert.True(t, filepath.IsAbs(prof.Dir), "got %q", prof.Dir)
+		assert.Equal(t, "profiles", filepath.Base(prof.Dir))
+	})
+
+	t.Run("should make a directory when none is named", func(t *testing.T) {
+		// -profile alone has to be enough: the point is to be able to ask for a profile without first deciding where
+		// to keep it.
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-profile"}))
+
+		prof, err := cli.profiling()
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = os.RemoveAll(prof.Dir) })
+
+		assert.True(t, filepath.IsAbs(prof.Dir), "got %q", prof.Dir)
+		assert.DirExists(t, prof.Dir, "made now rather than at the first scan, so that a run that cannot write "+
+			"anywhere says so before it is measured")
+	})
+
+	t.Run("should apply the sampling rate to the process", func(t *testing.T) {
+		// The heap sampling rate is a property of the process, so it is applied once, here, rather than per scan.
+		saved := runtime.MemProfileRate
+		t.Cleanup(func() { runtime.MemProfileRate = saved })
+
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", t.TempDir(), "-mem-profile-rate", "1"}))
+
+		_, err := cli.profiling()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, runtime.MemProfileRate)
+	})
+
+	t.Run("should leave the process's own rate alone when none is named", func(t *testing.T) {
+		// Zero is the flag's "nothing said", not a rate: setting it would turn -profile into an instruction to sample
+		// nothing and report an empty allocation table.
+		saved := runtime.MemProfileRate
+		t.Cleanup(func() { runtime.MemProfileRate = saved })
+
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", t.TempDir()}))
+
+		_, err := cli.profiling()
+		require.NoError(t, err)
+
+		assert.Equal(t, saved, runtime.MemProfileRate)
+	})
 }
 
-// The heap sampling rate is a property of the process, so it is applied once, here, rather than per scan.
-func TestProfilingAppliesTheSamplingRate(t *testing.T) {
-	// NOT PARALLEL
-	saved := runtime.MemProfileRate
-	t.Cleanup(func() { runtime.MemProfileRate = saved })
+func TestConfigFile(t *testing.T) {
+	// NOT PARALLEL: the file is found by searching upwards from the working directory.
 
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse([]string{"-profile", "-profile-dir", t.TempDir(), "-mem-profile-rate", "1"}))
-
-	_, err := cli.profiling()
-	require.NoError(t, err)
-
-	assert.Equal(t, 1, runtime.MemProfileRate)
-}
-
-func TestConfigFileSetsFlags(t *testing.T) {
-	cli, path := inConfiguredDir(t, `
+	t.Run("should preset the flags it names", func(t *testing.T) {
+		cli, path := inConfiguredDir(t, `
 scan:
   workdir: ./api
 emit:
@@ -189,66 +281,94 @@ profile:
   mem-profile-rate: 1
   profile: true
 `)
-	require.NoError(t, cli.set.Parse(nil))
+		require.NoError(t, cli.set.Parse(nil))
 
-	applied, got, err := configured(cli.set, cli.configFile)
-	require.NoError(t, err)
-	requireSameFile(t, path, got)
-	assert.ElementsMatch(t, []string{"workdir", "scan-models", "profile", "mem-profile-rate"}, applied.Set)
+		applied, got, err := configured(cli.set, cli.configFile)
+		require.NoError(t, err)
+		requireSameFile(t, path, got)
+		assert.ElementsMatch(t, []string{"workdir", "scan-models", "profile", "mem-profile-rate"}, applied.Set)
 
-	opts, err := cli.options(nil)
-	require.NoError(t, err)
-	assert.Equal(t, "api", filepath.Base(opts.WorkDir), "a section the library owns")
-	assert.False(t, opts.ScanModels)
-	assert.True(t, *cli.profile, "and a section this command owns")
+		opts, err := cli.options(nil)
+		require.NoError(t, err)
+		assert.Equal(t, "api", filepath.Base(opts.WorkDir), "a section the library owns")
+		assert.False(t, opts.ScanModels)
+		assert.True(t, *cli.profile, "and a section this command owns")
+	})
+
+	t.Run("should lose to anything typed", func(t *testing.T) {
+		// The precedence rule: a file presets, a command line decides.
+		cli, _ := inConfiguredDir(t, "emit:\n  scan-models: false\n")
+		require.NoError(t, cli.set.Parse([]string{"-scan-models=true"}))
+
+		_, _, err := configured(cli.set, cli.configFile)
+		require.NoError(t, err)
+
+		opts, err := cli.options(nil)
+		require.NoError(t, err)
+		assert.True(t, opts.ScanModels)
+	})
+
+	t.Run("should not be consulted at all under -no-config", func(t *testing.T) {
+		cli, path := inConfiguredDir(t, "emit:\n  scan-models: false\n")
+		require.NoError(t, cli.set.Parse([]string{"-no-config"}))
+
+		applied, got, err := configured(cli.set, cli.configFile)
+		require.NoError(t, err)
+		require.FileExists(t, path, "the file is there; it was simply not consulted")
+
+		assert.Empty(t, got)
+		assert.Empty(t, applied.Set)
+	})
+
+	t.Run("should refuse a key nobody can act on", func(t *testing.T) {
+		// Which reads exactly like a setting that quietly never applied, and is what the schema is for.
+		cli, _ := inConfiguredDir(t, "emit:\n  scan-modles: false\n")
+		require.NoError(t, cli.set.Parse(nil))
+
+		_, _, err := configured(cli.set, cli.configFile)
+
+		require.ErrorIs(t, err, cliconf.ErrUnknownKey)
+	})
+
+	t.Run("should refuse what it cannot parse", func(t *testing.T) {
+		// A different failure from a file whose contents cannot be obeyed, and it says so: the keys are never
+		// reached, so naming one would be guesswork.
+		cli, _ := inConfiguredDir(t, "emit:\n\tscan-models: false\n") // tabs do not indent YAML
+		require.NoError(t, cli.set.Parse(nil))
+
+		_, _, err := configured(cli.set, cli.configFile)
+
+		require.ErrorIs(t, err, cliconf.ErrBadConfig)
+		assert.Contains(t, err.Error(), cliconf.Names[0],
+			"and names the file, since the search decided which one that is and the caller may not know")
+	})
+
+	t.Run("should refuse what it cannot read", func(t *testing.T) {
+		// Named rather than discovered: the search skips a directory, so this is only reachable by asking for one.
+		cli := newTestFlags(t)
+		require.NoError(t, cli.set.Parse([]string{"-config", t.TempDir()}))
+
+		_, _, err := configured(cli.set, cli.configFile)
+
+		require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	})
+
+	t.Run("should skip another command's section", func(t *testing.T) {
+		// Skipped rather than refused - that is what makes the file shareable.
+		cli, _ := inConfiguredDir(t, "document:\n  output: spec.json\nemit:\n  scan-models: false\n")
+		require.NoError(t, cli.set.Parse(nil))
+
+		applied, _, err := configured(cli.set, cli.configFile)
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"scan-models"}, applied.Set)
+		assert.Equal(t, []string{"document.output"}, applied.Ignored, "genspec's half, reported rather than dropped")
+	})
 }
 
-// The precedence rule: a file presets, a command line decides.
-func TestTypedFlagsBeatTheConfigFile(t *testing.T) {
-	cli, _ := inConfiguredDir(t, "emit:\n  scan-models: false\n")
-	require.NoError(t, cli.set.Parse([]string{"-scan-models=true"}))
-
-	_, _, err := configured(cli.set, cli.configFile)
-	require.NoError(t, err)
-
-	opts, err := cli.options(nil)
-	require.NoError(t, err)
-	assert.True(t, opts.ScanModels)
-}
-
-func TestNoConfigIgnoresTheFile(t *testing.T) {
-	cli, path := inConfiguredDir(t, "emit:\n  scan-models: false\n")
-	require.NoError(t, cli.set.Parse([]string{"-no-config"}))
-
-	applied, got, err := configured(cli.set, cli.configFile)
-	require.NoError(t, err)
-	require.FileExists(t, path, "the file is there; it was simply not consulted")
-
-	assert.Empty(t, got)
-	assert.Empty(t, applied.Set)
-}
-
-// A key nobody can act on reads exactly like a setting that quietly never applied, which is what the schema is for.
-func TestConfigFileRefusesAnUnknownKey(t *testing.T) {
-	cli, _ := inConfiguredDir(t, "emit:\n  scan-modles: false\n")
-	require.NoError(t, cli.set.Parse(nil))
-
-	_, _, err := configured(cli.set, cli.configFile)
-
-	require.ErrorIs(t, err, cliconf.ErrUnknownKey)
-}
-
-// Another command's half of a shared file is skipped rather than refused - that is what makes the file shareable.
-func TestConfigFileSkipsAnotherCommandsSection(t *testing.T) {
-	cli, _ := inConfiguredDir(t, "document:\n  output: spec.json\nemit:\n  scan-models: false\n")
-	require.NoError(t, cli.set.Parse(nil))
-
-	applied, _, err := configured(cli.set, cli.configFile)
-	require.NoError(t, err)
-
-	assert.Equal(t, []string{"scan-models"}, applied.Set)
-	assert.Equal(t, []string{"document.output"}, applied.Ignored, "genspec's half, reported rather than dropped")
-}
+/********************************/
+/* test helpers */
+/********************************/
 
 // inConfiguredDir writes a configuration file into a fresh directory and runs the test from inside it, which is how
 // the file is found: the search walks up from where the command was started.
