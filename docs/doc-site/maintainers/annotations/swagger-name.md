@@ -46,7 +46,7 @@ chosen JSON name:
     go="concepts/models/models.go" goregion="name"
     json="concepts/models/testdata/name.json" >}}
 
-**Full example.** `fixtures/enhancements/interface-methods/types.go`.
+**Full example.** `testdata/enhancements/interface-methods/types.go`.
 
 ## Deprecated / legacy forms
 

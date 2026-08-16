@@ -17,8 +17,8 @@ jobs:
     with:
       # From v0.5.0 the shared workflow skips the matrix when nothing relevant changed, and
       # what it watches is go sources. Ours are not the whole input: the integration tests
-      # compare against captured specs under fixtures/integration/golden, and a corpus that
+      # compare against captured specs under testdata/integration/golden, and a corpus that
       # moves without a line of go moving is exactly the change those tests exist to catch.
       extra-paths: |
-        fixtures/**
+        testdata/**
     secrets: inherit

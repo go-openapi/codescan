@@ -1,0 +1,116 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/overrides": {
+      "get": {
+        "tags": [
+          "overrides"
+        ],
+        "summary": "Lists override shapes.",
+        "operationId": "listOverrides",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/overrideResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Decorated": {
+      "type": "object",
+      "title": "Decorated re-declares a promoted field to DECORATE it, leaving it on the wire.",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "description": "ID is assigned by the server.",
+          "type": "integer",
+          "format": "int64",
+          "readOnly": true
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/default-allof-embeds-override"
+    },
+    "Muted": {
+      "description": "Muted re-declares a promoted field with `json:\"-\"`, INTENDING to drop it from\nthe wire — and fails to, because Go ignores such a field rather than letting it\nshadow. Created stays on the wire and in the schema; the scan raises\n`scan.shadowed-embed-field` pointing at swagger:omit.",
+      "type": "object",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/default-allof-embeds-override"
+    },
+    "Renamed": {
+      "type": "object",
+      "title": "Renamed re-declares a promoted field under a different JSON name.",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "Name": {
+          "type": "string"
+        },
+        "fullName": {
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/default-allof-embeds-override"
+    },
+    "Retyped": {
+      "description": "Retyped re-declares a promoted field with a DIFFERENT Go type — legal Go, and\nthe outer declaration is the only one that marshals.",
+      "type": "object",
+      "properties": {
+        "Created": {
+          "type": "string"
+        },
+        "ID": {
+          "type": "string"
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/default-allof-embeds-override"
+    }
+  },
+  "responses": {
+    "overrideResp": {
+      "description": "respBody carries the models so they are reachable without ScanModels.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "decorated": {
+            "$ref": "#/definitions/Decorated"
+          },
+          "muted": {
+            "$ref": "#/definitions/Muted"
+          },
+          "renamed": {
+            "$ref": "#/definitions/Renamed"
+          },
+          "retyped": {
+            "$ref": "#/definitions/Retyped"
+          }
+        }
+      }
+    }
+  }
+}

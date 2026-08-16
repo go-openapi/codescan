@@ -21,7 +21,7 @@ const (
 	epsilon = 1e-9
 
 	// fixturesModule is the module path of the fixtures nested module.
-	fixturesModule = "github.com/go-openapi/codescan/fixtures"
+	fixturesModule = "github.com/go-openapi/codescan/testdata"
 	// classificationOrderRef is the fully-qualified $ref of the classification `order` model —
 	// emitted by the schema builder before the spec reduce stage shortens it (see
 	// scanner.EntityDecl.DefKey).
@@ -1876,7 +1876,7 @@ func TestIssue2540(t *testing.T) {
 	// Sub-builder unit tests run without the spec reduce stage, so the definitions key and the $ref
 	// stay fully-qualified.
 	const expectedJSON = `{
-		"github.com/go-openapi/codescan/fixtures/bugs/2540/foo/Book": {
+		"github.com/go-openapi/codescan/testdata/bugs/2540/foo/Book": {
       "description": "At this moment, a book is only described by its publishing date\nand author.",
       "type": "object",
       "title": "Book holds all relevant information about a book.",
@@ -1885,7 +1885,7 @@ func TestIssue2540(t *testing.T) {
       "properties": {
         "Author": {
           "allOf": [
-            {"$ref": "#/definitions/github.com/go-openapi/codescan/fixtures/bugs/2540/foo/Author"},
+            {"$ref": "#/definitions/github.com/go-openapi/codescan/testdata/bugs/2540/foo/Author"},
             {"example": {"Name": "Tolkien"}}
           ]
         },

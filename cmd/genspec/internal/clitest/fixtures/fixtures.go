@@ -50,5 +50,5 @@ func fixtures(t *testing.T) string {
 	_, thisFile, _, ok := runtime.Caller(0)
 	require.True(t, ok, "cannot resolve this test's own path")
 
-	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "..", "..", "fixtures"))
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "..", "..", "testdata"))
 }

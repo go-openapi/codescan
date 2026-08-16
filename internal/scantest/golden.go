@@ -15,7 +15,7 @@ import (
 )
 
 // CompareOrDumpJSON marshals got to stable JSON and either writes it to
-// <repo>/fixtures/integration/golden/<name> (when UPDATE_GOLDEN=1) or asserts that it JSON-equals
+// <repo>/testdata/integration/golden/<name> (when UPDATE_GOLDEN=1) or asserts that it JSON-equals
 // the stored golden.
 //
 // This is the regression-testing harness used to detect any behavior change in the go-openapi/spec
@@ -54,5 +54,5 @@ func goldenDir() string {
 		panic("scantest: unable to resolve caller for golden path")
 	}
 	// thisFile is <repo>/internal/scantest/golden.go
-	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "fixtures", "integration", "golden"))
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", "testdata", "integration", "golden"))
 }

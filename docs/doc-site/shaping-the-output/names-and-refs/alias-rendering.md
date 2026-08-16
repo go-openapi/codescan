@@ -67,7 +67,7 @@ The three modes at a glance:
 | `RefAliases: true` | `$ref: Amount` | `$ref: Fee` |
 | `TransparentAliases: true` | copy of `Amount`, unreferenced | `$ref: Amount` |
 
-Wider calibration lives in the `fixtures/enhancements/alias-calibration-embed`
+Wider calibration lives in the `testdata/enhancements/alias-calibration-embed`
 golden trio.
 
 {{% notice style="note" %}}

@@ -49,4 +49,4 @@ the wire shape).
 
 {{< code file="concepts/models/models.go" region="ignore" lang="go" >}}
 
-**Full example.** `fixtures/enhancements/top-level-kinds/types.go`.
+**Full example.** `testdata/enhancements/top-level-kinds/types.go`.

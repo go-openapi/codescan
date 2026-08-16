@@ -96,4 +96,4 @@ option `SkipEnumDescriptions: true` to keep the authored prose as the
 description; the mapping then rides `x-go-enum-desc` only. See
 [Vendor extensions]({{% relref "vendor-extensions" %}}).
 
-**Full example.** `fixtures/enhancements/enum-overrides/types.go`.
+**Full example.** `testdata/enhancements/enum-overrides/types.go`.

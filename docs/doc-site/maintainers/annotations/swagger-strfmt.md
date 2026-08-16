@@ -67,4 +67,4 @@ A field-level override targets one field's format — e.g.
 encoding (the conformant alternative to the Go-specific `{integer, format:
 uint64}` codescan emits for unsized/large ints by default).
 
-**Full example.** `fixtures/enhancements/text-marshal/types.go`.
+**Full example.** `testdata/enhancements/text-marshal/types.go`.

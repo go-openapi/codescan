@@ -78,7 +78,7 @@ func (c symmetryCell) resolve(t *testing.T, defs oaispec.Definitions) (named, al
 
 // symmetryLedger is one fixture package's matrix, run across all three alias modes.
 type symmetryLedger struct {
-	pkg          string // package pattern under fixtures/
+	pkg          string // package pattern under testdata/
 	goldenPrefix string // golden file stem; the mode name is appended
 	cells        []symmetryCell
 

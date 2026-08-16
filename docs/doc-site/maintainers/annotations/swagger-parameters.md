@@ -65,4 +65,4 @@ fields: `in`, `required`, the numeric / length / format validations,
     go="concepts/routes/routes.go" goregion="parameters"
     json="concepts/routes/testdata/parameters.json" >}}
 
-**Full example.** `fixtures/enhancements/simple-schema-violation/api.go`.
+**Full example.** `testdata/enhancements/simple-schema-violation/api.go`.

@@ -26,7 +26,7 @@ func TestAttachAnnotatedDependencies(t *testing.T) {
 		WithOnExportOnly(func(e ExportOnly) { reasons[e.Path] = e.Reason }),
 	)
 
-	roots, err := l.Load(&Config{Dir: "../../fixtures/goparsing"}, "./petstore/...")
+	roots, err := l.Load(&Config{Dir: "../../testdata/goparsing"}, "./petstore/...")
 	require.NoError(t, err)
 	require.NotEmpty(t, roots)
 

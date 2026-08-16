@@ -17,7 +17,7 @@ import (
 // definition (the fully-qualified Go type), default-off, and suppressed under the SkipExtensions
 // umbrella.
 func TestCoverage_EmitXGoType(t *testing.T) {
-	const pkgType = "github.com/go-openapi/codescan/fixtures/enhancements/emit-x-go-type.Widget"
+	const pkgType = "github.com/go-openapi/codescan/testdata/enhancements/emit-x-go-type.Widget"
 
 	// Default: x-go-name / x-go-package are present, x-go-type is not.
 	off, err := codescan.Run(&codescan.Options{
@@ -25,7 +25,7 @@ func TestCoverage_EmitXGoType(t *testing.T) {
 	})
 	require.NoError(t, err)
 	w := off.Definitions["Widget"]
-	assert.Equal(t, "github.com/go-openapi/codescan/fixtures/enhancements/emit-x-go-type", w.Extensions["x-go-package"])
+	assert.Equal(t, "github.com/go-openapi/codescan/testdata/enhancements/emit-x-go-type", w.Extensions["x-go-package"])
 	assert.Nil(t, w.Extensions["x-go-type"], "x-go-type is opt-in (off by default)")
 
 	// EmitXGoType: x-go-type records the fully-qualified Go type.

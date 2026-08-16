@@ -51,4 +51,4 @@ extensions per tag).
     go="concepts/meta/doc.go" goregion="meta"
     json="concepts/meta/testdata/meta.json" >}}
 
-**Full example.** `fixtures/goparsing/spec/api.go`.
+**Full example.** `testdata/goparsing/spec/api.go`.

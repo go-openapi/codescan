@@ -18,7 +18,7 @@ import (
 const enableSpecOutput = false
 
 // fixturesModule is the module path of the fixtures nested module.
-const fixturesModule = "github.com/go-openapi/codescan/fixtures"
+const fixturesModule = "github.com/go-openapi/codescan/testdata"
 
 func marshalToYAMLFormat(swspec any) ([]byte, error) {
 	b, err := json.Marshal(swspec)

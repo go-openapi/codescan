@@ -75,10 +75,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0 # fixtures source (FixturesDir resolves the build-time checkout path, identical across jobs)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0 # testdata source (FixturesDir resolves the build-time checkout path, identical across jobs)
       # oldstable is a DIFFERENT minor than job A's stable, so its GOROOT lives at a different path.
       #
-      # It must satisfy the fixtures module's `go` directive (currently go 1.25.0, the same across
+      # It must satisfy the testdata module's `go` directive (currently go 1.25.0, the same across
       # the whole workspace). oldstable resolves to the latest patch of the previous minor, so it
       # satisfies any directive naming that minor or an earlier one — which holds as long as we keep
       # naming a MINOR there and never a patch.
@@ -86,8 +86,8 @@ jobs:
         with:
           go-version: oldstable
           cache: false
-      - name: Warm the fixtures module cache (normal toolchain, before divergence)
-        working-directory: fixtures
+      - name: Warm the testdata module cache (normal toolchain, before divergence)
+        working-directory: testdata
         run: go mod download
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

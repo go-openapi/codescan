@@ -1,0 +1,205 @@
+{
+  "swagger": "2.0",
+  "paths": {},
+  "definitions": {
+    "ArrayHost": {
+      "type": "object",
+      "title": "ArrayHost embeds an array-underlying named type.",
+      "properties": {
+        "Grid": {
+          "$ref": "#/definitions/Grid"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "BasicHost": {
+      "type": "object",
+      "title": "BasicHost embeds a plain primitive-underlying named type.",
+      "properties": {
+        "Count": {
+          "$ref": "#/definitions/Count"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "Codes": {
+      "type": "array",
+      "title": "Codes is a named type over a slice.",
+      "items": {
+        "type": "string"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "Control": {
+      "description": "It is the calibration for what \"built from the embedded type\" has to mean: the member an embed\ncontributes must be the same schema a plain field of that type already produces. Without it the\nexpected shape would be invented here rather than derived from the builder's existing behaviour.",
+      "type": "object",
+      "title": "Control declares every embedded type above as an ORDINARY field.",
+      "properties": {
+        "codesField": {
+          "$ref": "#/definitions/Codes"
+        },
+        "countField": {
+          "$ref": "#/definitions/Count"
+        },
+        "fmtField": {
+          "type": "string",
+          "format": "duration",
+          "x-go-name": "FmtField"
+        },
+        "gridField": {
+          "$ref": "#/definitions/Grid"
+        },
+        "ptrField": {
+          "$ref": "#/definitions/Count"
+        },
+        "registryField": {
+          "$ref": "#/definitions/Registry"
+        },
+        "tokenField": {
+          "type": "string",
+          "x-go-name": "TokenField",
+          "x-go-type": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying.Token"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "Count": {
+      "type": "integer",
+      "format": "int64",
+      "title": "Count is a named type over a primitive, unannotated.",
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "FmtHost": {
+      "type": "object",
+      "title": "FmtHost embeds a primitive-underlying named type that carries a format.",
+      "properties": {
+        "FmtBasic": {
+          "type": "string",
+          "format": "duration"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "Grid": {
+      "type": "array",
+      "title": "Grid is a named type over an array.",
+      "items": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "MapHost": {
+      "type": "object",
+      "title": "MapHost embeds a map-underlying named type, the remaining non-struct underlying.",
+      "properties": {
+        "Registry": {
+          "$ref": "#/definitions/Registry"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "MarshalHost": {
+      "type": "object",
+      "title": "MarshalHost embeds a text-marshalable array-underlying named type.",
+      "properties": {
+        "Token": {
+          "type": "string",
+          "x-go-type": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying.Token"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "OmittedHost": {
+      "type": "object",
+      "title": "OmittedHost drops the embed with `json:\"-\"`, exactly as it would drop a regular field.",
+      "properties": {
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "PtrHost": {
+      "type": "object",
+      "title": "PtrHost embeds a pointer to a primitive-underlying named type.",
+      "properties": {
+        "Count": {
+          "$ref": "#/definitions/Count"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "Registry": {
+      "type": "object",
+      "title": "Registry is a named type over a map.",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "SliceHost": {
+      "type": "object",
+      "title": "SliceHost embeds a slice-underlying named type.",
+      "properties": {
+        "Codes": {
+          "$ref": "#/definitions/Codes"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    },
+    "TaggedHost": {
+      "type": "object",
+      "title": "TaggedHost names the embed with a json tag, which here renames an ordinary property.",
+      "properties": {
+        "count": {
+          "$ref": "#/definitions/Count"
+        },
+        "label": {
+          "description": "Label is the embedding struct's own field.",
+          "type": "string",
+          "x-go-name": "Label"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/embed-basic-underlying"
+    }
+  }
+}

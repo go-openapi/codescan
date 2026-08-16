@@ -71,7 +71,7 @@ The header line is the entire annotation surface.
 The `---` delimits the YAML body; everything between the fences is parsed as an
 OpenAPI 2.0 operation object.
 
-**Full example.** `fixtures/enhancements/parameters-map-postdecl/api.go`.
+**Full example.** `testdata/enhancements/parameters-map-postdecl/api.go`.
 
 ## Deprecated / legacy forms
 

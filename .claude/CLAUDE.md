@@ -164,16 +164,16 @@ the glue that lets `parsers` write into any builder's target without importing c
 
 ### `internal/integration/` — black-box integration tests
 
-Scans fixture trees and compares against `fixtures/integration/golden/*.json`. Tests for enhancements,
+Scans fixture trees and compares against `testdata/integration/golden/*.json`. Tests for enhancements,
 malformed input, the petstore, aliased schemas, go123-specific forms, and cross-feature coverage.
 
-### `fixtures/`
+### `testdata/`
 
-- `fixtures/goparsing/...` — historic corpus: classification, petstore, go118/go119/go123 variants, invalid inputs.
-- `fixtures/enhancements/...` — one sub-directory per isolated branch-coverage scenario (e.g. `swagger-type-array`,
+- `testdata/goparsing/...` — historic corpus: classification, petstore, go118/go119/go123 variants, invalid inputs.
+- `testdata/enhancements/...` — one sub-directory per isolated branch-coverage scenario (e.g. `swagger-type-array`,
   `alias-expand`, `allof-edges`, `named-basic`, `interface-methods`).
-- `fixtures/integration/golden/*.json` — captured Swagger output for golden comparisons.
-- `fixtures/bugs/...` — minimised repros for specific upstream bug IDs.
+- `testdata/integration/golden/*.json` — captured Swagger output for golden comparisons.
+- `testdata/bugs/...` — minimised repros for specific upstream bug IDs.
 
 ## Key API
 

@@ -4,4 +4,4 @@
 *.json text eol=lf
 *.txt text eol=lf
 internal/parsers/grammar/grammar_test/testdata/golden/* text eol=lf
-fixtures/integration/golden/* text eol=lf
+testdata/integration/golden/* text eol=lf

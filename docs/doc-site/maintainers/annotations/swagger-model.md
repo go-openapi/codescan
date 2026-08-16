@@ -93,4 +93,4 @@ own name — though tag options still apply:
     go="concepts/models/models.go" goregion="multiname"
     json="concepts/models/testdata/multiname.json" >}}
 
-**Full example.** `fixtures/enhancements/named-struct-tags-ref/types.go`.
+**Full example.** `testdata/enhancements/named-struct-tags-ref/types.go`.

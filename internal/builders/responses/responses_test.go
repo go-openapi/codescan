@@ -36,7 +36,7 @@ func TestParseResponses_OptionVariants(t *testing.T) {
 		{"SkipExt", true, false},
 		{"SkipExt+DescWithRef", true, true},
 	}
-	const petRef = "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet"
+	const petRef = "#/definitions/github.com/go-openapi/codescan/testdata/goparsing/classification/transitive/mods/pet"
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			sctx, err := scanner.NewScanCtx(&scanner.Options{
@@ -138,7 +138,7 @@ func TestParseResponses(t *testing.T) {
 	res, ok := responses["resp"]
 	assert.TrueT(t, ok)
 	assert.NotNil(t, res.Schema)
-	assert.EqualT(t, "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/operations/user", res.Schema.Ref.String())
+	assert.EqualT(t, "#/definitions/github.com/go-openapi/codescan/testdata/goparsing/classification/operations/user", res.Schema.Ref.String())
 }
 
 func assertComplexerOneHeaders(t *testing.T, responses map[string]spec.Response) {
@@ -338,7 +338,7 @@ func assertSomeResponseHeaders(t *testing.T, responses map[string]spec.Response)
 	assert.InDeltaT(t, 10.00, *iprop.Minimum, epsilon)
 	assert.TrueT(t, iprop.ExclusiveMinimum, "'id' should have had an exclusive minimum")
 
-	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/classification/transitive/mods/pet")
+	scantest.AssertRef(t, itprop, "pet", "Pet", "#/definitions/github.com/go-openapi/codescan/testdata/goparsing/classification/transitive/mods/pet")
 	_, ok = itprop.Properties["pet"]
 	assert.TrueT(t, ok)
 
@@ -448,7 +448,7 @@ func TestParseResponses_Issue2145(t *testing.T) {
 	require.NotNil(t, resp.Schema.AdditionalProperties)
 	require.NotNil(t, resp.Schema.AdditionalProperties.Schema)
 	assert.EqualT(t,
-		"#/definitions/github.com/go-openapi/codescan/fixtures/goparsing/product/Product",
+		"#/definitions/github.com/go-openapi/codescan/testdata/goparsing/product/Product",
 		resp.Schema.AdditionalProperties.Schema.Ref.String(),
 	)
 

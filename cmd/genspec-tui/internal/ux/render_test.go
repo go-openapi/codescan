@@ -236,7 +236,7 @@ func TestHeaderLine(t *testing.T) {
 	// Driven at several widths with every field at its longest, since the failure is a function of their sum.
 	t.Run("the whole line fits, whatever it is reporting", func(t *testing.T) {
 		const deepPath = "/home/fred/src/github.com/go-openapi/codescan/.worktrees/feat/" +
-			"tui-ux-enhancements/fixtures/enhancements/annotation-noise"
+			"tui-ux-enhancements/testdata/enhancements/annotation-noise"
 
 		for _, w := range []int{40, 60, 80, 120, 160, 200} {
 			m := testModel(t, sized(w, 40), withSpecJSON(refSpecJSON))

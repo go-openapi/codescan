@@ -349,10 +349,10 @@ hook A feeds the discovery fixpoint, the levels cascade — the root pulls
 the mid-level, and the mid-level (only just pulled in itself) pulls the
 leaves on the next round.
 
-Fixtures: `fixtures/enhancements/discriminated-subtypes` (`edges/` holds
+Fixtures: `testdata/enhancements/discriminated-subtypes` (`edges/` holds
 the embed-shape corner cases, in a family no route references — which
 also locks the other half of the gate: an unreached base pulls nothing)
-and `fixtures/enhancements/discriminated-subtypes-nested` (two-level
+and `testdata/enhancements/discriminated-subtypes-nested` (two-level
 hierarchy: `Shape` → `Polygon` → `Square`/`Triangle`).
 
 ## <a id="model-lookup"></a>§model-lookup — `GetModel` vs `FindModel`
@@ -662,7 +662,7 @@ selected through it, and the spec comes out **valid and quietly thinner** — a 
 
 That is announced rather than fatal: one `scan.synthesized-import` per unresolved
 import, plus `scan.degraded-load`. Measured on the petstore, `FS` rooted at the
-fixtures module against the same scan on the real filesystem:
+testdata module against the same scan on the real filesystem:
 
 | | definitions | `orderedAt.format` | diagnostics |
 |---|---|---|---|
@@ -966,7 +966,7 @@ source does ship, the entry is simply unused.
 
 ### What it buys, and what it does not cost
 
-Full scans of `fixtures/goparsing/petstore` through the toolchain-free loader:
+Full scans of `testdata/goparsing/petstore` through the toolchain-free loader:
 
 | | scan | spec |
 |---|---|---|

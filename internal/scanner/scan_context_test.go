@@ -44,7 +44,7 @@ func TestScanCtx_OptionAccessors(t *testing.T) {
 func TestScanCtx_OptionAccessors_Enabled(t *testing.T) {
 	sctx, err := NewScanCtx(&Options{
 		Packages:                []string{"./goparsing/classification"},
-		WorkDir:                 "../../fixtures",
+		WorkDir:                 "../../testdata",
 		SkipExtensions:          true,
 		DescWithRef:             true,
 		SetXNullableForPointers: true,
@@ -152,7 +152,7 @@ func TestScanCtx_PkgForPath(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 
 	t.Run("known package", func(t *testing.T) {
-		pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/fixtures/goparsing/classification/models")
+		pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/testdata/goparsing/classification/models")
 		assert.True(t, ok)
 		assert.NotNil(t, pkg)
 		assert.EqualT(t, "models", pkg.Name)
@@ -169,7 +169,7 @@ func TestScanCtx_FindDecl(t *testing.T) {
 
 	t.Run("finds existing type", func(t *testing.T) {
 		decl, ok := sctx.FindDecl(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"User",
 		)
 		require.True(t, ok)
@@ -187,7 +187,7 @@ func TestScanCtx_FindDecl(t *testing.T) {
 
 	t.Run("unknown type in known package returns false", func(t *testing.T) {
 		_, ok := sctx.FindDecl(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"NonExistentType",
 		)
 		assert.False(t, ok)
@@ -199,7 +199,7 @@ func TestScanCtx_FindModel(t *testing.T) {
 
 	t.Run("finds model in Models map", func(t *testing.T) {
 		decl, ok := sctx.FindModel(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"User",
 		)
 		require.True(t, ok)
@@ -212,7 +212,7 @@ func TestScanCtx_FindModel(t *testing.T) {
 		beforeExtra := sctx.NumExtraModels()
 
 		decl, ok := sctx.FindModel(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 			"SimpleOne",
 		)
 		require.True(t, ok)
@@ -225,7 +225,7 @@ func TestScanCtx_FindModel(t *testing.T) {
 
 	t.Run("type that does not exist returns false", func(t *testing.T) {
 		_, ok := sctx.FindModel(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"NonExistentType",
 		)
 		assert.False(t, ok)
@@ -239,13 +239,13 @@ func TestScanCtx_MoveExtraToModel(t *testing.T) {
 			"./goparsing/classification/models",
 			"./goparsing/classification/operations",
 		},
-		WorkDir: "../../fixtures",
+		WorkDir: "../../testdata",
 	})
 	require.NoError(t, err)
 
 	// Find a type that will be added to ExtraModels.
 	decl, ok := sctx.FindModel(
-		"github.com/go-openapi/codescan/fixtures/goparsing/classification/operations",
+		"github.com/go-openapi/codescan/testdata/goparsing/classification/operations",
 		"SimpleOne",
 	)
 	require.True(t, ok)
@@ -270,7 +270,7 @@ func TestScanCtx_DeclForType(t *testing.T) {
 
 	t.Run("named type", func(t *testing.T) {
 		decl, ok := sctx.FindDecl(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"User",
 		)
 		require.True(t, ok)
@@ -283,7 +283,7 @@ func TestScanCtx_DeclForType(t *testing.T) {
 
 	t.Run("pointer to named type", func(t *testing.T) {
 		decl, ok := sctx.FindDecl(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"User",
 		)
 		require.True(t, ok)
@@ -318,12 +318,12 @@ func TestScanCtx_DeclForType_Alias(t *testing.T) {
 	// Load the spec fixture which has type aliases (Customer = User).
 	sctx, err := NewScanCtx(&Options{
 		Packages: []string{"./goparsing/spec"},
-		WorkDir:  "../../fixtures",
+		WorkDir:  "../../testdata",
 	})
 	require.NoError(t, err)
 
 	decl, ok := sctx.FindDecl(
-		"github.com/go-openapi/codescan/fixtures/goparsing/spec",
+		"github.com/go-openapi/codescan/testdata/goparsing/spec",
 		"Customer",
 	)
 	require.True(t, ok)
@@ -339,7 +339,7 @@ func TestScanCtx_PkgForType(t *testing.T) {
 
 	t.Run("named type returns package", func(t *testing.T) {
 		decl, ok := sctx.FindDecl(
-			"github.com/go-openapi/codescan/fixtures/goparsing/classification/models",
+			"github.com/go-openapi/codescan/testdata/goparsing/classification/models",
 			"User",
 		)
 		require.True(t, ok)
@@ -360,12 +360,12 @@ func TestScanCtx_PkgForType_Alias(t *testing.T) {
 	// Load the spec fixture which has type aliases (Customer = User).
 	sctx, err := NewScanCtx(&Options{
 		Packages: []string{"./goparsing/spec"},
-		WorkDir:  "../../fixtures",
+		WorkDir:  "../../testdata",
 	})
 	require.NoError(t, err)
 
 	decl, ok := sctx.FindDecl(
-		"github.com/go-openapi/codescan/fixtures/goparsing/spec",
+		"github.com/go-openapi/codescan/testdata/goparsing/spec",
 		"Customer",
 	)
 	require.True(t, ok)
@@ -378,7 +378,7 @@ func TestScanCtx_PkgForType_Alias(t *testing.T) {
 
 func TestScanCtx_FindComments(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
-	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/fixtures/goparsing/classification/models")
+	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/testdata/goparsing/classification/models")
 	require.True(t, ok)
 
 	t.Run("finds comments for existing type", func(t *testing.T) {
@@ -397,11 +397,11 @@ func TestScanCtx_FindEnumValues(t *testing.T) {
 	// Load the petstore fixture which has enum types.
 	sctx, err := NewScanCtx(&Options{
 		Packages: []string{"./goparsing/petstore/enums"},
-		WorkDir:  "../../fixtures",
+		WorkDir:  "../../testdata",
 	})
 	require.NoError(t, err)
 
-	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/fixtures/goparsing/petstore/enums")
+	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/testdata/goparsing/petstore/enums")
 	require.True(t, ok)
 
 	t.Run("finds enum values for Status type", func(t *testing.T) {
@@ -453,7 +453,7 @@ func TestScanCtx_FindEnumValues_NoConsts(t *testing.T) {
 	sctx := loadClassificationPkgsCtx(t)
 
 	// Use a package that has types but no related const enums.
-	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/fixtures/goparsing/classification/models")
+	pkg, ok := sctx.PkgForPath("github.com/go-openapi/codescan/testdata/goparsing/classification/models")
 	require.True(t, ok)
 
 	list, descList, _, ok := sctx.FindEnumValues(pkg, "User")
@@ -465,7 +465,7 @@ func TestScanCtx_FindEnumValues_NoConsts(t *testing.T) {
 func TestNewScanCtx_WithBuildTags(t *testing.T) {
 	sctx, err := NewScanCtx(&Options{
 		Packages:  []string{"./goparsing/classification"},
-		WorkDir:   "../../fixtures",
+		WorkDir:   "../../testdata",
 		BuildTags: "integration",
 	})
 	require.NoError(t, err)
@@ -480,7 +480,7 @@ func TestNewScanCtx_InvalidPackage(t *testing.T) {
 	var diags []grammar.Diagnostic
 	sctx, err := NewScanCtx(&Options{
 		Packages:     []string{"./nonexistent"},
-		WorkDir:      "../../fixtures",
+		WorkDir:      "../../testdata",
 		OnDiagnostic: func(d grammar.Diagnostic) { diags = append(diags, d) },
 	})
 	require.Error(t, err)
@@ -882,7 +882,7 @@ func loadClassificationPkgsCtx(t *testing.T) *ScanCtx {
 			"./goparsing/classification/models",
 			"./goparsing/classification/operations",
 		},
-		WorkDir: "../../fixtures",
+		WorkDir: "../../testdata",
 	})
 	require.NoError(t, err)
 	classificationCtx = sctx

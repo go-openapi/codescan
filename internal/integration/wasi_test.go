@@ -33,7 +33,7 @@ func TestWASIArtifactMatchesNativeScan(t *testing.T) {
 	artifact := buildWASIArtifact(t)
 
 	const pattern = "./goparsing/petstore/..."
-	fixtures, err := filepath.Abs("../../fixtures")
+	fixtures, err := filepath.Abs("../../testdata")
 	require.NoError(t, err)
 
 	// The guest resolves the standard library and the module cache by path, so it has to be told
@@ -153,7 +153,7 @@ func TestWASIArtifactIsSelfContained(t *testing.T) {
 	runtimeName, _ := findWASIRuntime(t)
 	artifact := buildWASIArtifact(t, "exportdata")
 
-	fixtures, err := filepath.Abs("../../fixtures")
+	fixtures, err := filepath.Abs("../../testdata")
 	require.NoError(t, err)
 
 	// Only the fixture tree is mounted, and no GOROOT is named. Anything the scan needs from the

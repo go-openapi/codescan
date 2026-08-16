@@ -35,7 +35,7 @@ func TestParameterRefDiscovery(t *testing.T) {
 	t.Run("operation reference on a route func", func(t *testing.T) {
 		sctx, err := NewScanCtx(&Options{
 			Packages: []string{"./enhancements/shared-parameters"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.NoError(t, err)
 
@@ -53,7 +53,7 @@ func TestParameterRefDiscovery(t *testing.T) {
 	t.Run("path reference on a standalone func", func(t *testing.T) {
 		sctx, err := NewScanCtx(&Options{
 			Packages: []string{"./enhancements/shared-parameters-pathitem"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.NoError(t, err)
 
@@ -71,7 +71,7 @@ func TestParameterRefDiscovery(t *testing.T) {
 	t.Run("no reference markers when all swagger:parameters are struct definitions", func(t *testing.T) {
 		sctx, err := NewScanCtx(&Options{
 			Packages: []string{"./goparsing/classification/operations"},
-			WorkDir:  "../../fixtures",
+			WorkDir:  "../../testdata",
 		})
 		require.NoError(t, err)
 
@@ -96,7 +96,7 @@ func TestSharedParametersFixturesScanClean(t *testing.T) {
 	}
 	for _, pkg := range pkgs {
 		t.Run(pkg, func(t *testing.T) {
-			_, err := NewScanCtx(&Options{Packages: []string{pkg}, WorkDir: "../../fixtures"})
+			_, err := NewScanCtx(&Options{Packages: []string{pkg}, WorkDir: "../../testdata"})
 			assert.NoError(t, err)
 		})
 	}

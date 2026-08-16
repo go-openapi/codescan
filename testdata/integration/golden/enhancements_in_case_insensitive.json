@@ -1,0 +1,76 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/mixed": {
+      "post": {
+        "tags": [
+          "handlers"
+        ],
+        "operationId": "mixedCaseParamsRequest",
+        "parameters": [
+          {
+            "x-go-name": "Payload",
+            "name": "payload",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          },
+          {
+            "type": "string",
+            "x-go-name": "Search",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "x-go-name": "ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Token",
+            "name": "X-Token",
+            "in": "header"
+          },
+          {
+            "type": "file",
+            "x-go-name": "Upload",
+            "x-go-type": "io.Reader",
+            "name": "upload",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/mixedCaseResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Payload": {
+      "type": "object",
+      "title": "Payload is a small body struct exercised under in: Body.",
+      "properties": {
+        "note": {
+          "type": "string",
+          "x-go-name": "Note"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/enhancements/in-case-insensitive"
+    }
+  },
+  "responses": {
+    "mixedCaseResponse": {
+      "description": "MixedCaseResponse declares a Body-shaped response with a\nmixed-case `in: Body` line — the response builder must route it\nthrough the body branch, not the header / invalidIn branch.",
+      "schema": {
+        "$ref": "#/definitions/Payload"
+      }
+    }
+  }
+}
