@@ -1,34 +1,35 @@
 ---
 title: "Playground"
-weight: 3
+weight: 15
 description: |
-  Scan Go source in your browser: edit annotations, watch the specification
-  change, and follow a spec node back to the code that produced it.
+  Scan Go source in your browser.
+
+  Edit annotations, watch the specification change, and follow a spec node back to the code that produced it.
 ---
 
-Everything below runs in this tab. There is no server: the scanner is `codescan`
-itself, compiled to WebAssembly, and the source you open never leaves your
-browser.
+Everything below runs in this tab. There is no server: the scanner is `codescan` itself, compiled to WebAssembly.
+
+The source you open never leaves your browser.
 
 {{% notice style="note" title="Experimental" %}}
-Offered for demonstration. It follows [`genspec-tui`](https://github.com/go-openapi/codescan/tree/master/cmd/genspec-tui)
-closely, and its interface is checked by hand rather than by tests.
+Offered for demonstration.
+It follows [`genspec-tui`](https://github.com/go-openapi/codescan/tree/master/cmd/genspec-tui) closely,
+and its interface is checked by hand rather than by tests.
 {{% /notice %}}
 
 {{< playground >}}
 
 ## What to try
 
-The **Examples** menu carries five modules, each one whole and each scanning as
-it stands:
+The **Examples** menu carries five modules, each one whole and each scanning as it stands:
 
-| | shows |
-|---|---|
-| Models | a struct becoming a definition: validations, an enum, an example, a `$ref` |
-| Routes | `swagger:route` with its parameters and responses |
-| Operation | `swagger:operation`, where you write the OpenAPI directly in YAML |
-| Enums | a Go constant set becoming an enum, typed from the declaration |
-| Polymorphism | a discriminated base and its subtypes under `swagger:allOf` |
+|              | shows                                                                      |
+|--------------|----------------------------------------------------------------------------|
+| Models       | a struct becoming a definition: validations, an enum, an example, a `$ref` |
+| Routes       | `swagger:route` with its parameters and responses                          |
+| Operation    | `swagger:operation`, where you write the OpenAPI directly in YAML          |
+| Enums        | a Go constant set becoming an enum, typed from the declaration             |
+| Polymorphism | a discriminated base and its subtypes under `swagger:allOf`                |
 
 Edit anything on the left and it rescans after a pause.
 
@@ -37,14 +38,12 @@ highlights what that line produced; put it on a spec line and the source
 highlights what produced it; click a diagnostic and both light up. It answers by
 position rather than by matching names, which is why it survives a rename.
 
-One direction is exact and the other is not. The scanner records where a field
-*starts* and not where it ends, so a cursor sitting in a doc comment is
-attributed to the nearest anchor, ties resolving downwards because Go
-documentation sits above what it documents.
+One direction is exact and the other is not. The scanner records where a field *starts* and not where it ends,
+so a cursor sitting in a doc comment is attributed to the nearest anchor,
+ties resolving downwards because Go documentation sits above what it documents.
 
-Press <kbd>/</kbd> in the specification to search it, <kbd>n</kbd> and
-<kbd>N</kbd> to step through matches. The **Swagger UI** tab renders the
-document as a reader of your API would see it.
+Press <kbd>/</kbd> in the specification to search it, <kbd>n</kbd> and <kbd>N</kbd> to step through matches.
+The **Swagger UI** tab renders the document as a reader of your API would see it.
 
 ## Scanning your own code
 
@@ -76,14 +75,14 @@ immediately.
 ## The same thing without a browser
 
 [`genspec-wasi`](https://github.com/go-openapi/codescan/tree/master/cmd/genspec-wasi)
-is the command this page is built around. It writes a specification to standard
-output, and `-format=json` wraps it with the diagnostics and cross-references
-that drive the two panes above.
+is the command this page is built around.
+It writes a specification to standard output,
+and `-format=json` wraps it with the diagnostics and cross-references that drive the two panes above.
 
 ```sh
 go install github.com/go-openapi/codescan/cmd/genspec-wasi@latest
 genspec-wasi -workdir ./my-api ./...
 ```
 
-For an interactive scan in a terminal, with the same tracking and the same
-diagnostics, use [`genspec-tui`](https://github.com/go-openapi/codescan/tree/master/cmd/genspec-tui).
+For an interactive scan in a terminal, with the same tracking and the same diagnostics,
+use [`genspec-tui`](https://github.com/go-openapi/codescan/tree/master/cmd/genspec-tui).

@@ -21,6 +21,26 @@
   committed. If it is missing the shortcode says so on the page rather than
   rendering an empty box, because a silent blank is indistinguishable from a
   broken build.
+
+  # Room to work
+
+  The page around the playground is mostly prose, so the mount is sized to sit in
+  it politely: a reader scrolling past should meet a figure, not a screen. That is
+  the wrong size the moment they stop reading and start using it - two editor panes
+  in a documentation column, 38rem tall, is not an interface anybody can work in.
+
+  So the box carries its own controls. "Expand" takes all the room the page can
+  give: always more height, and more width where the theme was holding some back.
+  "Full screen" hands it the display. Both are reversible and neither reloads the
+  app, which matters because the artifact is 20 MB and the source in the editor is
+  the reader's own.
+
+  How much width there is to reclaim was measured rather than assumed, and it is
+  less than it looks. The theme caps an article at MAIN-WIDTH-MAX less the menu and
+  the gutters, but that cap only binds once the window is wide enough to reach it:
+  at 1600 and at 1920 the box already fills the column and expanding gains nothing
+  horizontally; at 2560 it gains about 560px. Height is the gain that is always
+  there, which is why "Expand" does not promise width in its name.
 */ -}}
 
 {{- $height := .Get "height" | default "38rem" -}}
@@ -35,17 +55,35 @@
 {{- else -}}
   <link rel="stylesheet" href="{{ relURL $css }}">
 
-  {{- /*
-    The artifact address is passed in rather than guessed. The app would
-    otherwise look for it beside its own module, which is right here and wrong
-    the moment the pack is served from somewhere else.
-  */ -}}
-  <div
-    class="playground-mount"
-    style="height: {{ $height }}"
-    data-codescan-playground
-    data-wasm="{{ relURL "playground/genspec-wasi.wasm" }}"
-  ></div>
+  <div class="playground-box" data-playground-box style="--playground-height: {{ $height }}">
+    {{- /*
+      The controls sit outside the mount rather than inside the app: the app is a component that
+      knows nothing about the page hosting it, and how much of a page it may occupy is the page's
+      business. It is also what keeps them reachable while the app is still fetching the artifact.
+    */ -}}
+    <div class="playground-bar">
+      <span class="playground-bar-hint">Room to work:</span>
+      <button type="button" class="playground-ctl" data-playground-expand aria-pressed="false">
+        <span class="playground-ctl-on">Expand</span>
+        <span class="playground-ctl-off">Collapse</span>
+      </button>
+      <button type="button" class="playground-ctl" data-playground-full aria-pressed="false">
+        <span class="playground-ctl-on">Full screen</span>
+        <span class="playground-ctl-off">Leave full screen</span>
+      </button>
+    </div>
+
+    {{- /*
+      The artifact address is passed in rather than guessed. The app would
+      otherwise look for it beside its own module, which is right here and wrong
+      the moment the pack is served from somewhere else.
+    */ -}}
+    <div
+      class="playground-mount"
+      data-codescan-playground
+      data-wasm="{{ relURL "playground/genspec-wasi.wasm" }}"
+    ></div>
+  </div>
 
   <noscript>
     <div class="playground-missing">
@@ -56,21 +94,210 @@
   </noscript>
 
   <script type="module" src="{{ relURL $js }}"></script>
+
+  <script>
+    (() => {
+      // Every box on the page, once each. The shortcode is documented as one per page, but a second
+      // one costs nothing to survive and a double-bound button is an unpleasant way to find out.
+      for (const box of document.querySelectorAll('[data-playground-box]')) {
+        if (box.dataset.playgroundReady) continue;
+        box.dataset.playgroundReady = '1';
+
+        const grow = box.querySelector('[data-playground-expand]');
+        const full = box.querySelector('[data-playground-full]');
+
+        // How far out it is worth breaking: to the content box of the nearest ancestor that scrolls,
+        // and no further. Going wider than that does not escape anything - it just scrolls inside it.
+        //
+        // Found by walking up rather than by naming a theme's element, and stopping at the first
+        // ancestor whose overflow is not visible, because that one is the wall.
+        const host = () => {
+          for (let el = box.parentElement; el && el !== document.body; el = el.parentElement) {
+            if (getComputedStyle(el).overflowX !== 'visible') return el;
+          }
+
+          return document.documentElement;
+        };
+
+        // Measured, never computed from percentages: the box sits several nested elements deep, and
+        // each one that carries a padding or a centred max-width would have to be guessed at.
+        // clientWidth also excludes the scrollbar, which a viewport unit would have counted as room.
+        const measure = () => {
+          box.classList.remove('is-expanded');
+
+          const outer = host();
+          const style = getComputedStyle(outer);
+          const padLeft = parseFloat(style.paddingLeft) || 0;
+          const room = outer.clientWidth - padLeft - (parseFloat(style.paddingRight) || 0);
+          const pull = box.getBoundingClientRect().left - (outer.getBoundingClientRect().left + padLeft);
+
+          box.style.setProperty('--playground-room', room + 'px');
+          box.style.setProperty('--playground-pull', pull + 'px');
+          box.classList.add('is-expanded');
+        };
+
+        const pressed = (button, on) => {
+          button.setAttribute('aria-pressed', String(on));
+        };
+
+        grow.addEventListener('click', () => {
+          if (box.classList.contains('is-expanded')) {
+            box.classList.remove('is-expanded');
+            pressed(grow, false);
+
+            return;
+          }
+
+          measure();
+          pressed(grow, true);
+          // Widening moves everything below it, and a reader who was looking at the playground should
+          // still be looking at it.
+          box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
+
+        let pending = 0;
+        window.addEventListener('resize', () => {
+          if (!box.classList.contains('is-expanded')) return;
+          cancelAnimationFrame(pending);
+          pending = requestAnimationFrame(measure);
+        });
+
+        // Full screen is the browser's, not ours, so Escape leaves it without this page listening for
+        // a key the app itself uses - the editor and the search box both answer to Escape.
+        full.addEventListener('click', () => {
+          if (document.fullscreenElement === box) {
+            document.exitFullscreen();
+
+            return;
+          }
+          const asked = box.requestFullscreen?.();
+          if (!asked) {
+            measure();
+            pressed(grow, true);
+
+            return;
+          }
+          asked.catch(() => {
+            // Refused - a permissions policy, or an engine without it. Widening is still on offer,
+            // so say nothing and leave the reader with the control that does work.
+            measure();
+            pressed(grow, true);
+          });
+        });
+
+        // The button label has to follow the state however it was reached, and Escape reaches it
+        // without going through the button.
+        document.addEventListener('fullscreenchange', () => {
+          pressed(full, document.fullscreenElement === box);
+        });
+      }
+    })();
+  </script>
 {{- end -}}
 
 <style>
-  /* The mount is a sized box the app fills. Relearn's content column is narrower than the two panes
-     want, so the box breaks out of it up to the viewport width - a source pane and a spec pane side
-     by side in 45rem leaves neither readable. */
+  .playground-box {
+    margin: 1.5rem 0;
+  }
+
+  /* The bar reads as a caption until it is needed, which is what keeps a page of prose from looking
+     like an application. */
+  .playground-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .4rem;
+    margin-bottom: .4rem;
+    font-size: .8rem;
+  }
+
+  .playground-bar-hint {
+    margin-right: auto;
+    opacity: .65;
+  }
+
+  .playground-ctl {
+    font: inherit;
+    line-height: 1.4;
+    padding: .15rem .6rem;
+    cursor: pointer;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--INTERNAL-MAIN-TEXT-color, #8886);
+    border-radius: 4px;
+    opacity: .75;
+  }
+
+  .playground-ctl:hover,
+  .playground-ctl:focus-visible {
+    opacity: 1;
+  }
+
+  .playground-ctl[aria-pressed="true"] {
+    opacity: 1;
+    border-style: solid;
+    font-weight: 600;
+  }
+
+  /* One button, two labels: what it will do, and how to undo it. Swapped by state rather than by
+     script, so the two can never disagree. */
+  .playground-ctl .playground-ctl-off,
+  .playground-ctl[aria-pressed="true"] .playground-ctl-on {
+    display: none;
+  }
+
+  .playground-ctl[aria-pressed="true"] .playground-ctl-off {
+    display: inline;
+  }
+
+  /* The mount is a sized box the app fills. The height is a custom property rather than an inline
+     style so that the states below can override it without !important - except where the reader has
+     dragged the resize handle, which writes an inline height and does need it. */
   .playground-mount {
     width: 100%;
-    max-width: 100vw;
-    margin: 1.5rem 0;
+    height: var(--playground-height, 38rem);
     border: 1px solid var(--INTERNAL-MAIN-TEXT-color, #8884);
     border-radius: 6px;
     overflow: hidden;
     resize: vertical;
     min-height: 20rem;
+  }
+
+  /* Expanded: as much of the scrolling ancestor's content box as it will give, and taller. Both
+     values are measured by the script; the class alone does nothing, which is what keeps a page whose
+     script did not run from rendering a box pulled halfway off its column. */
+  .playground-box.is-expanded {
+    width: var(--playground-room);
+    max-width: none;
+    margin-left: calc(-1 * var(--playground-pull));
+  }
+
+  .playground-box.is-expanded .playground-mount {
+    height: max(var(--playground-height, 38rem), 78vh) !important;
+  }
+
+  /* Full screen: the box is the fullscreen element, so it has to lay itself out - it is no longer
+     inside the article's flow and inherits none of its sizing. */
+  .playground-box:fullscreen {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: .5rem;
+    background: var(--INTERNAL-MAIN-BG-color, #fff);
+  }
+
+  .playground-box:fullscreen .playground-mount {
+    flex: 1 1 auto;
+    height: auto !important;
+    border-radius: 4px;
+    resize: none;
+  }
+
+  /* A reader who asked for no motion is asking about scrolling too. */
+  @media (prefers-reduced-motion: reduce) {
+    .playground-box {
+      scroll-behavior: auto;
+    }
   }
 
   .playground-missing {

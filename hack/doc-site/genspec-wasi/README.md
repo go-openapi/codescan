@@ -24,9 +24,18 @@ npm run wasm      # cross-compiles cmd/genspec-wasi into public/
 npm run dev       # http://localhost:5174
 npm run build     # dist/
 npm run check     # svelte-check
+npm run dist      # wasm + build + pack into ../hugo, which is what the doc site serves
 ```
 
 `public/genspec-wasi.wasm`, `node_modules/` and `dist/` are generated; none is committed.
+
+> **Node 22 or 20.19+.** `package.json` says so under `engines`, and it is worth reading as a
+> requirement rather than a preference: rolldown ships its native binding as an *optional*
+> dependency gated on that same range, so an older node installs everything except the binding —
+> with no error — and the first `vite`/`vitest`/`svelte-check` run dies with **"Cannot find native
+> binding … npm has a bug related to optional dependencies"**. It is not an npm bug and reinstalling
+> will not fix it. Switch node, `rm -rf node_modules`, and install again: `npm ci` will not notice
+> that the tree it is reusing was built by the wrong one.
 
 ## Using it
 

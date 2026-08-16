@@ -61,7 +61,7 @@ definition (carrying the `enum` array) that fields `$ref` instead — the genera
 
 Each member's doc comment becomes a line of the `x-go-enum-desc` extension, and
 is appended to the property description. Set
-[`SkipEnumDescriptions`]({{% relref "/maintainers/options" %}}) to keep the
+[`SkipEnumDescriptions`]({{% relref "options-reference" %}}) to keep the
 mapping on the extension only.
 
 ## Any constant expression, not just literals

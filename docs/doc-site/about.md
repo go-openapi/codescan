@@ -2,8 +2,9 @@
 title: About
 weight: 5
 description: |
-  What codescan is, why you would scan source to produce a spec, and how it
-  relates to the go-swagger toolkit.
+  What codescan is, why you would scan source to produce a spec.
+
+  How does it relate to the go-openapi & go-swagger toolkits.
 ---
 
 `codescan` is a **code-first** OpenAPI engine: it reads specially formatted
@@ -13,35 +14,43 @@ comments (annotations) in your Go source and produces a
 
 ## Two ways to build an API
 
-APIs and their documentation tend to evolve along one of two paths. The
-go-openapi / go-swagger toolkit supports both.
+APIs and their documentation tend to evolve along one of two paths. The go-openapi / go-swagger toolkit supports both.
 
-- **Design-first** (contract-first) — you write the OpenAPI document first and
-  treat it as the contract, then generate servers and clients from it. If this
-  is your workflow, reach for [go-swagger][go-swagger] (`swagger generate
-  server` / `swagger generate client`).
-- **Code-first** — you write annotated Go and scan it to produce the spec. This
-  keeps the document in sync with the code as it changes, and lets you produce a
-  valid specification for a service that already exists.
+- **Design-first** (contract-first) — you write the OpenAPI document first and treat it as the contract,
+  then generate servers and clients from it.
+
+> If this is your workflow, you should reach for [go-swagger][go-swagger] (`swagger generate server` / `swagger generate client`).
+
+- **Code-first** — you write annotated Go and scan it to produce the spec.
+
+> This keeps the document in sync with the code as it changes, and lets you produce a valid specification for a service that already exists.
 
 **codescan is the engine for the code-first path.**
 
 ## Relationship to go-swagger
 
 codescan began life as a single package inside [go-swagger][go-swagger] and was
-spun out into its own [go-openapi][go-openapi] repository. It is the scanner
-**behind** the go-swagger command:
+spun out into its own [go-openapi][go-openapi] repository. It is the scanner **behind** the go-swagger command:
 
 ```sh
 swagger generate spec ./...
 ```
 
-go-swagger remains the main command-line consumer of this library. This site
-documents the **scanner library itself** — the layer beneath `swagger generate
-spec` — so it sits upstream of go-swagger's "generate spec" documentation. If
-you arrived here from go-swagger: the annotations are exactly the same, and you
-can either keep using the `swagger` CLI or call `codescan.Run` directly from
-your own program (see [Getting started]({{% relref "/getting-started" %}})).
+For now, go-swagger remains the main command-line consumer of this library.
+
+This site documents the **scanner library itself** — the layer beneath `swagger generate spec` —
+so it sits upstream of go-swagger's "generate spec" documentation.
+
+If you arrived here from go-swagger: the annotations are exactly the same, and you can either keep using the
+`swagger` CLI or call `codescan.Run` directly from your own program
+(see [Getting started]({{% relref "/getting-started" %}})).
+
+{{% notice info %}}
+codescan now releases standalone CLI tools that ship independently from go-swagger:
+`genspec`, `genspec-wasi` and `genspec-tui`.
+
+These are supplementary tools, not a replacement, and go-swagger will continue shipping updates from this library.
+{{% /notice %}}
 
 ## Why scan from source
 
@@ -53,18 +62,18 @@ your own program (see [Getting started]({{% relref "/getting-started" %}})).
   that is already deployed, so it becomes interoperable with new clients and
   tooling.
 
-When document-level metadata (info, security, servers) is more naturally
-hand-authored, you do not have to push it into the code: scan the code for the
-operations and models, and **overlay** the result onto a hand-written base
-document (see [Shaping the output → Overlaying a spec]({{% relref "overlaying-a-spec" %}})).
+When document-level metadata (info, security, servers) is more naturally hand-authored,
+you do not have to push it into the code: scan the code for the operations and models,
+and **overlay** the result onto a hand-written base document
+(see [Shaping the output → Overlaying a spec]({{% relref "overlaying-a-spec" %}})).
 
-## A community toolkit
+## The go-openapi toolkit
 
-go-openapi and go-swagger are community-driven, open-source **building blocks**
-meant to be assembled and customized — there are too many ways to approach APIs
-to cover them all. Fork, reuse, and adapt what you find useful. See the
-[go-swagger project's "About" page][go-swagger-about] for the wider toolkit
-story.
+go-openapi and go-swagger are community-driven, open-source **building blocks** meant to be assembled and customized
+— there are too many ways to approach APIs to cover them all.
+
+Fork, reuse, and adapt what you find useful. See the [go-swagger project's "About" page][go-swagger-about]
+for the wider toolkit story.
 
 ## Where to go next
 
