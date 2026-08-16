@@ -17,11 +17,10 @@ import (
 
 // ResultMsg carries the outcome of a whole-scope scan.
 //
-// The spec rendered as both JSON and YAML, path and definition counts for the header, how long the scan took, what it
+// The spec rendered as JSON, path and definition counts for the header, how long the scan took, what it
 // cost to run, every diagnostic the build emitted in source order, and any hard error from codescan.Run.
 type ResultMsg struct {
 	JSON       string
-	YAML       string
 	Paths      int
 	Defs       int
 	Elapsed    time.Duration
@@ -36,12 +35,16 @@ type ResultMsg struct {
 //
 // Whole scope means one spec for the entire scanned set, rather than one per package.
 //
-// It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop. cfg is taken by value so the
-// goroutine has a stable snapshot even if the model mutates its options.
-func Run(cfg codescan.Options, prof Profiling) tea.Cmd {
+// It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop, which is why cfg is snapshotted
+// HERE rather than inside the command: the caller hands over the model's live configuration, and the options overlay
+// writes to it from the event loop while the scan reads it. Taking the copy on the caller's goroutine, before the
+// command exists, is what keeps the two apart - a copy taken inside the command would be the race it is meant to avoid.
+func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
+	snapshot := *cfg
+
 	return func() tea.Msg {
 		start := time.Now()
-		res := Do(cfg, prof)
+		res := Do(&snapshot, prof)
 		res.Elapsed = time.Since(start)
 		return res
 	}
@@ -51,13 +54,19 @@ func Run(cfg codescan.Options, prof Profiling) tea.Cmd {
 //
 // It fences the work three times - before the scan, after it, and once the document has been rendered - so the result
 // carries what the run cost as well as what it produced. The inner split is what makes the reading actionable: it
-// separates what codescan spent from what serializing the same document twice, as JSON and again as YAML, spent on top.
+// separates what codescan spent from what serializing the document spent on top.
 //
 // A profiled run brackets the same two phases with the profiler as well, so what the sampler says and what the fences
 // say describe the same halves of the same work.
 //
 // It is exposed by this package to allow for e2e tests.
-func Do(cfg codescan.Options, prof Profiling) ResultMsg {
+func Do(cfg *codescan.Options, prof *Profiling) ResultMsg {
+	// Worked on by value, because the two callbacks below are installed on it: the caller's Options is the model's live
+	// configuration, and a run that wrote its own collectors into it would both mutate what the options overlay shows
+	// and hand a second, overlapping run the first one's slices to append into.
+	local := *cfg
+	cfg = &local
+
 	// OnDiagnostic fires synchronously inside codescan.Run, on this same goroutine, so a plain append is race-free.
 	//
 	// Diagnostics collected before a hard error are still worth surfacing, so we carry them on every return.
@@ -80,7 +89,7 @@ func Do(cfg codescan.Options, prof Profiling) ResultMsg {
 	before := fence()
 
 	scanStart := time.Now()
-	sw, err := codescan.Run(&cfg)
+	sw, err := codescan.Run(cfg)
 	scanFor := time.Since(scanStart)
 	scanned := fence()
 
@@ -106,9 +115,6 @@ func Do(cfg codescan.Options, prof Profiling) ResultMsg {
 	if sw.Paths != nil {
 		res.Paths = len(sw.Paths.Paths)
 	}
-	if yb, yerr := jsonToYAML(jb); yerr == nil {
-		res.YAML = string(yb)
-	}
 	renderFor := time.Since(renderStart)
 
 	res.Cost = costOf(before, scanned, fence(), scanFor, renderFor)
@@ -117,13 +123,23 @@ func Do(cfg codescan.Options, prof Profiling) ResultMsg {
 	return res
 }
 
-// jsonToYAML reserializes ordered JSON bytes as YAML.
+// RenderYAML reserializes a rendered JSON document as YAML.
+//
+// Called when the YAML view is first asked for rather than alongside the JSON, because it costs more than the document
+// it is made from - a full reparse into map[string]any, then the emitter - and most sessions never open it. On a large
+// specification that was the larger half of every rescan, spent on a view nobody had looked at.
 //
 // Map keys come out alphabetically (yaml v3's deterministic order), which is good enough for a human-readable viewer.
-func jsonToYAML(jb []byte) ([]byte, error) {
+func RenderYAML(jsonBody string) (string, error) {
 	var v any
-	if err := json.Unmarshal(jb, &v); err != nil {
-		return nil, err
+	if err := json.Unmarshal([]byte(jsonBody), &v); err != nil {
+		return "", err
 	}
-	return yaml.Marshal(v)
+
+	yb, err := yaml.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	return string(yb), nil
 }

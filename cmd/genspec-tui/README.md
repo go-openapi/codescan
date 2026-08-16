@@ -31,40 +31,31 @@ go install github.com/go-openapi/codescan/cmd/genspec-tui@latest
 genspec-tui
 
 # or point it somewhere, and narrow the scope
-genspec-tui -workdir ../my-api -packages ./internal/models/...,./internal/api/...
+genspec-tui -workdir ../my-api ./internal/models/... ./internal/api/...
 ```
 
 When working from a checkout, the repo's `go.work` wires the module to the local library:
 
 ```sh
-go run ./cmd/genspec-tui -workdir ./fixtures -packages ./goparsing/petstore/...
+go run ./cmd/genspec-tui -workdir ./fixtures ./goparsing/petstore/...
 ```
 
-| Flag | Default | Meaning |
-|------|---------|---------|
-| `-workdir` | `.` | module directory the scan runs in (codescan `WorkDir`) |
-| `-packages` | `./...` | comma-separated package patterns, relative to `-workdir` |
-| `-scan-models` | `true` | also emit definitions for `swagger:model` types |
-| `-build-tags` | — | comma-separated go build tags to apply while loading |
-| `-include` / `-exclude` | — | comma-separated patterns selecting which packages are scanned |
-| `-include-tags` / `-exclude-tags` | — | comma-separated swagger tags selecting which operations are emitted |
-| `-name-from-tags` | `json` | ordered struct tags a field's name derives from, e.g. `form,json` for gin. Pass `-name-from-tags=` (empty) to use the Go field name instead |
-| `-name-concat-budget` | `0.65` | readability cutoff when deconflicting colliding definition names |
+The packages are **positional**, as they are for `genspec` and for every other Go
+command; naming none scans `./...`. The older `-packages` flag still works when
+no package is named, so existing scripts and editor tasks keep running, but it is
+no longer the spelling to reach for.
 
-A second group decides what gets built and how it is loaded — the go environment
-the scan runs under, plus codescan's own loader:
+### Flags
 
-| Flag | Default | Meaning |
-|------|---------|---------|
-| `-goos` / `-goarch` | this machine's | the platform the scanned code is built for, so `//go:build` lines and `_linux.go` suffixes resolve the way that platform resolves them |
-| `-goflags` | — | default go command flags, as `GOFLAGS` (e.g. `-tags=integration`); `-build-tags` wins |
-| `-gowork` | search upwards | workspace selection, as `GOWORK`: `off` to disable, or the path to a `go.work` |
-| `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` (e.g. `jsonv2`) |
-| `-toolchain-free-loader` | `false` | load packages with codescan's own loader instead of the go command (experimental) |
-| `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-toolchain-free-loader`) |
+Every codescan option is a flag here, declared once in `cmd/internal/cliopts` and
+shared with [`genspec`](../genspec) and `genspec-wasi` — so a flag means the same
+thing whichever command you reach for, and `-h` lists the current set rather than
+this README going stale. They fall in four groups: `scan` (which code), `go`
+(what it is built as), `load` (how it is read) and `emit` (what the document
+says). `-loader` (`go`, `own` or `auto`) is where the toolchain-free loader lives.
 
-A third group observes the run rather than configuring it — see
-[What a scan cost](#what-a-scan-cost-m):
+A fifth group is this command's own, and observes the run rather than configuring
+it — see [What a scan cost](#what-a-scan-cost-m):
 
 | Flag | Default | Meaning |
 |------|---------|---------|
@@ -72,18 +63,40 @@ A third group observes the run rather than configuring it — see
 | `-profile-dir` | a fresh temp dir | where `-profile` writes its `.pprof` files |
 | `-mem-profile-rate` | `0` | with `-profile`, `runtime.MemProfileRate`: `0` samples every 512 KiB, `1` records every allocation exactly |
 
-Every boolean scanner option can be toggled live with `o`; the spec re-renders
-on close, which makes the popup the fastest way to see what a flag such as
-`EmitRefSiblings` actually changes. The rows are grouped (discovery & scope ·
-`$ref` & composition · naming · docs & comments · types & extensions · package
-loading), and a knob that only bites in combination says so — `PruneUnusedModels`
-shows `(needs ScanModels)` until that one is on, and `EmitXGoType` shows
-`(moot: SkipExtensions)` while extensions are suppressed.
+### A configuration file for the defaults
 
-The value-typed options are flags rather than popup rows, since a checkbox list
-cannot express them — see the tables above. The three booleans that appear in
-both places (`-scan-models` and the two loader flags) let a session start one way
-and change without a restart. The one option with no route in at all is
+Flags may be preset in a `.codescan.yaml`, found by searching upwards from where
+the command was started — the same file, with the same sections, that `genspec`
+reads. Anything typed on the command line wins over it.
+
+```yaml
+scan:
+  workdir: ./api
+emit:
+  scan-models: true
+  prune-unused-models: true
+profile:
+  profile: true
+```
+
+`-c` / `-config` pins a file, `-no-config` refuses one. A section this command
+does not know — `document:`, which is genspec's — is skipped rather than refused,
+which is what lets one file serve both; a *key* that no flag matches inside a
+known section is an error, since a misspelling would otherwise read as a setting
+that quietly never applied. When a file is read, the status line says so and what
+it decided.
+
+The file decides what the session **starts** with, not what it is stuck with:
+every boolean is toggled live with `o`, and the spec re-renders on close, which
+makes the popup the fastest way to see what an option such as `EmitRefSiblings`
+actually changes. The rows are grouped (discovery & scope · `$ref` & composition ·
+naming · docs & comments · types & extensions · package loading), and a knob that
+only bites in combination says so — `PruneUnusedModels` shows `(needs ScanModels)`
+until that one is on, and `EmitXGoType` shows `(moot: SkipExtensions)` while
+extensions are suppressed.
+
+The value-typed options are flags and file keys rather than popup rows, since a
+checkbox list cannot express them. The one option with no route in at all is
 `InputSpec` (overlay mode).
 
 ## Layout
@@ -156,7 +169,7 @@ the cursor falls back to its nearest surviving ancestor.
 | `↑` `↓` / `j` `k` | move the cursor |
 | `PgUp` / `PgDn` | move it a page (the view never leaves the cursor behind) |
 | `Home` / `End` | first / last line |
-| `ctrl+j` / `ctrl+y` | render as JSON / YAML — keeps you on the same **node**, not the same line |
+| `ctrl+j` / `ctrl+y` | render as JSON / YAML — keeps you on the same **node**, not the same line. The YAML is converted the first time it is asked for, since it costs more than the JSON it is made from |
 | `/` | search; `n` / `N` step through matches |
 | `f` | toggle follow mode (spec drives, the source pane mirrors) |
 | `F3` / `shift+F3` | next / previous **reference** to the node under the cursor |
@@ -228,8 +241,8 @@ instead which family of keywords its body accepts.
 `m` opens a card describing the run that just finished: how long it took, what
 it allocated, what it left live, and how much the process holds from the OS.
 Time and memory are both split between **scanning** (codescan) and **rendering**
-(serializing the same document twice, as JSON and again as YAML), because the
-run is fenced three times — before the scan, after it, and after rendering. Under
+(serializing the document as JSON), because the run is fenced three times —
+before the scan, after it, and after rendering. Under
 `-profile` the same two phases are bracketed by the profiler, so what the sampler
 says and what the fences say describe the same halves of the same work.
 
@@ -275,6 +288,44 @@ go tool pprof -http=: <dir>/cpu-scan.pprof
 go tool pprof -http=: -base <dir>/mem-before.pprof <dir>/mem-after-scan.pprof
 ```
 
+#### What the CPU table is charged to
+
+A leaf frame answers "what was executing", which for this program is mostly the
+allocator and the collector — true, and nothing anyone can act on. So a sample is
+charged to the **call of ours that led there, and what it called**: the boundary
+where codescan hands the work to somebody else's code.
+
+```
+  38%    720ms   the runtime itself — collecting, allocating, scheduling
+  26%    490ms   internal/packages.(*loadState).loadDir → go/types.(*Config).Check
+  25%    480ms   internal/packages.(*loadState).loadDir → go/parser.ParseFile
+   3%     60ms   packages/vfs.(*FS).ReadDir → os.(*unixDirent).Info
+```
+
+Read the pair as *what the time went into* → *where to go and change it*. Three
+rules follow from it:
+
+- A row covers **everything under the boundary**, so these are not flat times.
+  Every sample is still charged exactly once, so the shares partition the phase.
+- Garbage collection, the allocator and the scheduler have no call of ours above
+  them, and get **one row** rather than eight naming the runtime's internals. It
+  is not a bottleneck to look up: it is the price of the allocation table below,
+  which is where something can be done about it.
+- Work on a goroutine we did not start (the loader's own) is charged to what that
+  goroutine is *doing*, not to the `errgroup` wrapper every one of them roots in.
+
+Function literals fold into the function they were written in: `refine.func2.1`
+and `refine.func3` are one piece of work seen at two of its entrances.
+
+Symbols keep their last two path segments, because one is not enough to compare
+runs by: `internal/packages` is this project's own loader and `go/packages` is
+the one it stands in for, and both end in `packages`.
+
+The allocation table is charged differently — to the innermost frame outside the
+runtime, the one that actually asked for the memory. `types.(*Checker).recordTypeAndValue`
+at 123 MB says the type-checker's own result set is the memory, which a boundary
+row would have hidden inside `types.(*Config).Check`.
+
 Five artifacts are written: a CPU profile per phase (`cpu-scan`, `cpu-render`)
 and three heap snapshots — before, after scanning, after rendering — so `-base`
 reproduces either phase in the real tool. What the in-TUI tables give you
@@ -295,7 +346,10 @@ Caveats worth knowing before reading a table:
 - **The observer is excluded.** Stopping one phase's CPU profile flushes it
   through a compressor and starting the next allocates its buffers, all of it
   between two fences. Those allocations are dropped from the tables rather than
-  reported: in the short phase they would otherwise crowd out its real sites.
+  reported: in the short phase they would otherwise crowd out its real sites. The
+  sampler catches the profiler writing the profile, too — those samples are
+  dropped from the CPU total as well, so the shares describe the run rather than
+  the observation of it.
 - **Observing costs.** A profiled run collects at each fence and carries the
   sampler's overhead, so the summary figures at the top of the card are worse
   than the same run unprofiled. The tables are the accurate account.

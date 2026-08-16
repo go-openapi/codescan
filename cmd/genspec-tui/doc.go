@@ -12,4 +12,6 @@
 //   - build tags, package and tag filters, naming - are command-line flags (a checkbox list cannot express them)
 //
 // The knobs settings overlay re-runs the scan on close.
+//
+// Defaults at startup may be consumed from a configuration file or environment variables.
 package main

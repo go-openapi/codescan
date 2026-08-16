@@ -58,10 +58,14 @@ jobs:
         with:
           fetch-depth: '1'
           submodules: recursive
+          # The playground is built from source here, so every directory it compiles has to be
+          # among these: the command, the shared flag surface it registers (cmd/internal), and
+          # the library itself.
           sparse-checkout: |
             hack/
             docs/
             cmd/genspec-wasi/
+            cmd/internal/
             internal/
       -
         name: Get all tags [go-openapi repo]

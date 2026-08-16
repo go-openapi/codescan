@@ -142,10 +142,16 @@ func aProfile() *scan.ProfileReport {
 			CPUTotal:   2 * time.Second,
 			CPUSamples: 200,
 			CPU: []scan.Func{
-				{Name: "go/types.(*Checker).checkFiles", Flat: 900 * time.Millisecond, Share: 0.45},
+				{Runtime: true, Spent: 900 * time.Millisecond, Share: 0.45},
+				{
+					Name:   "github.com/go-openapi/codescan/internal/scanner.(*ScanCtx).Load",
+					Callee: "go/types.(*Checker).checkFiles",
+					Spent:  600 * time.Millisecond,
+					Share:  0.30,
+				},
 				{
 					Name:  "github.com/go-openapi/codescan/internal/builders/schema.(*Builder).Build",
-					Flat:  time.Second / 2,
+					Spent: time.Second / 2,
 					Share: 0.25,
 				},
 			},
@@ -156,7 +162,12 @@ func aProfile() *scan.ProfileReport {
 			CPUPath:    "/tmp/genspec-tui-profile-42/cpu-render.pprof",
 			CPUTotal:   90 * time.Millisecond,
 			CPUSamples: 9,
-			CPU:        []scan.Func{{Name: "encoding/json.Marshal", Flat: 90 * time.Millisecond, Share: 1}},
+			CPU: []scan.Func{{
+				Name:   "github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan.Do",
+				Callee: "encoding/json.Marshal",
+				Spent:  90 * time.Millisecond,
+				Share:  1,
+			}},
 			Alloc: []scan.Site{
 				{Name: "encoding/json.Marshal", Bytes: 48 * mb, Objects: 12_000},
 				{Name: "go.yaml.in/yaml/v3.yaml_emitter_emit", Bytes: 5 * mb, Objects: 21},
@@ -179,10 +190,14 @@ func TestOverlayReportsAProfiledRun(t *testing.T) {
 
 	assert.Contains(t, got, "where the CPU went — scanning")
 	assert.Contains(t, got, "where the CPU went — rendering", "both phases are profiled, and both are reported")
-	assert.Contains(t, got, "types.(*Checker).checkFiles", "the repository path is trimmed off the symbol")
+	assert.Contains(t, got, "internal/scanner.(*ScanCtx).Load → go/types.(*Checker).checkFiles",
+		"the boundary names both halves: what the time went into, and where to go and change it")
 	assert.NotContains(t, got, "github.com/go-openapi/codescan/internal/builders")
-	assert.Contains(t, got, "schema.(*Builder).Build")
+	assert.Contains(t, got, "schema.(*Builder).Build", "a charge that never left our code is one name, with no arrow")
+	assert.Contains(t, got, "the runtime itself", "collection and allocation are one row, not eight")
 	assert.Contains(t, got, "45%")
+	assert.Contains(t, got, "charged to the call of ours",
+		"a row covers what it called, so the reader is told these are not flat times")
 
 	assert.Contains(t, got, "what allocated it — scanning")
 	assert.Contains(t, got, "182.0 MB")
@@ -197,6 +212,29 @@ func TestOverlayReportsAProfiledRun(t *testing.T) {
 	assert.Contains(t, got, "/tmp/genspec-tui-profile-42/cpu-render.pprof")
 	assert.Contains(t, got, "go tool pprof -http=: -base /tmp/p/mem-before.pprof /tmp/p/mem-after-scan.pprof",
 		"the command that reproduces the scanning phase in the real tool")
+}
+
+// Two packages named the same thing is the ordinary case, not an exotic one: our own loader stands in for
+// x/tools', and a run through each is exactly what a reader puts side by side.
+func TestOverlayKeepsPackagesApart(t *testing.T) {
+	report := aProfile()
+	report.Scan.CPU = []scan.Func{
+		{
+			Name:   "github.com/go-openapi/codescan/internal/packages.(*loadState).loadDir",
+			Callee: "go/types.(*Config).Check",
+			Spent:  500 * time.Millisecond, Share: 0.5,
+		},
+		{Name: "golang.org/x/tools/go/packages.(*loader).refine", Spent: 500 * time.Millisecond, Share: 0.5},
+	}
+
+	o := runstats.New()
+	o.Set(aRun(), report, false)
+	o.SetSize(200, 120)
+
+	got := testutils.StripANSI(o.View())
+
+	assert.Contains(t, got, "internal/packages.(*loadState).loadDir")
+	assert.Contains(t, got, "go/packages.(*loader).refine")
 }
 
 // Exactness is a property of the run's sampling rate, and the reader has to be told which one they are looking at.

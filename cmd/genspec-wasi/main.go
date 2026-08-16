@@ -39,7 +39,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-openapi/codescan"
-	"github.com/go-openapi/codescan/internal/cliopts"
+	"github.com/go-openapi/codescan/cmd/internal/cliopts"
 	"github.com/go-openapi/codescan/internal/exportdata"
 )
 
@@ -56,7 +56,7 @@ func main() {
 type config struct {
 	set *flag.FlagSet
 
-	// scan is every knob the library takes, declared once in internal/cliopts and shared with the
+	// scan is every knob the library takes, declared once in cmd/internal/cliopts and shared with the
 	// other commands. What follows is this command's own: where the document goes, and in what shape.
 	scan *cliopts.Values
 

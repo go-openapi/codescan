@@ -35,7 +35,7 @@ Three commands run the same scan. The question is about the machine, not about t
 | [`genspec-wasi`](../genspec-wasi/README.md) | there is no Go toolchain, no subprocess, or you are running under WebAssembly — it takes no dependency beyond the library. It also speaks a machine-readable envelope (`-format=json`) carrying diagnostics and cross-references |
 | [`genspec-tui`](../genspec-tui/README.md) | you are working *on* the annotations and want the source and the document side by side, live |
 
-They share their flag surface: `internal/cliopts` declares every knob the
+They share their flag surface: `cmd/internal/cliopts` declares every knob the
 library takes, once, so `-name-from-tags` means the same thing whichever one you
 reach for. A guard there fails the build when an option lands with no flag.
 

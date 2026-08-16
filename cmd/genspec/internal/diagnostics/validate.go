@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package diagnostics
 
 import (
 	"fmt"
 	"log/slog"
 
+	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/cmd/genspec/internal/sentinel"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
-
-	"github.com/go-openapi/codescan"
 )
 
 // rootPointer names what the empty JSON pointer addresses.
@@ -21,15 +21,17 @@ import (
 // is reported there. Printed as prose because "" would render as nothing at all.
 const rootPointer = "(the whole document)"
 
-// checkValid reports what is wrong with the document the scan produced.
+// ValidateSpec reports what is wrong with the document the scan produced.
 //
-// It runs on the rendered JSON rather than on the spec.Swagger it came from, so what is checked is
-// exactly what was written - including whatever the round-trip through JSON did to it.
+// The scanner diagnoses what is wrong with the syntax in annotations whereas [Check] verifies the output
+// spec is a valid OpenAPI 2.0 specfication.
 //
-// Findings go through the same reporter as the scan's own diagnostics: to a reader they are the same
-// kind of news about the same document, and giving them a second dialect would only mean two things
-// to learn.
-func checkValid(asJSON []byte, report *reporter) error {
+// It runs on the rendered JSON rather than on the [github.com/go-openapi/spec.Swagger] it came from,
+// so what is checked is exactly what was written - including whatever the round-trip through JSON did to it.
+//
+// Findings go through the same [Reporter] as the scan's own diagnostics: to a reader they are the same
+// kind of news about the same document, and giving them a second dialect would only mean two things to learn.
+func (r *Reporter) ValidateSpec(asJSON []byte) error {
 	document, err := loads.Analyzed(asJSON, "")
 	if err != nil {
 		return fmt.Errorf("cannot re-read the document to validate it: %w", err)
@@ -42,14 +44,14 @@ func checkValid(asJSON []byte, report *reporter) error {
 
 	errored := result.LocatedErrors()
 	for _, located := range errored {
-		report.finding(codescan.SeverityError, located)
+		r.finding(codescan.SeverityError, located)
 	}
 	for _, located := range result.LocatedWarnings() {
-		report.finding(codescan.SeverityWarning, located)
+		r.finding(codescan.SeverityWarning, located)
 	}
 
 	if len(errored) > 0 {
-		return fmt.Errorf("%w: %d finding(s)", errInvalidSpec, len(errored))
+		return fmt.Errorf("%w: %d finding(s)", sentinel.ErrInvalidSpec, len(errored))
 	}
 
 	return nil
@@ -57,10 +59,9 @@ func checkValid(asJSON []byte, report *reporter) error {
 
 // finding reports one validation result, located by the pointer the validator recorded.
 //
-// The pointer is carried straight through rather than recovered from the message: the validator
-// records where it was as it walks, so it is the authority on it, and a sentence is a poor place to
-// keep a machine-readable path.
-func (r *reporter) finding(severity codescan.Severity, located validate.Located) {
+// The pointer is carried straight through rather than recovered from the message:
+// the validator records where it was as it walks the spec, so it is the authority on it.
+func (r *Reporter) finding(severity codescan.Severity, located validate.Located) {
 	r.record(severity)
 
 	pointer := located.Pointer

@@ -1,5 +1,7 @@
 github.com/SladkyCitron/slogcolor v1.9.0 h1:fr4LeG+T6pZ1RYNNOP925jaBYrTdpA6BLzGy29yd4vI=
 github.com/SladkyCitron/slogcolor v1.9.0/go.mod h1:ft8LEVIl4isUkebakhv+ngNXJjWBumnwhXfxTLApf3M=
+github.com/charmbracelet/x/term v0.2.2 h1:xVRT/S2ZcKdhhOuSP4t5cLi5o+JxklsoEObBSgfgZRk=
+github.com/charmbracelet/x/term v0.2.2/go.mod h1:kF8CY5RddLWrsgVwpw4kAa6TESp6EB5y3uxGLeCqzAI=
 github.com/fatih/color v1.19.0 h1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=
 github.com/fatih/color v1.19.0/go.mod h1:zNk67I0ZUT1bEGsSGyCZYZNrHuTkJJB+r6Q9VuMi0LE=
 github.com/go-openapi/analysis v0.26.0 h1:1xECln1iMMmQnTjgcknC1vi1hA4KISt6IHpSwnqcuwI=

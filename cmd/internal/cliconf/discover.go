@@ -25,6 +25,11 @@ const (
 	NoFlag = "no-config"
 )
 
+// SampleConfigName returns the first default supported default config file.
+func SampleConfigName() string {
+	return Names[0]
+}
+
 // Names are the file names looked for, in order, when -config says nothing.
 //
 // One name for every command rather than one per command: the sections are what tell them apart, and

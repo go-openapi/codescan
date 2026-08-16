@@ -4,186 +4,142 @@
 package main
 
 import (
-	"flag"
-	"io"
-	"reflect"
+	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/cmd/internal/cliconf"
+	"github.com/go-openapi/codescan/cmd/internal/cliopts"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
 
-// optionFlags maps each value-typed codescan.Options field to the flag that sets it.
+// What a test can drive of this command stops where the session begins: a run that gets as far as its options takes
+// over the terminal it was started from and does not come back until the user quits.
 //
-// The drift guard checks both directions: every field listed here has a registered flag,
-// and every value-typed field is either listed here or explicitly excused below.
-var optionFlags = map[string]string{ //nolint:gochecknoglobals // table for the drift guard
-	"WorkDir":          "workdir",
-	"Packages":         "packages",
-	"BuildTags":        "build-tags",
-	"GOOS":             "goos",
-	"GOARCH":           "goarch",
-	"GOFLAGS":          "goflags",
-	"GOWORK":           "gowork",
-	"GOEXPERIMENT":     "goexperiment",
-	"Include":          "include",
-	"Exclude":          "exclude",
-	"IncludeTags":      "include-tags",
-	"ExcludeTags":      "exclude-tags",
-	"NameFromTags":     "name-from-tags",
-	"NameConcatBudget": "name-concat-budget",
-}
-
-// optionsNotOnCLI are the non-bool fields deliberately without a flag.
-var optionsNotOnCLI = map[string]string{ //nolint:gochecknoglobals // table for the drift guard
-	"InputSpec":    "overlay mode: needs a spec loaded from disk, not yet exposed",
-	"OnDiagnostic": "wired internally to the diagnostics pane",
-	"OnProvenance": "wired internally to the cross-ref linker",
-	"FS":           "virtual source filesystem: a programmatic seam, not expressible on a command line",
-	"ExportData":   "a filesystem of pre-computed export data: a programmatic seam, like FS",
-}
-
-// The CLI exposed three of ten options for a long time, because nothing failed when a new one landed.
+// So every case here has to be one that answers, or refuses, BEFORE that - which is also why each says which error it
+// expects rather than merely that there was one. A case that quietly stopped refusing would otherwise still pass, on
+// the TTY error a terminal-less CI machine happens to raise, while doing the one thing these tests must not do.
 //
-// This is what fails now.
+// What happens once a session is running is the ux package's to test, and it tests it through the model rather than
+// through a program.
+
+func TestRun(t *testing.T) {
+	t.Run("should print version", func(t *testing.T) {
+		t.Parallel()
+
+		stdout, _, err := exec(t, "-version")
+
+		require.NoError(t, err)
+		assert.Contains(t, stdout, cmd)
+	})
+
+	t.Run("should provide help without error", func(t *testing.T) {
+		// Unlike genspec, which carries flag.ErrHelp out so that its exit-status ladder can answer 0 for it, this
+		// command has no ladder: asking what it does is not an error and does not read as one.
+		t.Parallel()
+
+		stdout, stderr, err := exec(t, "-h")
+
+		require.NoError(t, err)
+		assert.Empty(t, stdout, "the usage is a message about the command, not its output")
+		assert.Contains(t, stderr, "usage: "+cmd)
+		assert.Contains(t, stderr, "packages are Go patterns")
+		assert.Contains(t, stderr, cliconf.SampleConfigName(), "and it says a file can preset all this")
+	})
+
+	t.Run("should reject an unknown flag", func(t *testing.T) {
+		t.Parallel()
+
+		_, stderr, err := exec(t, "-not-a-flag")
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not-a-flag")
+		assert.Contains(t, stderr, "usage: "+cmd, "which is when the usage is worth printing unasked")
+	})
+
+	t.Run("should reject a flag value it does not accept", func(t *testing.T) {
+		// The shared table validates its own values, and the command carries the verdict out rather than starting a
+		// session that would scan through a loader nobody named.
+		t.Parallel()
+
+		_, _, err := exec(t, "-no-config", "-loader", "cargo")
+
+		require.ErrorIs(t, err, cliopts.ErrBadFlag)
+	})
+}
+
+// A file this command cannot obey is refused before the session starts, rather than half-applied to it: the status
+// line reports what a file set, and a report of a file that was only partly read would be worse than no file.
+func TestRunConfigFile(t *testing.T) {
+	t.Run("should refuse an unknown key", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := exec(t, "-config", configFile(t, "scan:\n  workdirs: ./api\n"))
+
+		require.ErrorIs(t, err, cliconf.ErrUnknownKey)
+		assert.Contains(t, err.Error(), "scan.workdirs")
+	})
+
+	t.Run("should refuse a value of the wrong kind", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := exec(t, "-config", configFile(t, "emit:\n  scan-models: sometimes\n"))
+
+		require.ErrorIs(t, err, cliconf.ErrBadValue)
+	})
+
+	t.Run("should refuse a file that is not there", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := exec(t, "-config", filepath.Join(t.TempDir(), "absent.yaml"))
+
+		require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	})
+
+	t.Run("should refuse being asked for a file and for none", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := exec(t, "-config", configFile(t, "scan:\n  workdir: .\n"), "-no-config")
+
+		require.ErrorIs(t, err, cliconf.ErrBadConfig)
+	})
+
+	t.Run("should refuse a file naming another file", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := exec(t, "-config", configFile(t, "scan:\n  config: elsewhere.yaml\n"))
+
+		require.ErrorIs(t, err, cliconf.ErrUnknownKey)
+	})
+}
+
+/********************************/
+/* exec helpers */
+/********************************/
+
+// exec runs the command as the process would, and reports what it wrote and what it returned.
 //
-// Booleans are excluded: they are the options overlay's job, and TestOptions_OverlayCoversEveryBoolKnob guards that
-// side.
-func TestFlags_CoverEveryValueTypedOption(t *testing.T) {
-	cli := newTestFlags(t)
-
-	typ := reflect.TypeFor[codescan.Options]()
-	for i := range typ.NumField() {
-		f := typ.Field(i)
-		if !f.IsExported() || f.Type.Kind() == reflect.Bool {
-			continue
-		}
-
-		name, mapped := optionFlags[f.Name]
-		if !mapped {
-			if _, excused := optionsNotOnCLI[f.Name]; excused {
-				continue
-			}
-
-			t.Errorf("codescan.Options.%s (%s) has no CLI flag. Add one and list it in "+
-				"optionFlags, or excuse it in optionsNotOnCLI with a reason.", f.Name, f.Type)
-
-			continue
-		}
-
-		assert.NotNil(t, cli.set.Lookup(name),
-			"Options.%s claims flag -%s, which is not registered", f.Name, name)
-	}
-}
-
-// The option tables must not rot.
-//
-// An entry naming a field that no longer exists, or one that has since become a bool, is stale.
-func TestFlags_TablesAreCurrent(t *testing.T) {
-	typ := reflect.TypeFor[codescan.Options]()
-
-	for name := range optionFlags {
-		f, ok := typ.FieldByName(name)
-		require.True(t, ok, "optionFlags names Options.%s, which no longer exists", name)
-		assert.NotEqual(t, reflect.Bool, f.Type.Kind(),
-			"Options.%s is a bool and belongs to the overlay, not the CLI", name)
-	}
-
-	for name, reason := range optionsNotOnCLI {
-		_, ok := typ.FieldByName(name)
-		assert.True(t, ok, "optionsNotOnCLI names Options.%s, which no longer exists", name)
-		assert.NotEmpty(t, reason, "Options.%s is excused without a reason", name)
-		_, alsoMapped := optionFlags[name]
-		assert.False(t, alsoMapped, "Options.%s is both excused and mapped to a flag", name)
-	}
-}
-
-func TestFlags_Defaults(t *testing.T) {
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse(nil))
-
-	opts := cli.options("/work")
-
-	assert.Equal(t, "/work", opts.WorkDir)
-	assert.Equal(t, []string{"./..."}, opts.Packages)
-	assert.True(t, opts.ScanModels)
-	assert.Empty(t, opts.BuildTags)
-	assert.Nil(t, opts.Include)
-	assert.Nil(t, opts.ExcludeTags)
-	assert.Nil(t, opts.NameFromTags, "unset must stay nil so codescan applies its [\"json\"] default")
-	assert.Zero(t, opts.NameConcatBudget, "zero selects codescan's own 0.65 default")
-}
-
-func TestFlags_ParseValues(t *testing.T) {
-	cli := newTestFlags(t)
-	require.NoError(t, cli.set.Parse([]string{
-		"-packages", "./api/...,./models/...",
-		"-scan-models=false",
-		"-build-tags", "integration,dev",
-		"-include", "^github.com/me/",
-		"-exclude", "vendor,testdata",
-		"-include-tags", "public",
-		"-exclude-tags", "internal, deprecated",
-		"-name-concat-budget", "0.8",
-	}))
-
-	opts := cli.options("/work")
-
-	assert.Equal(t, []string{"./api/...", "./models/..."}, opts.Packages)
-	assert.False(t, opts.ScanModels)
-	assert.Equal(t, "integration,dev", opts.BuildTags, "build tags pass through verbatim")
-	assert.Equal(t, []string{"^github.com/me/"}, opts.Include)
-	assert.Equal(t, []string{"vendor", "testdata"}, opts.Exclude)
-	assert.Equal(t, []string{"public"}, opts.IncludeTags)
-	assert.Equal(t, []string{"internal", "deprecated"}, opts.ExcludeTags, "entries are trimmed")
-	assert.InDelta(t, 0.8, opts.NameConcatBudget, 1e-9)
-}
-
-// NameFromTags is three-way, and flattening it would make -name-from-tags= mean the opposite of what it says.
-func TestFlags_NameFromTagsIsThreeWay(t *testing.T) {
-	for _, c := range []struct {
-		name    string
-		args    []string
-		want    []string
-		wantNil bool
-	}{
-		{"unset keeps the historic json default", nil, nil, true},
-		{"explicit empty means the Go field name", []string{"-name-from-tags="}, []string{}, false},
-		{"a list is ordered as given", []string{"-name-from-tags", "form,json"}, []string{"form", "json"}, false},
-		{"entries are trimmed", []string{"-name-from-tags", " form , json "}, []string{"form", "json"}, false},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			cli := newTestFlags(t)
-			require.NoError(t, cli.set.Parse(c.args))
-
-			got := cli.options("/work").NameFromTags
-
-			if c.wantNil {
-				assert.Nil(t, got)
-
-				return
-			}
-			require.NotNil(t, got, "an explicitly passed flag must never yield nil")
-			assert.Equal(t, c.want, got)
-		})
-	}
-}
-
-func TestSplitHelpers(t *testing.T) {
-	assert.Nil(t, splitList(""))
-	assert.Nil(t, splitList("  ,  , "))
-	assert.Equal(t, []string{"a", "b"}, splitList(" a , b "))
-
-	assert.Equal(t, []string{"./..."}, splitPatterns(""), "an empty -packages falls back")
-	assert.Equal(t, []string{"./..."}, splitPatterns(" , "))
-	assert.Equal(t, []string{"./x"}, splitPatterns("./x"))
-}
-
-func newTestFlags(t *testing.T) *cliFlags {
+// NOTE: main's os.Exit is not simulated - a non-nil error is what the process exits 1 on.
+func exec(t *testing.T, argv ...string) (stdout, stderr string, err error) {
 	t.Helper()
-	fs := flag.NewFlagSet("genspec-tui", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
 
-	return registerFlags(fs)
+	var out, errs bytes.Buffer
+	err = run(argv, &out, &errs)
+
+	return out.String(), errs.String(), err
+}
+
+// configFile writes a configuration file in a fresh directory and reports its path.
+//
+// Named on the command line rather than left to be discovered, so that a test says which file it means and none of
+// these depends on where it was run from.
+func configFile(t *testing.T, content string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), cliconf.Names[0])
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+	return path
 }

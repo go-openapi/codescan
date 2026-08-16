@@ -4,7 +4,7 @@
 package ux
 
 import (
-	"errors"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -130,11 +130,19 @@ func TestUpdate_CopyResult(t *testing.T) {
 	t.Run("failure names the error", func(t *testing.T) {
 		m := testModel(t, sized(100, 40))
 
-		_, _ = m.Update(copyResultMsg{err: errors.New("no clipboard tool")})
+		_, _ = m.Update(copyResultMsg{err: errClipboardTest})
 
 		assert.Contains(t, m.notice, "no clipboard tool")
 	})
 }
+
+type testError string
+
+func (e testError) Error() string {
+	return string(e)
+}
+
+const errClipboardTest testError = "no clipboard tool"
 
 func TestUpdate_ClearNotice(t *testing.T) {
 	m := testModel(t, sized(100, 40))
@@ -162,6 +170,44 @@ func TestWaitForFS(t *testing.T) {
 	assert.Nil(t, waitForFS(ch)(), "a closed channel ends the loop")
 }
 
+// The YAML view costs more than the JSON it is made from, and most sessions never open it - so it is rendered when it
+// is asked for, and kept until the document it was made from is replaced.
+func TestSpecYAML_RendersOnDemandAndIsKept(t *testing.T) {
+	m := scanPetstore(t)
+	require.Empty(t, m.scan.YAML)
+
+	switchToYAML(t, m)
+	rendered := m.scan.YAML
+
+	assert.Nil(t, m.setSpecFormat("JSON"), "going back needs no work")
+	assert.Nil(t, m.setSpecFormat("YAML"), "nor does coming back: the render is still the right one")
+	assert.Equal(t, rendered, m.scan.YAML)
+}
+
+// Between asking for YAML and getting it there is a frame to draw, and an empty one reads as a scan that produced
+// nothing.
+func TestSpecYAML_SaysItIsRendering(t *testing.T) {
+	m := scanPetstore(t)
+
+	require.NotNil(t, m.setSpecFormat("YAML"))
+
+	assert.Contains(t, testutils.StripANSI(m.spec.View(false)), "rendering YAML")
+}
+
+// A conversion outlived by a rescan describes a document nobody is looking at any more.
+func TestSpecYAML_DropsAConversionARescanOvertook(t *testing.T) {
+	m := scanPetstore(t)
+
+	cmd := m.setSpecFormat("YAML")
+	require.NotNil(t, cmd)
+	converted := cmd() // finished, not yet delivered
+
+	_, _ = m.Update(petstoreRes) // ...and a rescan lands first
+	_, _ = m.Update(converted)
+
+	assert.Empty(t, m.scan.YAML, "the render was of the document that has just been replaced")
+}
+
 // Anything the model does not recognise belongs to whichever panel has focus.
 func TestUpdate_UnknownMessageGoesToTheFocusedPane(t *testing.T) {
 	m := testModel(t, sized(100, 40), viewing("user.go", "a\nb\n"), focusedOn(paneTree))
@@ -170,5 +216,35 @@ func TestUpdate_UnknownMessageGoesToTheFocusedPane(t *testing.T) {
 		m.focused = p
 		_, cmd := m.Update(struct{ nothing bool }{})
 		assert.Nil(t, cmd, "pane %d ignores a message it has no use for", p)
+	}
+}
+
+// A scan runs on a goroutine of the runtime's while the event loop keeps taking keys, and nothing stops the options
+// overlay from being opened and toggled meanwhile.
+//
+// Both reach the model's configuration, so this one only says anything under -race - which is how CI runs it.
+func TestScan_OptionsAreToggledWhileAScanRuns(t *testing.T) {
+	m := testModelIn(t, filepath.Join(fixturesDir(t), "goparsing", "petstore"))
+
+	// Running already, so startScan hands back the bare scan command rather than batching a spinner tick with it -
+	// which is also the case that matters: a rescan fired while the previous one is still in flight.
+	m.scan.Running = true
+	run := m.startScan() // built on the event loop...
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		_ = run() // ...and executed elsewhere, as the bubbletea runtime does
+	}()
+
+	_ = m.handleKey(testutils.KeyRune('o'))
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			_ = m.handleKey(testutils.KeyRune(' '))
+		}
 	}
 }

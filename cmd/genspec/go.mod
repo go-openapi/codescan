@@ -8,10 +8,12 @@ go 1.25.0
 
 require (
 	github.com/SladkyCitron/slogcolor v1.9.0
+	github.com/charmbracelet/x/term v0.2.2
 	github.com/go-openapi/codescan v0.36.3
 	github.com/go-openapi/loads v0.25.1
 	github.com/go-openapi/spec v0.22.9
 	github.com/go-openapi/strfmt v0.27.0
+	github.com/go-openapi/swag/conv v0.28.0
 	github.com/go-openapi/testify/v2 v2.6.1
 	github.com/go-openapi/validate v0.26.3
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
@@ -27,7 +29,6 @@ require (
 	github.com/go-openapi/errors v0.22.8 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-openapi/jsonreference v1.0.0 // indirect
-	github.com/go-openapi/swag/conv v0.28.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.28.0 // indirect
 	github.com/go-openapi/swag/jsonutils v0.28.0 // indirect
 	github.com/go-openapi/swag/loading v0.28.0 // indirect

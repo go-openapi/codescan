@@ -12,6 +12,7 @@ require (
 	github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3
 	github.com/go-openapi/loads v0.25.1
 	github.com/go-openapi/strfmt v0.27.0
+	github.com/go-openapi/swag/conv v0.28.0
 	github.com/go-openapi/testify/v2 v2.6.1
 	github.com/go-openapi/validate v0.26.3
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3
@@ -36,7 +37,6 @@ require (
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-openapi/jsonreference v1.0.0 // indirect
 	github.com/go-openapi/spec v0.22.9 // indirect
-	github.com/go-openapi/swag/conv v0.28.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.28.0 // indirect
 	github.com/go-openapi/swag/jsonutils v0.28.0 // indirect
 	github.com/go-openapi/swag/loading v0.28.0 // indirect

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+package config
 
 import (
 	"flag"
@@ -11,8 +11,9 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 
-	"github.com/go-openapi/codescan/internal/cliconf"
-	"github.com/go-openapi/codescan/internal/cliopts"
+	"github.com/go-openapi/codescan/cmd/genspec/internal/sentinel"
+	"github.com/go-openapi/codescan/cmd/internal/cliconf"
+	"github.com/go-openapi/codescan/cmd/internal/cliopts"
 )
 
 // The sections this command's own flags are addressed in.
@@ -53,7 +54,7 @@ var notConfigurable = map[string]string{ //nolint:gochecknoglobals // table for 
 func configSchema() (cliconf.Schema, error) {
 	schema, err := cliopts.ConfigSchema().Merge(commandSections)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errUsage, err)
+		return nil, fmt.Errorf("%w: %w", sentinel.ErrUsage, err)
 	}
 
 	return schema, nil
