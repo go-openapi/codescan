@@ -167,6 +167,18 @@ the glue that lets `parsers` write into any builder's target without importing c
 Scans fixture trees and compares against `testdata/integration/golden/*.json`. Tests for enhancements,
 malformed input, the petstore, aliased schemas, go123-specific forms, and cross-feature coverage.
 
+### `internal/benchmarks/` — what a scan costs
+
+Measures two go-swagger-generated projects that ship with the repo as one archive
+(`testdata/corpus.tgz`, unpacked on demand by the `corpus` package): `dockerctl`, a light client over
+a reasonably large API, and `kubeapi`, a heavy server over a very large one. Both vendor their
+dependencies, so a measurement needs a clone and nothing else. Everything is gated behind
+`CODESCAN_BENCH=1` or run by hand — none of it runs in CI, where a benchmark would measure the
+runner. `loader-benchmark/` is the half that measures *released* versions too: it talks only to the
+public `Run` API, so `run.sh` compiles the same source against each release tag and against the
+working tree. `README.md` carries the results — the loader comparison and the history since v0.33.3 —
+and is what `internal/scanner/README.md#loader` cites for its figures.
+
 ### `testdata/`
 
 - `testdata/goparsing/...` — historic corpus: classification, petstore, go118/go119/go123 variants, invalid inputs.

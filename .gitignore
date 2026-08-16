@@ -40,6 +40,9 @@ internal/exportdata/exportdata.zip
 /genspec-wasi
 /loader-benchmark
 
-# loader-benchmark scratch: generated baseline module, built probes, raw measurements
-hack/loader-benchmark/.work/
-hack/loader-benchmark/results/
+# benchmark corpora: the archive is committed, the tree it unpacks to is not
+internal/benchmarks/testdata/corpus/
+
+# loader-benchmark scratch: generated version modules, built probes, raw measurements
+internal/benchmarks/loader-benchmark/.work/
+internal/benchmarks/loader-benchmark/results/

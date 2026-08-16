@@ -610,10 +610,11 @@ Go installation at all (a WASI guest, a browser): `StubStdlib`, which pays for t
 reach in fidelity, and `ExportData`, which pays in preparation. See
 [What it costs](#what-it-costs).
 
-Figures are from `hack/loader-benchmark`, which compares a release against the
-working tree over external corpora; its README carries the tables and the method.
-They are indicative, not a promise — the balance moves with corpus size, and on a
-small tree the pure-Go loader is *slower* warm than the standard one.
+Figures are from [`internal/benchmarks`](../benchmarks/README.md), which measures two
+generated projects that ship with this repository, warm and cold, against the
+released versions as well as the working tree. That document carries the tables and
+the method. They are indicative, not a promise — the balance moves with corpus size,
+and on a small tree the pure-Go loader is *slower* warm than the standard one.
 
 ### Choosing
 
