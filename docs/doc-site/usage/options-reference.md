@@ -104,10 +104,9 @@ it does not cover falls back to source and then to synthesis.
 {{% notice style="note" %}}
 The percentages are indicative, not a promise: the balance moves with the size of
 the tree being scanned, and on a small one the pure-Go loader is *slower* warm than
-the standard loader. Measure your own corpus with
-[`hack/loader-benchmark`](https://github.com/go-openapi/codescan/tree/master/hack/loader-benchmark),
-which compares a released version against a working tree and carries the tables and
-the method.
+the standard loader. The figures, the corpora they were taken on and the method are in
+[`internal/benchmarks`](https://github.com/go-openapi/codescan/tree/master/internal/benchmarks),
+whose harness also takes an extra corpus of your own to measure alongside them.
 {{% /notice %}}
 
 | Option | Type | Default | Flag | Section | Effect |
