@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
@@ -33,7 +34,7 @@ func Render(workdir string, scanErr error, diags []grammar.Diagnostic, selected 
 	selectedLine := -1
 
 	if scanErr != nil {
-		b.WriteString(theme.SevError().Render("scan failed: ") + scanErr.Error())
+		b.WriteString(theme.SevError().Render("scan failed: ") + safetext.SanitizeBlock(scanErr.Error()))
 		if len(diags) == 0 {
 			return b.String(), -1
 		}
@@ -118,7 +119,7 @@ func formatDiagnostic(workdir string, d grammar.Diagnostic) string {
 		sev.Render(d.Severity.String()),
 		// Bold(false) rather than a separate palette entry: the message wants the severity's hue at normal weight, and
 		// deriving it here keeps one definition of what "error red" is.
-		sev.Bold(false).Render(d.Message),
+		sev.Bold(false).Render(safetext.SanitizeBlock(d.Message)),
 		theme.Dim().Render("["+string(d.Code)+"]"),
 	)
 }
@@ -130,19 +131,25 @@ func formatDiagnostic(workdir string, d grammar.Diagnostic) string {
 // Kept beside its styled twin, and built from the same pieces in the same order, so the two can never drift into
 // showing different text depending on where the cursor is.
 func plainDiagnostic(workdir string, d grammar.Diagnostic) string {
-	return fmt.Sprintf("%s %s: %s [%s]", diagnosticLoc(workdir, d), d.Severity, d.Message, d.Code)
+	return fmt.Sprintf("%s %s: %s [%s]",
+		diagnosticLoc(workdir, d), d.Severity, safetext.SanitizeBlock(d.Message), d.Code,
+	)
 }
 
 // diagnosticLoc renders a diagnostic's position as path:line:col.
 //
 // The path is made relative to workdir when it sits inside the scanned tree, and stays absolute otherwise.
 // An unknown position renders as a dash.
+//
+// The path is a name from the scanned tree, so it is sanitized: a file may be called whatever the filesystem accepts,
+// which on the platforms this runs on includes control characters. The strict form, since the location is one token
+// on one row.
 func diagnosticLoc(workdir string, d grammar.Diagnostic) string {
 	if rel, err := filepath.Rel(workdir, d.Pos.Filename); err == nil && !strings.HasPrefix(rel, "..") {
-		return fmt.Sprintf("%s:%d:%d", rel, d.Pos.Line, d.Pos.Column)
+		return safetext.Sanitize(fmt.Sprintf("%s:%d:%d", rel, d.Pos.Line, d.Pos.Column))
 	}
 
-	return d.Pos.String()
+	return safetext.Sanitize(d.Pos.String())
 }
 
 // severityStyle maps a grammar.Severity to its diagnostics-pane style.

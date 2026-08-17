@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
@@ -318,9 +319,14 @@ func annotationOnLine(line string) (annotationSite, bool) {
 }
 
 // relTo renders path relative to base when possible, else the base name.
+//
+// The result is for DISPLAY only - a panel title, a notice, a confirmation prompt - which is why the name is
+// sanitized here and the caller's own path is left alone for the reads and writes it still has to do.
+// A file may be named anything the filesystem accepts, and a name carrying an escape sequence would otherwise be
+// handed to the terminal as an instruction.
 func relTo(base, path string) string {
 	if rel, err := filepath.Rel(base, path); err == nil && !strings.HasPrefix(rel, "..") {
-		return rel
+		return safetext.Sanitize(rel)
 	}
-	return filepath.Base(path)
+	return safetext.Sanitize(filepath.Base(path))
 }

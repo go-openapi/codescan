@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
@@ -251,7 +252,9 @@ func (p *FileView) View(focused, navActive bool) string {
 		mode = "edit"
 		body = p.ta.View()
 	}
-	title := theme.Title(focused).Render("file · " + name + " · " + mode)
+	// The name is a path from the scanned tree, so it is sanitized here rather than trusted: the body below goes
+	// through fit, and a title row is the one part of this panel that does not.
+	title := theme.Title(focused).Render("file · " + safetext.Sanitize(name) + " · " + mode)
 	return theme.Panel(p.w, p.h, focused).Render(title + "\n" + body)
 }
 

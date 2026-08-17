@@ -542,6 +542,36 @@ document and tell you nothing. External `$ref`s are not marked either, because
 
 The gutter column only appears when there is something to mark.
 
+### Control characters are shown, never obeyed
+
+Everything on screen comes out of a repository you are reading rather than one
+you wrote: the contents of a file, the names of the files and directories around
+it, and the diagnostics and validation findings quoting all three. An escape
+sequence in any of those is not text to a terminal — it is a command, and it can
+repaint the screen, retitle the window or overwrite a line with something other
+than what is in the file.
+
+So no scanned text reaches the terminal unescaped. A control character is drawn
+as its Unicode picture instead: `ESC` as `␛`, `NUL` as `␀`, `DEL` as `␡`, a
+carriage return as `␍`. The C1 range and bytes that are not valid UTF-8 have no
+picture and are shown as `�`. A crafted line therefore reads as its own
+disguise:
+
+```
+// swagger:model ␛[2J␛[3JPet
+```
+
+Each stand-in occupies exactly one column, so line numbers, syntax colouring,
+diagnostic marks and click targets all still land where they should.
+
+The spec pane needs none of this: JSON and YAML both encode a control character
+rather than emit it, so the rendered document is already safe by the time the
+pane sees it. That is asserted by a test rather than assumed.
+
+Prose that the panes lay out themselves — a diagnostic message, a validation
+finding — keeps its own line breaks and tabs, since neither can command a
+terminal.
+
 ## Limitations
 
 These are known and deliberate; the TUI says so rather than guessing.

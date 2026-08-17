@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/index"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/diagnostics"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/validation"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/watcher"
@@ -279,8 +280,11 @@ func (m *Model) refreshDiagnostics() {
 //
 // The two halves belong together: a notice that is set without also being scheduled to expire stays on the status line
 // until something else happens to overwrite it. Pairing them here makes that structural rather than remembered.
+//
+// Sanitizing the finished sentence rather than the arguments keeps every caller out of the question: notices quote
+// paths, search terms and error text, and this is the one place they all pass through on the way to the status line.
 func (m *Model) notify(format string, args ...any) tea.Cmd {
-	m.notice = fmt.Sprintf(format, args...)
+	m.notice = safetext.Sanitize(fmt.Sprintf(format, args...))
 
 	return clearNoticeAfter(noticeTTL)
 }
