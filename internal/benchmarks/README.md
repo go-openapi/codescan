@@ -63,7 +63,8 @@ Memory does not depend on cache state and is omitted here; it matches the warm f
 
 **Compiled dependencies win warm and lose cold, by a lot.** Taking dependency types from the
 compiler instead of their source is 35–55% faster and 2.5–4× smaller on a warm cache. On a cold one
-it is **6× slower** than reading source, because `go list -export` must *compile* the closure rather
+it is **more than 6× slower** than reading source (6.3× and 6.6× on the two corpora), because
+`go list -export` must *compile* the closure rather
 than type-check it, and it materialises up to 231 MB of build cache doing so. `CompiledDependencies`
 opts in, and a build cache that is warm by construction — a developer's machine, a watch loop, a
 pipeline that restores its cache — is the case that wants it.
@@ -136,8 +137,10 @@ own throwaway module so it links the released library rather than this checkout.
 | current, source dependencies *(default)* | 0.972 s | 1103 MB | 1.506 s | 1215 MB |
 | current, compiled dependencies | **0.438 s** | **237 MB** | **0.970 s** | **447 MB** |
 
-End to end, six months moved the larger corpus from 7.1 s / 4555 MB to 0.97 s / 447 MB — **7.3×
-faster, 10× less allocated** — for the identical 222 definitions and 260 paths.
+End to end, six months moved the larger corpus from 7.1 s / 4555 MB to 1.51 s / 1215 MB in the
+default configuration — **4.7× faster, 3.7× less allocated** — and to 0.97 s / 447 MB with compiled
+dependencies asked for, which is **7.3× faster, 10× less allocated**. Every row emits the identical
+222 definitions and 260 paths.
 
 ### The two halves moved for different reasons, on different corpora
 
