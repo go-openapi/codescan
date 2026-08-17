@@ -77,7 +77,6 @@ The library itself is not bound to config files.
 
 ```yaml
 scan:
-  workdir: ./api
   exclude-tags: [internal]
 
 emit:
@@ -86,7 +85,7 @@ emit:
 
 document:
   format: yaml
-  output: swagger.yaml
+  compact: true
 
 diagnostics:
   validate: true
@@ -97,6 +96,18 @@ Keys are grouped into sections, and inside a section **a key is the flag it
 sets**, spelled exactly as on the command line. There is no second vocabulary to
 learn and no mapping table to keep in step: `genspec -h` is the reference for the
 file.
+
+### What a file may not set
+
+**The options naming a path are settable on the command line only**: `-workdir`,
+`genspec`'s `-output` and `-input`, and `genspec-tui`'s `-profile-dir`.
+
+A file is found by searching upwards, so running a command inside a repository
+reads *that repository's* file — and a tool whose job is reading somebody else's
+code must not let the code decide where it reads or writes. Everything else a
+file sets shapes the document, which is what one is for. Naming a file with
+`-config` does not lift the restriction: the rule belongs to the option, so there
+is nothing to remember at the point of use.
 
 ### The sections
 
@@ -109,9 +120,9 @@ them. Each command adds its own for the flags that are its business:
 | `go` | what it is built as: the go environment that decides what compiles | the library — every command |
 | `load` | how the packages are read | the library — every command |
 | `emit` | what the specification ends up saying | the library — every command |
-| `document` | what is read and written: `input`, `output`, `format`, `compact` | `genspec` |
+| `document` | how the specification is rendered: `format`, `compact` | `genspec` |
 | `diagnostics` | how loud it is about what it saw: `color`, `quiet`, `verbose`, `validate`, `fail-on` | `genspec` |
-| `profile` | whether a run is profiled: `profile`, `profile-dir`, `mem-profile-rate` | `genspec-tui` |
+| `profile` | whether a run is profiled: `profile`, `mem-profile-rate` | `genspec-tui` |
 
 ### Where the file is found
 
@@ -133,9 +144,9 @@ Asking for both at once is an error rather than a coin toss. So is `-config` and
 `-c` naming different files.
 
 {{% notice style="note" %}}
-The search starts from the current directory, **not** from `-workdir`. The file
-is free to set `-workdir`, and one found through the very value it sets would be
-reasoning in a circle.
+The search starts from the current directory, **not** from `-workdir`. A file
+found through the very directory it was meant to describe would be reasoning in a
+circle — which is one of the reasons `-workdir` is not something a file sets.
 {{% /notice %}}
 
 {{% /tab %}}

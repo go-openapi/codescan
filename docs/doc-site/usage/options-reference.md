@@ -29,6 +29,13 @@ and handed a package of annotated models should produce their definitions.
 {{% /notice %}}
 
 {{% notice style="note" %}}
+**Config Section** is where a `.codescan.yaml` addresses the option. A dash means
+it has none: either the option is not a value a file can carry (a callback, a
+positional argument), or it names a **path**, which is settable on the command
+line only. See [what a file may not set]({{% relref "setting-options" %}}#what-a-file-may-not-set).
+{{% /notice %}}
+
+{{% notice style="note" %}}
 codescan never writes to stdout or stderr. Every scan-time observation — a
 dropped construct, a rename, a prune — flows through the `OnDiagnostic`
 callback. See [Diagnostics & observability](#diagnostics--observability) below.
@@ -42,7 +49,7 @@ What gets loaded and which packages and types are in play. See
 | Option | Type | Default | Flag | Config Section | Effect |
 |--------|------|---------|------|---------|--------|
 | `Packages` | `[]string` | `nil` | *(positional)* | — | Package patterns to scan (e.g. `./...`), resolved relative to `WorkDir`. |
-| `WorkDir` | `string` | `""` (cwd) | `-workdir` | `scan` | Working directory the package patterns and module resolution are rooted at. |
+| `WorkDir` | `string` | `""` (cwd) | `-workdir` | — | Working directory the package patterns and module resolution are rooted at. **Command line only**: see [what a file may not set]({{% relref "setting-options" %}}#what-a-file-may-not-set). |
 | `BuildTags` | `string` | `""` | `-build-tags` | `scan` | Go build tags to activate while loading, so tag-guarded source is scanned. See [Build tags]({{% relref "build-tags" %}}). |
 | `Include` | `[]string` | `nil` | `-include` | `scan` | Allow-list of package path patterns; when non-empty only matching packages are scanned. See [Scoping the scan]({{% relref "scoping-the-scan" %}}). |
 | `Exclude` | `[]string` | `nil` | `-exclude` | `scan` | Deny-list of package path patterns, applied after `Include`. See [Scoping the scan]({{% relref "scoping-the-scan" %}}). |

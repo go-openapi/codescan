@@ -6,6 +6,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
@@ -24,20 +25,32 @@ const sectionProfile = "profile"
 var commandSections = cliconf.Schema{
 	// NOTE: TestEveryFlagIsAddressableInAConfigFile is what keeps this list in step.
 	"profile":          sectionProfile,
-	"profile-dir":      sectionProfile,
 	"mem-profile-rate": sectionProfile,
 }
 
 // notConfigurable are the flags a file deliberately cannot set, with the reason.
 //
 //nolint:gochecknoglobals // table for the drift guard
-var notConfigurable = map[string]string{
-	cliconf.Flag:      "names the file itself, which cannot be read from inside it",
-	cliconf.ShortFlag: "the short form of -" + cliconf.Flag,
-	cliconf.NoFlag:    "decides whether there is a file at all, from outside it",
-	"packages": "the historic spelling of the positional patterns, kept working for scripts; a file " +
-		"that could set it would be reviving the flag rather than retiring it",
-	"version": "asks the command a question rather than configuring it",
+var notConfigurable = excusedFlags()
+
+// excusedFlags is what a configuration file may not set here, on top of what every command excuses.
+//
+// profile-dir joins the shared path options: it decides which directory profile files are created
+// in, and a file found by searching upwards belongs to the tree being scanned rather than to the
+// person scanning it.
+func excusedFlags() map[string]string {
+	excused := map[string]string{
+		cliconf.Flag:      "names the file itself, which cannot be read from inside it",
+		cliconf.ShortFlag: "the short form of -" + cliconf.Flag,
+		cliconf.NoFlag:    "decides whether there is a file at all, from outside it",
+		"packages": "the historic spelling of the positional patterns, kept working for scripts; a file " +
+			"that could set it would be reviving the flag rather than retiring it",
+		"version":     "asks the command a question rather than configuring it",
+		"profile-dir": "it decides which directory profile files are created in",
+	}
+	maps.Copy(excused, cliopts.NotConfigurable())
+
+	return excused
 }
 
 // configSchema is the whole of what a configuration file may address here.
