@@ -6,4 +6,5 @@
 // This package is intended for go1.25 onwards and uses go1.26 toolchain.
 //
 // It supports go modules.
+// MODIFY ANY GO TO TRIGGER PIPELINE.
 package codescan
