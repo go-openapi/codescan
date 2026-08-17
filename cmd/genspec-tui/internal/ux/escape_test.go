@@ -110,12 +110,12 @@ func TestSpecRender_EscapesControlCharacters(t *testing.T) {
 		"}\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "api.go"), []byte(src), 0o600))
 
-	res := scan.Do(&codescan.Options{
+	res := scan.Do(testutils.ApplyLoader(&codescan.Options{
 		WorkDir:    dir,
 		Packages:   []string{"./..."},
 		GOWORK:     "off",
 		ScanModels: true,
-	}, nil)
+	}), nil)
 	require.NoError(t, res.Err)
 	require.Contains(t, res.JSON, "PWNED", "the crafted text never reached the document, so nothing is being tested")
 

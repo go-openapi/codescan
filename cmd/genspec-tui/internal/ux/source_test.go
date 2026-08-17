@@ -500,10 +500,10 @@ func classificationScan(t *testing.T) scan.ResultMsg {
 	t.Helper()
 
 	classificationOnce.Do(func() {
-		classificationRes = scan.Do(&codescan.Options{
+		classificationRes = scan.Do(testutils.ApplyLoader(&codescan.Options{
 			WorkDir:  fixturesDir(t),
 			Packages: []string{"./goparsing/classification/..."},
-		}, &scan.Profiling{})
+		}), &scan.Profiling{})
 	})
 	require.NoError(t, classificationRes.Err)
 	require.NotEmpty(t, classificationRes.Diags, "the corpus must produce diagnostics")

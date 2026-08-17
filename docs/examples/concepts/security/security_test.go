@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/docs/examples/internal/loadertest"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -43,10 +44,10 @@ func goldenRaw(t *testing.T, feature string, v any) {
 //
 // Regenerate with: UPDATE_GOLDEN=1 go test ./...
 func TestSecurityInCode(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:  examplesRoot(t),
 		Packages: []string{"./concepts/security"},
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 
@@ -95,12 +96,12 @@ func TestSecurityByOverlay(t *testing.T) {
 	var base spec.Swagger
 	require.NoError(t, json.Unmarshal([]byte(baseSpec), &base))
 
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:    examplesRoot(t),
 		Packages:   []string{"./concepts/routes"},
 		ScanModels: true,
 		InputSpec:  &base,
-	})
+	}))
 	require.NoError(t, err)
 	require.Contains(t, doc.SecurityDefinitions, "api_key", "schemes come from the base, not the code")
 	require.Len(t, doc.Security, 1, "default requirement comes from the base")

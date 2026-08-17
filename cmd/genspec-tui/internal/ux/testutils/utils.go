@@ -11,6 +11,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-openapi/testify/v2/require"
+
+	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/internal/testloader"
 )
 
 // StripANSI removes the SGR escape sequences lipgloss emits.
@@ -40,4 +43,33 @@ func WriteTempGo(t *testing.T, content string) string {
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 
 	return path
+}
+
+// ApplyLoader writes the loader this run was asked for onto opts, and returns it for chaining.
+//
+// The TUI scans through the same library as everything else, so its tests answer to the same
+// run-wide setting; see internal/testloader for what selects it and why.
+//
+// A test that pins a loader must not route through here - there is no telling a field left at its
+// zero value from one set on purpose - which is why this refuses one rather than writing over it.
+func ApplyLoader(opts *codescan.Options) *codescan.Options {
+	if opts == nil || opts.FS != nil {
+		return opts
+	}
+	if opts.CompiledDependencies || opts.ToolchainFreeLoader {
+		panic("testutils: these options already pin a loader, so they must not be routed through " +
+			"ApplyLoader; drop the call and leave the pin, or drop the pin and keep the call")
+	}
+
+	switch selected := testloader.Selected(); selected {
+	case testloader.LoaderCompiled:
+		opts.CompiledDependencies = true
+	case testloader.LoaderOwn:
+		opts.ToolchainFreeLoader = true
+	case testloader.LoaderSource:
+	default:
+		panic("testutils: no rule for loader " + string(selected))
+	}
+
+	return opts
 }

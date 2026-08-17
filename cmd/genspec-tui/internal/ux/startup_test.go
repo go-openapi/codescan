@@ -13,13 +13,14 @@ import (
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
 )
 
 // A session that behaves unlike the command line says it should is a session whose configuration file nobody knows
 // about. It is said once, on the status line, and expires like every other notice.
 func TestStartup_AnnouncesTheConfigurationFile(t *testing.T) {
 	m := New(Startup{
-		Options:    &codescan.Options{WorkDir: t.TempDir(), Packages: []string{"./..."}},
+		Options:    testutils.ApplyLoader(&codescan.Options{WorkDir: t.TempDir(), Packages: []string{"./..."}}),
 		ConfigPath: "/proj/.codescan.yaml",
 		ConfigSet:  []string{"workdir", "scan-models"},
 	})
@@ -33,7 +34,7 @@ func TestStartup_AnnouncesTheConfigurationFile(t *testing.T) {
 
 func TestStartup_SaysWhenTheFileDecidedNothing(t *testing.T) {
 	m := New(Startup{
-		Options:    &codescan.Options{WorkDir: t.TempDir()},
+		Options:    testutils.ApplyLoader(&codescan.Options{WorkDir: t.TempDir()}),
 		ConfigPath: "/proj/.codescan.yaml",
 	})
 	t.Cleanup(m.Close)
@@ -47,7 +48,7 @@ func TestStartup_SaysWhenTheFileDecidedNothing(t *testing.T) {
 // One setting is one setting.
 func TestStartup_CountsOneSettingSingly(t *testing.T) {
 	m := New(Startup{
-		Options:    &codescan.Options{WorkDir: t.TempDir()},
+		Options:    testutils.ApplyLoader(&codescan.Options{WorkDir: t.TempDir()}),
 		ConfigPath: "/proj/.codescan.yaml",
 		ConfigSet:  []string{"workdir"},
 	})
@@ -61,7 +62,7 @@ func TestStartup_CountsOneSettingSingly(t *testing.T) {
 
 // The ordinary case: no file, nothing said.
 func TestStartup_SaysNothingWithoutAFile(t *testing.T) {
-	m := New(Startup{Options: &codescan.Options{WorkDir: t.TempDir()}})
+	m := New(Startup{Options: testutils.ApplyLoader(&codescan.Options{WorkDir: t.TempDir()})})
 	t.Cleanup(m.Close)
 
 	assert.Nil(t, m.announceConfig())
@@ -72,7 +73,7 @@ func TestStartup_SaysNothingWithoutAFile(t *testing.T) {
 func TestStartup_CarriesProfilingToTheScans(t *testing.T) {
 	dir := t.TempDir()
 	m := New(Startup{
-		Options:   &codescan.Options{WorkDir: dir},
+		Options:   testutils.ApplyLoader(&codescan.Options{WorkDir: dir}),
 		Profiling: &scan.Profiling{Enabled: true, Dir: dir},
 	})
 	t.Cleanup(m.Close)

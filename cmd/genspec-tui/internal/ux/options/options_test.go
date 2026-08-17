@@ -30,7 +30,7 @@ var deliberatelyOmitted = map[string]string{ //nolint:gochecknoglobals // table 
 func newOverlay(t *testing.T, height int) (*Overlay, *codescan.Options) {
 	t.Helper()
 
-	cfg := &codescan.Options{WorkDir: t.TempDir(), Packages: []string{"./..."}}
+	cfg := testutils.ApplyLoader(&codescan.Options{WorkDir: t.TempDir(), Packages: []string{"./..."}})
 	o := New(cfg)
 	o.SetSize(100, height)
 

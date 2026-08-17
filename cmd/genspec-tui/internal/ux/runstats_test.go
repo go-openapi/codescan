@@ -84,10 +84,10 @@ func TestRunStats_TakesTheCostFromTheScan(t *testing.T) {
 func TestRunStats_ProfiledRunNamesWhoSpentIt(t *testing.T) {
 	dir := t.TempDir()
 
-	res := scan.Do(&codescan.Options{
+	res := scan.Do(testutils.ApplyLoader(&codescan.Options{
 		WorkDir:  fixturesDir(t),
 		Packages: []string{"./goparsing/classification/..."},
-	}, &scan.Profiling{Enabled: true, Dir: dir})
+	}), &scan.Profiling{Enabled: true, Dir: dir})
 	require.NoError(t, res.Err)
 
 	report := res.Profile

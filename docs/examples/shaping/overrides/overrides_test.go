@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/docs/examples/internal/loadertest"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -33,7 +34,7 @@ func examplesRoot(t *testing.T) string {
 // collects the scan diagnostics.
 func scanOverrides(t *testing.T, emitRefSiblings bool, diags *[]codescan.Diagnostic) *spec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:         examplesRoot(t),
 		Packages:        []string{"./shaping/overrides"},
 		ScanModels:      true,
@@ -43,7 +44,7 @@ func scanOverrides(t *testing.T, emitRefSiblings bool, diags *[]codescan.Diagnos
 				*diags = append(*diags, d)
 			}
 		},
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 	return doc
@@ -134,13 +135,13 @@ func TestOverrides(t *testing.T) {
 // the swagger:title context error (OAS2 responses and headers have no title).
 func TestOverrides_Responses(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:  examplesRoot(t),
 		Packages: []string{"./shaping/overrides"},
 		OnDiagnostic: func(d codescan.Diagnostic) {
 			diags = append(diags, d)
 		},
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 

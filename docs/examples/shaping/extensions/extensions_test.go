@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/docs/examples/internal/loadertest"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -25,12 +26,12 @@ func examplesRoot(t *testing.T) string {
 
 func scan(t *testing.T, skipExtensions bool) *spec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:        examplesRoot(t),
 		Packages:       []string{"./shaping/extensions"},
 		ScanModels:     true,
 		SkipExtensions: skipExtensions,
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 	return doc
@@ -38,13 +39,13 @@ func scan(t *testing.T, skipExtensions bool) *spec.Swagger {
 
 func scanEmitXGoType(t *testing.T, skipExtensions bool) *spec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:        examplesRoot(t),
 		Packages:       []string{"./shaping/extensions"},
 		ScanModels:     true,
 		EmitXGoType:    true,
 		SkipExtensions: skipExtensions,
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 	return doc
