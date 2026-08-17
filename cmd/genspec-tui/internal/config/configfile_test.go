@@ -46,10 +46,14 @@ func TestConfigSchema(t *testing.T) {
 		schema, err := configSchema()
 		require.NoError(t, err)
 
-		assert.Equal(t, "scan", schema["workdir"], "the library's own flags")
-		assert.Equal(t, "emit", schema["scan-models"])
+		assert.Equal(t, "emit", schema["scan-models"], "the library's own flags")
+		assert.Equal(t, "load", schema["stub-stdlib"])
 		assert.Equal(t, sectionProfile, schema["mem-profile-rate"], "and this command's")
-		assert.Equal(t, sectionProfile, schema["profile-dir"])
+
+		// The path options are command-line only. A file is found by searching upwards, so it belongs
+		// to the tree being scanned, and that tree may not choose where the session reads or writes.
+		assert.NotContains(t, schema, "workdir")
+		assert.NotContains(t, schema, "profile-dir")
 		assert.Equal(t,
 			[]string{"emit", "go", "load", sectionProfile, "scan"},
 			schema.Sections(),

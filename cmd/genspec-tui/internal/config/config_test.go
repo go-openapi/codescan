@@ -135,30 +135,32 @@ func TestPrepareScan(t *testing.T) {
 	t.Run("should settle the file, then what was typed, then the arguments", func(t *testing.T) {
 		profiles := t.TempDir()
 		cli, path := inConfiguredDir(t, `
-scan:
-  workdir: ./api
 emit:
   scan-models: false
 profile:
-  profile-dir: `+profiles+`
+  mem-profile-rate: 1
   profile: true
 `)
-		require.NoError(t, cli.set.Parse([]string{"-scan-models=true", "./handlers/..."}))
+		require.NoError(t, cli.set.Parse([]string{
+			"-scan-models=true", "-workdir", "./api", "-profile-dir", profiles, "./handlers/...",
+		}))
 
 		opts, prof, err := cli.PrepareScan()
 		require.NoError(t, err)
 
 		assert.Equal(t, []string{"./handlers/..."}, opts.Packages, "the arguments name what to scan")
-		assert.Equal(t, "api", filepath.Base(opts.WorkDir), "the file says from where")
+		// The paths are typed, not configured: a file found by searching upwards belongs to the tree
+		// being scanned, so it may not choose where the session reads or writes.
+		assert.Equal(t, "api", filepath.Base(opts.WorkDir), "-workdir says from where")
 		assert.True(t, filepath.IsAbs(opts.WorkDir), "resolved once, here, got %q", opts.WorkDir)
 		assert.True(t, opts.ScanModels, "and what was typed wins over what the file asked for")
 
 		require.NotNil(t, prof, "the file asked for a profiled session")
 		assert.True(t, prof.Enabled)
-		assert.Equal(t, profiles, prof.Dir, "and said where to keep it")
+		assert.Equal(t, profiles, prof.Dir, "and -profile-dir said where to keep it")
 
 		requireSameFile(t, path, cli.ConfigPath())
-		assert.ElementsMatch(t, []string{"profile", "profile-dir", "workdir"}, cli.ConfigSet(),
+		assert.ElementsMatch(t, []string{"profile", "mem-profile-rate"}, cli.ConfigSet(),
 			"scan-models is not among them: it was typed, so the file never got to set it - what is reported is "+
 				"what the session took from the file, not what the file asked for")
 	})
@@ -273,10 +275,9 @@ func TestConfigFile(t *testing.T) {
 
 	t.Run("should preset the flags it names", func(t *testing.T) {
 		cli, path := inConfiguredDir(t, `
-scan:
-  workdir: ./api
 emit:
   scan-models: false
+  ref-aliases: true
 profile:
   mem-profile-rate: 1
   profile: true
@@ -286,11 +287,11 @@ profile:
 		applied, got, err := configured(cli.set, cli.configFile)
 		require.NoError(t, err)
 		requireSameFile(t, path, got)
-		assert.ElementsMatch(t, []string{"workdir", "scan-models", "profile", "mem-profile-rate"}, applied.Set)
+		assert.ElementsMatch(t, []string{"scan-models", "ref-aliases", "profile", "mem-profile-rate"}, applied.Set)
 
 		opts, err := cli.options(nil)
 		require.NoError(t, err)
-		assert.Equal(t, "api", filepath.Base(opts.WorkDir), "a section the library owns")
+		assert.True(t, opts.RefAliases, "a section the library owns")
 		assert.False(t, opts.ScanModels)
 		assert.True(t, *cli.profile, "and a section this command owns")
 	})

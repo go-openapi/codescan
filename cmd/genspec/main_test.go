@@ -222,8 +222,6 @@ func TestConfigFileSetsFlags(t *testing.T) {
 	t.Run("should set flags from config file", func(t *testing.T) {
 		t.Parallel()
 		path := fixtures.ConfigFile(t, `
-scan:
-  workdir: `+fixtures.Petstore(t)+`
 emit:
   scan-models: false
 document:
@@ -232,7 +230,7 @@ diagnostics:
   quiet: true
 `)
 
-		stdout, _, err := exec(t, "-config", path, "./...")
+		stdout, _, err := exec(t, "-config", path, "-workdir", fixtures.Petstore(t), "./...")
 		require.NoError(t, err)
 
 		assert.NotContains(t, stdout, "\n  ", "document.compact came from the file")
@@ -271,9 +269,9 @@ diagnostics:
 	t.Run("should not report about config when quiet", func(t *testing.T) {
 		t.Parallel()
 
-		path := fixtures.ConfigFile(t, "scan:\n  workdir: "+fixtures.Petstore(t)+"\ndocument:\n  compact: true\n")
+		path := fixtures.ConfigFile(t, "document:\n  compact: true\n")
 
-		stdout, _, err := exec(t, "-c", path, "-quiet", "./...")
+		stdout, _, err := exec(t, "-c", path, "-workdir", fixtures.Petstore(t), "-quiet", "./...")
 
 		require.NoError(t, err)
 		assert.NotContains(t, stdout, "\n  ", "the file -c named was read")
@@ -283,7 +281,7 @@ diagnostics:
 		// the pair of flags can be asked something with no answer
 		t.Parallel()
 
-		path := fixtures.ConfigFile(t, "scan:\n  workdir: .\n")
+		path := fixtures.ConfigFile(t, "document:\n  compact: true\n")
 
 		_, _, err := exec(t, "-c", path, "-no-config", "./...")
 
@@ -328,13 +326,14 @@ diagnostics:
 		t.Parallel()
 
 		path := fixtures.ConfigFile(t, `
-scan:
-  workdir: `+fixtures.Petstore(t)+`
+document:
+  compact: true
 tui:
   theme: dark
 `)
 
-		_, stderr, err := exec(t, "-config", path, "-verbose", "-color=never", "./...")
+		_, stderr, err := exec(t, "-config", path, "-workdir", fixtures.Petstore(t),
+			"-verbose", "-color=never", "./...")
 
 		require.NoError(t, err)
 		assert.Contains(t, stderr, "configuration read")
@@ -344,9 +343,9 @@ tui:
 	t.Run("should not report about config when not verbose", func(t *testing.T) {
 		t.Parallel()
 
-		path := fixtures.ConfigFile(t, "scan:\n  workdir: "+fixtures.Petstore(t)+"\n")
+		path := fixtures.ConfigFile(t, "document:\n  compact: true\n")
 
-		_, stderr, err := exec(t, "-config", path, "-color=never", "./...")
+		_, stderr, err := exec(t, "-config", path, "-workdir", fixtures.Petstore(t), "-color=never", "./...")
 
 		require.NoError(t, err)
 		if loaderHasSomethingToSay() {
@@ -376,16 +375,70 @@ func TestConfigFileWalkUp(t *testing.T) {
 		// Not parallel: it is about the process's working directory, which is not a thing a test can hold an opinion on privately.
 		project := t.TempDir()
 		require.NoError(t, os.WriteFile(filepath.Join(project, cliconf.Names[0]),
-			[]byte("scan:\n  workdir: "+fixtures.Petstore(t)+"\ndiagnostics:\n  quiet: true\n"), 0o600))
+			[]byte("document:\n  compact: true\ndiagnostics:\n  quiet: true\n"), 0o600))
 
 		deep := filepath.Join(project, "cmd", "api")
 		require.NoError(t, os.MkdirAll(deep, 0o750))
 		t.Chdir(deep)
 
-		stdout, _, err := exec(t, "./...")
+		stdout, _, err := exec(t, "-workdir", fixtures.Petstore(t), "./...")
 
 		require.NoError(t, err)
-		assert.Contains(t, stdout, `"swagger": "2.0"`, "the scan ran where the file said")
+		assert.Contains(t, stdout, `"swagger":"2.0"`)
+		assert.NotContains(t, stdout, "\n  ", "document.compact came from the file three directories up")
+	})
+
+	// The walk above is what makes the next one matter: it climbs to the filesystem root, so running
+	// the command inside a repository reads THAT repository's file. An output path settable from a
+	// file would let the repository choose where the document lands -- and largely what is in it,
+	// since descriptions come from its own doc comments.
+	//
+	// So no file sets it, named or found. The rule is the option's, not the file's provenance: one
+	// sentence to state, nothing to reason about at the call site, and a scanned tree can no more
+	// choose a path than it can choose the command line.
+	t.Run("should refuse a configuration file that chooses where the document is written", func(t *testing.T) {
+		project := t.TempDir()
+		stolen := filepath.Join(t.TempDir(), "stolen.json")
+		require.NoError(t, os.WriteFile(filepath.Join(project, cliconf.Names[0]),
+			[]byte("document:\n  output: "+stolen+"\n"), 0o600))
+		t.Chdir(project)
+
+		_, _, err := exec(t, "-workdir", fixtures.Petstore(t), "./...")
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "output")
+
+		_, statErr := os.Stat(stolen)
+		assert.ErrorIs(t, statErr, os.ErrNotExist, "the repository must not have chosen where the document lands")
+	})
+
+	// Naming the file changes nothing: the option is off the schema, so there is no provenance rule
+	// to remember and no way to reach it from a file at all.
+	t.Run("should refuse it even when the file is named", func(t *testing.T) {
+		project := t.TempDir()
+		stolen := filepath.Join(t.TempDir(), "stolen.json")
+		config := filepath.Join(project, cliconf.Names[0])
+		require.NoError(t, os.WriteFile(config, []byte("document:\n  output: "+stolen+"\n"), 0o600))
+
+		_, _, err := exec(t, "-config", config, "-workdir", fixtures.Petstore(t), "-quiet", "./...")
+
+		require.Error(t, err)
+
+		_, statErr := os.Stat(stolen)
+		assert.ErrorIs(t, statErr, os.ErrNotExist)
+	})
+
+	// And the same for the scan's root, which decides what is READ.
+	t.Run("should refuse a configuration file that chooses where the scan runs", func(t *testing.T) {
+		project := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(project, cliconf.Names[0]),
+			[]byte("scan:\n  workdir: "+fixtures.Petstore(t)+"\n"), 0o600))
+		t.Chdir(project)
+
+		_, _, err := exec(t, "./...")
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "workdir")
 	})
 }
 

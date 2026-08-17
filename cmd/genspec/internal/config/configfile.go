@@ -6,6 +6,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 
 	"github.com/knadh/koanf/providers/rawbytes"
@@ -31,7 +32,6 @@ const (
 // table to read a section off. TestEveryFlagIsAddressableInAConfigFile is what keeps it in step.
 var commandSections = cliconf.Schema{ //nolint:gochecknoglobals // the schema, read once at startup
 	"input":   sectionDocument,
-	"output":  sectionDocument,
 	"format":  sectionDocument,
 	"compact": sectionDocument,
 
@@ -43,11 +43,24 @@ var commandSections = cliconf.Schema{ //nolint:gochecknoglobals // the schema, r
 }
 
 // notConfigurable are the flags a file deliberately cannot set, with the reason.
-var notConfigurable = map[string]string{ //nolint:gochecknoglobals // table for the drift guard
-	cliconf.Flag:      "names the file itself, which cannot be read from inside it",
-	cliconf.ShortFlag: "the short form of -" + cliconf.Flag,
-	cliconf.NoFlag:    "decides whether there is a file at all, from outside it",
-	"version":         "asks the command a question rather than configuring it",
+var notConfigurable = excusedFlags() //nolint:gochecknoglobals // table for the drift guard
+
+// excusedFlags is what a configuration file may not set here, on top of what every command excuses.
+//
+// output joins the shared path options: a file found by searching upwards belongs to the tree being
+// scanned, and letting that tree pick where the document is written is an arbitrary file write with
+// content it largely chooses too, since descriptions come from its own doc comments.
+func excusedFlags() map[string]string {
+	excused := map[string]string{
+		cliconf.Flag:      "names the file itself, which cannot be read from inside it",
+		cliconf.ShortFlag: "the short form of -" + cliconf.Flag,
+		cliconf.NoFlag:    "decides whether there is a file at all, from outside it",
+		"version":         "asks the command a question rather than configuring it",
+		"output":          "it decides which file the command writes",
+	}
+	maps.Copy(excused, cliopts.NotConfigurable())
+
+	return excused
 }
 
 // configSchema is the whole of what a configuration file may address here.

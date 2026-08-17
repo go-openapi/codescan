@@ -104,17 +104,46 @@ func TestEveryFlagIsAddressableInAConfigFile(t *testing.T) {
 	schema := ConfigSchema()
 	sections := map[string]bool{sectionScan: true, sectionGo: true, sectionLoad: true, sectionEmit: true}
 
+	excused := NotConfigurable()
+
 	fs.VisitAll(func(f *flag.Flag) {
+		if reason, notAddressable := excused[f.Name]; notAddressable {
+			assert.NotContainsf(t, schema, f.Name,
+				"-%s is excused from configuration (%s) but the schema addresses it anyway", f.Name, reason)
+
+			return
+		}
+
 		section, declared := schema[f.Name]
 		assert.Truef(t, declared,
-			"flag -%s is addressed in no configuration section. Give its table entry a section.", f.Name)
+			"flag -%s is addressed in no configuration section. Give its table entry a section, or "+
+				"excuse it in notConfigurable with a reason.", f.Name)
 		assert.Truef(t, sections[section],
 			"flag -%s is addressed in section %q, which is not one of this package's", f.Name, section)
 	})
 
 	registered := 0
 	fs.VisitAll(func(*flag.Flag) { registered++ })
-	assert.Len(t, schema, registered, "the schema and the flag set describe different surfaces")
+	assert.Len(t, schema, registered-len(excused), "the schema and the flag set describe different surfaces")
+}
+
+// TestPathOptionsAreCommandLineOnly pins the one thing the exclusion is for.
+//
+// A configuration file is found by searching upwards, so running a command inside a repository reads
+// THAT repository's file. An option deciding a path would let the tree being scanned choose where the
+// command reads or writes; these stay on the command line, where the answer is the one the person
+// running the command typed.
+func TestPathOptionsAreCommandLineOnly(t *testing.T) {
+	t.Parallel()
+
+	schema := ConfigSchema()
+
+	for name, reason := range NotConfigurable() {
+		assert.NotContainsf(t, schema, name, "%s is excused (%s) but a file can still address it", name, reason)
+		assert.NotEmptyf(t, reason, "%s is excused with no reason", name)
+	}
+
+	assert.Contains(t, NotConfigurable(), "workdir", "the scan's root is the option this exists for")
 }
 
 func TestDefaults(t *testing.T) {

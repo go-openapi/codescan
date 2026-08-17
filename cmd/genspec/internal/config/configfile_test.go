@@ -106,10 +106,14 @@ func TestConfigSchemaCoversBothHalves(t *testing.T) {
 	schema, err := configSchema()
 	require.NoError(t, err)
 
-	assert.Equal(t, "scan", schema["workdir"], "the library's own flags")
-	assert.Equal(t, "emit", schema["scan-models"])
-	assert.Equal(t, sectionDocument, schema["output"], "and this command's")
+	assert.Equal(t, "emit", schema["scan-models"], "the library's own flags")
+	assert.Equal(t, sectionDocument, schema["format"], "and this command's")
 	assert.Equal(t, sectionDiagnostics, schema["fail-on"])
+
+	// The path options are command-line only. A file is found by searching upwards, so it belongs to
+	// the tree being scanned, and that tree may not choose where the command reads or writes.
+	assert.NotContains(t, schema, "workdir")
+	assert.NotContains(t, schema, "output")
 	assert.Equal(t,
 		[]string{sectionDiagnostics, sectionDocument, "emit", "go", "load", "scan"},
 		schema.Sections())
