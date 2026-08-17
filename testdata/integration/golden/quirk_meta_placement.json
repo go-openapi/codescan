@@ -1,0 +1,27 @@
+{
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "The meta block, written below the package clause rather than above it.",
+    "version": "1.2.3"
+  },
+  "host": "api.example.com",
+  "basePath": "/v2",
+  "paths": {},
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "title": "Pet is a pet.",
+      "properties": {
+        "name": {
+          "description": "Name of the pet.",
+          "type": "string",
+          "x-go-name": "Name"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/quirks/meta-placement/below-package-doc"
+    }
+  }
+}
