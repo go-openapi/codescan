@@ -112,9 +112,9 @@ xychart-beta
 
 | configuration | option | warm | cold | allocated | peak RSS | build cache it writes |
 |---|---|---|---|---|---|---|
-| source dependencies | `SkipCompiledDependencies` | 1.506 s | 2.208 s | 1215 MB | 751 MB | 7.7 MB |
+| source dependencies | *the default* | 1.506 s | 2.208 s | 1215 MB | 751 MB | 7.7 MB |
 | pure-Go loader | `ToolchainFreeLoader` | 1.331 s | **1.359 s** | 643 MB | 412 MB | **4 KB** |
-| compiled dependencies | *the default* | **0.970 s** | 14.511 s | **447 MB** | **306 MB** | 231 MB |
+| compiled dependencies | `CompiledDependencies` | **0.970 s** | 14.511 s | **447 MB** | **306 MB** | 231 MB |
 
 **No configuration wins both cache states**, which is the whole reason there is a
 choice to make:
@@ -123,8 +123,8 @@ choice to make:
   reading their source — 19 packages read from source rather than 296. Fastest and
   smallest by a wide margin on a warm cache. On a cold one it must *compile* the
   closure before it can read it, so it is 6× slower than reading source and writes
-  231 MB of build cache. It is the default; `SkipCompiledDependencies` opts out,
-  and a CI job regenerating a spec from a clean checkout is what that is for.
+  231 MB of build cache. Opt in where the cache is warm by construction; it is off
+  by default because a CI job regenerating a spec from a clean checkout is not.
 - **The pure-Go loader** never invokes the go command, so there is no metadata to
   populate and nothing to compile: it writes 4 KB of build cache and **its cold
   time equals its warm time**. It is the only choice whose cost is predictable,

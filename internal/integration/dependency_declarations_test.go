@@ -123,10 +123,10 @@ func scanTarget(tb testing.TB, target string, compiled bool) (*oaispec.Swagger, 
 
 	var notices []string
 	doc, err := codescan.Run(&codescan.Options{
-		Packages:                 []string{target},
-		WorkDir:                  scantest.FixturesDir(),
-		ScanModels:               true,
-		SkipCompiledDependencies: !compiled,
+		Packages:             []string{target},
+		WorkDir:              scantest.FixturesDir(),
+		ScanModels:           true,
+		CompiledDependencies: compiled,
 		OnDiagnostic: func(d codescan.Diagnostic) {
 			if strings.Contains(d.Message, "could not be read") || d.Code == "scan.sourceless-type" {
 				notices = append(notices, d.Message)

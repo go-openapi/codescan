@@ -137,13 +137,20 @@ func loadPackages(opts *Options, exportOnly map[string]string) ([]*packages.Pack
 		cfg.BuildFlags = []string{"-tags", opts.BuildTags}
 	}
 
-	if opts.SkipCompiledDependencies {
+	if !opts.CompiledDependencies {
 		return loadWith(cfg, opts, loaderOpts)
 	}
 
 	pkgs, loader, err := loadWith(cfg, opts, append(loaderOpts, ownpackages.WithCompiledDependencies()))
-	if err != nil || !anyListError(pkgs) {
+	if err != nil {
 		return pkgs, loader, err
+	}
+	if !anyListError(pkgs) {
+		// Announced from the resolved strategy, not from the request. Only one strategy can take dependency types from
+		// the compiler, and Options.FS forces the other one whatever was asked for.
+		reportCompiledDependencies(opts, loader.Strategy())
+
+		return pkgs, loader, nil
 	}
 
 	// Taking dependency types from export data means `go list -export`, and that BUILDS what it is asked about rather
@@ -188,7 +195,7 @@ func anyListError(pkgs []*packages.Package) bool {
 // reportCompiledFallback says the compiled fast path was abandoned, and why.
 //
 // Worth a word rather than silence: the scan is about to cost roughly twice what it should, and the reason is in the
-// scanned tree rather than in codescan. A caller who sees this on every run wants SkipCompiledDependencies, which
+// scanned tree rather than in codescan. A caller who sees this on every run wants CompiledDependencies unset, which
 // skips the wasted first load.
 func reportCompiledFallback(opts *Options, pkgs []*packages.Package) {
 	if opts.OnDiagnostic == nil {
@@ -206,7 +213,7 @@ func reportCompiledFallback(opts *Options, pkgs []*packages.Package) {
 
 	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
 		"reading every dependency from source instead: taking their types from compiled export data needs the "+
-			"scanned code to build, and it does not (%s). Set SkipCompiledDependencies to skip this first attempt",
+			"scanned code to build, and it does not (%s). Unset CompiledDependencies to skip this first attempt",
 		culprit))
 }
 
@@ -222,18 +229,45 @@ func loaderStrategy(opts *Options) ownpackages.Strategy {
 	return ownpackages.StrategyGoPackages
 }
 
-// Where compiled dependencies stopped being announced.
+// reportCompiledDependencies announces which dependencies are read and which are not.
 //
-// A Hint used to fire once per scan saying dependency types had come from export data, and a Warning
-// fired when the option was asked for under a loader that cannot honour it. Both made sense while this
-// was opt-in: the first described a deviation the caller had chosen, the second an intent the load
-// could not meet.
+// Only a caller who asked for this hears anything. The pair says whether the request was met: a Hint
+// when the load took the shortcut, a Warning when it could not.
 //
-// Neither survives the option becoming the default. Announcing the default on every scan is noise, and
-// nobody asks for something they did not set, so there is no unmet intent left to report.
+// This does not announce a loss. Dependency source going unread wholesale is what it used to mean —
+// strfmt being the case that mattered, since its `swagger:strfmt` marks are what turn a
+// strfmt.DateTime field into a date-time. A dependency whose source carries annotations is now read
+// back after the load, and one that is merely asked for a declaration is read back at the lookup.
 //
-// What could still cost something is announced where it lands rather than up front: the lookup that
-// wanted a declaration and found no source to read it from. See reportSourcelessLookup.
+// So this says what the load did rather than what it cost. What it can still cost — source that is
+// not there to read at all — is announced where it lands, by the lookup that wanted a declaration and
+// did not find one; see reportSourcelessLookup.
+//
+// It takes the RESOLVED strategy rather than reading the request off Options, because the two can
+// disagree: only the go/packages strategy can ask the compiler for dependency types, and a virtual
+// filesystem forces the other one whatever the caller asked for. Announcing from the request meant
+// telling a toolchain-free scan that its dependency types came from export data while it was reading
+// every one of them from source — a diagnostic contradicting the load it describes.
+func reportCompiledDependencies(opts *Options, strategy ownpackages.Strategy) {
+	if opts.OnDiagnostic == nil {
+		return
+	}
+
+	// Asked for and not delivered. Worth more than silence: the caller chose this for the speed-up and
+	// did not get it, and nothing else in the output would say so.
+	if strategy != ownpackages.StrategyGoPackages {
+		opts.OnDiagnostic(grammar.Warnf(token.Position{}, grammar.CodeCompiledDependencies,
+			"CompiledDependencies is ignored under the %s loader, which resolves imports itself and "+
+				"already decides per dependency whether to read its source; every dependency here is "+
+				"loaded as usual", strategy))
+
+		return
+	}
+
+	opts.OnDiagnostic(grammar.Hintf(token.Position{}, grammar.CodeCompiledDependencies,
+		"dependency types come from compiled export data: a dependency is read only if its source carries "+
+			"swagger annotations, or if the spec later needs a declaration out of it"))
+}
 
 // exportOnlyCollector records "types without source" notices instead of announcing them.
 //

@@ -604,14 +604,16 @@ Three ways to get a package graph. The short version, before the mechanism:
   build cache, so **cold costs what warm costs**: about level with the standard
   loader warm, ~30% faster cold, and the only option whose cost is predictable.
   Usually the right pick for CI.
-- **Compiled dependencies** — what the standard loader does since v0.36.4: dependency
-  types come from compiled export data instead of their source. Warm, it is 35–55%
-  faster and 2.5–4× smaller, and it produces the same document, because a
+- **Compiled dependencies** (`CompiledDependencies`) — the standard loader, taking
+  dependency types from compiled export data instead of their source. Warm, it is
+  35–55% faster and 2.5–4× smaller, and it produces the same document, because a
   dependency's declarations are fetched on demand when the spec needs them — see
   [§compiled-dependencies](#compiled-dependencies).
   It must **compile** the closure, not merely type-check it, so on a cold cache it
-  is *an order of magnitude slower* and writes a large build cache.
-  `SkipCompiledDependencies` opts out, and CI is what it is for.
+  is *an order of magnitude slower* and writes a large build cache. Opt in where the
+  cache is warm by construction — a developer's machine, a watch loop, a pipeline
+  that restores it. Off by default because a CI runner is cold by construction, and
+  that is the case a default should protect.
 
 Two knobs below drop the GOROOT requirement entirely, for environments that have no
 Go installation at all (a WASI guest, a browser): `StubStdlib`, which pays for the
@@ -652,10 +654,11 @@ Two consequences of that override are worth stating, because both have bitten:
 - an option only one strategy can honour is **dropped, not refused**, when the other
   one runs. Compiled dependencies are the case — the go command is what takes
   dependency types from export data, so under `FS` nothing does. This is why the
-  scan no longer announces where its dependency types came from: announcing it from
-  the request is how a toolchain-free scan came to be told its types were compiled
-  while it read every one of them from source, and announcing it from
-  `Loader.Strategy()` is a line on every scan once it is the default.
+  announcement is driven by `Loader.Strategy()` and not by the request: announcing it
+  from the request is how a toolchain-free scan came to be told its types were
+  compiled while it read every one of them from source. A request the resolved
+  loader cannot meet is a Warning rather than silence, since the caller chose it for
+  the speed-up and did not get it.
 - `FS` is **the whole world the scan can read**, not just the tree being scanned —
   see [§virtual-filesystem](#virtual-filesystem).
 
@@ -930,27 +933,26 @@ ordinary scan never walks a file twice.
 Both halves are needed, and together they close every known divergence: the loader
 agreement A/B over the whole fixture corpus is empty for all three configurations
 (`internal/integration/loader_agreement_test.go`). That A/B holds the **source**
-scan as its reference rather than the default one — since the default now takes the
-shortcut, a test asking whether the shortcut changes anything would otherwise have
-it on both sides.
+scan as its reference, which is what plain `Options` give — a test asking whether
+the shortcut changes anything must not have it on both sides.
 
 #### Code that does not build
 
-Closing the fidelity gap is what let this become the default in v0.36.4, and it left
-one thing to handle that has nothing to do with fidelity.
+Closing the fidelity gap is what makes this option safe to reach for at all, and it
+left one thing to handle that has nothing to do with fidelity.
 
 `go list -export` **builds** the packages it is asked about. So a scanned package
 that does not compile comes back as a package that could not be loaded at all — a
 `ListError`, which aborts the scan — where an ordinary load reports a type error on
 a package whose definitions are still perfectly usable. That is go-swagger#2874
 exactly: one non-building package sinking a whole `./...` scan. Scanning a tree
-mid-edit is the ordinary case, so the default cannot be allowed to reintroduce it.
+mid-edit is the ordinary case, so opting into a shortcut must not reintroduce it.
 
 The fast path is therefore abandoned rather than allowed to change the answer:
 `loadPackages` retries from source when the compiled load reports a `ListError`,
 and says so with a `scan.compiled-dependencies` Hint. The retry costs a second
 load, and only on a tree that was not going to build; a healthy tree pays nothing.
-A caller who sees the Hint every run wants `SkipCompiledDependencies`, which skips
+A caller who sees the Hint every run wants `CompiledDependencies` unset, which skips
 the wasted first attempt.
 
 Note that dependencies need no such treatment — go/packages already type-checks a

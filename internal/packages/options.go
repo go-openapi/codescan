@@ -166,7 +166,7 @@ func WithStubbedStdlib() Option {
 // It stays an option here while being the default above, because the loader is the mechanism and the policy is the
 // scanner's. What the scanner adds on top is a retry: `go list -export` BUILDS what it is asked about, so a scanned
 // package that does not compile fails the load outright, and it is reloaded without this option rather than allowed
-// to abort. See Options.SkipCompiledDependencies.
+// to abort. See Options.CompiledDependencies.
 func WithCompiledDependencies() Option {
 	return func(o *options) { o.compiledDeps = true }
 }

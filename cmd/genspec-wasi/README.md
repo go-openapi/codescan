@@ -47,7 +47,7 @@ go run ./cmd/genspec-wasi -workdir ./testdata ./goparsing/petstore/...
 | `-loader` | `auto` | `go` runs `go list`; `own` needs no toolchain; `auto` picks `own` wherever the build cannot exec |
 | `-export-data` | | directory or `.zip` of precomputed dependency types (see below) |
 | `-stub-stdlib` | `false` | synthesize standard-library types instead of reading GOROOT |
-| `-skip-compiled-dependencies` | `false` | read every dependency from source rather than taking its types from the compiler's export data. The spec is the same either way; this is much slower on a warm cache and much faster on a cold one, since export data has to be compiled before it exists. **Native builds only** — it needs `-loader=go`, which WebAssembly cannot run |
+| `-compiled-dependencies` | `false` | take dependency types from the compiler's export data rather than reading every dependency from source. The spec is the same either way; this is much faster on a warm build cache and much slower on a cold one, since export data has to be compiled before it exists. **Native builds only** — it needs `-loader=go`, which WebAssembly cannot run |
 | `-format` | `spec` | `spec` writes the document alone; `json` wraps it with diagnostics and provenance (see below) |
 | `-output` | `-` | where to write the specification |
 | `-indent` | `true` | indent the emitted JSON |

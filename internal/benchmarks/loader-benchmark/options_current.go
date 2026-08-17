@@ -32,11 +32,10 @@ func (e *extraOptions) register() {
 
 // apply sets the configuration this run measures.
 //
-// -compiled-deps keeps its meaning across both builds — "take dependency types from compiled export
-// data" — even though the field behind it inverted when that became the default. So the flag selects a
-// configuration rather than reporting the library's default, and a run without it measures the opt-out
-// rather than what a caller gets out of the box.
+// -compiled-deps keeps its meaning across every build measured — "take dependency types from compiled
+// export data" — whichever way the field behind it was spelled at that release. So the flag selects a
+// configuration rather than reporting the library's default.
 func (e *extraOptions) apply(opts *codescan.Options) {
-	opts.SkipCompiledDependencies = !e.compiledDependencies
+	opts.CompiledDependencies = e.compiledDependencies
 	opts.ToolchainFreeLoader = e.toolchainFreeLoader
 }

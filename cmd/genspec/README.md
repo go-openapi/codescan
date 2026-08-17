@@ -148,7 +148,7 @@ specific answer.
 - **what to build it as** — `-goos`, `-goarch`, `-goflags`, `-gowork`,
   `-goexperiment`. Each changes what gets compiled, and so what the document
   says; each is a flag rather than inherited state, so a scan is reproducible
-- **how to load it** — `-loader`, `-stub-stdlib`, `-skip-compiled-dependencies`
+- **how to load it** — `-loader`, `-stub-stdlib`, `-compiled-dependencies`
 - **what to emit** — `-scan-models`, `-prune-unused-models`, the alias and
   `allOf` knobs, `-skip-extensions`, the naming knobs, the doc-comment knobs
 
