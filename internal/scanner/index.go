@@ -200,7 +200,7 @@ func (a *TypeIndex) processFile(pkg *packages.Package, file *ast.File) error {
 	}
 
 	if n&metaNode != 0 {
-		a.Meta = append(a.Meta, file.Doc)
+		a.Meta = collectMetaComments(file.Comments, a.Meta)
 	}
 
 	if n&operationNode != 0 {
@@ -214,6 +214,34 @@ func (a *TypeIndex) processFile(pkg *packages.Package, file *ast.File) error {
 	a.processFileDecls(pkg, file, n)
 
 	return nil
+}
+
+// collectMetaComments appends the comment groups that carry a swagger:meta annotation.
+//
+// The group holding the annotation is the meta block, wherever in the file it sits. Taking the file's PACKAGE doc
+// instead was wrong in both directions: a swagger:meta anywhere else left it nil, and a file that also had a package
+// doc had that unrelated comment parsed as its meta block - so an ordinary sentence above the package clause could
+// set the specification's title and version while the authored block was dropped.
+//
+// Detection already reads every comment in the file, so this is where the two agree on which one it found.
+func collectMetaComments(comments []*ast.CommentGroup, dst []*ast.CommentGroup) []*ast.CommentGroup {
+	for _, cmts := range comments {
+		if cmts == nil {
+			continue
+		}
+		for _, cline := range cmts.List {
+			if cline == nil {
+				continue
+			}
+			if annotation, ok := parsers.ExtractAnnotation(cline.Text); ok && annotation == "meta" {
+				dst = append(dst, cmts)
+
+				break
+			}
+		}
+	}
+
+	return dst
 }
 
 func (a *TypeIndex) collectOperationPathAnnotations(pkg *packages.Package, comments []*ast.CommentGroup, dst []parsers.ParsedPathContent) []parsers.ParsedPathContent {

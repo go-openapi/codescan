@@ -2,7 +2,7 @@ module github.com/go-openapi/codescan
 
 go 1.25.0
 
-toolchain go1.26.1
+toolchain go1.26.6
 
 require (
 	github.com/go-openapi/spec v0.22.9

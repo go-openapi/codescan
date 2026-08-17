@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/humanize"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
@@ -181,10 +182,14 @@ func (m *Model) followBadge() string {
 func (m *Model) stale() bool { return m.fileView.Dirty() }
 
 // shortenPath trims a path from the left with an ellipsis so it fits maxLen.
+//
+// The path is sanitized on the way, for the same reason [relTo] sanitizes its own: this result is drawn, and a
+// directory may be named anything the filesystem accepts.
 func shortenPath(p string, maxLen int) string {
 	if maxLen < 4 {
 		maxLen = 4
 	}
+	p = safetext.Sanitize(p)
 	r := []rune(p)
 	if len(r) <= maxLen {
 		return p

@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
@@ -21,7 +22,7 @@ import (
 // taking the whole line over RAW text - so the two tabs read as two views of one pane rather than two widgets.
 func Render(findings []Finding, ran bool, runErr error, selected int, focused bool) (string, int) {
 	if runErr != nil {
-		return theme.SevError().Render("validation failed: ") + runErr.Error(), -1
+		return theme.SevError().Render("validation failed: ") + safetext.SanitizeBlock(runErr.Error()), -1
 	}
 	if !ran {
 		return "(press v to validate the generated spec)", -1
@@ -81,7 +82,7 @@ func styledRow(f Finding) string {
 	return fmt.Sprintf("%s %s: %s",
 		theme.Dim().Render(location(f)),
 		style.Render(f.Severity.String()),
-		style.Bold(false).Render(f.Message),
+		style.Bold(false).Render(message(f)),
 	)
 }
 
@@ -90,19 +91,34 @@ func styledRow(f Finding) string {
 // Built from the same pieces in the same order so the two can never show different text depending on where the cursor
 // is - the same pairing the scan tab uses, and for the same reason.
 func plainRow(f Finding) string {
-	return fmt.Sprintf("%s %s: %s", location(f), f.Severity, f.Message)
+	return fmt.Sprintf("%s %s: %s", location(f), f.Severity, message(f))
 }
 
 // location is where the finding says the offending value is.
 //
 // The row shows the POINTER, which is also where enter will take you - so what is printed and what navigating does
 // cannot disagree. The validator's own wording of the path survives inside the message.
+//
+// A pointer names path templates, parameter and property names, all of which come from the scanned source, so it is
+// sanitized before it is drawn. Being a single token on a single row, it takes the strict form.
 func location(f Finding) string {
 	if f.Pointer == "" {
 		return RootLabel
 	}
 
-	return f.Pointer
+	return safetext.Sanitize(f.Pointer)
+}
+
+// message is the finding's wording, made safe to draw.
+//
+// The validator composes it from the document's own strings - names, paths, offending values - every one of which came
+// out of an annotation somebody wrote, so it reaches here carrying whatever they put there. Whether a given message
+// happens to quote what it interpolates is upstream's business and changes between releases; the pane cannot draw it
+// on that basis.
+//
+// The block form, since a message is prose and is allowed the line breaks the pane already counts rows for.
+func message(f Finding) string {
+	return safetext.SanitizeBlock(f.Message)
 }
 
 // severityStyle maps a severity to its pane style.

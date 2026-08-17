@@ -1,0 +1,24 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "The blank line above the package clause is what makes the file's doc nil, and recording the\ninfo node's cross-reference anchor used to dereference it.",
+    "title": "The meta block, in a file whose package clause carries no doc comment of its own.",
+    "version": "4.5.6"
+  },
+  "host": "nodoc.example.com",
+  "paths": {},
+  "definitions": {
+    "Widget": {
+      "type": "object",
+      "title": "Widget is a widget.",
+      "properties": {
+        "id": {
+          "description": "ID of the widget.",
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/go-openapi/codescan/testdata/quirks/meta-placement/no-package-doc"
+    }
+  }
+}

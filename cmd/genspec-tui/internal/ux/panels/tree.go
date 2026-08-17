@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/key"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/safetext"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/theme"
 )
 
@@ -283,16 +284,21 @@ func flatten(n *node, out *[]*node) {
 // fit truncates s to width with an ellipsis, or right-pads it with spaces.
 //
 // Padding is what makes the cursor highlight span the full inner width.
+//
+// It is also where the panes' text is made safe to draw, because it is the last thing every row of scanned material
+// passes through - a tree entry, a line of the open file, a run handed on to [renderSpans]. Sanitizing costs no
+// columns (one rune in, one rune out), so the truncation below and every rune coordinate computed against the same
+// text elsewhere still agree.
 func fit(s string, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	r := []rune(s)
+	r := []rune(safetext.Sanitize(s))
 	if len(r) > width {
 		if width == 1 {
 			return "…"
 		}
 		return string(r[:width-1]) + "…"
 	}
-	return s + strings.Repeat(" ", width-len(r))
+	return string(r) + strings.Repeat(" ", width-len(r))
 }

@@ -415,7 +415,15 @@ downstream processing:
 | `responseNode` | `swagger:response` | per-decl response registration |
 
 `route`, `operation`, and `meta` accumulate freely across comment
-groups in a file. The three struct-level annotations (`model`,
+groups in a file. For `meta` that means the group the annotation was
+found in **is** the meta block, wherever in the file it sits — not
+the file's package doc, which the block was once taken from
+regardless of where it had been detected. A `swagger:meta` outside
+the package doc then had an unrelated comment parsed in its place,
+or, in a file with no package doc at all, nothing to parse and a nil
+comment group carried into the origin recorder.
+
+The three struct-level annotations (`model`,
 `parameters`, `response`) are **mutually exclusive within a single
 comment group** — a struct cannot simultaneously be a model and a
 parameters bag, for instance. `checkStructConflict` enforces the

@@ -19,6 +19,10 @@ import (
 // through escape sequences and drops their resets, which is how a highlighted pane ends up bleeding colour across the
 // rest of the screen.
 //
+// The fit is also what makes the line safe to hand to the styling layer, since it is where control characters are
+// encoded. Nothing here may reach theme.Syntax on a path that skips it: raw text is the scanned repository's, and an
+// ESC in it would be read by the terminal as a command rather than drawn.
+//
 // spans record only where each run starts, so a run extends to the next span's column. width <= 0 renders nothing; no
 // spans renders the raw (fitted) text.
 func renderSpans(raw string, spans []theme.Span, width int) string {
