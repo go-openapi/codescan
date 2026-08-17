@@ -53,10 +53,10 @@ func TestEntityDecl(t *testing.T) {
 
 		t.Run("alias type returns types.Alias", func(t *testing.T) {
 			// Load the spec fixture which has type aliases (Customer = User).
-			specCtx, err := NewScanCtx(&Options{
+			specCtx, err := NewScanCtx(withTestLoader(&Options{
 				Packages: []string{"./goparsing/spec"},
 				WorkDir:  "../../testdata",
-			})
+			}))
 			require.NoError(t, err)
 
 			decl, ok := specCtx.FindDecl(

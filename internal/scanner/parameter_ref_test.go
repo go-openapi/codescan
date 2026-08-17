@@ -33,10 +33,10 @@ func parametersBlock(t *testing.T, sctx *ScanCtx, ref *ParameterRef) *grammar.Pa
 // Struct-hosted markers (definitions) must NOT appear among the refs.
 func TestParameterRefDiscovery(t *testing.T) {
 	t.Run("operation reference on a route func", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./enhancements/shared-parameters"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.NoError(t, err)
 
 		refs := slices.Collect(sctx.ParameterRefs())
@@ -51,10 +51,10 @@ func TestParameterRefDiscovery(t *testing.T) {
 	})
 
 	t.Run("path reference on a standalone func", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./enhancements/shared-parameters-pathitem"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.NoError(t, err)
 
 		refs := slices.Collect(sctx.ParameterRefs())
@@ -69,10 +69,10 @@ func TestParameterRefDiscovery(t *testing.T) {
 	})
 
 	t.Run("no reference markers when all swagger:parameters are struct definitions", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./goparsing/classification/operations"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.NoError(t, err)
 
 		assert.Empty(t, slices.Collect(sctx.ParameterRefs()))
@@ -96,7 +96,7 @@ func TestSharedParametersFixturesScanClean(t *testing.T) {
 	}
 	for _, pkg := range pkgs {
 		t.Run(pkg, func(t *testing.T) {
-			_, err := NewScanCtx(&Options{Packages: []string{pkg}, WorkDir: "../../testdata"})
+			_, err := NewScanCtx(withTestLoader(&Options{Packages: []string{pkg}, WorkDir: "../../testdata"}))
 			assert.NoError(t, err)
 		})
 	}

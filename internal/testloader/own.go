@@ -3,7 +3,7 @@
 
 //go:build testloader_own
 
-package scantest
+package testloader
 
 // defaultLoader is what the suites run under when nothing selects otherwise.
 //

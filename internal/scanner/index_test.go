@@ -318,7 +318,7 @@ func TestDetectNodes_StructConflict(t *testing.T) {
 }
 
 func TestNewTypeIndex_ExcludeDeps(t *testing.T) {
-	sctx, err := NewScanCtx(&Options{
+	sctx, err := NewScanCtx(withTestLoader(&Options{
 		Packages: []string{
 			"./goparsing/classification",
 			"./goparsing/classification/models",
@@ -326,7 +326,7 @@ func TestNewTypeIndex_ExcludeDeps(t *testing.T) {
 		},
 		WorkDir:     "../../testdata",
 		ExcludeDeps: true,
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, sctx)
 	require.NotNil(t, sctx.app)
@@ -339,7 +339,7 @@ func TestNewTypeIndex_ExcludeDeps(t *testing.T) {
 
 func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 	t.Run("include only models package", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{
 				"./goparsing/classification",
 				"./goparsing/classification/models",
@@ -348,7 +348,7 @@ func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			Include:     []string{"models"},
-		})
+		}))
 		require.NoError(t, err)
 
 		// Only the models package should have been processed for swagger annotations.
@@ -358,7 +358,7 @@ func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 	})
 
 	t.Run("exclude operations package", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{
 				"./goparsing/classification",
 				"./goparsing/classification/models",
@@ -367,7 +367,7 @@ func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			Exclude:     []string{"operations$"},
-		})
+		}))
 		require.NoError(t, err)
 
 		// Routes and parameters come from operations, so excluding it should eliminate them.
@@ -378,7 +378,7 @@ func TestNewTypeIndex_IncludeExcludePkgs(t *testing.T) {
 
 func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 	t.Run("include tag filters routes", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{
 				"./goparsing/classification",
 				"./goparsing/classification/operations",
@@ -386,7 +386,7 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			IncludeTags: []string{"orders"},
-		})
+		}))
 		require.NoError(t, err)
 
 		// Only routes tagged "orders" should be included.
@@ -396,7 +396,7 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 	})
 
 	t.Run("exclude tag filters routes", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{
 				"./goparsing/classification",
 				"./goparsing/classification/operations",
@@ -404,7 +404,7 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			ExcludeTags: []string{"orders"},
-		})
+		}))
 		require.NoError(t, err)
 
 		// No route should have the "orders" tag.
@@ -417,10 +417,10 @@ func TestNewTypeIndex_IncludeExcludeTags(t *testing.T) {
 }
 
 func TestCollectOperationPathAnnotations(t *testing.T) {
-	sctx, err := NewScanCtx(&Options{
+	sctx, err := NewScanCtx(withTestLoader(&Options{
 		Packages: []string{"./goparsing/classification/operations_annotation"},
 		WorkDir:  "../../testdata",
-	})
+	}))
 	require.NoError(t, err)
 
 	// operations_annotation has swagger:operation annotations.
@@ -433,12 +433,12 @@ func TestCollectOperationPathAnnotations(t *testing.T) {
 
 func TestCollectOperationPathAnnotations_TagFiltering(t *testing.T) {
 	t.Run("include tag filters operations", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages:    []string{"./goparsing/classification/operations_annotation"},
 			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			IncludeTags: []string{"Events"},
-		})
+		}))
 		require.NoError(t, err)
 
 		var count int
@@ -452,12 +452,12 @@ func TestCollectOperationPathAnnotations_TagFiltering(t *testing.T) {
 	})
 
 	t.Run("exclude tag filters operations", func(t *testing.T) {
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages:    []string{"./goparsing/classification/operations_annotation"},
 			WorkDir:     "../../testdata",
 			ExcludeDeps: true,
 			ExcludeTags: []string{"pets"},
-		})
+		}))
 		require.NoError(t, err)
 
 		for op := range sctx.Operations() {
@@ -473,50 +473,50 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 		// The invalid_model_param fixture has swagger:model and swagger:parameters on the same struct,
 		// which triggers a struct conflict error in detectNodes, propagated through processFile →
 		// processPackage → build → NewTypeIndex → NewScanCtx.
-		_, err := NewScanCtx(&Options{
+		_, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./goparsing/invalid_model_param"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
 	})
 
 	t.Run("model and response conflict propagates error", func(t *testing.T) {
-		_, err := NewScanCtx(&Options{
+		_, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./goparsing/invalid_model_response"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
 	})
 
 	t.Run("param and model conflict propagates error", func(t *testing.T) {
-		_, err := NewScanCtx(&Options{
+		_, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./goparsing/invalid_param_model"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
 	})
 
 	t.Run("response and model conflict propagates error", func(t *testing.T) {
-		_, err := NewScanCtx(&Options{
+		_, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{"./goparsing/invalid_response_model"},
 			WorkDir:  "../../testdata",
-		})
+		}))
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner), "expected ErrScanner, got: %v", err)
 	})
 
 	t.Run("duplicate package is de-duplicated", func(t *testing.T) {
 		// Load the same package twice — the second occurrence should be skipped (line 109 in build).
-		sctx, err := NewScanCtx(&Options{
+		sctx, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{
 				"./goparsing/petstore/enums",
 				"./goparsing/petstore/enums", // duplicate
 			},
 			WorkDir: "../../testdata",
-		})
+		}))
 		require.NoError(t, err)
 		require.NotNil(t, sctx)
 	})
@@ -525,13 +525,13 @@ func TestNewTypeIndex_ErrorPropagation(t *testing.T) {
 		// Load a valid package alongside an invalid one that shares imports.
 		// The invalid_model_param package is a main package; loading it should trigger the conflict error
 		// even if other packages are fine.
-		_, err := NewScanCtx(&Options{
+		_, err := NewScanCtx(withTestLoader(&Options{
 			Packages: []string{
 				"./goparsing/petstore/enums",
 				"./goparsing/invalid_model_param",
 			},
 			WorkDir: "../../testdata",
-		})
+		}))
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrScanner))
 	})
