@@ -18,7 +18,7 @@ const embedOverridePkg = "./enhancements/default-allof-embeds-override/..."
 // runEmbedOverride scans the override fixture in one of the two embed renderings.
 func runEmbedOverride(t *testing.T, defaultAllOf bool) *oaispec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:              []string{embedOverridePkg},
 		WorkDir:               scantest.FixturesDir(),
 		DefaultAllOfForEmbeds: defaultAllOf,

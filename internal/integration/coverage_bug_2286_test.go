@@ -16,7 +16,7 @@ import (
 // swagger:model directly as a route response (`200: model`) is accepted and yields a valid response
 // with a $ref to that model — the lenient shorthand for `200: body:model`.
 func TestCoverage_Bug2286(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2286/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

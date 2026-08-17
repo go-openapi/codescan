@@ -18,7 +18,7 @@ import (
 // a simple-schema query parameter.
 func TestCoverage_ExternalDocsObjects(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/external-docs-objects/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

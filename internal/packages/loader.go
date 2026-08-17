@@ -430,7 +430,7 @@ func (ld *loadState) loadDir(dir, pkgPath string, root bool) (*Package, error) {
 
 	// Fabricate whatever this package selects through imports that will not resolve.
 	// This way, the checker has something to bind those selectors to.
-	ld.synthesizeFrom(syntax)
+	ld.synthesizeFrom(syntax, dir)
 
 	// Only the two maps codescan reads.
 	// [types.Info] is pure output — every map handed in is one the checker then fills for every node it visits.
@@ -442,7 +442,7 @@ func (ld *loadState) loadDir(dir, pkgPath string, root bool) (*Package, error) {
 		Defs:  map[*ast.Ident]types.Object{},
 	}
 	conf := types.Config{
-		Importer: &importer{ld: ld, from: pkg},
+		Importer: &importer{ld: ld, from: pkg, fromDir: dir},
 		// Function bodies are checked for the packages under scan.
 		//
 		// An annotated type may be declared inside one (see the swagger:response in classification/operations/responses.go),
@@ -530,6 +530,11 @@ func inAnyFile(pos string, files []string) bool {
 type importer struct {
 	ld   *loadState
 	from *Package
+	// fromDir is where the importing package's source lives.
+	//
+	// Carried because it decides whether the standard library's own vendor tree is in scope: a package inside GOROOT/src
+	// resolves golang.org/x/crypto/... to the copy vendored beside it, and a package anywhere else must not.
+	fromDir string
 }
 
 func (i *importer) Import(importPath string) (*types.Package, error) {
@@ -557,7 +562,7 @@ func (i *importer) Import(importPath string) (*types.Package, error) {
 		}
 	}
 
-	dir, pkgPath, ok := i.ld.res.ResolveImport(importPath)
+	dir, pkgPath, ok := i.ld.res.ResolveImportFrom(importPath, i.fromDir)
 	if ok {
 		dep, err := i.ld.loadDir(dir, pkgPath, false)
 		if err == nil && dep != nil && dep.Types != nil {

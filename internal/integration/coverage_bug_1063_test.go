@@ -18,7 +18,7 @@ import (
 // 📖 Need doc: readOnly is a spec-level marker; excluding the field from request bodies is the
 // responsibility of downstream code generation / validation, not the spec scanner.
 func TestCoverage_Bug1063(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1063/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

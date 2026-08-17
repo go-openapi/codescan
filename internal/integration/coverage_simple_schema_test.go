@@ -33,7 +33,7 @@ import (
 //   - OnDiagnostic callback fires with the code in both cases
 func TestCoverage_SimpleSchemaViolation(t *testing.T) {
 	var got []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/simple-schema-violation/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {

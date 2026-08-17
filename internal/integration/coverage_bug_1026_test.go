@@ -19,7 +19,7 @@ import (
 // 📖 Need doc: document InfoExtensions / Extensions for arbitrary x-* vendor extensions on info /
 // the spec root.
 func TestCoverage_Bug1026(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1026/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

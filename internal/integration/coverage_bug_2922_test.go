@@ -38,7 +38,7 @@ func TestCoverage_Bug2922(t *testing.T) {
 	const enumMapping = "FIRST TestEnumFirst"
 
 	t.Run("default keeps the mapping in the description (backward compat)", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:   []string{"./bugs/2922/..."},
 			WorkDir:    scantest.FixturesDir(),
 			ScanModels: true,
@@ -66,7 +66,7 @@ func TestCoverage_Bug2922(t *testing.T) {
 	})
 
 	t.Run("SkipEnumDescriptions leaves the description as authored prose", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:             []string{"./bugs/2922/..."},
 			WorkDir:              scantest.FixturesDir(),
 			ScanModels:           true,

@@ -188,7 +188,7 @@ file uses as its sections:
   `-goexperiment`. Each decides what compiles, and so what the document says;
   each is a flag rather than inherited state, so a scan is reproducible
 - **how it is read** (`load`) — `-loader`, `-stub-stdlib`,
-  `-skip-compiled-dependencies`
+  `-compiled-dependencies`
 - **what is emitted** (`emit`) — `-scan-models`, `-prune-unused-models`, the
   alias and `allOf` knobs, `-skip-extensions`, the naming and doc-comment knobs
 

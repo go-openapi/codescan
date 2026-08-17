@@ -19,7 +19,7 @@ import (
 // The cross-package model is now resolved, so the response schema is an array of `$ref` to the
 // emitted definition.
 func TestCoverage_Bug2907(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2907/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

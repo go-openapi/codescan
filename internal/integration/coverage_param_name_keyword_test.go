@@ -18,7 +18,7 @@ import (
 // structural keyword — is stripped from the parameter description rather than leaking into it as
 // prose (it previously had no handler and fell through to Block.Prose()).
 func TestCoverage_ParamNameKeyword(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/param-name-keyword/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -41,7 +41,7 @@ xychart-beta
     title "Time for one scan of kubeapi (warm build cache, seconds)"
     x-axis ["v0.33.3", "v0.35.1", "current"]
     y-axis "seconds" 0 --> 8
-    bar [7.087, 1.758, 0.970]
+    bar [7.087, 1.758, 1.506]
 ```
 
 ```mermaid
@@ -49,17 +49,26 @@ xychart-beta
     title "Memory: total allocated (bars) and peak RSS (line), MB"
     x-axis ["v0.33.3", "v0.35.1", "current"]
     y-axis "MB" 0 --> 4800
-    bar [4555, 1217, 447]
-    line [1154, 807, 306]
+    bar [4555, 1217, 1215]
+    line [1154, 807, 751]
 ```
 
-End to end: **7.3× faster and 10× less allocated**, for the identical document.
+End to end, out of the box: **4.7× faster and 3.7× less allocated**, for the
+identical document. Either of the loader options in the next section takes it
+further — compiled dependencies reach 0.970 s and 447 MB, which is **7.3× faster
+and 10× less allocated** than v0.33.3.
+
+All three bars are the *same* configuration, so the series measures six months of
+work and nothing else. That matters because the largest single step available
+today is not on this chart at all: it is a flag, and mixing it in here would
+credit the calendar for it.
 
 The two charts do not tell the same story, and the difference is the interesting
 part. The step from v0.33.3 to v0.35.1 removes 3.3 GB of *allocation* but only
 346 MB of *peak* — the old regexp-based parser allocated and discarded, so the
-high-water mark stayed near the floor that the loaded package graph sets. The
-step to current lowers that floor instead.
+high-water mark stayed near the floor that the loaded package graph sets. Nothing
+since has moved that floor by default (−56 MB); moving it is what asking for a
+different loader does, and it is worth −395 to −501 MB.
 
 ### What each step changed
 
@@ -74,7 +83,9 @@ in reading annotations, and it appears where route and operation bodies do.
 
 **v0.35.1 → current — the package loader.** Resolving and type-checking the
 package graph is the bulk of a scan, and it is now possible to ask for a loader
-that reads less of it. That is the next section.
+that reads less of it. In the default configuration this stretch bought speed
+only — a quarter-second on both corpora, allocation-neutral to within 2 MB. The
+memory is all in the asking. That is the next section.
 
 ## How each loader option fares
 
@@ -112,19 +123,20 @@ xychart-beta
 
 | configuration | option | warm | cold | allocated | peak RSS | build cache it writes |
 |---|---|---|---|---|---|---|
-| source dependencies | `SkipCompiledDependencies` | 1.506 s | 2.208 s | 1215 MB | 751 MB | 7.7 MB |
+| source dependencies | *the default* | 1.506 s | 2.208 s | 1215 MB | 751 MB | 7.7 MB |
 | pure-Go loader | `ToolchainFreeLoader` | 1.331 s | **1.359 s** | 643 MB | 412 MB | **4 KB** |
-| compiled dependencies | *the default* | **0.970 s** | 14.511 s | **447 MB** | **306 MB** | 231 MB |
+| compiled dependencies | `CompiledDependencies` | **0.970 s** | 14.511 s | **447 MB** | **306 MB** | 231 MB |
 
 **No configuration wins both cache states**, which is the whole reason there is a
 choice to make:
 
 - **Compiled dependencies** take dependency types from the compiler instead of
-  reading their source — 19 packages read from source rather than 296. Fastest and
+  reading their source — 31 packages read from source rather than 296. Fastest and
   smallest by a wide margin on a warm cache. On a cold one it must *compile* the
-  closure before it can read it, so it is 6× slower than reading source and writes
-  231 MB of build cache. It is the default; `SkipCompiledDependencies` opts out,
-  and a CI job regenerating a spec from a clean checkout is what that is for.
+  closure before it can read it, so it is more than 6× slower than reading
+  source, and it writes 231 MB of build cache. Opt in where the cache is warm by
+  construction; it is off by default because a CI job regenerating a spec from a
+  clean checkout is not.
 - **The pure-Go loader** never invokes the go command, so there is no metadata to
   populate and nothing to compile: it writes 4 KB of build cache and **its cold
   time equals its warm time**. It is the only choice whose cost is predictable,

@@ -23,7 +23,7 @@ import (
 // 📖 Need doc: the uint* formats are intentional; use swagger:strfmt int64 to emit a conformant
 // string-encoded int64.
 func TestCoverage_Bug1512(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1512/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -22,7 +22,7 @@ const pruneUnusedPkg = "./enhancements/prune-unused/..."
 func runPrune(t *testing.T, scanModels, prune bool, input *oaispec.Swagger) (*oaispec.Swagger, map[grammar.Code][]grammar.Diagnostic) {
 	t.Helper()
 	byCode := map[grammar.Code][]grammar.Diagnostic{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{pruneUnusedPkg},
 		WorkDir:           scantest.FixturesDir(),
 		InputSpec:         input,
@@ -146,7 +146,7 @@ func TestPruneUnused_InputSpecPinned(t *testing.T) {
 // references a pruned node, and every emitted anchor resolves in the rendered spec.
 func TestPruneUnused_Provenance(t *testing.T) {
 	var recorded []scanner.Provenance
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{pruneUnusedPkg},
 		WorkDir:           scantest.FixturesDir(),
 		ScanModels:        true,

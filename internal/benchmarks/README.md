@@ -39,21 +39,21 @@ Three configurations of the working tree, the same document out of each.
 
 | configuration | wall | peak RSS | allocated |
 |---|---|---|---|
-| **dockerctl** — source dependencies | 0.972 s | 679 MB | 1103 MB |
+| **dockerctl** — source dependencies *(the default)* | 0.972 s | 679 MB | 1103 MB |
 | pure-Go loader (`ToolchainFreeLoader`) | 1.134 s | **403 MB** | **589 MB** |
-| compiled dependencies *(the default)* | **0.438 s** | **170 MB** | **237 MB** |
-| **kubeapi** — source dependencies | 1.506 s | 751 MB | 1215 MB |
+| compiled dependencies | **0.438 s** | **170 MB** | **237 MB** |
+| **kubeapi** — source dependencies *(the default)* | 1.506 s | 751 MB | 1215 MB |
 | pure-Go loader (`ToolchainFreeLoader`) | 1.331 s | 412 MB | 643 MB |
-| compiled dependencies *(the default)* | **0.970 s** | **306 MB** | **447 MB** |
+| compiled dependencies | **0.970 s** | **306 MB** | **447 MB** |
 
 ### Cold build cache (n=1, private empty `GOCACHE`)
 
 | configuration | wall | build cache it writes |
 |---|---|---|
-| **dockerctl** — source dependencies | 1.490 s | 7.5 MB |
+| **dockerctl** — source dependencies *(the default)* | 1.490 s | 7.5 MB |
 | pure-Go loader | **1.198 s** | **4 KB** |
 | compiled dependencies | 9.361 s | 216 MB |
-| **kubeapi** — source dependencies | 2.208 s | 7.7 MB |
+| **kubeapi** — source dependencies *(the default)* | 2.208 s | 7.7 MB |
 | pure-Go loader | **1.359 s** | **4 KB** |
 | compiled dependencies | 14.511 s | 231 MB |
 
@@ -63,10 +63,11 @@ Memory does not depend on cache state and is omitted here; it matches the warm f
 
 **Compiled dependencies win warm and lose cold, by a lot.** Taking dependency types from the
 compiler instead of their source is 35–55% faster and 2.5–4× smaller on a warm cache. On a cold one
-it is **6× slower** than reading source, because `go list -export` must *compile* the closure rather
-than type-check it, and it materialises up to 231 MB of build cache doing so. It is the default
-since v0.36.4, and `SkipCompiledDependencies` is the opt-out; CI regenerating a spec from a clean
-checkout is the case that wants it.
+it is **more than 6× slower** than reading source (6.3× and 6.6× on the two corpora), because
+`go list -export` must *compile* the closure rather
+than type-check it, and it materialises up to 231 MB of build cache doing so. `CompiledDependencies`
+opts in, and a build cache that is warm by construction — a developer's machine, a watch loop, a
+pipeline that restores its cache — is the case that wants it.
 
 **The pure-Go loader is the only one whose cost is predictable.** It writes 4 KB of build cache and
 its cold time equals its warm time, because it never invokes the go command — there is no metadata
@@ -82,6 +83,15 @@ Its memory advantage is flat — 45–47% less allocated on both corpora — whi
 corpus-dependent: *slower* than the standard loader warm on the smaller client, *faster* on the
 larger server. Scale decides whether the wall-clock deficit survives; on the larger corpus it does
 not.
+
+**Which is why the default is the standard loader reading dependencies from source.** No
+configuration wins everywhere, so the default is the one with no bad case: it is never an order of
+magnitude off, it writes 7 MB of build cache rather than 231, and it does not care whether the cache
+was there. The two better answers are both conditional, and each is one flag away — compiled
+dependencies where the cache is warm by construction, and the pure-Go loader where memory is the
+binding constraint or the cost has to be predictable. The pure-Go loader is the better trade of the
+two on these figures and would be the natural default; it remains experimental, which is the only
+reason it is not.
 
 **Where the memory goes.** The load ladders (`bench_loaders_test.go`) report the shape behind those
 figures — how much of the closure ends up as parsed syntax:
@@ -124,11 +134,13 @@ own throwaway module so it links the released library rather than this checkout.
 |---|---|---|---|---|
 | v0.33.3 | 1.593 s | 1316 MB | 7.087 s | 4555 MB |
 | v0.35.1 | 1.226 s | 1103 MB | 1.758 s | 1217 MB |
-| current, source dependencies | 0.972 s | 1103 MB | 1.506 s | 1215 MB |
-| current, compiled dependencies *(default)* | **0.438 s** | **237 MB** | **0.970 s** | **447 MB** |
+| current, source dependencies *(default)* | 0.972 s | 1103 MB | 1.506 s | 1215 MB |
+| current, compiled dependencies | **0.438 s** | **237 MB** | **0.970 s** | **447 MB** |
 
-End to end, six months moved the larger corpus from 7.1 s / 4555 MB to 0.97 s / 447 MB — **7.3×
-faster, 10× less allocated** — for the identical 222 definitions and 260 paths.
+End to end, six months moved the larger corpus from 7.1 s / 4555 MB to 1.51 s / 1215 MB in the
+default configuration — **4.7× faster, 3.7× less allocated** — and to 0.97 s / 447 MB with compiled
+dependencies asked for, which is **7.3× faster, 10× less allocated**. Every row emits the identical
+222 definitions and 260 paths.
 
 ### The two halves moved for different reasons, on different corpora
 
@@ -198,7 +210,7 @@ comes from *asking* for a loader that prunes.
 
 ### What a scan is made of today
 
-Per phase, in the default configuration, warm:
+Per phase, warm, with compiled dependencies — the configuration the loader work was aimed at:
 
 | corpus | Load | Build | Build's share |
 |---|---|---|---|
@@ -292,6 +304,6 @@ with the commands above.
   too.
 - **A version probe refuses options younger than itself.** `options_baseline.go` accepts the same
   flags as the current build and *exits* rather than ignoring them — a probe that silently accepted
-  `-compiled-deps` would report a default-configuration measurement under a label saying otherwise,
-  the one measurement error that cannot be spotted in the output.
+  `-compiled-deps` would report a source-dependency measurement under a label saying otherwise, the
+  one measurement error that cannot be spotted in the output.
 - **Peak RSS is read from `/proc`**, so that column reads zero off Linux.

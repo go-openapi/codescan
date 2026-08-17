@@ -73,11 +73,10 @@ type abConfig struct {
 // abBaseline is the reference every configuration is compared against: every dependency read from
 // source, nothing taken from a compiler's word for it.
 //
-// Deliberately not the default Options. Since v0.36.4 the default takes dependency types from export
-// data, and a test asking "does this shortcut change the document?" has to hold the no-shortcut scan
-// as its reference — otherwise the shortcut is on both sides of the comparison and the question
-// answers itself.
-func abBaseline(o *codescan.Options) { o.SkipCompiledDependencies = true }
+// That is what plain Options do, which is the point of the default: a test asking "does this shortcut
+// change the document?" has to hold the no-shortcut scan as its reference, or the shortcut sits on
+// both sides of the comparison and the question answers itself.
+func abBaseline(*codescan.Options) {}
 
 // abConfigs returns the configurations to compare against [abBaseline].
 func abConfigs(tb testing.TB) []abConfig {
@@ -92,12 +91,11 @@ func abConfigs(tb testing.TB) []abConfig {
 			apply: func(o *codescan.Options) { o.ToolchainFreeLoader = true },
 		},
 		{
-			// Axis B, and since v0.36.4 the default. go/packages takes dependency types from `go list
-			// -export` wholesale — a LoadMode is one value for the whole load — and the annotated ones
-			// are read back afterwards, which is how it reaches the per-dependency outcome the
-			// toolchain-free route decides during it.
+			// Axis B. go/packages takes dependency types from `go list -export` wholesale — a LoadMode
+			// is one value for the whole load — and the annotated ones are read back afterwards, which
+			// is how it reaches the per-dependency outcome the toolchain-free route decides during it.
 			name:  "compiled-dependencies",
-			apply: func(*codescan.Options) {},
+			apply: func(o *codescan.Options) { o.CompiledDependencies = true },
 		},
 	}
 

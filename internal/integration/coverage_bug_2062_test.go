@@ -17,7 +17,7 @@ import (
 // swagger:meta concept in OpenAPI 2.0, not a per-operation field — that part of the ask is N/A by
 // spec.)
 func TestCoverage_Bug2062(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2062/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

@@ -15,7 +15,7 @@ import (
 // TestCoverage_Bug91 locks go-swagger issue #91 ("decouple from source"): a query parameter can be
 // declared INLINE in the swagger:operation YAML body — no Go wrapper struct required.
 func TestCoverage_Bug91(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/91/..."}, WorkDir: scantest.FixturesDir()})
+	doc, err := runScan(&codescan.Options{Packages: []string{"./bugs/91/..."}, WorkDir: scantest.FixturesDir()})
 	require.NoError(t, err)
 	op := doc.Paths.Paths["/search"].Get
 	require.NotNil(t, op)

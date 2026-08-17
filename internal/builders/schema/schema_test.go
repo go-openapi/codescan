@@ -761,14 +761,14 @@ func TestAliasedModels(t *testing.T) {
 func TestAliasedTopLevelModels(t *testing.T) {
 	t.Run("with options: no scan models, with aliases as ref", func(t *testing.T) {
 		t.Run("with goparsing/spec", func(t *testing.T) {
-			ctx, err := scanner.NewScanCtx(&scanner.Options{
+			ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 				Packages: []string{
 					"./goparsing/spec",
 				},
 				WorkDir:    scantest.FixturesDir(),
 				ScanModels: false,
 				RefAliases: true,
-			})
+			}))
 			require.NoError(t, err)
 
 			t.Run("should find User definition in source", func(t *testing.T) {
@@ -834,14 +834,14 @@ func TestAliasedTopLevelModels(t *testing.T) {
 
 	t.Run("with options: no scan models, without aliases as ref", func(t *testing.T) {
 		t.Run("with goparsing/spec", func(t *testing.T) {
-			ctx, err := scanner.NewScanCtx(&scanner.Options{
+			ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 				Packages: []string{
 					"./goparsing/spec",
 				},
 				WorkDir:    scantest.FixturesDir(),
 				ScanModels: false,
 				RefAliases: false,
-			})
+			}))
 			require.NoError(t, err)
 
 			t.Run("should find User definition in source", func(t *testing.T) {
@@ -940,7 +940,11 @@ func TestPointersAreNullableByDefaultWhenSetXNullableForPointersIsSet(t *testing
 
 	packagePattern := "./enhancements/pointers-nullable-by-default"
 	packagePath := fixturesModule + "/enhancements/pointers-nullable-by-default"
-	ctx, err := scanner.NewScanCtx(&scanner.Options{Packages: []string{packagePattern}, WorkDir: scantest.FixturesDir(), SetXNullableForPointers: true})
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
+		Packages:                []string{packagePattern},
+		WorkDir:                 scantest.FixturesDir(),
+		SetXNullableForPointers: true,
+	}))
 	require.NoError(t, err)
 
 	assertModel(ctx, packagePath, "Item")
@@ -986,7 +990,10 @@ func TestPointersAreNotNullableByDefaultWhenSetXNullableForPointersIsNotSet(t *t
 
 	packagePattern := "./enhancements/pointers-nullable-by-default"
 	packagePath := fixturesModule + "/enhancements/pointers-nullable-by-default"
-	ctx, err := scanner.NewScanCtx(&scanner.Options{Packages: []string{packagePattern}, WorkDir: scantest.FixturesDir()})
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
+		Packages: []string{packagePattern},
+		WorkDir:  scantest.FixturesDir(),
+	}))
 	require.NoError(t, err)
 
 	assertModel(ctx, packagePath, "Item")
@@ -1305,13 +1312,13 @@ func TestBuilder_DiagnosticsOnInvalidNumeric(t *testing.T) {
 	packagePath := fixturesModule + "/enhancements/diagnostics"
 
 	var collected []grammar.Diagnostic
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{packagePattern},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {
 			collected = append(collected, d)
 		},
-	})
+	}))
 	require.NoError(t, err)
 
 	decl, _ := ctx.FindDecl(packagePath, "BadMaximum")
@@ -1375,10 +1382,10 @@ func TestBuilder_DiagnosticsOnAmbiguousEmbed(t *testing.T) {
 
 	build := func(t *testing.T, name string) *Builder {
 		t.Helper()
-		ctx, err := scanner.NewScanCtx(&scanner.Options{
+		ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 			Packages: []string{packagePattern},
 			WorkDir:  scantest.FixturesDir(),
-		})
+		}))
 		require.NoError(t, err)
 
 		decl, _ := ctx.FindDecl(packagePath, name)
@@ -1437,10 +1444,10 @@ func TestBuilder_DiagnosticsOnAmbiguousEmbed(t *testing.T) {
 func TestEmbeddedDescriptionAndTags(t *testing.T) {
 	packagePattern := "./" + fixtureMinimal3125
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{packagePattern},
 		WorkDir:  scantest.FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
@@ -1508,12 +1515,12 @@ func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, err := scanner.NewScanCtx(&scanner.Options{
+			ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 				Packages:       []string{"./" + fixtureMinimal3125},
 				WorkDir:        scantest.FixturesDir(),
 				SkipExtensions: tc.skipExt,
 				DescWithRef:    tc.descRef,
-			})
+			}))
 			require.NoError(t, err)
 			decl, _ := ctx.FindDecl(fixturesModule+"/"+fixtureMinimal3125, "Item")
 			require.NotNil(t, decl)
@@ -1565,11 +1572,11 @@ func TestEmbeddedDescriptionAndTags_OptionVariants(t *testing.T) {
 func TestEmbeddedDescriptionAndTags_SkipExtensions(t *testing.T) {
 	packagePattern := "./" + fixtureMinimal3125
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:       []string{packagePattern},
 		WorkDir:        scantest.FixturesDir(),
 		SkipExtensions: true,
-	})
+	}))
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
@@ -1615,12 +1622,12 @@ func TestEmbeddedDescriptionAndTags_SkipAllOfCompounding(t *testing.T) {
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
 
 	var diags []grammar.Diagnostic
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:             []string{"./" + fixtureMinimal3125},
 		WorkDir:              scantest.FixturesDir(),
 		SkipAllOfCompounding: true,
 		OnDiagnostic:         func(d grammar.Diagnostic) { diags = append(diags, d) },
-	})
+	}))
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
@@ -1702,12 +1709,12 @@ func TestEmbeddedDescriptionAndTags_EmitRefSiblings(t *testing.T) {
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
 
 	var diags []grammar.Diagnostic
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:        []string{"./" + fixtureMinimal3125},
 		WorkDir:         scantest.FixturesDir(),
 		EmitRefSiblings: true,
 		OnDiagnostic:    func(d grammar.Diagnostic) { diags = append(diags, d) },
-	})
+	}))
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
@@ -1755,13 +1762,13 @@ func TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip(t *testing.T) {
 	packagePath := fixturesModule + "/" + fixtureMinimal3125
 
 	var diags []grammar.Diagnostic
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:             []string{"./" + fixtureMinimal3125},
 		WorkDir:              scantest.FixturesDir(),
 		EmitRefSiblings:      true,
 		SkipAllOfCompounding: true,
 		OnDiagnostic:         func(d grammar.Diagnostic) { diags = append(diags, d) },
-	})
+	}))
 	require.NoError(t, err)
 	decl, _ := ctx.FindDecl(packagePath, "Item")
 	require.NotNil(t, decl)
@@ -1815,7 +1822,7 @@ func TestEmbeddedDescriptionAndTags_EmitRefSiblings_Skip(t *testing.T) {
 func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 	getPetField := func(t *testing.T, descWithRef bool) oaispec.Schema {
 		t.Helper()
-		ctx, err := scanner.NewScanCtx(&scanner.Options{
+		ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 			Packages: []string{
 				"./goparsing/classification",
 				"./goparsing/classification/models",
@@ -1824,7 +1831,7 @@ func TestParamsShape_DescWithRef_BothModes(t *testing.T) {
 			WorkDir:        scantest.FixturesDir(),
 			SkipExtensions: true,
 			DescWithRef:    descWithRef,
-		})
+		}))
 		require.NoError(t, err)
 		decl, ok := ctx.FindDecl(fixturesModule+"/goparsing/classification/models", "NoModel")
 		require.True(t, ok)
@@ -1900,11 +1907,11 @@ func TestIssue2540(t *testing.T) {
   }`
 	packagePattern := "./bugs/2540/foo"
 	packagePath := fixturesModule + "/bugs/2540/foo"
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:       []string{packagePattern},
 		WorkDir:        scantest.FixturesDir(),
 		SkipExtensions: true,
-	})
+	}))
 	require.NoError(t, err)
 
 	decl, _ := ctx.FindDecl(packagePath, "Book")
@@ -1943,4 +1950,8 @@ func TestBuildFromDeclWithoutSource(t *testing.T) {
 	err := NewBuilder(ctx, stripped).Build(WithDefinitions(make(map[string]oaispec.Schema)))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrSchema)
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

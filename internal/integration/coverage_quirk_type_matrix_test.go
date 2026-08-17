@@ -26,7 +26,7 @@ import (
 // strfmt-iff-format-compatible rule.
 func TestQuirk_TypeMatrix(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./quirks/swagger-type-matrix/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

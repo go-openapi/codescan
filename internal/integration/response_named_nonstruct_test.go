@@ -27,7 +27,7 @@ import (
 // the $ref machinery and publishes it as a definition — which is what the response-toplevel-example
 // and response-edges witnesses exist to prevent.
 func TestResponseNamedNonStruct(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-named-nonstruct/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

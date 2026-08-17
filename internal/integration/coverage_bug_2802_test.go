@@ -21,7 +21,7 @@ import (
 // The uninstantiated generic's free type parameter `T` is skipped with a warning (it has no spec
 // representation), which is acceptable — the point is the scan completes.
 func TestCoverage_Bug2802(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2802/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -18,7 +18,7 @@ import (
 // The reporter's "model not appearing" was the -m (ScanModels) requirement — an unreferenced
 // model only shows up under -m, which is asserted here as the documented behaviour.
 func TestCoverage_Bug301(t *testing.T) {
-	withModels, err := codescan.Run(&codescan.Options{
+	withModels, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/301/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -37,7 +37,7 @@ func TestCoverage_Bug301(t *testing.T) {
 		user.Properties["friends"].Items.Schema.Ref.String(), "self-referential array")
 
 	// The documented confusion: without -m an unreferenced model is absent.
-	withoutModels, err := codescan.Run(&codescan.Options{
+	withoutModels, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/301/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

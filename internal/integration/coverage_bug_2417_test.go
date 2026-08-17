@@ -28,7 +28,7 @@ import (
 //   - color.SamePackageAlias embedded -> "hue" promoted
 //   - named a.AnotherPackageAlias      -> $ref
 func TestCoverage_Bug2417(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2417/b/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

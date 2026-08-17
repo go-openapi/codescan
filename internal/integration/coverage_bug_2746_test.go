@@ -18,7 +18,7 @@ import (
 //
 // The format now applies to the array's items.
 func TestCoverage_Bug2746(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2746/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -167,7 +167,7 @@ func (l symmetryLedger) run(t *testing.T) {
 
 	for _, mode := range aliasModes() {
 		t.Run(mode.name, func(t *testing.T) {
-			doc, err := codescan.Run(&codescan.Options{
+			doc, err := runScan(&codescan.Options{
 				Packages:           []string{"./" + l.pkg + "/..."},
 				WorkDir:            scantest.FixturesDir(),
 				ScanModels:         true,

@@ -16,7 +16,7 @@ import (
 // struct that itself has an anonymous-struct field no longer panics during schema build; the
 // promoted anonymous-struct property is emitted as a nested object.
 func TestCoverage_Bug2296(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2296/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

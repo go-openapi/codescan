@@ -22,7 +22,7 @@ import (
 // swagger:model).
 func TestQuirk_AliasDeprecated(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./quirks/alias-deprecated/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

@@ -18,7 +18,7 @@ import (
 //
 // The body param schema is a clean $ref.
 func TestCoverage_Bug3117(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3117/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

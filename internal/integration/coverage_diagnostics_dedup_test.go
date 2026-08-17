@@ -22,7 +22,7 @@ import (
 func TestCoverage_DiagnosticsDeduped(t *testing.T) {
 	counts := map[string]int{}
 	emitted := 0
-	_, err := codescan.Run(&codescan.Options{
+	_, err := runScan(&codescan.Options{
 		Packages:   []string{"./goparsing/classification/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

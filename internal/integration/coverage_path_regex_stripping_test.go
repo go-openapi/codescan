@@ -18,7 +18,7 @@ import (
 // no warning).
 func TestCoverage_PathRegexStripping(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/path-regex-stripping/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {

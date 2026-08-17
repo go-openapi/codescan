@@ -17,7 +17,7 @@ import (
 // type) ARE supported — multiple operations may reuse one example-bearing model while each
 // response code carries its own example, different from the model's.
 func TestCoverage_Bug2871(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2871/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)

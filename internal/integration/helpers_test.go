@@ -11,8 +11,27 @@ import (
 
 	"github.com/go-openapi/testify/v2/assert"
 
+	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/internal/scantest"
 	oaispec "github.com/go-openapi/spec"
 )
+
+// runScan is codescan.Run under whichever loader the suite was asked to run with.
+//
+// Almost every test here is about what a scan EMITS, and the emitted document is the same however
+// the package graph was fetched - held over the whole corpus by TestLoaderAgreement. What differs is
+// the cost, and this suite is where the cost lands: several hundred scans of small trees over one
+// dependency closure. Reading that closure from source each time is roughly three times the CPU of
+// compiling it once and reading it back, which a runner with two cores pays for on the wall.
+//
+// So the configuration is a property of the RUN rather than of each test, and lives in one place.
+// See scantest.LoaderEnv for how to select it.
+//
+// The tests that are about loading itself do not come through here: they set their own options and
+// call codescan.Run directly, because a test that pins a loader cannot have one applied over it.
+func runScan(opts *codescan.Options) (*oaispec.Swagger, error) {
+	return codescan.Run(scantest.ApplyLoader(opts))
+}
 
 // enableSpecOutput toggles YAML dumping of generated specs for debugging.
 const enableSpecOutput = false

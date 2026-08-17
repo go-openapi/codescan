@@ -16,7 +16,7 @@ import (
 // swagger:parameters struct is bound to its route when the struct's operation id matches the
 // route's operation id — the query parameter appears on the operation.
 func TestCoverage_Bug2218(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2218/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

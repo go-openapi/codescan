@@ -1,0 +1,62 @@
+# Runs the whole suite once per loader, so a divergence between them is caught as a divergence
+# rather than as a puzzle.
+#
+# The loaders are meant to produce the same document by different means, and the agreement A/B
+# asserts exactly that over the fixture corpus. It does not cover the SUITE: a test can depend on how
+# its graph was loaded without saying so, which is how one measuring the compiled-dependency
+# read-back economy came to fail under the toolchain-free loader, and how four sites wrapped twice in
+# the run-wide loader setting passed every ordinary run.
+#
+# Deliberately none of what the shared go-test workflow does. No OS matrix, no -race, no coverage: on
+# this question those add wall clock and variance and answer nothing, and windows in particular
+# drowns the signal. One platform, one toolchain, plain `go test`. What it buys is a green tick per
+# loader and three durations that can be read side by side.
+name: loader conformance
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+
+  # On demand, for comparing the three after a change to how a scan loads anything.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  loaders:
+    name: ${{ matrix.loader }} loader
+    runs-on: ubuntu-latest
+    # Every loader reports, rather than the first failure hiding the other two: which ones diverge is
+    # the whole of what this job has to say.
+    strategy:
+      fail-fast: false
+      matrix:
+        loader:
+          - source
+          - compiled
+          - own
+    steps:
+      -
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      -
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          check-latest: true
+          cache: true
+          cache-dependency-path: '**/go.sum'
+      -
+        name: Run the whole workspace under the ${{ matrix.loader }} loader
+        # The environment variable rather than the build tag the shared workflow has to use: a
+        # reusable workflow does not inherit the caller's environment, and this job is our own. It
+        # also means the variable is exercised somewhere, which the tags otherwise leave untested.
+        #
+        # -count=1 because a cached result reports no work and no duration, and the duration is half
+        # the point.
+        env:
+          CODESCAN_TEST_LOADER: ${{ matrix.loader }}
+        run: go test work -count=1 -timeout=30m ./...

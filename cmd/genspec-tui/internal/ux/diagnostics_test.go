@@ -253,11 +253,11 @@ func TestDoScanCollectsDiagnostics(t *testing.T) {
 		"types.go": badMaximumFixture,
 	})
 
-	res := scan.Do(&codescan.Options{
+	res := scan.Do(testutils.ApplyLoader(&codescan.Options{
 		WorkDir:    dir,
 		Packages:   []string{"."},
 		ScanModels: true,
-	}, &scan.Profiling{})
+	}), &scan.Profiling{})
 
 	if res.Err != nil {
 		t.Fatalf("scan should not hard-fail on soft diagnostics: %v", res.Err)

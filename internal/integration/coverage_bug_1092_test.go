@@ -18,7 +18,7 @@ import (
 // — the prose stays in the description and the real Version field is read; no YAML "mapping
 // values" error.
 func TestCoverage_Bug1092(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1092/..."}, WorkDir: scantest.FixturesDir(),
 	})
 	require.NoError(t, err, "colon-bearing meta prose must not raise a YAML mapping error (go-swagger#1092)")

@@ -21,7 +21,7 @@ import (
 // description survives alongside the reference.
 func TestCoverage_Bug1737(t *testing.T) {
 	t.Run("default drops the description (bare $ref)", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:   []string{"./bugs/1737/..."},
 			WorkDir:    scantest.FixturesDir(),
 			ScanModels: true,
@@ -35,7 +35,7 @@ func TestCoverage_Bug1737(t *testing.T) {
 	})
 
 	t.Run("DescWithRef preserves it via allOf", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:    []string{"./bugs/1737/..."},
 			WorkDir:     scantest.FixturesDir(),
 			ScanModels:  true,

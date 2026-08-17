@@ -22,7 +22,7 @@ import (
 // The Go field name is still recorded as x-go-name when it differs from the emitted JSON name, so
 // the override does not lose traceability.
 func TestQuirk_NameOnField(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./quirks/name-on-field/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

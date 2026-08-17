@@ -16,7 +16,7 @@ import (
 // the body-field keywords land on the body schema rather than the discarded header
 // (go-swagger#3013, #2942 family).
 func TestCoverage_ResponseBodyFieldExample(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/response-bodyfield-example/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

@@ -43,6 +43,17 @@ type Resolver struct {
 	modPath string // the main module's path
 	vendor  string // <modRoot>/vendor when it is authoritative (see vendorMode), else ""
 	srcRoot string // GOROOT/src
+	// stdVendor is GOROOT/src/vendor, the standard library's OWN vendor tree, when it has one.
+	//
+	// A second vendor root, because std is the second module loaded from its own tree: everything else arrives
+	// pre-flattened, either from the module cache or from the main module's vendor directory, and `go mod vendor`
+	// is what flattens it. A dependency's own vendor directory is never consulted - see modload/import.go, "everything
+	// must be in the main modules or the main module's or workspace's vendor directory".
+	//
+	// std is the exception because std never goes through modload at all. cmd/go resolves its imports with the older
+	// vendoredImportPath walk, which climbs from the importing package looking for a vendor directory and stops at the
+	// source root - so a package in GOROOT/src reaches GOROOT/src/vendor and nothing outside it does.
+	stdVendor string
 
 	// modDirs maps a required module path to the directory holding its source: the module cache for an ordinary
 	// requirement, an arbitrary directory for a `replace` target.
@@ -187,7 +198,28 @@ func (r *Resolver) ResolvePatterns(patterns []string) ([]Target, error) {
 	return out, nil
 }
 
+// ResolveImportFrom maps an import path onto a directory, for an import made from fromDir.
+//
+// The importing directory decides one thing only, and it is the thing [Resolver.ResolveImport] cannot know: whether
+// the standard library's own vendor tree is in scope. It is in scope for a package inside GOROOT/src and for nothing
+// else, which is what keeps a user package importing golang.org/x/crypto from silently picking up the copy pinned
+// inside the Go installation.
+//
+// Vendor first, as the go command has it: for an importer under the source root the vendored copy IS the package,
+// and the flat GOROOT/src lookup would miss it anyway.
+func (r *Resolver) ResolveImportFrom(importPath, fromDir string) (dir, pkgPath string, ok bool) {
+	if d, p, found := r.resolveStdVendor(importPath, fromDir); found {
+		return d, p, true
+	}
+
+	return r.ResolveImport(importPath)
+}
+
 // ResolveImport maps an import path onto a directory.
+//
+// It answers for an import from anywhere in the main module, which is every caller that has no importer to name. Use
+// [Resolver.ResolveImportFrom] where the importer is known: it is the only way the standard library's own vendor tree
+// can be reached.
 func (r *Resolver) ResolveImport(importPath string) (dir, pkgPath string, ok bool) {
 	// Standard library: GOROOT/src is laid out by import path.
 	if !strings.Contains(firstSegment(importPath), ".") {
@@ -255,11 +287,50 @@ func (r *Resolver) InMainModule(importPath string) bool {
 	return importPath == r.modPath || strings.HasPrefix(importPath, r.modPath+"/")
 }
 
+// UnderGoroot reports whether an import made from dir can see the standard library's own vendor tree.
+//
+// Exported for the loader's stub memo, which must not give one importer's answer to another.
+func (r *Resolver) UnderGoroot(dir string) bool { return r.underSrcRoot(dir) }
+
+// resolveStdVendor maps an import made from inside GOROOT onto the standard library's vendored copy of it.
+//
+// The package path carries the `vendor/` prefix, which is what `go list` reports for these and therefore what the
+// go/packages loader reports too - the two must agree on identity or a type recognized under one name goes unrecognized
+// under the other.
+func (r *Resolver) resolveStdVendor(importPath, fromDir string) (dir, pkgPath string, ok bool) {
+	if r.stdVendor == "" || !r.underSrcRoot(fromDir) {
+		return "", "", false
+	}
+	d := r.vfs.Join(r.stdVendor, importPath)
+	if !r.vfs.IsDir(d) {
+		return "", "", false
+	}
+
+	return d, "vendor/" + importPath, true
+}
+
+// underSrcRoot reports whether dir is GOROOT/src or sits inside it.
+//
+// Compared as a path rather than as a string, so that a directory merely NAMED like the source root does not qualify.
+func (r *Resolver) underSrcRoot(dir string) bool {
+	if dir == "" || r.srcRoot == "" {
+		return false
+	}
+	if dir == r.srcRoot {
+		return true
+	}
+
+	return strings.HasPrefix(dir, r.srcRoot+string(filepath.Separator)) || strings.HasPrefix(dir, r.srcRoot+"/")
+}
+
 func (r *Resolver) init() error {
 	if r.dir == "" {
 		r.dir = "."
 	}
 	r.srcRoot = r.vfs.Join(r.ctx.GOROOT, "src")
+	if v := r.vfs.Join(r.srcRoot, "vendor"); r.isVendorTree(v) {
+		r.stdVendor = v
+	}
 	r.nearestMod = map[string]moduleAt{}
 	r.ws = r.findWorkspace(r.gowork)
 
@@ -308,6 +379,15 @@ func (r *Resolver) vendorMode(dir string) bool {
 	if r.modFlag == "mod" {
 		return false
 	}
+
+	return r.isVendorTree(dir)
+}
+
+// isVendorTree reports whether dir is a vendor directory `go mod vendor` wrote, by the same test the go command uses.
+//
+// Split out of [Resolver.vendorMode] for the standard library's own tree, which -mod does not speak for: that flag
+// chooses how the MAIN module resolves its dependencies, and says nothing about the Go installation.
+func (r *Resolver) isVendorTree(dir string) bool {
 	_, err := r.vfs.ReadFile(r.vfs.Join(dir, "modules.txt"))
 
 	return err == nil

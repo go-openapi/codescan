@@ -29,7 +29,7 @@ import (
 // The observable signal is the gate diagnostic itself.
 func TestCoverage_SimpleSchemaReadOnlyGate(t *testing.T) {
 	var got []grammar.Diagnostic
-	_, err := codescan.Run(&codescan.Options{
+	_, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/simple-schema-readonly/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {

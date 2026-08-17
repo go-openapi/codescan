@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/docs/examples/internal/loadertest"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -45,10 +46,10 @@ func goldenJSON(t *testing.T, feature string, v any) {
 //
 // Regenerate with: UPDATE_GOLDEN=1 go test ./...
 func TestOmitFragments(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:  examplesRoot(t),
 		Packages: []string{"./concepts/omit"},
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 

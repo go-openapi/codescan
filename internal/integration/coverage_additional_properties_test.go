@@ -18,7 +18,7 @@ import (
 // map-override case, coexistence with maxProperties, and the lowest-priority precedence rule.
 func TestCoverage_AdditionalProperties(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/additional-properties/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

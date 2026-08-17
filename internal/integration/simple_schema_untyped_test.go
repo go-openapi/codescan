@@ -21,7 +21,7 @@ import (
 // fallback is codescan choosing rather than the Go type saying.
 func TestSimpleSchemaUntyped(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/simple-schema-untyped/..."},
 		WorkDir:      scantest.FixturesDir(),
 		OnDiagnostic: func(d codescan.Diagnostic) { diags = append(diags, d) },
@@ -100,7 +100,7 @@ type spec2Param struct {
 // The x-go-type stamp is an extension like any other and must disappear under SkipExtensions, while
 // the type it accompanies must not: the type is what makes the spec valid.
 func TestSimpleSchemaUntyped_SkipExtensions(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:       []string{"./enhancements/simple-schema-untyped/..."},
 		WorkDir:        scantest.FixturesDir(),
 		SkipExtensions: true,

@@ -22,7 +22,7 @@ import (
 // The fix lives in the meta-Security parser (internal/parsers/security), the same parser as
 // #2403/#2479.
 func TestCoverage_Bug2294(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2294/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

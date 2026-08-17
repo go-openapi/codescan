@@ -555,14 +555,14 @@ func TestNewScanCtx_NonBuildingCode_FallsBackToSource(t *testing.T) {
 		"type Gadget struct {\n\tName string `json:\"name\"`\n}\n\n"+
 		"var _ int = \"not an int\"\n"), 0o600))
 
-	scan := func(skip bool) []grammar.Diagnostic {
+	scan := func(compiled bool) []grammar.Diagnostic {
 		var diags []grammar.Diagnostic
 		sctx, err := NewScanCtx(&Options{
-			Packages:                 []string{"./..."},
-			WorkDir:                  dir,
-			ScanModels:               true,
-			SkipCompiledDependencies: skip,
-			OnDiagnostic:             func(d grammar.Diagnostic) { diags = append(diags, d) },
+			Packages:             []string{"./..."},
+			WorkDir:              dir,
+			ScanModels:           true,
+			CompiledDependencies: compiled,
+			OnDiagnostic:         func(d grammar.Diagnostic) { diags = append(diags, d) },
 		})
 		require.NoError(t, err)
 		require.NotNil(t, sctx)
@@ -583,11 +583,11 @@ func TestNewScanCtx_NonBuildingCode_FallsBackToSource(t *testing.T) {
 		return n
 	}
 
-	assert.Equal(t, 1, fellBack(scan(false)),
+	assert.Equal(t, 1, fellBack(scan(true)),
 		"the compiled load could not build this tree, so it was abandoned and said so")
 
-	assert.Zero(t, fellBack(scan(true)),
-		"opting out skips the attempt entirely, so there is nothing to fall back from")
+	assert.Zero(t, fellBack(scan(false)),
+		"the default never attempts the compiled load, so there is nothing to fall back from")
 }
 
 // TestSameSourceFile covers the comparison that joins a position out of compiled export data to the

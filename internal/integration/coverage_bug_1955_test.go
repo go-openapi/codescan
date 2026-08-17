@@ -16,7 +16,7 @@ import (
 // swagger:parameters struct defined in a DIFFERENT package — they are matched by operation id
 // across all scanned packages (the swagger:operation analog of #1742).
 func TestCoverage_Bug1955(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1955/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

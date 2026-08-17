@@ -20,7 +20,7 @@ import (
 // The fix carries both for defined-type fields too; since a $ref cannot carry sibling keywords,
 // they ride the override arm of an allOf compound.
 func TestCoverage_Bug958(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/958/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

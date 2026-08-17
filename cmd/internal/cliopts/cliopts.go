@@ -117,11 +117,12 @@ var boolOptions = []option[bool]{ //nolint:gochecknoglobals // the flag table, r
 		func(o *Options) *bool { return &o.StubStdlib },
 	},
 	{
-		sectionLoad, "skip-compiled-dependencies", false,
-		"read every dependency from source rather than taking its types from the compiler's export\n" +
-			"data: the spec is the same either way, but this is much slower on a warm cache and much\n" +
-			"faster on a cold one. Native builds only -- it needs -loader=go, which WebAssembly cannot run",
-		func(o *Options) *bool { return &o.SkipCompiledDependencies },
+		sectionLoad, "compiled-dependencies", false,
+		"take dependency types from the compiler's export data rather than reading every dependency\n" +
+			"from source: the spec is the same either way, but this is much faster on a warm build\n" +
+			"cache and much slower on a cold one, where it also writes hundreds of MB. Native builds\n" +
+			"only -- it needs -loader=go, which WebAssembly cannot run",
+		func(o *Options) *bool { return &o.CompiledDependencies },
 	},
 }
 

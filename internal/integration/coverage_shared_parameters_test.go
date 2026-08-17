@@ -23,7 +23,7 @@ import (
 // Register-only: the entries appear in the top-level map regardless of whether any operation
 // references them yet (the $ref wiring is a later phase).
 func TestCoverage_SharedParameters_TopLevel(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -65,7 +65,7 @@ func paramRefs(op *spec.Operation) []string {
 // `swagger:parameters * opid` definition convenience and the standalone `swagger:parameters opid
 // name` reference marker on a func.
 func TestCoverage_SharedParameters_Refs(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -104,7 +104,7 @@ func TestCoverage_SharedParameters_Refs(t *testing.T) {
 // Application is exact-path (no hierarchy), and path-item parameters co-exist with operation-level
 // ones (the operation one wins at resolution — co-presence, not removal).
 func TestCoverage_SharedParameters_PathItem(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters-pathitem/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -166,7 +166,7 @@ func TestCoverage_SharedParameters_PathItem(t *testing.T) {
 // Before P5 the `*` failed the name regex and the response was silently dropped, leaving the route
 // ref dangling.
 func TestCoverage_SharedResponses(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -195,7 +195,7 @@ func TestCoverage_SharedResponses(t *testing.T) {
 // warning.
 func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters-overrides/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {
@@ -248,7 +248,7 @@ func TestCoverage_SharedParameters_OverridesAndDedup(t *testing.T) {
 // scan.dangling-{parameter,response}-ref warning rather than emitting an invalid reference.
 func TestCoverage_SharedParameters_YAMLRefs(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/shared-parameters-yaml/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {
@@ -296,7 +296,7 @@ func TestCoverage_SharedParameters_YAMLRefs(t *testing.T) {
 // Independent namespaces: #/definitions/Status coexists with #/parameters/Status.
 func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/shared-parameters-conflict/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -344,7 +344,7 @@ func TestCoverage_SharedParameters_Conflict(t *testing.T) {
 func runSharedPrune(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnostic) {
 	t.Helper()
 	var pruned []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{"./enhancements/shared-parameters-prune/..."},
 		WorkDir:           scantest.FixturesDir(),
 		ScanModels:        true,
@@ -416,7 +416,7 @@ func TestCoverage_SharedParameters_Prune_On(t *testing.T) {
 func runSharedPruneCascade(t *testing.T, prune bool) (*spec.Swagger, []grammar.Diagnostic) {
 	t.Helper()
 	var pruned []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{"./enhancements/shared-parameters-prune-cascade/..."},
 		WorkDir:           scantest.FixturesDir(),
 		ScanModels:        true,

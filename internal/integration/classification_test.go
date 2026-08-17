@@ -31,7 +31,7 @@ func TestClassification_Spec(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			doc, err := codescan.Run(&codescan.Options{
+			doc, err := runScan(&codescan.Options{
 				Packages: []string{
 					"./goparsing/classification",
 					"./goparsing/classification/models",

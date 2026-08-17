@@ -29,7 +29,7 @@ import (
 //
 // We lock the current behaviour; surfacing it would be a separate enhancement.
 func TestCoverage_Bug3035(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/3035/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

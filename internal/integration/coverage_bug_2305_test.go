@@ -16,7 +16,7 @@ import (
 // parameter with an enum produces a clean, valid parameter — the enum is present, with no illegal
 // `schema` and no duplicated description.
 func TestCoverage_Bug2305(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2305/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

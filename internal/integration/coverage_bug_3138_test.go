@@ -27,7 +27,7 @@ import (
 // Operation-level `deprecated: true` keeps using the native OAS2 field.
 func TestCoverage_Bug3138(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3138/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

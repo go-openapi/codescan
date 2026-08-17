@@ -24,24 +24,39 @@ import (
 // This is not enough for anything structural: a synthesized type has no fields to walk and no methods,
 // so drilling into it, or asking whether it implements an interface, both fail.
 
-// willStub reports whether an import path will be synthesized rather than loaded.
-func (ld *loadState) willStub(path string) bool {
+// willStub reports whether an import path will be synthesized rather than loaded, for an import made from fromDir.
+//
+// The importing directory is part of the question, not context around it: the standard library's vendored packages
+// resolve for an importer inside GOROOT/src and for no other, so the same path has two honest answers. Memoizing on
+// the path alone gave whichever was asked first to everybody, which is how a resolvable import came to be announced
+// as synthesized.
+func (ld *loadState) willStub(path, fromDir string) bool {
 	if path == "unsafe" {
 		return false
 	}
-	if known, ok := ld.stubbable[path]; ok {
+	key := stubKey(path, ld.res.UnderGoroot(fromDir))
+	if known, ok := ld.stubbable[key]; ok {
 		return known
 	}
 	if ld.hasExportData(path) {
-		ld.stubbable[path] = false
+		ld.stubbable[key] = false
 
 		return false
 	}
 
-	_, _, resolved := ld.res.ResolveImport(path)
-	ld.stubbable[path] = !resolved
+	_, _, resolved := ld.res.ResolveImportFrom(path, fromDir)
+	ld.stubbable[key] = !resolved
 
 	return !resolved
+}
+
+// stubKey distinguishes the two answers an import path can honestly have.
+func stubKey(path string, fromGoroot bool) string {
+	if fromGoroot {
+		return "goroot\x00" + path
+	}
+
+	return path
 }
 
 // synthesizeFrom records the names a package selects through its unresolvable imports, so that the synthesized packages
@@ -49,9 +64,9 @@ func (ld *loadState) willStub(path string) bool {
 //
 // Names are collected per importing package, which is why this runs before each Check rather than once up front: the
 // set of packages is discovered lazily, as imports are followed.
-func (ld *loadState) synthesizeFrom(files []*ast.File) {
+func (ld *loadState) synthesizeFrom(files []*ast.File, fromDir string) {
 	for _, f := range files {
-		aliases := ld.stubbedImports(f)
+		aliases := ld.stubbedImports(f, fromDir)
 		if len(aliases) == 0 {
 			continue
 		}
@@ -75,11 +90,11 @@ func (ld *loadState) synthesizeFrom(files []*ast.File) {
 }
 
 // stubbedImports maps the local name of each to-be-synthesized import onto its path.
-func (ld *loadState) stubbedImports(f *ast.File) map[string]string {
+func (ld *loadState) stubbedImports(f *ast.File, fromDir string) map[string]string {
 	var aliases map[string]string
 	for _, spec := range f.Imports {
 		path, err := strconv.Unquote(spec.Path.Value)
-		if err != nil || !ld.willStub(path) {
+		if err != nil || !ld.willStub(path, fromDir) {
 			continue
 		}
 

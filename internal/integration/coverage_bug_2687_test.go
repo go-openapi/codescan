@@ -22,7 +22,7 @@ import (
 // (alongside Go `//go:`/`//nolint:` directives) and drops them from the prose surface, so the
 // descriptions stay clean.
 func TestCoverage_Bug2687(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2687/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

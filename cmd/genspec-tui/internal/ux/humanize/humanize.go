@@ -62,9 +62,7 @@ func SignedBytes(n int64) string {
 
 	// Negating MinInt64 overflows. Adding one before the negation keeps it in range, at the cost of a single byte at a
 	// magnitude no heap difference can reach.
-	//
-	//nolint:gosec // -(n+1) is non-negative for every n < 0, which is the only branch this is reached on
-	return "-" + Bytes(uint64(-(n+1))+1)
+	return "-" + Bytes(uint64(-(n+1))+1) //nolint:gosec // -(n+1) is non-negative for every n < 0, which is the only branch this is reached on
 }
 
 // SignedCount renders a count difference in short form: "+410 k", "-1.2 M", "+37".

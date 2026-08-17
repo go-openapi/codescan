@@ -19,7 +19,7 @@ import (
 // (The example value is carried as the string "210000"; numeric coercion of example values is the
 // separate forthcoming-features §2.1 / #1268 concern.)
 func TestCoverage_Bug2549(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2549/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

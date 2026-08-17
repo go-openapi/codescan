@@ -18,7 +18,7 @@ import (
 //
 // 📖 Need doc: document the inline Parameters: block in swagger:route.
 func TestCoverage_Bug1279(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1279/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

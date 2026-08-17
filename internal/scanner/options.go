@@ -145,14 +145,14 @@ type Options struct {
 	// Experimental: see ToolchainFreeLoader.
 	StubStdlib bool
 
-	// SkipCompiledDependencies reads every dependency from source, instead of taking its types from the
-	// compiler's export data.
+	// CompiledDependencies takes dependency types from the compiler's export data, instead of reading
+	// every dependency from source.
 	//
-	// By default a scan under the go/packages loader takes dependency types from export data, because
-	// parsing and type-checking dependencies is most of what a load does and the compiler already did
-	// it. Set this to opt out and load the graph the way every release before v0.36.4 did.
+	// Unset, a scan parses and type-checks the whole dependency graph, which is most of what a load
+	// does. Set, that work is skipped for anything outside the scanned module: the compiler already did
+	// it, and `go list -export` hands the result over.
 	//
-	// Leaving it unset costs no meaning. Export data carries the full exported type surface — fields,
+	// Setting it costs no meaning. Export data carries the full exported type surface — fields,
 	// method sets, interface identity — but no syntax and no comments, and a scan wants two different
 	// things out of a dependency's source. What a dependency SAYS about its own types is found by
 	// scanning its files for the annotation marker after the load, which is what keeps go-openapi's own
@@ -164,22 +164,28 @@ type Options struct {
 	//
 	// # When to set it
 	//
-	// Cost, and only cost. It is roughly 2.3x faster on a warm build cache and an order of magnitude
-	// slower on a cold one, since export data has to be compiled before it exists — around 229 MB of
-	// build cache on a large tree. CI regenerating a spec from a clean checkout is the case this exists
-	// for, and it is the reason to reach for it.
+	// Cost, and only cost — but the cost swings both ways, which is why this is a choice and not a
+	// default. On a warm build cache it is roughly 2.3x faster and holds a third of the memory. On a
+	// cold one it is an order of magnitude slower, since export data has to be compiled before it
+	// exists, and it writes around 229 MB of build cache on a large tree.
 	//
-	// A closure that does not compile is NOT a reason: go/packages falls back to type-checking such a
-	// package from source, and the spec comes out the same.
+	// So it pays where the cache is warm by construction: a developer's own machine, a watch loop, a
+	// pipeline that restores its cache. It loses badly on a clean checkout, which is what a CI runner
+	// usually is — and that is the case the default protects. Under a memory bound rather than a time
+	// one, ToolchainFreeLoader is the better answer than either: leaner than a source load and, unlike
+	// this, indifferent to the state of the cache.
+	//
+	// A closure that does not compile is NOT a reason to avoid it: the load is retried from source and
+	// the spec comes out the same.
 	//
 	// The option applies to the go/packages loader alone. The toolchain-free loader resolves imports
 	// itself and already decides per dependency whether to read its source, so it neither needs this
 	// nor honours it; ExportData below is the same idea supplied by hand for that loader.
 	//
-	// So there is nothing here to opt out of wherever go/packages cannot run. A WebAssembly build has
+	// So there is nothing here to ask for wherever go/packages cannot run. A WebAssembly build has
 	// no process model and therefore no `go list`, and setting FS forces the same loader for the same
 	// reason — in both, dependency types come from source or from ExportData regardless of this field.
-	SkipCompiledDependencies bool
+	CompiledDependencies bool
 
 	// ExportData serves DEPENDENCIES from pre-computed export data instead of reading their source,
 	// under the toolchain-free loader.

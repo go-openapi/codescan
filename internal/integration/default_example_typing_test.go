@@ -29,7 +29,7 @@ import (
 // same dispatch arms, so a divergence between them is itself a defect.
 func TestDefaultExampleTyping(t *testing.T) {
 	var diags []string
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/default-example-typing/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

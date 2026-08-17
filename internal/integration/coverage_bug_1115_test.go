@@ -19,7 +19,7 @@ import (
 // The grammar2 scanner handles the StarExpr — the pointer is dereferenced and the alias emits a
 // $ref like the non-pointer form.
 func TestCoverage_Bug1115(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1115/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

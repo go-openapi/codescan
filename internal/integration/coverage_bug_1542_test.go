@@ -19,7 +19,7 @@ import (
 // 📖 Need doc: complex (map/object) examples must be written as valid JSON on the example: line.
 // (Comma-list / array coercion remains the §2.1 enhancement.)
 func TestCoverage_Bug1542(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1542/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

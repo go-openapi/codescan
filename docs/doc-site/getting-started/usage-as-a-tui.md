@@ -78,8 +78,9 @@ A second group settles what gets built, and how it is loaded — the environment
 | `-goflags` | — | default go command flags, as `GOFLAGS` — `-build-tags` wins over a `-tags` given here |
 | `-gowork` | search upwards | workspace selection, as `GOWORK`: `off` to ignore a `go.work`, or the path to one |
 | `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` |
-| `-loader` | `auto` | `go` runs `go list`; `own` uses codescan's own loader and needs no toolchain; `auto` picks `own` wherever the build cannot exec (experimental) |
+| `-loader` | `auto` | `auto` runs `go list`, which is what every native build does, and picks `own` only where no subprocess can be started; `go` always runs `go list`; `own` always uses codescan's own loader, which needs no toolchain (experimental) |
 | `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-loader=own`) |
+| `-compiled-dependencies` | `false` | take dependency types from the compiler's export data instead of reading every dependency from source (needs `-loader=go`). Worth having here more than anywhere: a session rescans on every save, so the build cache is warm after the first one |
 
 Everything the flags set is also a **live toggle**. Press `o` for the options
 popup, `space` to flip a row, `Esc` to apply — the spec re-renders on close, which

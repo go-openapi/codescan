@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
 	"github.com/go-openapi/codescan/cmd/internal/cliopts"
+	"github.com/go-openapi/codescan/internal/testloader"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -126,7 +127,11 @@ func exec(t *testing.T, argv ...string) (stdout, stderr string, err error) {
 	t.Helper()
 
 	var out, errs bytes.Buffer
-	err = run(argv, &out, &errs)
+	const maxExtraArgs = 4
+	argsWithLoader := make([]string, 0, len(argv)+maxExtraArgs)
+	argsWithLoader = append(argsWithLoader, testloader.Flags()...)
+	argsWithLoader = append(argsWithLoader, argv...)
+	err = run(argsWithLoader, &out, &errs)
 
 	return out.String(), errs.String(), err
 }

@@ -32,7 +32,7 @@ import (
 // swagger:response-vs-model name resolution.
 func TestCoverage_Bug1109(t *testing.T) {
 	t.Run("OP form `200: order` resolves via definition-fallback with -m", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:   []string{"./bugs/1109/responseref/..."},
 			WorkDir:    scantest.FixturesDir(),
 			ScanModels: true,
@@ -45,7 +45,7 @@ func TestCoverage_Bug1109(t *testing.T) {
 	})
 
 	t.Run("casualjim form `200: body:order` with -m", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:   []string{"./bugs/1109/bodyref/..."},
 			WorkDir:    scantest.FixturesDir(),
 			ScanModels: true,

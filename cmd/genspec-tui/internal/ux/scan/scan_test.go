@@ -8,6 +8,7 @@ package scan
 import (
 	"testing"
 
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 
@@ -19,7 +20,7 @@ import (
 func TestDoLeavesTheCallersOptionsAlone(t *testing.T) {
 	t.Parallel()
 
-	cfg := &codescan.Options{WorkDir: t.TempDir(), Packages: []string{"./..."}}
+	cfg := testutils.ApplyLoader(&codescan.Options{WorkDir: t.TempDir(), Packages: []string{"./..."}})
 
 	_ = Do(cfg, nil)
 
@@ -32,7 +33,7 @@ func TestDoLeavesTheCallersOptionsAlone(t *testing.T) {
 func TestRunSnapshotsTheOptionsBeforeItRuns(t *testing.T) {
 	t.Parallel()
 
-	cfg := &codescan.Options{WorkDir: "/nonexistent-at-launch", Packages: []string{"./..."}}
+	cfg := testutils.ApplyLoader(&codescan.Options{WorkDir: "/nonexistent-at-launch", Packages: []string{"./..."}})
 
 	cmd := Run(cfg, nil)
 

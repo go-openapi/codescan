@@ -17,7 +17,7 @@ import (
 // maxItems), so on an object swagger:model they emit property-count validation instead of leaking
 // into the model description.
 func TestCoverage_Bug2985(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2985/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

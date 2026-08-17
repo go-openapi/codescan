@@ -16,7 +16,7 @@ import (
 // field"): a `swagger:type string` on a field whose type is an external/imported struct overrides
 // it to a plain string (instead of a $ref to the external type's definition).
 func TestCoverage_Bug2419(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2419/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

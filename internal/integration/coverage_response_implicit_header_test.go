@@ -31,7 +31,7 @@ import (
 // Schema presence, primitive types — locks down side-by-side.
 func TestCoverage_ResponseImplicitHeader(t *testing.T) {
 	var got []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-implicit-header/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

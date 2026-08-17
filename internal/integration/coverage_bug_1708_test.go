@@ -16,7 +16,7 @@ import (
 // property type", follow-up of #619): a body response whose fields are pointers to other models no
 // longer errors with "missing property type" — the fields resolve to $refs in an object schema.
 func TestCoverage_Bug1708(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1708/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

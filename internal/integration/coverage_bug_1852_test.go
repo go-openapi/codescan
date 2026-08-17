@@ -20,7 +20,7 @@ import (
 // The legacy engine omitted it entirely, so editor.swagger.io rejected the spec ("missingProperty:
 // description"); codescan now always emits the key (empty string when no doc comment is present).
 func TestCoverage_Bug1852(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1852/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

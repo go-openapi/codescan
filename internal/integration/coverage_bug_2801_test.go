@@ -19,7 +19,7 @@ import (
 //
 // The v0.30 empty-spec is gone.
 func TestCoverage_Bug2801(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2801/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

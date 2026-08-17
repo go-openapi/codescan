@@ -18,7 +18,7 @@ import (
 // Pre-M2, user-authored `Extensions:` blocks on header fields were silently dropped; post-M2 they
 // land on the header's Extensions map with grammar-typed values.
 func TestCoverage_HeaderExtensions(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/header-extensions/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

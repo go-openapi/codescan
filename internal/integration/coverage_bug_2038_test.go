@@ -22,7 +22,7 @@ import (
 // tag and flattens both forms, so the generated spec for Tagged does not match the actual JSON.
 // The untagged form (correct promotion) is the green guard rail.
 func TestCoverage_Bug2038(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2038/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -17,7 +17,7 @@ import (
 // defined in ANOTHER package resolves — the response and its body model are emitted (no "$refs
 // must reference a valid location").
 func TestCoverage_Bug2233(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2233/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

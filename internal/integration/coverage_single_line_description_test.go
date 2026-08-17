@@ -20,7 +20,7 @@ func TestCoverage_SingleLineCommentAsDescription(t *testing.T) {
 	pkgs := []string{"./enhancements/single-line-description/..."}
 
 	// Default: a single-line comment ending in a period is the title.
-	def, err := codescan.Run(&codescan.Options{
+	def, err := runScan(&codescan.Options{
 		Packages: pkgs, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)
@@ -29,7 +29,7 @@ func TestCoverage_SingleLineCommentAsDescription(t *testing.T) {
 	assert.Empty(t, widget.Description)
 
 	// Option on: the single-line comment becomes the description instead.
-	on, err := codescan.Run(&codescan.Options{
+	on, err := runScan(&codescan.Options{
 		Packages: pkgs, WorkDir: scantest.FixturesDir(), ScanModels: true,
 		SingleLineCommentAsDescription: true,
 	})

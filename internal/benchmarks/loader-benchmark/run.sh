@@ -87,9 +87,9 @@ done
 current="$work/probe-current"
 
 # The working tree, in the configurations worth telling apart. `current` is the source-loading scan,
-# which is what SkipCompiledDependencies selects today; `current+compiled-deps` is what a plain run
-# does since v0.36.4. Rows are labelled by configuration rather than by default, so they stay
-# comparable across a release that moves the default.
+# which is what a plain run does; `current+compiled-deps` opts into export data. Rows are labelled by
+# configuration rather than by default, so they stay comparable across a release that moves the
+# default -- and one has moved.
 configs+=(
 	"current:$current:"
 	"current+toolchain-free:$current:-toolchain-free"

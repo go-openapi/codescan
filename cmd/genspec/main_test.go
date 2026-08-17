@@ -16,6 +16,7 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec/internal/clitest/fixtures"
 	"github.com/go-openapi/codescan/cmd/genspec/internal/sentinel"
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
+	"github.com/go-openapi/codescan/internal/testloader"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -132,9 +133,13 @@ func TestRun(t *testing.T) {
 		t.Parallel()
 
 		_, stderr, err := exec(t, "-workdir", fixtures.Petstore(t), "-color=never", "-no-config", "./...")
-
 		require.NoError(t, err)
-		assert.Empty(t, stderr)
+
+		if loaderHasSomethingToSay() {
+			assert.Contains(t, stderr, "finished hints=1")
+		} else {
+			assert.Empty(t, stderr)
+		}
 	})
 
 	t.Run("should remain silent when quiet", func(t *testing.T) {
@@ -344,7 +349,11 @@ tui:
 		_, stderr, err := exec(t, "-config", path, "-color=never", "./...")
 
 		require.NoError(t, err)
-		assert.Empty(t, stderr, "reading a configuration file is not news")
+		if loaderHasSomethingToSay() {
+			assert.Contains(t, stderr, "finished hints=1")
+		} else {
+			assert.Empty(t, stderr, "reading a configuration file is not news")
+		}
 	})
 
 	t.Run("should reject config pointing to another config", func(t *testing.T) {
@@ -384,6 +393,17 @@ func TestConfigFileWalkUp(t *testing.T) {
 /* exec helpers */
 /********************************/
 
+// loaderHasSomethingToSay reports whether the loader this run uses reports a hint of its own on a
+// clean scan, which the silence assertions have to allow for.
+//
+// Both non-default loaders do, for unrelated reasons: compiled dependencies announce that the
+// request was met, and the toolchain-free loader says it did not run the cgo tool. Neither is a
+// finding about the scanned code, which is what those assertions are really about -- so the
+// exception is the loader having spoken, not any particular thing it said.
+func loaderHasSomethingToSay() bool {
+	return testloader.Selected() != testloader.LoaderSource
+}
+
 // exec runs the command as the process would, and reports what it wrote and what it returned.
 //
 // NOTE: this does not simulate the exit code returned to the shell: you have to check exitStatus() for that.
@@ -391,7 +411,11 @@ func exec(t *testing.T, argv ...string) (stdout, stderr string, err error) {
 	t.Helper()
 
 	var out, errs bytes.Buffer
-	err = run(argv, &out, &errs)
+	const maxExtraArgs = 4
+	argsWithLoader := make([]string, 0, len(argv)+maxExtraArgs)
+	argsWithLoader = append(argsWithLoader, testloader.Flags()...)
+	argsWithLoader = append(argsWithLoader, argv...)
+	err = run(argsWithLoader, &out, &errs)
 
 	return out.String(), errs.String(), err
 }

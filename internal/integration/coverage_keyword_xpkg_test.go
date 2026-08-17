@@ -20,7 +20,7 @@ import (
 // This matches the leaf resolution the name-identity engine gave routes/responses.
 func TestKeywordCrossPackageLeaf(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/keyword-xpkg-leaf/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

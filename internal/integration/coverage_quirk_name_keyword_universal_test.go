@@ -24,7 +24,7 @@ import (
 // Precedence: name: keyword > swagger:name > json tag > Go field name.
 func TestQuirk_NameKeywordUniversal(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./quirks/name-keyword-universal/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

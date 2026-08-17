@@ -36,11 +36,11 @@ func LoadPetstorePkgsCtx(t testing.TB, enableDebug bool) *scanner.ScanCtx {
 		return petstoreCtx
 	}
 
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(ApplyLoader(&scanner.Options{
 		Packages: []string{"./goparsing/petstore/..."},
 		WorkDir:  FixturesDir(),
 		Debug:    enableDebug,
-	})
+	}))
 
 	require.NoError(t, err)
 	petstoreCtx = ctx
@@ -55,12 +55,12 @@ func LoadGo118ClassificationPkgsCtx(t *testing.T) *scanner.ScanCtx {
 		return go118ClassificationCtx
 	}
 
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(ApplyLoader(&scanner.Options{
 		Packages: []string{
 			"./goparsing/go118",
 		},
 		WorkDir: FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 	go118ClassificationCtx = sctx
 
@@ -74,14 +74,14 @@ func LoadClassificationPkgsCtx(t *testing.T) *scanner.ScanCtx {
 		return classificationCtx
 	}
 
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(ApplyLoader(&scanner.Options{
 		Packages: []string{
 			"./goparsing/classification",
 			"./goparsing/classification/models",
 			"./goparsing/classification/operations",
 		},
 		WorkDir: FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 	classificationCtx = sctx
 

@@ -21,7 +21,7 @@ import (
 // params.
 // That engine is gone; grammar2 scans a route-with-params (here, cross-package) without panicking.
 func TestCoverage_Bug1742(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1742/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

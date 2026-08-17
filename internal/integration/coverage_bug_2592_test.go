@@ -20,7 +20,7 @@ import (
 // same embeds yields that allOf directly on the response schema. (Embedding in the response WRAPPER
 // instead turns the field into a header — the embeds must live in the body.)
 func TestCoverage_Bug2592(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2592/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)

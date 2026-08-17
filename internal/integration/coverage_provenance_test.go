@@ -25,7 +25,7 @@ import (
 // TestCoverage_ProvenanceAnchorKinds; the geometry safety net by TestCoverage_ProvenanceGeometry.
 func TestCoverage_ProvenanceDefinitions(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/named-basic"},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -76,7 +76,7 @@ func TestCoverage_ProvenanceDefinitions(t *testing.T) {
 // dangled after the rename.
 func TestCoverage_ProvenanceCollisionRename(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/name-identity-mixed/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -126,7 +126,7 @@ func TestCoverage_ProvenanceCollisionRename(t *testing.T) {
 // TestCoverage_ProvenanceOffByDefault confirms the callback is opt-in: a scan without OnProvenance
 // set produces the same spec and records nothing.
 func TestCoverage_ProvenanceOffByDefault(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/named-basic"},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -187,7 +187,7 @@ func TestCoverage_ProvenanceGeometry(t *testing.T) {
 	for _, pkg := range fixtures {
 		t.Run(pkg, func(t *testing.T) {
 			var recorded []scanner.Provenance
-			doc, err := codescan.Run(&codescan.Options{
+			doc, err := runScan(&codescan.Options{
 				Packages:   []string{pkg},
 				WorkDir:    scantest.FixturesDir(),
 				ScanModels: true,
@@ -262,7 +262,7 @@ func TestCoverage_ProvenanceAnchorKinds(t *testing.T) {
 // lands on `// default: 1.5` rather than the field declaration.
 func TestCoverage_ProvenanceValidations(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/defaults-examples"},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -301,7 +301,7 @@ func TestCoverage_ProvenanceValidations(t *testing.T) {
 // sibling), so this is the only way to reach them.
 func TestCoverage_ProvenanceMetaAndRoutes(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./goparsing/petstore/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -346,7 +346,7 @@ func TestCoverage_ProvenanceMetaAndRoutes(t *testing.T) {
 // `over` is an array, not an object).
 func TestCoverage_ProvenanceSchemaShapes(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/provenance-schema-shapes"},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -396,7 +396,7 @@ func TestCoverage_ProvenanceSchemaShapes(t *testing.T) {
 //
 // The fixture's regex deliberately contains both '/' and '~'.
 func TestCoverage_ProvenancePatternPropertyPointer(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/provenance-schema-shapes"},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -438,7 +438,7 @@ func TestCoverage_ProvenancePatternPropertyPointer(t *testing.T) {
 // its own definition instead).
 func TestCoverage_ProvenanceParamsResponses(t *testing.T) {
 	byPointer := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/provenance-params-responses"},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -476,7 +476,7 @@ func TestCoverage_ProvenanceParamsResponses(t *testing.T) {
 func scanAndResolve(t *testing.T, pkg string) map[string]scanner.Provenance {
 	t.Helper()
 	seen := map[string]scanner.Provenance{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{pkg},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

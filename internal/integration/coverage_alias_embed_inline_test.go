@@ -20,7 +20,7 @@ import (
 // The fixture exercises the same Base struct embedded direct, via alias, via pointer, and via
 // interface — all four produce structurally equivalent inline shapes.
 func TestCoverage_AliasEmbedInline(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -70,7 +70,7 @@ func TestCoverage_AliasEmbedInline(t *testing.T) {
 // Together with TestCoverage_AliasEmbedInline this asserts the bidirectional contract: annotation
 // is the sole gate of allOf composition.
 func TestCoverage_AliasEmbedAllOfOptIn(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

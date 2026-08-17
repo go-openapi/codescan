@@ -139,7 +139,7 @@ func TestRoutesParser(t *testing.T) {
 }
 
 func TestRoutesParserBody(t *testing.T) {
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{
 			"./goparsing/classification",
 			"./goparsing/classification/models",
@@ -147,7 +147,7 @@ func TestRoutesParserBody(t *testing.T) {
 			"./goparsing/classification/operations_body",
 		},
 		WorkDir: scantest.FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 	var ops oaispec.Paths
 	for apiPath := range sctx.Routes() {
@@ -418,4 +418,8 @@ func assertOperationBody(t *testing.T, op *oaispec.Operation, id, summary, descr
 	assert.TrueT(t, ok)
 	assert.Empty(t, rsp.Ref.String())
 	assert.EqualT(t, "#/definitions/validationError", rsp.Schema.Ref.String())
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

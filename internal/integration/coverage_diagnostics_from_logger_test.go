@@ -21,7 +21,7 @@ import (
 // (never to stderr).
 func TestDiagnostics_UnsupportedGoType(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/unsupported-go-type/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,
@@ -60,7 +60,7 @@ func TestDiagnostics_UnsupportedGoType(t *testing.T) {
 // Hint per dropped route through OnDiagnostic.
 func TestDiagnostics_IgnoredByTag(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./goparsing/petstore/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ExcludeTags:  []string{"orders"},

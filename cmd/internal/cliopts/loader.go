@@ -18,7 +18,14 @@ const (
 	loaderOwn  = "own"  // codescan's own loader: no toolchain, no subprocess
 	loaderAuto = "auto" // own where there is no exec, go otherwise
 
-	loaderHelp = `package loader: "go" runs go list, "own" needs no toolchain, "auto" picks own where there is no exec`
+	// Spelled out rather than left as "auto picks own where there is no exec", which takes two hops to
+	// answer the question a reader actually has -- what do I get if I pass nothing? The string is
+	// printed by the WebAssembly build as well, so it has to be true of both without naming either as
+	// the normal case.
+	loaderHelp = `package loader: "auto" (the default) runs go list wherever a subprocess can be` + "\n" +
+		`started, which is every native build, and uses "own" only where one cannot -- a` + "\n" +
+		`WebAssembly build. "go" always runs go list; "own" always uses codescan's own loader,` + "\n" +
+		`which needs neither a toolchain nor a subprocess`
 )
 
 // resolveLoader reports whether to use codescan's own loader.

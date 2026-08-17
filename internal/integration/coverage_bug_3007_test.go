@@ -22,7 +22,7 @@ import (
 // go-swagger#2687: the lexer drops `+marker`-style directive lines from prose, so the description
 // is clean.
 func TestCoverage_Bug3007(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3007/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

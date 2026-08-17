@@ -28,7 +28,7 @@ import (
 // This test asserts the parsed shape directly and captures the full output in a golden as a
 // regression lock.
 func TestCoverage_Bug3214(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3214/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

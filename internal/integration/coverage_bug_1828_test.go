@@ -19,7 +19,7 @@ import (
 // The legacy engine emitted an invalid `$ref: '#/responses/'` (empty name); grammar2 parses the
 // inline description correctly.
 func TestCoverage_Bug1828(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1828/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

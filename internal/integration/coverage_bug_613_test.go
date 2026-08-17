@@ -16,7 +16,7 @@ import (
 // referenced struct (here via a []*Ulimit field) is implicitly converted into its own definition
 // and referenced by $ref — no unhelpful error.
 func TestCoverage_Bug613(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/613/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
+	doc, err := runScan(&codescan.Options{Packages: []string{"./bugs/613/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
 	require.NoError(t, err)
 	ul := doc.Definitions["Resources"].Properties["ulimits"]
 	require.NotNil(t, ul.Items)

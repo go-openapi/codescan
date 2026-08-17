@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/codescan"
+	"github.com/go-openapi/codescan/docs/examples/internal/loadertest"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
@@ -60,12 +61,12 @@ func TestOverlay(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(baseSpec), &base))
 	writeGolden(t, "base", &base)
 
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := codescan.Run(loadertest.Apply(&codescan.Options{
 		WorkDir:    examplesRoot(t),
 		Packages:   []string{"./shaping/overlay"},
 		ScanModels: true,
 		InputSpec:  &base,
-	})
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, doc)
 	writeGolden(t, "merged", doc)

@@ -16,7 +16,7 @@ import (
 // application/xml"): a `produces: [application/xml]` in the swagger:operation YAML body sets the
 // operation's produced media type.
 func TestCoverage_Bug2245(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2245/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

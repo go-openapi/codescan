@@ -26,7 +26,7 @@ import (
 // whose body interleaves 1-space prose keys with tab-prefixed value blocks.
 // The dedent now expands leading tabs to spaces before stripping the common indent.
 func TestQuirk_GofmtOperationYAML(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./quirks/gofmt-operation/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

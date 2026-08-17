@@ -20,7 +20,7 @@ import (
 // Now each keeps its own identity: two distinct Test definitions (deep-keyed by package while the
 // leaf collides) plus TestResponseBody — three definitions, deterministic.
 func TestCoverage_Bug2783(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2783/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

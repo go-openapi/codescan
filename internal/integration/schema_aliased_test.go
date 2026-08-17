@@ -21,7 +21,7 @@ func TestAliasedSchemas(t *testing.T) {
 	var sp *oaispec.Swagger
 	t.Run("end-to-end source scan should succeed", func(t *testing.T) {
 		var err error
-		sp, err = codescan.Run(&codescan.Options{
+		sp, err = runScan(&codescan.Options{
 			WorkDir:    fixturesPath,
 			BuildTags:  "testscanner", // fixture code is excluded from normal build
 			ScanModels: true,

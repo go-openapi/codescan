@@ -19,7 +19,7 @@ import (
 const epsilon = 1e-9
 
 func TestAppScanner_NewSpec(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./goparsing/petstore/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -40,7 +40,7 @@ func TestAppScanner_NewSpec(t *testing.T) {
 // excluded.
 // The bookings fixture is the reporter's own repro.
 func TestAppScanner_Definitions(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./goparsing/bookings/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -30,7 +30,7 @@ import (
 //
 // 📖 Need doc: document the one-field/named-type body-parameter idiom.
 func TestCoverage_Bug2663(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2663/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

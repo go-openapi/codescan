@@ -18,7 +18,7 @@ import (
 // type level and cannot infer the custom-marshaled wire shape; declaring it requires swagger:type /
 // swagger:strfmt on the wrapper type.
 func TestCoverage_Bug2520(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2520/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

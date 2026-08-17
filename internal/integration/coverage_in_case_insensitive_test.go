@@ -29,7 +29,7 @@ import (
 //	mixedCaseResponse: shaped as a body response with Payload
 //	schema.
 func TestCoverage_InCaseInsensitive(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/in-case-insensitive/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

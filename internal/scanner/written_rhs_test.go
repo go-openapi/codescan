@@ -36,7 +36,7 @@ func TestWrittenRHS_AgreesWithTheTypeChecker(t *testing.T) {
 		"./enhancements/...",
 		"./bugs/...",
 	} {
-		sctx, err := NewScanCtx(&Options{Packages: []string{root}, WorkDir: "../../testdata"})
+		sctx, err := NewScanCtx(withTestLoader(&Options{Packages: []string{root}, WorkDir: "../../testdata"}))
 		if err != nil {
 			continue
 		}

@@ -17,7 +17,7 @@ import (
 // specific x-go-type IMPORT semantics is a separate design question — poison-queue #2924 — but
 // the extension mechanism itself works for any x-* key.)
 func TestCoverage_Bug2409(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2409/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

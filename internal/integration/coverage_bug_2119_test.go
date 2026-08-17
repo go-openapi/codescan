@@ -17,14 +17,14 @@ import (
 // vendor extensions (which clash across same-named types).
 func TestCoverage_Bug2119(t *testing.T) {
 	// Default: x-go-name / x-go-package are present.
-	on, err := codescan.Run(&codescan.Options{
+	on, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2119/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Colour", on.Definitions["Widget"].Properties["colour"].Extensions["x-go-name"])
 
 	// SkipExtensions: x-go-* are gone.
-	off, err := codescan.Run(&codescan.Options{
+	off, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2119/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 		SkipExtensions: true,
 	})

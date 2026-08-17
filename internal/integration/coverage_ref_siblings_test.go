@@ -24,7 +24,7 @@ import (
 // never entered.
 func TestCoverage_RefSiblingValidations(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/ref-sibling-validations/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

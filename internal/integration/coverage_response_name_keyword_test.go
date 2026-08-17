@@ -19,7 +19,7 @@ import (
 //
 // Mirrors the parameter-side TestCoverage_ParamNameKeyword.
 func TestCoverage_ResponseNameKeyword(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-name-keyword/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

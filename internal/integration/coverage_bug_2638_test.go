@@ -15,7 +15,7 @@ import (
 // TestCoverage_Bug2638 locks the fix for go-swagger issue #2638: a field group with multiple names
 // on one line (`R, G, B, A uint8`) emits one property per name, not a single mislabeled property.
 func TestCoverage_Bug2638(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2638/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

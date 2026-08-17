@@ -16,7 +16,7 @@ import (
 )
 
 func TestOperationsParser(t *testing.T) {
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{
 			"./goparsing/classification",
 			"./goparsing/classification/models",
@@ -24,7 +24,7 @@ func TestOperationsParser(t *testing.T) {
 			"./goparsing/classification/operations_annotation",
 		},
 		WorkDir: scantest.FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 	var ops spec.Paths
 	for apiPath := range sctx.Operations() {

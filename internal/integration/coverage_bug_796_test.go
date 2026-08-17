@@ -24,7 +24,7 @@ import (
 // (pingResponse) is emitted; the parameter struct is rendered as an operation parameter (with a
 // clean description and a real `in` field) and the interface is dropped entirely.
 func TestCoverage_Bug796(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/796/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -24,7 +24,7 @@ import (
 // there was nothing to report and the path just never appeared.
 func TestRouteNameShapes(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/route-name-shapes/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d codescan.Diagnostic) {

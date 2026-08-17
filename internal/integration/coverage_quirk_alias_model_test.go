@@ -34,7 +34,7 @@ func TestQuirk_AliasModelNoHang(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			doc, err := codescan.Run(tc.opts)
+			doc, err := runScan(tc.opts)
 			require.NoError(t, err, "the model-annotated alias must scan, not hang (F9)")
 			require.NotNil(t, doc)
 

@@ -26,7 +26,7 @@ import (
 // branch; see forthcoming §18.)
 func TestCoverage_Bug2251(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2251/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

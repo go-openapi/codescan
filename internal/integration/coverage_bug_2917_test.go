@@ -19,7 +19,7 @@ import (
 // The current regex only matches `swagger:` at start-of-line or after whitespace/slash, so the
 // embedded `_swagger:extendee` is not treated as an annotation.
 func TestCoverage_Bug2917(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2917/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

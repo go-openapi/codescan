@@ -25,7 +25,7 @@ import (
 // embedded type's own declaration, and the message says so.
 func TestAnnotationNoise(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/annotation-noise/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

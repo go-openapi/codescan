@@ -18,19 +18,24 @@ const makeplans = "github.com/go-swagger/scan-repo-boundary/makeplans"
 
 // A dependency taken types-only is read back when a declaration is wanted from it, and only then.
 //
-// That "only then" is what makes the default affordable. Reading every dependency back up front would answer the
-// same lookups and give away most of the saving — measured on a generated server, a third of the wall clock and a
-// third of the peak RSS — because the closure a scan does not look at is where the saving lives. So the cost is one
-// parse per declaration wanted, and this pins the "one" from both sides.
+// That "only then" is what makes the shortcut worth choosing. Reading every dependency back up front would answer
+// the same lookups and give away most of the saving — measured on a generated server, a third of the wall clock and
+// a third of the peak RSS — because the closure a scan does not look at is where the saving lives. So the cost is
+// one parse per declaration wanted, and this pins the "one" from both sides.
 //
-// No option is set: taking dependency types from export data is what an ordinary scan does.
+// CompiledDependencies is what creates the economy being measured: an ordinary scan reads every dependency, so there
+// is nothing to read back and nothing here to count.
 func TestReadBackOnDemand_PaysPerDeclarationWanted(t *testing.T) {
 	t.Parallel()
 
+	// Pinned, and deliberately NOT routed through the run-wide loader setting: the economy measured
+	// here exists only under compiled dependencies. The toolchain-free loader reads every dependency
+	// during the load, so there is no types-only package left to read back and nothing to count.
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
-		Packages:   []string{"./goparsing/bookings/..."},
-		WorkDir:    scantest.FixturesDir(),
-		ScanModels: true,
+		Packages:             []string{"./goparsing/bookings/..."},
+		WorkDir:              scantest.FixturesDir(),
+		ScanModels:           true,
+		CompiledDependencies: true,
 	})
 	require.NoError(t, err)
 
@@ -59,11 +64,11 @@ func TestReadBackOnDemand_PaysPerDeclarationWanted(t *testing.T) {
 func TestReadBackOnDemand_MissingDeclaration(t *testing.T) {
 	t.Parallel()
 
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:   []string{"./goparsing/bookings/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
-	})
+	}))
 	require.NoError(t, err)
 
 	_, found := ctx.FindDecl(makeplans, "NoSuchType")

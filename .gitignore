@@ -40,6 +40,12 @@ internal/exportdata/exportdata.zip
 /genspec-wasi
 /loader-benchmark
 
+# and from "go build ./..." run inside a command's own module, which drops the
+# binary beside its main package rather than at the repo root
+/cmd/genspec/genspec
+/cmd/genspec-tui/genspec-tui
+/cmd/genspec-wasi/genspec-wasi
+
 # benchmark corpora: the archive is committed, the tree it unpacks to is not
 internal/benchmarks/testdata/corpus/
 

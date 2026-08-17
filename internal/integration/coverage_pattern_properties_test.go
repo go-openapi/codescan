@@ -19,7 +19,7 @@ import (
 // raises a CodeInvalidAnnotation diagnostic (never dropped silently).
 func TestCoverage_PatternProperties(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/pattern-properties/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

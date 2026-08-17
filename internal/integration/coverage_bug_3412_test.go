@@ -21,7 +21,7 @@ import (
 // not merely the scan. A float enum covers the FLOAT branch, and a non-decimal enum covers the
 // base-detected integer forms.
 func TestCoverage_Bug3412(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3412/negative/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -133,7 +133,7 @@ func TestCoverage_Bug3412(t *testing.T) {
 // Values come from the type-checker, which evaluated all of them exactly; the schema type still
 // comes from the declared Go type.
 func TestCoverage_Bug3412_ConstForms(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3412/constforms/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -220,7 +220,7 @@ func TestCoverage_Bug3412_ConstForms(t *testing.T) {
 // inline. Each is a distinct path, and a per-property assertion in one of them says nothing about
 // the others; the golden is what makes a regression in any single target visible.
 func TestCoverage_Bug3412_SimpleSchema(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3412/simpleschema/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -237,7 +237,7 @@ func TestCoverage_Bug3412_SimpleSchema(t *testing.T) {
 // type without the annotation keeps it, since the ordinary path resolves the declaration's
 // right-hand side instead. Annotating a type as an enum must not cost the author their format.
 func TestCoverage_Bug3412_StrfmtEnum(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3412/strfmtenum/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

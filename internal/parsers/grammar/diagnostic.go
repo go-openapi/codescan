@@ -217,16 +217,22 @@ const (
 	// Carries the position of the import that triggered it, once per import path.
 	CodeSynthesizedImport Code = "scan.synthesized-import"
 
-	// CodeCompiledDependencies fires once when a scan takes dependency types from compiled export data
-	// rather than from their source.
+	// CodeCompiledDependencies reports on a scan that was asked to take dependency types from compiled
+	// export data rather than from their source.
 	//
-	// Announced rather than left to be discovered, because what changes is cost and cost alone: export
-	// data carries types and not comments, so a dependency is read only when the scan needs what its
-	// source says — its own annotations, found by scanning for the marker, or a declaration the spec
-	// turns out to want, fetched at that lookup. Worth saying because the trade is real in the other
-	// direction: the closure has to be compiled first, so a cold build cache pays for this heavily.
+	// Only a caller who asked hears it, and it says whether the request was met. A Hint when the load
+	// took the shortcut: what changes is cost and cost alone, since export data carries types and not
+	// comments, so a dependency is read only when the scan needs what its source says — its own
+	// annotations, found by scanning for the marker, or a declaration the spec turns out to want,
+	// fetched at that lookup. Worth saying because the trade is real in the other direction: the
+	// closure has to be compiled first, so a cold build cache pays for this heavily.
 	//
-	// Informational (Hint); emitted once per scan, not per package.
+	// A Warning instead where the resolved loader could not honour the request, since the caller chose
+	// it for the speed-up and did not get it. A Hint again, later and separately, where the fast path
+	// was abandoned because the scanned tree does not build, and once more for a lookup that wanted a
+	// declaration from a package with no source to read it from.
+	//
+	// Emitted once per scan for the load itself, not per package.
 	CodeCompiledDependencies Code = "scan.compiled-dependencies"
 
 	// CodeSourcelessType fires when a type is rendered from what its type alone says, because the

@@ -20,7 +20,7 @@ import (
 // objects (schema, operation, tag); supporting those is a separate feature beyond this meta-focused
 // fix.
 func TestCoverage_Bug2872(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2872/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

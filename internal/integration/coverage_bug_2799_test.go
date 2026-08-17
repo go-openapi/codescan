@@ -22,7 +22,7 @@ import (
 // (Distinct from #3211, which is about markdown *table* rows losing their leading pipe — still
 // open.)
 func TestCoverage_Bug2799(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2799/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

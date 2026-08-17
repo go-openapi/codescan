@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-openapi/codescan"
 	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/scan"
+	"github.com/go-openapi/codescan/cmd/genspec-tui/internal/ux/testutils"
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
 	"github.com/go-openapi/testify/v2/assert"
@@ -762,11 +763,11 @@ func scanPetstore(t *testing.T) *Model {
 	t.Helper()
 
 	petstoreOnce.Do(func() {
-		petstoreRes = scan.Do(&codescan.Options{
+		petstoreRes = scan.Do(testutils.ApplyLoader(&codescan.Options{
 			WorkDir:    fixturesDir(t),
 			Packages:   []string{"./goparsing/petstore/..."},
 			ScanModels: true,
-		}, &scan.Profiling{})
+		}), &scan.Profiling{})
 	})
 	res := petstoreRes
 	require.NoError(t, res.Err, "the petstore fixture must scan cleanly")

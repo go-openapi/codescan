@@ -20,7 +20,7 @@ func TestCoverage_EmitXGoType(t *testing.T) {
 	const pkgType = "github.com/go-openapi/codescan/testdata/enhancements/emit-x-go-type.Widget"
 
 	// Default: x-go-name / x-go-package are present, x-go-type is not.
-	off, err := codescan.Run(&codescan.Options{
+	off, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/emit-x-go-type/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)
@@ -29,7 +29,7 @@ func TestCoverage_EmitXGoType(t *testing.T) {
 	assert.Nil(t, w.Extensions["x-go-type"], "x-go-type is opt-in (off by default)")
 
 	// EmitXGoType: x-go-type records the fully-qualified Go type.
-	on, err := codescan.Run(&codescan.Options{
+	on, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/emit-x-go-type/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 		EmitXGoType: true,
 	})
@@ -37,7 +37,7 @@ func TestCoverage_EmitXGoType(t *testing.T) {
 	assert.Equal(t, pkgType, on.Definitions["Widget"].Extensions["x-go-type"], "EmitXGoType stamps the qualified Go type (go-swagger#2924)")
 
 	// SkipExtensions wins: no vendor extension is emitted even with EmitXGoType.
-	none, err := codescan.Run(&codescan.Options{
+	none, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/emit-x-go-type/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 		EmitXGoType: true, SkipExtensions: true,
 	})

@@ -44,7 +44,7 @@ func nameIdentityDoc(t *testing.T, pkg string) *oaispec.Swagger {
 func nameIdentityDocDiags(t *testing.T, pkg string) (*oaispec.Swagger, []grammar.Diagnostic) {
 	t.Helper()
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{pkg},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,
@@ -239,7 +239,7 @@ func TestNameIdentity_Hierarchical(t *testing.T) {
 
 	t.Run("nested when EmitHierarchicalNames is set", func(t *testing.T) {
 		var diags []grammar.Diagnostic
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:              []string{pkg},
 			WorkDir:               scantest.FixturesDir(),
 			ScanModels:            true,

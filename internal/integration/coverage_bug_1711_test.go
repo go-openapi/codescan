@@ -19,7 +19,7 @@ import (
 // 📖 Need doc: the param description comes from the field comment; x-go-name is a separate vendor
 // extension, not concatenated into the description.
 func TestCoverage_Bug1711(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1711/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

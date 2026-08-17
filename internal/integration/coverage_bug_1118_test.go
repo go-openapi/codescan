@@ -24,7 +24,7 @@ import (
 //
 // 📖 Need doc: document the title/description heuristic (see #2626).
 func TestCoverage_Bug1118(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1118/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

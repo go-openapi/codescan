@@ -20,7 +20,7 @@ import (
 // title/description are dropped — they are only captured when the annotation comes last.
 // Asserted explicitly below so a future change is conscious.
 func TestCoverage_Bug334(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/334/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

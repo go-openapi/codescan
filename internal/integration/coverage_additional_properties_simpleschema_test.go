@@ -23,7 +23,7 @@ import (
 // UnsupportedSimpleSchemaString in the param/header/items dispatchers.
 func TestCoverage_AdditionalProperties_SimpleSchemaSafeguard(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/additional-properties-simpleschema/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

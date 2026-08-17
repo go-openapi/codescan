@@ -19,7 +19,7 @@ import (
 // The body param is now clean — {in: body, schema: {$ref}}, no top-level $ref — and links to
 // the operation.
 func TestCoverage_Bug1416(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1416/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

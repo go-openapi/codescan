@@ -17,7 +17,7 @@ import (
 // allOf override arm — matching the direct-field path — instead of riding the arm as a raw
 // string.
 func TestQuirk_RefExampleCoercion(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./quirks/ref-example-coercion/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
