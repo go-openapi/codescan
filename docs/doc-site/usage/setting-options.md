@@ -51,9 +51,10 @@ Two shapes do not follow from a field name:
   Naming none scans `./...`;
 - **`-loader`** takes `go`, `own` or `auto` where the field
   (`ToolchainFreeLoader`) is a boolean: the useful default is the third answer,
-  "pick `own` wherever the build cannot exec". `auto` is what lets the same
-  source build for a WASI guest, which has no process model and so can never run
-  `go list`.
+  "whichever one can run here". On a native build that is `go list`, so a stock
+  run loads exactly as it always did; `auto` picks `own` only where no subprocess
+  can be started. That is what lets the same source build for a WASI guest, which
+  has no process model and so can never run `go list`.
 
 **Commands may add some extra flags that do not affect the scanning itself**.
 
