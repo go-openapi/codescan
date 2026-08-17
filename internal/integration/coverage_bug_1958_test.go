@@ -17,7 +17,7 @@ import (
 // share a name with a known keyword (here, `responses:` inside x-amazon-apigateway-integration),
 // which must NOT be confused with the operation's own responses.
 func TestCoverage_Bug1958(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1958/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

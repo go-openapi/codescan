@@ -68,7 +68,7 @@ func TestTypeOverrideSymmetry(t *testing.T) {
 // each pair must agree, which is the point: the gate lives on the shared path, so the alias and the
 // named declaration reach it alike.
 func TestTypeOverrideSimpleSchema(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/type-override-symmetry/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -101,7 +101,7 @@ func TestTypeOverrideSimpleSchema(t *testing.T) {
 // legacy annotation raises, so both spellings pass through the SAME location gate — a formData
 // parameter and a response body, nowhere else.
 func TestTypeOverrideFileSynonym(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/type-override-symmetry/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -141,7 +141,7 @@ func TestTypeOverrideFileSynonym(t *testing.T) {
 // NAMED enum type does work, because the named type survives the alias, and must stay silent.
 func TestAliasEnumIsUnfixableButLoud(t *testing.T) {
 	var diags []string
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/type-override-symmetry/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

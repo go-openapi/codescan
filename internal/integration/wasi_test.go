@@ -57,7 +57,7 @@ func TestWASIArtifactMatchesNativeScan(t *testing.T) {
 	require.NoError(t, json.Unmarshal(out, &fromGuest))
 
 	// The control: the same scan, in this process, through the stock loader.
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{pattern},
 		WorkDir:    fixtures,
 		ScanModels: true,
@@ -174,7 +174,7 @@ func TestWASIArtifactIsSelfContained(t *testing.T) {
 	var fromGuest map[string]any
 	require.NoError(t, json.Unmarshal(out, &fromGuest))
 
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{pattern},
 		WorkDir:    fixtures,
 		ScanModels: true,

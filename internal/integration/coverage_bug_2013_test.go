@@ -16,7 +16,7 @@ import (
 // buildEmbedded): an enum on a promoted (embedded) field is parsed without panicking and the enum
 // values are carried onto the composed model.
 func TestCoverage_Bug2013(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2013/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

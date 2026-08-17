@@ -21,7 +21,7 @@ import (
 // Both the authored `+` form and the gofmt-canonical `-` form now parse to the same parameter.
 func TestCoverage_Bug2837(t *testing.T) {
 	scan := func(pkg string) *oaispec.Swagger {
-		doc, err := codescan.Run(&codescan.Options{Packages: []string{pkg}, WorkDir: scantest.FixturesDir()})
+		doc, err := runScan(&codescan.Options{Packages: []string{pkg}, WorkDir: scantest.FixturesDir()})
 		require.NoError(t, err)
 		require.NotNil(t, doc)
 		return doc

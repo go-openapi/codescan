@@ -16,7 +16,7 @@ import (
 // response header typed time.Duration resolves to {type:integer, format:int64} — it carries a
 // type, so the spec is valid (the reporter saw "headers.<name>.type in body is required").
 func TestCoverage_Bug2248(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2248/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

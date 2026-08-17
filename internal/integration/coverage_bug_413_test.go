@@ -19,7 +19,7 @@ import (
 //
 // It now resolves cleanly — the embedded fields are promoted as parameters.
 func TestCoverage_Bug413(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/413/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

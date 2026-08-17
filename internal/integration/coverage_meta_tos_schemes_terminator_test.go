@@ -25,7 +25,7 @@ import (
 //	"termsOfService": "http://example.com/terms/"
 //	"schemes":        ["http", "https"]
 func TestCoverage_MetaTOSSchemesTerminator(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/meta-tos-schemes-terminator/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

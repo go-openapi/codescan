@@ -16,7 +16,7 @@ import (
 // indicated type when using swagger:type on struct"): a struct type carrying `swagger:type int64`,
 // used as a parameter field, makes the parameter an integer — not a $ref to the struct.
 func TestCoverage_Bug2184(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2184/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

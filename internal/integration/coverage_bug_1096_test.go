@@ -21,7 +21,7 @@ import (
 // Guarded by the cgo build tag so it is skipped where cgo is unavailable (the fixture is likewise
 // cgo-tagged).
 func TestCoverage_Bug1096(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1096/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

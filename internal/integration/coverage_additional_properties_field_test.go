@@ -18,7 +18,7 @@ import (
 // allOf-sibling form on a referenced-model field, and the lowest-priority contradiction.
 func TestCoverage_AdditionalProperties_Field(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/additional-properties-field/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

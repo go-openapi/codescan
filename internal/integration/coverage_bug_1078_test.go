@@ -15,7 +15,7 @@ import (
 // TestCoverage_Bug1078 locks the fix for go-swagger issue #1078 ("fails to generate JSON schema for
 // time fields"): a time.Time field is documented as {type: string, format: date-time}.
 func TestCoverage_Bug1078(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1078/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

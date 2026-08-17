@@ -19,7 +19,7 @@ import (
 // MarshalText the same type also carries — so it is an `integer`, while big.Float and big.Rat have
 // only MarshalText and therefore travel quoted ("3.5", "5/3"), so they are `string`.
 func TestMathBig(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/math-big/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -18,7 +18,7 @@ import (
 //   - an empty block, which must NOT emit a useless `externalDocs: {}`.
 func TestCoverage_ExternalDocs(t *testing.T) {
 	t.Run("aliased url-only", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages: []string{"./enhancements/external-docs/aliased/..."},
 			WorkDir:  scantest.FixturesDir(),
 		})
@@ -29,7 +29,7 @@ func TestCoverage_ExternalDocs(t *testing.T) {
 	})
 
 	t.Run("empty block skipped", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages: []string{"./enhancements/external-docs/empty/..."},
 			WorkDir:  scantest.FixturesDir(),
 		})

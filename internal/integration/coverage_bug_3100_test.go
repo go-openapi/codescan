@@ -19,7 +19,7 @@ import (
 // round-trip its `in` field verbatim; the scanner used to only recognise `form` and dropped `in`
 // entirely from the spec.
 func TestCoverage_Bug3100(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/3100/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

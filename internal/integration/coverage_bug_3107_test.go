@@ -23,7 +23,7 @@ import (
 // body, so the test also exercises type resolution through the import graph (the v0.30.5 trigger:
 // the model package was resolved by reference, not directly scanned).
 func TestCoverage_Bug3107(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3107/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

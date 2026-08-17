@@ -21,7 +21,7 @@ import (
 //   - dropped + CodeUnsupportedInSimpleSchema on a SimpleSchema param.
 func TestCoverage_ObjectKeywordsContext(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/object-keywords-context/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

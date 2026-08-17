@@ -19,7 +19,7 @@ import (
 // (The struct-based swagger:response example-by-mime form is the separate forthcoming feature §10
 // / #2871.)
 func TestCoverage_Bug1713(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1713/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

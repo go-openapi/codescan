@@ -21,7 +21,7 @@ import (
 // an inline description value there is NOT captured (the 403 gets an empty description).
 // To add a description, use swagger:operation or a dedicated swagger:response object.
 func TestCoverage_Bug989(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/989/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

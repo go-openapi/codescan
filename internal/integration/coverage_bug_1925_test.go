@@ -16,7 +16,7 @@ import (
 // parameter typed `[]map[string]interface{}` no longer aborts spec generation — it produces a
 // valid array-of-object schema with open additionalProperties.
 func TestCoverage_Bug1925(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1925/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

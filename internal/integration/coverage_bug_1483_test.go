@@ -16,7 +16,7 @@ import (
 // map[string]string"): a map[string]string field in a body parameter renders as {type:object,
 // additionalProperties:{type:string}} — no "items doesn't support maps" error.
 func TestCoverage_Bug1483(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1483/..."}, WorkDir: scantest.FixturesDir(),
 	})
 	require.NoError(t, err)

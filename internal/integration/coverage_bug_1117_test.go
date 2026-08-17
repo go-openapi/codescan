@@ -18,7 +18,7 @@ import (
 //
 // 📖 Need doc: array-body response recipe (in:body Body []T).
 func TestCoverage_Bug1117(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1117/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

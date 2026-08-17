@@ -16,7 +16,7 @@ import (
 // `swagger:ignore` on a struct FIELD drops that property from the model (the docs only mentioned
 // types/whole declarations).
 func TestCoverage_Bug2311(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2311/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

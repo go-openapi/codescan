@@ -17,7 +17,7 @@ import (
 // scope, but the OAS2 idiom for server-assigned fields — `read only: true` → `readOnly: true`
 // — is supported and is the recommended mechanism.
 func TestCoverage_Bug1992(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1992/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -18,7 +18,7 @@ import (
 //
 // 📖 Need doc: document the swagger:meta Tags: block for tag descriptions.
 func TestCoverage_Bug1121(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1121/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

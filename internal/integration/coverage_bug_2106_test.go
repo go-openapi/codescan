@@ -16,7 +16,7 @@ import (
 // an array"): a field-level `Extensions:` block emits its x-* vendor extensions on BOTH scalar and
 // array fields.
 func TestCoverage_Bug2106(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2106/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

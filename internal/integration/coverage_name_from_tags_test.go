@@ -28,7 +28,7 @@ import (
 func TestCoverage_NameFromTags(t *testing.T) {
 	run := func(t *testing.T, nameTags []string) *spec.Swagger {
 		t.Helper()
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:     []string{"./enhancements/name-from-tags/..."},
 			WorkDir:      scantest.FixturesDir(),
 			ScanModels:   true,

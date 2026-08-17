@@ -21,7 +21,7 @@ import (
 // 📖 Need doc: clarify -m semantics (annotated models + referenced types, not every struct in the
 // package).
 func TestCoverage_Bug1079(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1079/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -16,7 +16,7 @@ import (
 // annotation across multiple lines"): multiple swagger:parameters lines on one type are all honored
 // — the shared param binds to operations listed across every line.
 func TestCoverage_Bug1665(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1665/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

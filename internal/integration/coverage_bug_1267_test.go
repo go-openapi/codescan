@@ -16,7 +16,7 @@ import (
 // is described with produces: application/octet-stream and a body field marked swagger:strfmt
 // binary -> {type:string, format:binary}.
 func TestCoverage_Bug1267(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1267/..."}, WorkDir: scantest.FixturesDir(),
 	})
 	require.NoError(t, err)

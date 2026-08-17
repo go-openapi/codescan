@@ -17,7 +17,7 @@ import (
 // (not zero-valued). (The multi-line YAML-list example syntax is kept as a raw string — the
 // example-coercion gap tracked in forthcoming-features §2.1.)
 func TestCoverage_Bug2160(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2160/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -21,7 +21,7 @@ import (
 // refactor.
 
 func TestCoverage_EmbeddedTypes(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/embedded-types/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -33,7 +33,7 @@ func TestCoverage_EmbeddedTypes(t *testing.T) {
 }
 
 func TestCoverage_AllOfEdges(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/allof-edges/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -45,7 +45,7 @@ func TestCoverage_AllOfEdges(t *testing.T) {
 }
 
 func TestCoverage_StrfmtArrays(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/strfmt-arrays/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -57,7 +57,7 @@ func TestCoverage_StrfmtArrays(t *testing.T) {
 }
 
 func TestCoverage_DefaultsExamples(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/defaults-examples/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -69,7 +69,7 @@ func TestCoverage_DefaultsExamples(t *testing.T) {
 }
 
 func TestCoverage_InterfaceMethods(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/interface-methods/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -81,7 +81,7 @@ func TestCoverage_InterfaceMethods(t *testing.T) {
 }
 
 func TestCoverage_InterfaceMethods_XNullable(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:                []string{"./enhancements/interface-methods/..."},
 		WorkDir:                 scantest.FixturesDir(),
 		ScanModels:              true,
@@ -97,7 +97,7 @@ func TestCoverage_InterfaceMethods_XNullable(t *testing.T) {
 // buildFieldAlias take the non-transparent expansion path: each alias resolves to the underlying
 // type and the target is emitted inline rather than as a $ref.
 func TestCoverage_AliasExpand(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-expand/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -144,7 +144,7 @@ func TestCoverage_AliasExpand(t *testing.T) {
 // response aliases resolve to $ref via makeRef, and the alias-of-alias chain resolves through the
 // non-transparent switch.
 func TestCoverage_AliasRef(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-expand/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -162,7 +162,7 @@ func TestCoverage_AliasRef(t *testing.T) {
 // Under RefAliases=true the scanner takes the responseBuilder.buildAlias refAliases switch, which
 // is not covered by any other test.
 func TestCoverage_AliasResponseRef(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-response/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -175,7 +175,7 @@ func TestCoverage_AliasResponseRef(t *testing.T) {
 }
 
 func TestCoverage_ResponseEdges(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-edges/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -188,7 +188,7 @@ func TestCoverage_ResponseEdges(t *testing.T) {
 
 func TestCoverage_NamedBasic(t *testing.T) {
 	var diags []string
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./enhancements/named-basic/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,
@@ -224,7 +224,7 @@ func TestCoverage_NamedBasic(t *testing.T) {
 //
 // Pins today's broken behavior so the gap is visible until it's fixed.
 func TestCoverage_WrapperDeclTypeOverride(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/wrapper-decl-type-override/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -262,7 +262,7 @@ func TestCoverage_WrapperDeclTypeOverride(t *testing.T) {
 // A field-level `swagger:type` is now consumed by scanFieldDoc and applied in applyFieldCarrier
 // after buildFromType (Gap C — closed).
 func TestCoverage_RawMessageOverride(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/raw-message-override/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -342,7 +342,7 @@ func TestCoverage_RawMessageOverride(t *testing.T) {
 //
 // Covers buildNamedSlice, buildNamedArray and buildNamedStruct fallthrough branches.
 func TestCoverage_SwaggerTypeArray(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/swagger-type-array/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -354,7 +354,7 @@ func TestCoverage_SwaggerTypeArray(t *testing.T) {
 }
 
 func TestCoverage_RefAliasChain(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/ref-alias-chain/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -392,7 +392,7 @@ func TestCoverage_RefAliasChain(t *testing.T) {
 }
 
 func TestCoverage_EnumDocs(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/enum-docs/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -417,7 +417,7 @@ func TestCoverage_EnumDocs(t *testing.T) {
 // The golden snapshot becomes the v1-behavior contract the v2 migration either preserves or
 // consciously diverges from.
 func TestCoverage_EnumOverrides(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/enum-overrides/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -429,7 +429,7 @@ func TestCoverage_EnumOverrides(t *testing.T) {
 }
 
 func TestCoverage_TextMarshal(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/text-marshal/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -446,7 +446,7 @@ func TestCoverage_TextMarshal(t *testing.T) {
 // underlying shape, not as a $ref to the generic declaration (whose own schema is empty because
 // type parameters are filtered as UnsupportedBuiltinType).
 func TestCoverage_GenericInstantiation(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/generic-instantiation/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -458,7 +458,7 @@ func TestCoverage_GenericInstantiation(t *testing.T) {
 }
 
 func TestCoverage_AllHTTPMethods(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/all-http-methods/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -479,7 +479,7 @@ func TestCoverage_AllHTTPMethods(t *testing.T) {
 // This exercises the default branch of typeIndex.detectNodes.
 func TestCoverage_UnknownAnnotation(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/unknown-annotation/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -507,7 +507,7 @@ func TestCoverage_UnknownAnnotation(t *testing.T) {
 }
 
 func TestCoverage_NamedStructTags(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/named-struct-tags/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -519,7 +519,7 @@ func TestCoverage_NamedStructTags(t *testing.T) {
 }
 
 func TestCoverage_NamedStructTagsRef(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/named-struct-tags-ref/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -531,7 +531,7 @@ func TestCoverage_NamedStructTagsRef(t *testing.T) {
 }
 
 func TestCoverage_TopLevelKinds(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/top-level-kinds/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -572,7 +572,7 @@ func TestCoverage_InputOverlay(t *testing.T) {
 		},
 	}
 
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:  []string{"./enhancements/embedded-types/..."},
 		WorkDir:   scantest.FixturesDir(),
 		InputSpec: input,
@@ -591,7 +591,7 @@ func TestCoverage_InputOverlay(t *testing.T) {
 // The pre-fix golden shows the buggy state (LocalItem missing from definitions).
 // The fix commit regenerates the golden to show LocalItem appearing, witnessing the resolution.
 func TestCoverage_ParametersMapPostDecl(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/parameters-map-postdecl/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -610,7 +610,7 @@ func TestCoverage_ParametersMapPostDecl(t *testing.T) {
 // See M6.5-PRE plan.
 
 func TestCoverage_RoutesParamsPath(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-path/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -621,7 +621,7 @@ func TestCoverage_RoutesParamsPath(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsQueryValidations(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-query-validations/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -632,7 +632,7 @@ func TestCoverage_RoutesParamsQueryValidations(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsBodyRef(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-params-body-ref/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -644,7 +644,7 @@ func TestCoverage_RoutesParamsBodyRef(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesTaggedBody(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-responses-tagged-body/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -656,7 +656,7 @@ func TestCoverage_RoutesResponsesTaggedBody(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsQueryString(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-query-string/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -666,7 +666,7 @@ func TestCoverage_RoutesParamsQueryString(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsQueryNumber(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-query-number/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -676,7 +676,7 @@ func TestCoverage_RoutesParamsQueryNumber(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsQueryBoolean(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-query-boolean/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -686,7 +686,7 @@ func TestCoverage_RoutesParamsQueryBoolean(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsQueryArray(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-query-array/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -696,7 +696,7 @@ func TestCoverage_RoutesParamsQueryArray(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsHeaderString(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-header-string/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -706,7 +706,7 @@ func TestCoverage_RoutesParamsHeaderString(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsFormString(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-form-string/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -716,7 +716,7 @@ func TestCoverage_RoutesParamsFormString(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsBodyArray(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-params-body-array/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -727,7 +727,7 @@ func TestCoverage_RoutesParamsBodyArray(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsBodyArrayNested(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-params-body-array-nested/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -738,7 +738,7 @@ func TestCoverage_RoutesParamsBodyArrayNested(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsBodyWithSchemaValidations(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-params-body-with-schema-validations/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -749,7 +749,7 @@ func TestCoverage_RoutesParamsBodyWithSchemaValidations(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsMultiple(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-params-multiple/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -760,7 +760,7 @@ func TestCoverage_RoutesParamsMultiple(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsUnknownKey(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-unknown-key/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -770,7 +770,7 @@ func TestCoverage_RoutesParamsUnknownKey(t *testing.T) {
 }
 
 func TestCoverage_RoutesParamsEmptyChunk(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-params-empty-chunk/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -780,7 +780,7 @@ func TestCoverage_RoutesParamsEmptyChunk(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesPositional(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-positional/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -790,7 +790,7 @@ func TestCoverage_RoutesResponsesPositional(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesTaggedResponse(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-tagged-response/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -800,7 +800,7 @@ func TestCoverage_RoutesResponsesTaggedResponse(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesMixedBodies(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-responses-mixed-bodies/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -811,7 +811,7 @@ func TestCoverage_RoutesResponsesMixedBodies(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesDescriptionOnly(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-description-only/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -821,7 +821,7 @@ func TestCoverage_RoutesResponsesDescriptionOnly(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesDefault(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-default/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -831,7 +831,7 @@ func TestCoverage_RoutesResponsesDefault(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesArray(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-responses-array/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -842,7 +842,7 @@ func TestCoverage_RoutesResponsesArray(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesEmptyValue(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-empty-value/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -852,7 +852,7 @@ func TestCoverage_RoutesResponsesEmptyValue(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesDefinitionFallback(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-responses-definition-fallback/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -863,7 +863,7 @@ func TestCoverage_RoutesResponsesDefinitionFallback(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesMultipleCodes(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-responses-multiple-codes/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -874,7 +874,7 @@ func TestCoverage_RoutesResponsesMultipleCodes(t *testing.T) {
 }
 
 func TestCoverage_RoutesFullPetstoreShape(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-full-petstore-shape/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -885,7 +885,7 @@ func TestCoverage_RoutesFullPetstoreShape(t *testing.T) {
 }
 
 func TestCoverage_RoutesMultiMethodSamePath(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/routes-multi-method-same-path/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -896,7 +896,7 @@ func TestCoverage_RoutesMultiMethodSamePath(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesSpaceBodyQuirk(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-space-body-quirk/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -906,7 +906,7 @@ func TestCoverage_RoutesResponsesSpaceBodyQuirk(t *testing.T) {
 }
 
 func TestCoverage_RoutesResponsesRefNotFound(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-responses-ref-not-found/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -916,7 +916,7 @@ func TestCoverage_RoutesResponsesRefNotFound(t *testing.T) {
 }
 
 func TestCoverage_RoutesDescriptionDashList(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-description-dash-list/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -926,7 +926,7 @@ func TestCoverage_RoutesDescriptionDashList(t *testing.T) {
 }
 
 func TestCoverage_RoutesDescriptionYAMLFenceAbsorb(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-description-yaml-fence-absorb/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -936,7 +936,7 @@ func TestCoverage_RoutesDescriptionYAMLFenceAbsorb(t *testing.T) {
 }
 
 func TestCoverage_RoutesListsFlexForms(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/routes-lists-flex-forms/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -946,7 +946,7 @@ func TestCoverage_RoutesListsFlexForms(t *testing.T) {
 }
 
 func TestCoverage_MetaListsFlexForms(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/meta-lists-flex-forms/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

@@ -17,7 +17,7 @@ import (
 //
 // They are carried on the parameter object alongside the body schema.
 func TestCoverage_Bug2064(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2064/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

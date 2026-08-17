@@ -16,7 +16,7 @@ import (
 // swagger:route (with a body parameter) and swagger:operation — the reporter found
 // swagger:operation silently failed and swagger:route could not specify the JSON body.
 func TestCoverage_Bug1867(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1867/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

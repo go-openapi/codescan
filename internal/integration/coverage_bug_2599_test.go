@@ -18,7 +18,7 @@ import (
 //
 // Same mechanism answers #2404/#2419.
 func TestCoverage_Bug2599(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2599/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

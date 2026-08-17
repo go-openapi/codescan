@@ -17,7 +17,7 @@ import (
 // tail (josev2) differs from its package name (jose) used to fail with "no import found for jose".
 // go/packages resolves it by the real package name, so the $ref and its definition are emitted.
 func TestCoverage_Bug1587(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1587/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

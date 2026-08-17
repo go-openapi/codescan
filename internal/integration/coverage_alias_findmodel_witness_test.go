@@ -20,7 +20,7 @@ import (
 // definitions via the implicit ExtraModels side effect.
 // Both paths produce identical output; the golden is the witness.
 func TestCoverage_AliasFindModelWitness(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-findmodel-witness/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

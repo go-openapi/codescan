@@ -21,7 +21,7 @@ const discriminatedNestedPkg = "./enhancements/discriminated-subtypes-nested/...
 func runNested(t *testing.T, scanModels, prune bool) (*oaispec.Swagger, map[grammar.Code][]grammar.Diagnostic) {
 	t.Helper()
 	byCode := map[grammar.Code][]grammar.Diagnostic{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{discriminatedNestedPkg},
 		WorkDir:           scantest.FixturesDir(),
 		ScanModels:        scanModels,

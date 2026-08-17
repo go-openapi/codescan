@@ -22,7 +22,7 @@ import (
 // primitives ({string, ""}); pre-Q4 they emitted empty headers because the response builder's
 // buildFieldAlias fell through to makeRef even on header targets.
 func TestCoverage_AliasResponseShapes_Default(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-response-shapes/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -59,7 +59,7 @@ func TestCoverage_AliasResponseShapes_Default(t *testing.T) {
 //
 // The Q4 gate's "in != body OR !RefAliases" branch covers both legs.
 func TestCoverage_AliasResponseShapes_Ref(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-response-shapes/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -79,7 +79,7 @@ func TestCoverage_AliasResponseShapes_Ref(t *testing.T) {
 // alias-of-struct case on a header surfaces empty (the struct can't reduce to a SimpleSchema
 // primitive — same as Q2's post-fix behaviour).
 func TestCoverage_AliasResponseShapes_Transparent(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:           []string{"./enhancements/alias-response-shapes/..."},
 		WorkDir:            scantest.FixturesDir(),
 		ScanModels:         true,

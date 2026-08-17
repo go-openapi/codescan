@@ -25,7 +25,7 @@ import (
 // The fix makes security.Parse return a non-nil empty list for the explicit `[]` form, which
 // go-openapi/spec marshals as `"security": []` rather than omitting it.
 func TestCoverage_Bug2479(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2479/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

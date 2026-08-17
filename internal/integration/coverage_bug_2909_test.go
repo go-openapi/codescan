@@ -21,7 +21,7 @@ import (
 // (OpenAPI 2.0 path templating cannot express it).
 func TestCoverage_Bug2909(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2909/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {

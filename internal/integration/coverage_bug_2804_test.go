@@ -34,7 +34,7 @@ import (
 func TestCoverage_Bug2804(t *testing.T) {
 	var diagnostics []grammar.Diagnostic
 
-	spec, err := codescan.Run(&codescan.Options{
+	spec, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2804/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

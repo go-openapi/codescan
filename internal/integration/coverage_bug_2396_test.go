@@ -22,7 +22,7 @@ import (
 // The scanner currently glues them onto the first/last value (["[issues", "pulls", "projects]"]).
 // The unbracketed form (which already trims correctly) is the green guard rail.
 func TestCoverage_Bug2396(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2396/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

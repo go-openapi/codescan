@@ -17,7 +17,7 @@ import (
 // body param is a clean {in:body, schema: {$ref}} with no forbidden sibling `type`, and the path
 // param is a simple {in:path, type:string}.
 func TestCoverage_Bug2353(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2353/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -19,7 +19,7 @@ import (
 // The quoted source example (`example: "123456"`) emits the quote-stripped value `123456`:
 // surrounding quotes are delimiters (quirk F8, fixed alongside go-swagger#2547).
 func TestCoverage_Bug2899(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2899/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

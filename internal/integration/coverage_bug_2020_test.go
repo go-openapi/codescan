@@ -20,7 +20,7 @@ import (
 // — it is dropped to a query param — but that narrow edge is independent of the
 // grouped-declaration detection this locks.)
 func TestCoverage_Bug2020(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2020/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

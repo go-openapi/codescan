@@ -16,7 +16,7 @@ import (
 // response body field is emitted on the response schema. (The reporter's `exampleValue:` was
 // non-standard; `example:` is the keyword.)
 func TestCoverage_Bug622(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/622/..."}, WorkDir: scantest.FixturesDir()})
+	doc, err := runScan(&codescan.Options{Packages: []string{"./bugs/622/..."}, WorkDir: scantest.FixturesDir()})
 	require.NoError(t, err)
 	name := doc.Responses["personResponse"].Schema.Properties["name"]
 	assert.Equal(t, "Bob", name.Example, "example on a response body field is emitted (go-swagger#622)")

@@ -40,7 +40,7 @@ func TestQuirk_MetaPlacement(t *testing.T) {
 	// Wrong answer: the authored block is ignored, and an ordinary sentence about the package is
 	// parsed as the meta block in its place.
 	t.Run("below a package doc", func(t *testing.T) {
-		doc, err := codescan.Run(scanQuirkMetaPlacement(t, "below-package-doc"))
+		doc, err := runScan(scanQuirkMetaPlacement(t, "below-package-doc"))
 		require.NoError(t, err, "a meta block below the package clause must scan")
 		require.NotNil(t, doc)
 		require.NotNil(t, doc.Info)
@@ -61,7 +61,7 @@ func TestQuirk_MetaPlacement(t *testing.T) {
 	// No answer at all: the file's doc is nil, and the anchor recorded for the info node
 	// dereferenced it.
 	t.Run("with no package doc", func(t *testing.T) {
-		doc, err := codescan.Run(scanQuirkMetaPlacement(t, "no-package-doc"))
+		doc, err := runScan(scanQuirkMetaPlacement(t, "no-package-doc"))
 		require.NoError(t, err, "a file with no package doc must scan")
 		require.NotNil(t, doc)
 		require.NotNil(t, doc.Info)

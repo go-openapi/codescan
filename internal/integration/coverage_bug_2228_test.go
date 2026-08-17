@@ -16,7 +16,7 @@ import (
 // the auto-derived summary (first prose line) is suppressed by simply omitting that line — a
 // route with only `responses:` has no summary.
 func TestCoverage_Bug2228(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2228/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

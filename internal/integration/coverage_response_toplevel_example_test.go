@@ -17,7 +17,7 @@ import (
 //
 // Both land on the response body schema (go-swagger#3013).
 func TestCoverage_ResponseTopLevelExample(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/response-toplevel-example/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

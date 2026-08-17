@@ -15,7 +15,7 @@ import (
 // TestCoverage_Bug2575 locks go-swagger issue #2575 ("custom request headers"): a
 // swagger:parameters field marked `in: header` emits a header parameter.
 func TestCoverage_Bug2575(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2575/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

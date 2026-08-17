@@ -21,7 +21,7 @@ import (
 // After the fix the bound body is its own `in: body` parameter and the inline path param carries
 // only its simple schema (no Schema/$ref).
 func TestCoverage_Bug2651(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2651/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -42,7 +42,7 @@ import (
 // behaviour is pinned by its own witnesses elsewhere. This suite only asks whether the four agree.
 func TestBuilderConformance(t *testing.T) {
 	var diags []codescan.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/builder-conformance/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

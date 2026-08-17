@@ -20,7 +20,7 @@ import (
 // scan.empty-override.
 func TestCoverage_DescriptionTitleOverride_Schema(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/description-title-override/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -101,7 +101,7 @@ func TestCoverage_DescriptionTitleOverride_Schema(t *testing.T) {
 // siblings of the $ref ({$ref, title, description}) rather than dropped — the override flows
 // through the same machinery a prose description would.
 func TestCoverage_DescriptionTitleOverride_RefSiblings(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:        []string{"./enhancements/description-title-override/..."},
 		WorkDir:         scantest.FixturesDir(),
 		ScanModels:      true,
@@ -126,7 +126,7 @@ func TestCoverage_DescriptionTitleOverride_RefSiblings(t *testing.T) {
 // description override still applies.
 func TestCoverage_DescriptionTitleOverride_Responses(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/description-title-override-responses/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {

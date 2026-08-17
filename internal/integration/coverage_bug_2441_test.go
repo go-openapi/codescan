@@ -17,7 +17,7 @@ import (
 // → format binary. (OpenAPI 2.0 `type: file` is formData-only; a raw body uses `{type: string,
 // format: binary}`.)
 func TestCoverage_Bug2441(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2441/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

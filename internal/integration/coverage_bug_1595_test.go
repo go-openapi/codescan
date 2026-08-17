@@ -23,7 +23,7 @@ import (
 // Both the flush-left block style and the idiomatic `*`-decorated style must parse like their //
 // equivalent — the path with a 200 response — without erroring.
 func TestCoverage_Bug1595(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1595/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

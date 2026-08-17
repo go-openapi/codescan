@@ -19,7 +19,7 @@ import (
 // The reporter's "unsupported type 'invalid type'" came from the old GO111MODULE=off go/loader; the
 // module-aware go/packages loader resolves the cross-package type.
 func TestCoverage_Bug2002(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2002/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

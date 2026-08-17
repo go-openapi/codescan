@@ -23,7 +23,7 @@ import (
 // through `applyStdlibSpecials`, so `error` produces its canonical `{type: string, x-go-type:
 // error}` shape inline instead of crashing the scan.
 func TestCoverage_AliasPredeclaredRef(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-stdlib/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -96,7 +96,7 @@ func TestCoverage_AliasPredeclaredRef(t *testing.T) {
 // With the recognizer call, all four produce their canonical shape inline, matching
 // TransparentAliases mode.
 func TestCoverage_AliasStdlibDefault(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-stdlib/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

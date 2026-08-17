@@ -33,7 +33,7 @@ import (
 // Diagnostic emission on duplicates is deferred to the yaml-library swap (see the
 // forthcoming-features roadmap).
 func TestCoverage_MetaSecurityDefsDuplicateKeys(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/meta-securitydefs-duplicate-keys/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

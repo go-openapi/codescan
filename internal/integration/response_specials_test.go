@@ -19,7 +19,7 @@ import (
 // Putting them after it lost every type that is a struct underneath: time.Time went to the struct
 // arm to have its fields read as response headers, exports none, and the response carried no schema.
 func TestResponseSpecials(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/response-specials/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

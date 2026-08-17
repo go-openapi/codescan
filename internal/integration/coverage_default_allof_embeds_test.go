@@ -15,7 +15,7 @@ import (
 
 func runDefaultAllOfEmbeds(t *testing.T, on bool) *spec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:              []string{"./enhancements/default-allof-embeds/..."},
 		WorkDir:               scantest.FixturesDir(),
 		ScanModels:            true,

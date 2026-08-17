@@ -19,7 +19,7 @@ import (
 // The misleading additionalProp1/2/3 keys are only the Swagger UI's fallback when no example is
 // provided.
 func TestCoverage_Bug1459(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1459/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)

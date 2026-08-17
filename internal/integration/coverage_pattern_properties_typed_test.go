@@ -18,7 +18,7 @@ import (
 // lowest-priority precedence rule.
 func TestCoverage_PatternProperties_Typed(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/pattern-properties-typed/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

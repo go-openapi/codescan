@@ -15,7 +15,7 @@ import (
 
 func runGodocLinks(t *testing.T, on bool) *spec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/godoc-links/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

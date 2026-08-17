@@ -22,7 +22,7 @@ import (
 // The buildNamedType gate is therefore (isModel && !simpleSchema): a regression would dissolve the
 // schema to {} via the simple-schema $ref safety net, losing the enum/format.
 func TestQuirk_ModelOverrideSimpleSchema(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./quirks/model-override-simpleschema/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

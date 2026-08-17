@@ -24,7 +24,7 @@ import (
 // The `[]`-prefixed form collapses a Go struct slice to a simple array-of-scalar query parameter,
 // mirroring the schema builder's array layers.
 func TestCoverage_Bug1499(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1499/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

@@ -19,7 +19,7 @@ import (
 // ComplexType -> string makes a []ComplexType field render as an array of strings, matching the
 // actual wire format. (📖 Need doc: document this override for custom-marshalled types.)
 func TestCoverage_Bug3069(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3069/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -20,7 +20,7 @@ import (
 // and a model-ref control that must still resolve to a $ref.
 func TestCoverage_PrimitiveResponse(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/primitive-response/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

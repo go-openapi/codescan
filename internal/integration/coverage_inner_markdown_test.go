@@ -19,7 +19,7 @@ import (
 //
 // Reframes go-swagger#3211.
 func TestCoverage_InnerMarkdown(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/inner-markdown/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

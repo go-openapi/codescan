@@ -16,7 +16,7 @@ import (
 // swagger:response whose body is a slice of a model produces a valid `{type: array, items: {$ref}}`
 // schema.
 func TestCoverage_Bug1881(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1881/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

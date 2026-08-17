@@ -31,7 +31,7 @@ import (
 // (explicit empty opt-out) and #2294 (multi-key AND grouping): the positive demonstration that
 // those forms are just YAML.
 func TestCoverage_SecurityYAMLIdiom(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/security-yaml-idiom/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

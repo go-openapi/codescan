@@ -35,7 +35,7 @@ import (
 //   - EnvelopeAnnotatedAlias.viaAliasModeled (ANNOTATED) →
 //     $ref: BaseAliasModeled (alias keeps identity); has own def
 func TestCoverage_AliasField_Default(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -68,7 +68,7 @@ func TestCoverage_AliasField_Default(t *testing.T) {
 // decl's own definition shape (chain `$ref` instead of structural copy), not the field-site `$ref`
 // target.
 func TestCoverage_AliasField_Ref(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-calibration-embed/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -98,7 +98,7 @@ func TestCoverage_AliasField_Ref(t *testing.T) {
 // Both Envelope.viaAlias and EnvelopeAnnotatedAlias.viaAliasModeled resolve to {$ref: Base} because
 // Transparent supersedes the annotation gate at use sites.
 func TestCoverage_AliasField_Transparent(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:           []string{"./enhancements/alias-calibration-embed/..."},
 		WorkDir:            scantest.FixturesDir(),
 		ScanModels:         true,

@@ -27,7 +27,7 @@ import (
 // This closes the residual behind #2959-class meta failures: write the natural column-0 form, run
 // gofmt, still scans.
 func TestQuirk_GofmtMetaYAML(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./quirks/gofmt-meta/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

@@ -19,7 +19,7 @@ import (
 // To constrain or example the RawMessage, annotate it (swagger:type / swagger:strfmt); the raw
 // bytes are not forced to an int array.
 func TestCoverage_Bug2230(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2230/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

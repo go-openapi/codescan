@@ -17,7 +17,7 @@ import (
 // spaced tags — its tags are space-delimited tokens — so the YAML form is the supported route
 // to it.)
 func TestCoverage_Bug2232(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2232/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

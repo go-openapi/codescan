@@ -23,7 +23,7 @@ import (
 // `byte` is the base64-encoded string OAS 2.0 defines for exactly that. It is not a claim about
 // the content — a stream is opaque, and this is the standard way of saying so.
 func TestOpaqueStreams(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/opaque-streams/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -64,7 +64,7 @@ func TestOpaqueStreams(t *testing.T) {
 	})
 
 	t.Run("SkipExtensions suppresses the x-go-type stamp", func(t *testing.T) {
-		bare, err := codescan.Run(&codescan.Options{
+		bare, err := runScan(&codescan.Options{
 			Packages:       []string{"./enhancements/opaque-streams/..."},
 			WorkDir:        scantest.FixturesDir(),
 			ScanModels:     true,

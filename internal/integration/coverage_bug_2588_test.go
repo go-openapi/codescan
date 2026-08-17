@@ -16,7 +16,7 @@ import (
 // a struct embedding a named type whose underlying type is an interface (type B A; type C struct{ B
 // }) no longer panics with "interface conversion: ast.Expr is *ast.Ident, not *ast.InterfaceType".
 func TestCoverage_Bug2588(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2588/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

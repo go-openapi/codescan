@@ -20,7 +20,7 @@ import (
 // meta-Security parsing fixes (cf. #2403).
 // The OP's "SecurityDefinition" (singular) was a keyword typo.
 func TestCoverage_Bug1395(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1395/..."}, WorkDir: scantest.FixturesDir(),
 	})
 	require.NoError(t, err)

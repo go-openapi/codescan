@@ -16,7 +16,7 @@ import (
 // parameter is emitted as a simple {type:string, in:path} with NO sibling `schema` (the
 // double-emission the reporter saw would fail validation).
 func TestCoverage_Bug2133(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2133/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

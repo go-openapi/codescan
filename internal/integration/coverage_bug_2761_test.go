@@ -23,7 +23,7 @@ import (
 // 📖 Need doc: an allOf $ref requires the embedded base to be a swagger:model, not a
 // swagger:response.
 func TestCoverage_Bug2761(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2761/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

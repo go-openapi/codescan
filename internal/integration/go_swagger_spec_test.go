@@ -24,7 +24,7 @@ func TestGoSwagger_GenerateJSONSpec(t *testing.T) {
 		WorkDir:  filepath.Join(scantest.FixturesDir(), "goparsing", "spec"),
 		Packages: []string{"./..."},
 	}
-	swspec, err := codescan.Run(&opts)
+	swspec, err := runScan(&opts)
 	require.NoError(t, err)
 
 	scantest.CompareOrDumpJSON(t, swspec, "api_spec_go111.json")
@@ -36,7 +36,7 @@ func TestGoSwagger_GenerateJSONSpec_RefAliases(t *testing.T) {
 		Packages:   []string{"./..."},
 		RefAliases: true,
 	}
-	swspec, err := codescan.Run(&opts)
+	swspec, err := runScan(&opts)
 	require.NoError(t, err)
 
 	scantest.CompareOrDumpJSON(t, swspec, "api_spec_go111_ref.json")
@@ -48,7 +48,7 @@ func TestGoSwagger_GenerateJSONSpec_TransparentAliases(t *testing.T) {
 		Packages:           []string{"./..."},
 		TransparentAliases: true,
 	}
-	swspec, err := codescan.Run(&opts)
+	swspec, err := runScan(&opts)
 	require.NoError(t, err)
 
 	scantest.CompareOrDumpJSON(t, swspec, "api_spec_go111_transparent.json")

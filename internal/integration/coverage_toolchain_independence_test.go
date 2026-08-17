@@ -60,7 +60,7 @@ func TestToolchainIndependence_FullScan(t *testing.T) {
 	})
 
 	t.Run("symptom: TextMarshaler fields still render as strings", func(t *testing.T) {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages:   []string{"./enhancements/text-marshal/..."},
 			WorkDir:    scantest.FixturesDir(),
 			ScanModels: true,

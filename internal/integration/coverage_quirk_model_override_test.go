@@ -24,7 +24,7 @@ import (
 // still pin the current (no-enum) behaviour.
 func TestQuirk_ModelOverrideMatrix(t *testing.T) {
 	var diags []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:     []string{"./quirks/model-override-matrix/..."},
 		WorkDir:      scantest.FixturesDir(),
 		ScanModels:   true,

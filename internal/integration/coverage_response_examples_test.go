@@ -19,7 +19,7 @@ import (
 // coverage_bug_2871); this verifies the Go-struct `swagger:response` path, where the `examples:`
 // block in the decl comment is parsed into the OAS2 Response.examples field.
 func TestCoverage_ResponseExamplesByMime(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-examples-by-mime/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

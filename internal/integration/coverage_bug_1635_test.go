@@ -23,7 +23,7 @@ import (
 // one body parameter per promoted field (invalid OAS2, which allows at most one body parameter per
 // operation).
 func TestCoverage_Bug1635(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1635/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

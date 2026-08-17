@@ -19,7 +19,7 @@ import (
 // marker supplies the additionalProperties value schema. field1 stays a named property alongside
 // it.
 func TestCoverage_Bug3005(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3005/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

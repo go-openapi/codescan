@@ -16,7 +16,7 @@ import (
 // `x-nullable: true` Extensions block on a pointer field is applied — the field becomes
 // allOf[$ref] carrying x-nullable.
 func TestCoverage_Bug2317(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2317/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

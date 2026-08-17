@@ -31,7 +31,7 @@ import (
 func TestCoverage_Bug1088(t *testing.T) {
 	var diagnostics []grammar.Diagnostic
 
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1088/..."},
 		WorkDir:  scantest.FixturesDir(),
 		OnDiagnostic: func(d grammar.Diagnostic) {

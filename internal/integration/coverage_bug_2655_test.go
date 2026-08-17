@@ -21,7 +21,7 @@ import (
 // list nesting survives the raw-block lexer because `Tags:` preserves per-line indentation (like
 // extensions/securityDefinitions).
 func TestCoverage_Bug2655(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2655/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

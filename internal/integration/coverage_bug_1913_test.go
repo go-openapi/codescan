@@ -22,7 +22,7 @@ import (
 // keeps locking the -m shape; the discovery half lives in
 // coverage_discriminated_subtypes_test.go.
 func TestCoverage_Bug1913(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1913/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -28,7 +28,7 @@ import (
 // See [§alias-handling](../builders/responses/README.md#alias-handling) for the contract.
 
 func TestCoverage_AliasResponsesCalibration_Default(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-responses-calibration/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -79,7 +79,7 @@ func TestCoverage_AliasResponsesCalibration_Default(t *testing.T) {
 }
 
 func TestCoverage_AliasResponsesCalibration_Ref(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-responses-calibration/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -116,7 +116,7 @@ func TestCoverage_AliasResponsesCalibration_Ref(t *testing.T) {
 }
 
 func TestCoverage_AliasResponsesCalibration_Transparent(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:           []string{"./enhancements/alias-responses-calibration/..."},
 		WorkDir:            scantest.FixturesDir(),
 		ScanModels:         true,

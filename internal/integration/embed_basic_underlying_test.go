@@ -39,7 +39,7 @@ import (
 func TestEmbedBasicUnderlying(t *testing.T) {
 	wire := loadEmbedWireGolden(t)
 
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/embed-basic-underlying/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

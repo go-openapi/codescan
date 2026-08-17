@@ -18,7 +18,7 @@ import (
 // Pre-fix, a header parameter typed as a named string emitted a `$ref` (invalid under OAS v2
 // SimpleSchema); post-fix it inlines as `{type: string}`.
 func TestCoverage_HeaderNamedBasic(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/header-named-basic/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

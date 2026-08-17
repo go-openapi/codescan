@@ -21,7 +21,7 @@ import (
 // 📖 Need doc: a bare `// x-example: …` line is swallowed as the description; the supported
 // form is an Extensions: block on the parameter / header.
 func TestCoverage_Bug1609(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1609/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

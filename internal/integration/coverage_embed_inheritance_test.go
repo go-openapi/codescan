@@ -19,7 +19,7 @@ import (
 //
 // Exportedness stays per-field — the unexported promoted member never surfaces.
 func TestCoverage_EmbedInheritance(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/embed-inheritance/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

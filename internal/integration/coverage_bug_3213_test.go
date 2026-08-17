@@ -20,7 +20,7 @@ import (
 // distinct titles, which a GenDecl-only reader could not produce.
 // A grouped `swagger:enum` referenced by one of them also has its values parsed.
 func TestCoverage_Bug3213(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/3213/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

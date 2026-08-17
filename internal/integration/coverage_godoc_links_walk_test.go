@@ -23,7 +23,7 @@ import (
 // The godoc-links fixture is models-only, so it only ever exercised the definitions arm of that
 // walk. This one puts a doc-link in each of the other positions.
 func TestCoverage_GodocLinksWalk(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/godoc-links-walk/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -120,7 +120,7 @@ func TestCoverage_GodocLinksWalk(t *testing.T) {
 //
 // Assertions rather than a golden: this pins one branch, not a document shape.
 func TestCoverage_GodocLinksWalk_PrunedTarget(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{"./enhancements/godoc-links-walk/..."},
 		WorkDir:           scantest.FixturesDir(),
 		ScanModels:        true,

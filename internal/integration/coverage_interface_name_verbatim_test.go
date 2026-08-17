@@ -22,7 +22,7 @@ import (
 // See observed-quirks Q9 (RESOLVED, Stream M) and internal/builders/schema/README.md
 // §interface-naming.
 func TestCoverage_InterfaceNameVerbatim(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/interface-name-verbatim/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

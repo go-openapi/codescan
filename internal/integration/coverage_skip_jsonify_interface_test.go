@@ -15,7 +15,7 @@ import (
 
 func runSkipJSONifyInterface(t *testing.T, skip bool) *spec.Swagger {
 	t.Helper()
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:                    []string{"./enhancements/interface-no-mangle/..."},
 		WorkDir:                     scantest.FixturesDir(),
 		ScanModels:                  true,

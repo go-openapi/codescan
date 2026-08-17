@@ -19,7 +19,7 @@ import (
 // Works-as-designed; the "prune unreferenced under -m" middle ground is forthcoming-features §12.
 func TestCoverage_Bug1436(t *testing.T) {
 	run := func(m bool) map[string]struct{} {
-		doc, err := codescan.Run(&codescan.Options{
+		doc, err := runScan(&codescan.Options{
 			Packages: []string{"./bugs/1436/..."}, WorkDir: scantest.FixturesDir(), ScanModels: m,
 		})
 		require.NoError(t, err)

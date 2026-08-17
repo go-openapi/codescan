@@ -24,7 +24,7 @@ import (
 // Previously it was carried as a raw string ("{...}") because the override arm has no type to
 // coerce against.
 func TestCoverage_Bug2652(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2652/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

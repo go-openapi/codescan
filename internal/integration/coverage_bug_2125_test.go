@@ -18,7 +18,7 @@ import (
 // kept in the info description and does NOT derail field parsing — the real `Version:` field is
 // read correctly.
 func TestCoverage_Bug2125(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2125/..."}, WorkDir: scantest.FixturesDir(),
 	})
 	require.NoError(t, err)

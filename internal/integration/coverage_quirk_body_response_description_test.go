@@ -24,7 +24,7 @@ import (
 //	500: body:string   → "Internal Server Error" (primitive → status phrase)
 //	default: body:string → "Default response"    (no phrase → placeholder)
 func TestQuirk_BodyResponseDescription(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./quirks/body-response-description/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -21,7 +21,7 @@ import (
 // The test also guards the exportedness contract: only exported fields are promoted (including ones
 // reached through an unexported embed), and unexported fields never surface.
 func TestCoverage_Bug2701(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2701/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

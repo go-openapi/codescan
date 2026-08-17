@@ -18,7 +18,7 @@ import (
 //
 // It is warned and skipped; the annotated model is still emitted.
 func TestCoverage_Bug1133(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1133/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

@@ -16,7 +16,7 @@ import (
 // swagger:response whose body is a top-level array type now lands on the response body schema (it
 // was previously dropped — the response decl comment only contributed the description).
 func TestCoverage_Bug3013(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/3013/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

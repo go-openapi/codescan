@@ -21,7 +21,7 @@ import (
 //     {schema: {type: string}} instead of no schema (Typed routed to the body
 //     schema rather than a discarded header).
 func TestCoverage_Bug2942(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/2942/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})

@@ -31,7 +31,7 @@ import (
 // for (1).
 func TestCoverage_ResponseFileTypes(t *testing.T) {
 	var got []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-file-types/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

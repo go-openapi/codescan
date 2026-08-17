@@ -17,7 +17,7 @@ import (
 // discovered — the model resolves as the route's response body $ref, and the params type
 // contributes the query parameter.
 func TestCoverage_Bug1934(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1934/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

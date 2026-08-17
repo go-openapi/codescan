@@ -35,7 +35,7 @@ import (
 //     set; diagnostic still fires for the underlying ref attempt.
 func TestCoverage_ResponseHeaderRefLeak(t *testing.T) {
 	var got []grammar.Diagnostic
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/response-header-ref-leak/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

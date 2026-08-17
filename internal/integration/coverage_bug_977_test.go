@@ -16,7 +16,7 @@ import (
 // by a named string type (type Role string) renders as {type:object, additionalProperties:<value>}
 // — its underlying string kind makes it a valid object-key.
 func TestCoverage_Bug977(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{Packages: []string{"./bugs/977/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
+	doc, err := runScan(&codescan.Options{Packages: []string{"./bugs/977/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true})
 	require.NoError(t, err)
 	perms := doc.Definitions["Acl"].Properties["perms"]
 	assert.Equal(t, []string{"object"}, []string(perms.Type))

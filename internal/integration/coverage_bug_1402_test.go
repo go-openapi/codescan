@@ -16,7 +16,7 @@ import (
 // map[string]interface{}"): the field renders as {type:object, additionalProperties:{}} — an OPEN
 // value schema (any), not one wrongly constrained to object.
 func TestCoverage_Bug1402(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./bugs/1402/..."}, WorkDir: scantest.FixturesDir(), ScanModels: true,
 	})
 	require.NoError(t, err)

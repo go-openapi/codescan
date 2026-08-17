@@ -22,7 +22,7 @@ import (
 // `* item` / `+ item` are normalised to `- item` (matching gofmt's own rewrite of doc-comment
 // bullets), so the asserted descriptions carry the dash form.
 func TestCoverage_Bug1726(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/1726/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

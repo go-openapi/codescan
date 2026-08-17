@@ -17,7 +17,7 @@ import (
 //
 // The values are now coerced to numbers against the integer schema type.
 func TestCoverage_Bug2961(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./bugs/2961/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,

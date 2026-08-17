@@ -53,7 +53,7 @@ func findBodyParam(t *testing.T, doc *oaispec.Swagger, path, verb, name string) 
 // See [§alias-handling](../builders/parameters/README.md#alias-handling) for the contract.
 
 func TestCoverage_AliasParametersCalibration_Default(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-parameters-calibration/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -102,7 +102,7 @@ func TestCoverage_AliasParametersCalibration_Default(t *testing.T) {
 }
 
 func TestCoverage_AliasParametersCalibration_Ref(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:   []string{"./enhancements/alias-parameters-calibration/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -136,7 +136,7 @@ func TestCoverage_AliasParametersCalibration_Ref(t *testing.T) {
 }
 
 func TestCoverage_AliasParametersCalibration_Transparent(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:           []string{"./enhancements/alias-parameters-calibration/..."},
 		WorkDir:            scantest.FixturesDir(),
 		ScanModels:         true,

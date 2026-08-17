@@ -20,7 +20,7 @@ const discriminatedSubtypesPkg = "./enhancements/discriminated-subtypes/..."
 func runSubtypes(t *testing.T, scanModels, prune bool) (*oaispec.Swagger, map[grammar.Code][]grammar.Diagnostic) {
 	t.Helper()
 	byCode := map[grammar.Code][]grammar.Diagnostic{}
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages:          []string{discriminatedSubtypesPkg},
 		WorkDir:           scantest.FixturesDir(),
 		ScanModels:        scanModels,

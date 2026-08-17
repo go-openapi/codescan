@@ -17,7 +17,7 @@ import (
 // No goldens are produced — these tests exist purely to pin the error surface.
 
 func TestMalformed_DefaultInt(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	_, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/default-int/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -25,7 +25,7 @@ func TestMalformed_DefaultInt(t *testing.T) {
 }
 
 func TestMalformed_ExampleInt(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	_, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/example-int/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -39,7 +39,7 @@ func TestMalformed_ExampleInt(t *testing.T) {
 // diagnostic at grammar parse time and drop, but Run still succeeds.
 // The fixture's bad key ends up absent from the captured golden.
 func TestMalformed_MetaBadExtensionKey(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/meta-bad-ext-key/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -53,7 +53,7 @@ func TestMalformed_MetaBadExtensionKey(t *testing.T) {
 //
 // Same diagnose-and-drop shift, here under the InfoExtensions: keyword.
 func TestMalformed_InfoBadExtensionKey(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/info-bad-ext-key/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -64,7 +64,7 @@ func TestMalformed_InfoBadExtensionKey(t *testing.T) {
 }
 
 func TestMalformed_BadContact(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	_, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/bad-contact/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -80,7 +80,7 @@ func TestMalformed_BadContact(t *testing.T) {
 // The fixture's malformed response line ends up absent from the captured golden — the witness IS
 // the dropped output.
 func TestMalformed_DuplicateBodyTag(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/duplicate-body-tag/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -95,7 +95,7 @@ func TestMalformed_DuplicateBodyTag(t *testing.T) {
 // Unknown tag prefixes emit a diagnostic and drop the response line; the rest of the route builds
 // normally.
 func TestMalformed_BadResponseTag(t *testing.T) {
-	doc, err := codescan.Run(&codescan.Options{
+	doc, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/bad-response-tag/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
@@ -106,7 +106,7 @@ func TestMalformed_BadResponseTag(t *testing.T) {
 }
 
 func TestMalformed_BadSecurityDefinitions(t *testing.T) {
-	_, err := codescan.Run(&codescan.Options{
+	_, err := runScan(&codescan.Options{
 		Packages: []string{"./enhancements/malformed/bad-sec-defs/..."},
 		WorkDir:  scantest.FixturesDir(),
 	})
