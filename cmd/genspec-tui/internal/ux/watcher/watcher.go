@@ -43,7 +43,8 @@ func (w *Watcher) Events() <-chan struct{} { return w.events }
 func (w *Watcher) addRecursive(root string) {
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
-			return nil //nolint:nilerr // skip unreadable entries, keep walking
+			//nolint:nilerr // skip unreadable entries, keep walking
+			return nil
 		}
 		if name := d.Name(); path != root && (strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules") {
 			return filepath.SkipDir

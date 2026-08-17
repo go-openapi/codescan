@@ -16,6 +16,7 @@ import (
 	"github.com/go-openapi/codescan/cmd/genspec/internal/clitest/fixtures"
 	"github.com/go-openapi/codescan/cmd/genspec/internal/sentinel"
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
+	"github.com/go-openapi/codescan/internal/testloader"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -132,9 +133,14 @@ func TestRun(t *testing.T) {
 		t.Parallel()
 
 		_, stderr, err := exec(t, "-workdir", fixtures.Petstore(t), "-color=never", "-no-config", "./...")
-
 		require.NoError(t, err)
-		assert.Empty(t, stderr)
+
+		if testloader.Selected() == "compiled" {
+			// exception: with compiled dependencies, get a single info (hint) at startup
+			assert.Contains(t, stderr, "finished hints=1")
+		} else {
+			assert.Empty(t, stderr)
+		}
 	})
 
 	t.Run("should remain silent when quiet", func(t *testing.T) {
@@ -344,7 +350,12 @@ tui:
 		_, stderr, err := exec(t, "-config", path, "-color=never", "./...")
 
 		require.NoError(t, err)
-		assert.Empty(t, stderr, "reading a configuration file is not news")
+		if testloader.Selected() == "compiled" {
+			// exception: with compiled dependencies, get a single info (hint) at startup
+			assert.Contains(t, stderr, "finished hints=1")
+		} else {
+			assert.Empty(t, stderr, "reading a configuration file is not news")
+		}
 	})
 
 	t.Run("should reject config pointing to another config", func(t *testing.T) {
@@ -391,7 +402,11 @@ func exec(t *testing.T, argv ...string) (stdout, stderr string, err error) {
 	t.Helper()
 
 	var out, errs bytes.Buffer
-	err = run(argv, &out, &errs)
+	const maxExtraArgs = 4
+	argsWithLoader := make([]string, 0, len(argv)+maxExtraArgs)
+	argsWithLoader = append(argsWithLoader, testloader.Flags()...)
+	argsWithLoader = append(argsWithLoader, argv...)
+	err = run(argsWithLoader, &out, &errs)
 
 	return out.String(), errs.String(), err
 }

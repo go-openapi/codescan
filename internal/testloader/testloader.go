@@ -56,6 +56,29 @@ func Selected() Loader {
 	}
 }
 
+// Flags is the loader as command-line flags, for the commands that build their options from flags
+// rather than from a literal.
+//
+// Derived from [Selected] rather than from the build tag alone, so that the two knobs cannot
+// disagree: a test branching on Selected while the command it ran was configured by the tag reads
+// one loader and exercises another, which is a failure that accuses the command of the wrong thing.
+// CODESCAN_TEST_LOADER is how the loader-conformance workflow selects, so this is not hypothetical.
+//
+// -loader is stated even for the shipped default: "auto" resolves to go list on every native build,
+// but saying so pins the intent rather than leaning on that resolution.
+func Flags() []string {
+	switch selected := Selected(); selected {
+	case LoaderCompiled:
+		return []string{"-loader", "go", "-compiled-dependencies"}
+	case LoaderOwn:
+		return []string{"-loader", "own"}
+	case LoaderSource:
+		return []string{"-loader", "go"}
+	default:
+		panic("testloader: no flags for loader " + string(selected))
+	}
+}
+
 // Describe is a one-line statement of which loader is in force.
 //
 // A run is otherwise indistinguishable from a run configured differently: the tag that selects the
