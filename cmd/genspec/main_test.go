@@ -135,8 +135,7 @@ func TestRun(t *testing.T) {
 		_, stderr, err := exec(t, "-workdir", fixtures.Petstore(t), "-color=never", "-no-config", "./...")
 		require.NoError(t, err)
 
-		if testloader.Selected() == "compiled" {
-			// exception: with compiled dependencies, get a single info (hint) at startup
+		if loaderHasSomethingToSay() {
 			assert.Contains(t, stderr, "finished hints=1")
 		} else {
 			assert.Empty(t, stderr)
@@ -350,8 +349,7 @@ tui:
 		_, stderr, err := exec(t, "-config", path, "-color=never", "./...")
 
 		require.NoError(t, err)
-		if testloader.Selected() == "compiled" {
-			// exception: with compiled dependencies, get a single info (hint) at startup
+		if loaderHasSomethingToSay() {
 			assert.Contains(t, stderr, "finished hints=1")
 		} else {
 			assert.Empty(t, stderr, "reading a configuration file is not news")
@@ -394,6 +392,17 @@ func TestConfigFileWalkUp(t *testing.T) {
 /********************************/
 /* exec helpers */
 /********************************/
+
+// loaderHasSomethingToSay reports whether the loader this run uses reports a hint of its own on a
+// clean scan, which the silence assertions have to allow for.
+//
+// Both non-default loaders do, for unrelated reasons: compiled dependencies announce that the
+// request was met, and the toolchain-free loader says it did not run the cgo tool. Neither is a
+// finding about the scanned code, which is what those assertions are really about -- so the
+// exception is the loader having spoken, not any particular thing it said.
+func loaderHasSomethingToSay() bool {
+	return testloader.Selected() != testloader.LoaderSource
+}
 
 // exec runs the command as the process would, and reports what it wrote and what it returned.
 //
