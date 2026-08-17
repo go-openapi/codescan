@@ -47,7 +47,6 @@ and the command is run bare:
 
 ```yaml
 scan:
-  workdir: ./api
   exclude-tags: [internal]
 
 emit:
@@ -56,11 +55,19 @@ emit:
 
 document:
   format: yaml
-  output: swagger.yaml
+  compact: true
 
 diagnostics:
   validate: true
   fail-on: warning
+```
+
+The options naming a **path** are not among them — `-workdir`, `-output`, `-input` — because a file
+found by searching upwards belongs to the tree being scanned, and that tree must not choose where the
+command reads or writes. They are typed:
+
+```cmd
+genspec -workdir ./api -output swagger.yaml ./...
 ```
 
 Keys are grouped into sections, and inside a section a key **is** the flag it

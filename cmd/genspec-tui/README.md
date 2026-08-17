@@ -70,13 +70,19 @@ the command was started — the same file, with the same sections, that `genspec
 reads. Anything typed on the command line wins over it.
 
 ```yaml
-scan:
-  workdir: ./api
 emit:
   scan-models: true
   prune-unused-models: true
 profile:
   profile: true
+```
+
+The options naming a **path** are not among them — `-workdir` and `-profile-dir` — because a file
+found by searching upwards belongs to the tree being scanned, and that tree must not choose where the
+session reads or writes. They are typed:
+
+```cmd
+genspec-tui -workdir ./api -profile -profile-dir ./profiles
 ```
 
 `-c` / `-config` pins a file, `-no-config` refuses one. A section this command
