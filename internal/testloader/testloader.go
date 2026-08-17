@@ -55,3 +55,17 @@ func Selected() Loader {
 			Env, string(v), LoaderSource, LoaderCompiled, LoaderOwn))
 	}
 }
+
+// Announce writes the selected loader to stdout, once, before a suite runs.
+//
+// A run is otherwise indistinguishable from a run configured differently: the tag that selects the
+// loader is set in a workflow file, far from any test, and two rounds of CI debugging have already
+// gone on inferring which configuration a run actually used from its wall-clock time.
+//
+// Written to stdout rather than through testing.T, because a passing package's test logs are not
+// shown by the console formatter CI uses. Package-level output reaches the gotestsum JSON report
+// whatever the console shows, so the answer survives in the artifact.
+func Announce(suite string) {
+	fmt.Fprintf(os.Stdout, "codescan %s suite: loader=%s (set %s or -tags=testloader_<name>)\n",
+		suite, Selected(), Env)
+}
