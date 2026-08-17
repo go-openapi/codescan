@@ -56,16 +56,16 @@ func Selected() Loader {
 	}
 }
 
-// Announce writes the selected loader to stdout, once, before a suite runs.
+// Describe is a one-line statement of which loader is in force.
 //
 // A run is otherwise indistinguishable from a run configured differently: the tag that selects the
-// loader is set in a workflow file, far from any test, and two rounds of CI debugging have already
-// gone on inferring which configuration a run actually used from its wall-clock time.
+// loader is set in a workflow file, far from any test, and two rounds of CI debugging went on
+// inferring exactly that from wall-clock time.
 //
-// Written to stdout rather than through testing.T, because a passing package's test logs are not
-// shown by the console formatter CI uses. Package-level output reaches the gotestsum JSON report
-// whatever the console shows, so the answer survives in the artifact.
-func Announce(suite string) {
-	fmt.Fprintf(os.Stdout, "codescan %s suite: loader=%s (set %s or -tags=testloader_<name>)\n",
+// Returned rather than printed, and reported from an ordinary test rather than from TestMain,
+// because TestMain also runs under `go test -list`: the fuzz matrix builds itself by treating every
+// listed line as a target name, and a stray line there becomes a fuzz test that does not exist.
+func Describe(suite string) string {
+	return fmt.Sprintf("codescan %s suite: loader=%s (set %s or -tags=testloader_<name>)",
 		suite, Selected(), Env)
 }
