@@ -15,6 +15,16 @@ jobs:
   test:
     uses: go-openapi/ci-workflows/.github/workflows/go-test-monorepo.yml@81c95ab8bb6a3e0aeccc90a7c9e5fc5b398b1244 # v0.6.0
     with:
+      # The suites emit the same document under any loader -- TestLoaderAgreement holds that over
+      # the whole corpus -- so which one runs is a question about what the run costs, and this
+      # harness is the shape compiled dependencies were made for: several hundred scans of small
+      # trees over one dependency closure, compiled once and read back by every scan after the
+      # first. Measured over the repository, that is 4m06s of CPU against 5m34s, and a runner with
+      # two cores spends most of the difference on the wall.
+      #
+      # A build tag rather than CODESCAN_TEST_LOADER because the shared workflow forwards flags to
+      # `go test` and not the environment. See internal/scantest for the knob itself.
+      extra-flags: -tags=testloader_compiled
       # From v0.5.0 the shared workflow skips the matrix when nothing relevant changed, and
       # what it watches is go sources. Ours are not the whole input: the integration tests
       # compare against captured specs under testdata/integration/golden, and a corpus that
