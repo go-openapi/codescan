@@ -4,11 +4,14 @@
 package spec
 
 import (
+	"cmp"
 	"go/token"
+	"slices"
 	"testing"
 
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 	"github.com/go-openapi/codescan/internal/scanner"
+	"github.com/go-openapi/codescan/internal/scantest"
 	"github.com/go-openapi/testify/v2/assert"
 	"github.com/go-openapi/testify/v2/require"
 )
@@ -23,11 +26,11 @@ import (
 // The spec.Builder build loops wrap every per-decl step in this guard.
 func TestBuilder_guard_RecoversPanicWithLocatedDiagnostic(t *testing.T) {
 	var diags []grammar.Diagnostic
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:     []string{"./enhancements/emit-x-go-type/..."},
 		WorkDir:      "../../../testdata",
 		OnDiagnostic: func(d grammar.Diagnostic) { diags = append(diags, d) },
-	})
+	}))
 	require.NoError(t, err)
 	b := NewBuilder(nil, ctx, false)
 
@@ -39,13 +42,21 @@ func TestBuilder_guard_RecoversPanicWithLocatedDiagnostic(t *testing.T) {
 	assert.Contains(t, gerr.Error(), "widget.go:42", "the aborting error carries the source location")
 	assert.Contains(t, gerr.Error(), "model Widget")
 
-	require.Len(t, diags, 1)
-	assert.Equal(t, grammar.CodeInternalPanic, diags[0].Code)
-	assert.Equal(t, grammar.SeverityError, diags[0].Severity)
-	assert.Equal(t, pos, diags[0].Pos, "the diagnostic is anchored at the offending decl")
-	assert.Contains(t, diags[0].Message, "boom")
+	require.NotEmpty(t, diags)
+	diagsAtThisPoint := len(diags)
+	mostSevere := slices.MaxFunc(diags, func(a, b grammar.Diagnostic) int { // depending on the loader mode, some hint diagnostics may be added
+		return cmp.Compare(int(b.Severity), int(a.Severity))
+	})
+	assert.Equal(t, grammar.CodeInternalPanic, mostSevere.Code)
+	assert.Equal(t, grammar.SeverityError, mostSevere.Severity)
+	assert.Equal(t, pos, mostSevere.Pos, "the diagnostic is anchored at the offending decl")
+	assert.Contains(t, mostSevere.Message, "boom")
 
-	// A non-panicking step passes through with no diagnostic.
+	// A non-panicking step passes through with no additional diagnostic.
 	require.NoError(t, b.guard(pos, "ok", func() error { return nil }))
-	assert.Len(t, diags, 1, "a clean step emits no diagnostic")
+	assert.Len(t, diags, diagsAtThisPoint, "a clean step emits no additional diagnostic")
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

@@ -15,12 +15,12 @@ import (
 )
 
 func TestIndentedYAMLBlock(t *testing.T) {
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{
 			"./goparsing/go119",
 		},
 		WorkDir: scantest.FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 
 	var ops spec.Paths
@@ -75,4 +75,8 @@ curl -u "${LOGIN}:${PASSWORD}" -d '{"key2": "value2"}' -X POST   "https://{host}
 
 	assert.MapContainsT(t, sample2, "source")
 	assert.Equal(t, expectedSource, sample2["source"])
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

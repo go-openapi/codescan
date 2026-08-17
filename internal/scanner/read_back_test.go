@@ -28,6 +28,9 @@ const makeplans = "github.com/go-swagger/scan-repo-boundary/makeplans"
 func TestReadBackOnDemand_PaysPerDeclarationWanted(t *testing.T) {
 	t.Parallel()
 
+	// Pinned, and deliberately NOT routed through the run-wide loader setting: the economy measured
+	// here exists only under compiled dependencies. The toolchain-free loader reads every dependency
+	// during the load, so there is no types-only package left to read back and nothing to count.
 	ctx, err := scanner.NewScanCtx(&scanner.Options{
 		Packages:             []string{"./goparsing/bookings/..."},
 		WorkDir:              scantest.FixturesDir(),
@@ -61,11 +64,11 @@ func TestReadBackOnDemand_PaysPerDeclarationWanted(t *testing.T) {
 func TestReadBackOnDemand_MissingDeclaration(t *testing.T) {
 	t.Parallel()
 
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:   []string{"./goparsing/bookings/..."},
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
-	})
+	}))
 	require.NoError(t, err)
 
 	_, found := ctx.FindDecl(makeplans, "NoSuchType")

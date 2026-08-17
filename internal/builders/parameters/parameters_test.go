@@ -121,7 +121,7 @@ func TestParamsParser_OptionVariants(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			sctx, err := scanner.NewScanCtx(&scanner.Options{
+			sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 				Packages: []string{
 					"./goparsing/classification",
 					"./goparsing/classification/models",
@@ -130,7 +130,7 @@ func TestParamsParser_OptionVariants(t *testing.T) {
 				WorkDir:        scantest.FixturesDir(),
 				SkipExtensions: tc.skipExt,
 				DescWithRef:    tc.descRef,
-			})
+			}))
 			require.NoError(t, err)
 			operations := make(map[string]*oaispec.Operation)
 			paramNames := []string{
@@ -574,12 +574,12 @@ func assertSomeAliasOperationParams(t *testing.T, operations map[string]*oaispec
 }
 
 func TestParamsParser_TransparentAliases(t *testing.T) {
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:           []string{"./goparsing/transparentalias"},
 		WorkDir:            scantest.FixturesDir(),
 		TransparentAliases: true,
 		ScanModels:         true,
-	})
+	}))
 	require.NoError(t, err)
 
 	td := getParameter(sctx, "TransparentAliasParams")
@@ -677,4 +677,8 @@ func TestGo118ParameterParser_Issue2011(t *testing.T) {
 	assert.Equal(t, "NumPlates", param.Extensions["x-go-name"])
 	sch := param.Schema
 	require.NotNil(t, sch)
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

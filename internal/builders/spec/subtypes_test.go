@@ -28,10 +28,10 @@ const (
 // — that independence is what makes the no-`-m` pull possible at all.
 func newSubtypesBuilder(t *testing.T) *Builder {
 	t.Helper()
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{"./enhancements/discriminated-subtypes/..."},
 		WorkDir:  "../../../testdata",
-	})
+	}))
 	require.NoError(t, err)
 
 	return NewBuilder(nil, ctx, false)
@@ -176,10 +176,10 @@ func TestDiscriminatedSubtypesOf(t *testing.T) {
 // TestSubtypeIndex_Nested locks the multi-level hierarchy in the index: an INTERFACE that embeds a discriminated
 // interface is a subtype too, and is itself a base for the structs below it.
 func TestSubtypeIndex_Nested(t *testing.T) {
-	ctx, err := scanner.NewScanCtx(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{"./enhancements/discriminated-subtypes-nested/..."},
 		WorkDir:  "../../../testdata",
-	})
+	}))
 	require.NoError(t, err)
 	idx := NewBuilder(nil, ctx, false).subtypes()
 

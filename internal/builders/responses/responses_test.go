@@ -39,7 +39,7 @@ func TestParseResponses_OptionVariants(t *testing.T) {
 	const petRef = "#/definitions/github.com/go-openapi/codescan/testdata/goparsing/classification/transitive/mods/pet"
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			sctx, err := scanner.NewScanCtx(&scanner.Options{
+			sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 				Packages: []string{
 					"./goparsing/classification",
 					"./goparsing/classification/models",
@@ -48,7 +48,7 @@ func TestParseResponses_OptionVariants(t *testing.T) {
 				WorkDir:        scantest.FixturesDir(),
 				SkipExtensions: tc.skipExt,
 				DescWithRef:    tc.descRef,
-			})
+			}))
 			require.NoError(t, err)
 			responses := make(map[string]spec.Response)
 			responseNames := []string{
@@ -358,12 +358,12 @@ func assertSomeResponseHeaders(t *testing.T, responses map[string]spec.Response)
 }
 
 func TestParseResponses_TransparentAliases(t *testing.T) {
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:           []string{"./goparsing/transparentalias"},
 		WorkDir:            scantest.FixturesDir(),
 		TransparentAliases: true,
 		ScanModels:         true,
-	})
+	}))
 	require.NoError(t, err)
 
 	td := getResponse(sctx, "TransparentAliasResponse")
@@ -429,10 +429,10 @@ func TestParseResponses_Issue2011(t *testing.T) {
 }
 
 func TestParseResponses_Issue2145(t *testing.T) {
-	sctx, err := scanner.NewScanCtx(&scanner.Options{
+	sctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages: []string{"./goparsing/product/..."},
 		WorkDir:  scantest.FixturesDir(),
-	})
+	}))
 	require.NoError(t, err)
 	responses := make(map[string]spec.Response)
 	td := getResponse(sctx, "GetProductsResponse")
@@ -480,4 +480,8 @@ func TestGo118ParseResponses_Issue2011(t *testing.T) {
 	assert.Empty(t, resp.Schema.Type)
 	assert.Empty(t, resp.Schema.Ref.String())
 	assert.Empty(t, resp.Schema.Properties)
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

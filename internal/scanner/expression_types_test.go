@@ -85,7 +85,7 @@ func TestSpecIsBuiltWithoutExpressionTypes(t *testing.T) {
 func buildCorpus(t *testing.T, pkgs []string, dropExpressionTypes bool) string {
 	t.Helper()
 
-	ctx, err := scanner.NewScanCtx(scantest.ApplyLoader(&scanner.Options{
+	ctx, err := scanner.NewScanCtx(applyLoader(&scanner.Options{
 		Packages:   pkgs,
 		WorkDir:    scantest.FixturesDir(),
 		ScanModels: true,
@@ -103,4 +103,8 @@ func buildCorpus(t *testing.T, pkgs []string, dropExpressionTypes bool) string {
 	require.NoError(t, err)
 
 	return string(out)
+}
+
+func applyLoader(opts *scanner.Options) *scanner.Options {
+	return scantest.ApplyLoader(opts)
 }

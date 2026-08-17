@@ -37,11 +37,23 @@ func ApplyLoader(opts *scanner.Options) *scanner.Options {
 	return applyLoader(opts)
 }
 
+// A test that pins a loader must not also be routed through the run-wide setting: there is no way to
+// tell a field left at its zero value from one set on purpose, so the setting would silently write
+// over the pin. Under one tag that merely wastes the pin; under another it inverts what the test
+// measures, and the failure surfaces as an arithmetic assertion far from the cause.
+//
+// Panicking names the cause at the call site instead, under every tag including the default, so a
+// sweep that routes one of these is caught by an ordinary run rather than by the one tag that breaks.
+//
 // applyLoader is the shared body, so packages that cannot import scantest can hold a copy of the
 // three lines rather than of the reasoning.
 func applyLoader(opts *scanner.Options) *scanner.Options {
 	if opts == nil || opts.FS != nil {
 		return opts
+	}
+	if opts.CompiledDependencies || opts.ToolchainFreeLoader {
+		panic("scantest: these options already pin a loader, so they must not be routed through " +
+			"ApplyLoader; drop the call and leave the pin, or drop the pin and keep the call")
 	}
 
 	switch selected := testloader.Selected(); selected {

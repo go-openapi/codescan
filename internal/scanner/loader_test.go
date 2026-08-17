@@ -17,6 +17,10 @@ func withTestLoader(opts *Options) *Options {
 	if opts == nil || opts.FS != nil {
 		return opts
 	}
+	if opts.CompiledDependencies || opts.ToolchainFreeLoader {
+		panic("scanner: these options already pin a loader, so they must not be routed through " +
+			"withTestLoader; drop the call and leave the pin, or drop the pin and keep the call")
+	}
 
 	switch selected := testloader.Selected(); selected {
 	case testloader.LoaderCompiled:
