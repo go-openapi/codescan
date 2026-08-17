@@ -15,5 +15,5 @@ import (
 // that comes in unexpectedly slow can be read rather than guessed at. `go test -json` captures a
 // passing test's log, so the line survives in the report CI keeps even where the console hides it.
 func TestLoaderInUse(t *testing.T) {
-	t.Log(testloader.Describe("integration"))
+	t.Skip(testloader.Describe("integration"))
 }

@@ -13,6 +13,9 @@ import (
 //
 // Worth having here in particular: this suite was silently left on the default while the setting was
 // believed to cover it, and an echo would have said so at a glance.
+//
+// Skipped rather than logged, because gotestsum prints a skip's message and swallows a passing
+// test's log. See the integration suite's twin.
 func TestLoaderInUse(t *testing.T) {
-	t.Log(testloader.Describe("scanner"))
+	t.Skip(testloader.Describe("scanner"))
 }
