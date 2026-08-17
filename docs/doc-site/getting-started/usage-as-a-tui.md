@@ -80,6 +80,7 @@ A second group settles what gets built, and how it is loaded — the environment
 | `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` |
 | `-loader` | `auto` | `go` runs `go list`; `own` uses codescan's own loader and needs no toolchain; `auto` picks `own` wherever the build cannot exec (experimental) |
 | `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-loader=own`) |
+| `-compiled-dependencies` | `false` | take dependency types from the compiler's export data instead of reading every dependency from source (needs `-loader=go`). Worth having here more than anywhere: a session rescans on every save, so the build cache is warm after the first one |
 
 Everything the flags set is also a **live toggle**. Press `o` for the options
 popup, `space` to flip a row, `Esc` to apply — the spec re-renders on close, which
