@@ -13,7 +13,7 @@ on:
 
 jobs:
   test:
-    uses: go-openapi/ci-workflows/.github/workflows/go-test-monorepo.yml@81c95ab8bb6a3e0aeccc90a7c9e5fc5b398b1244 # v0.6.0
+    uses: go-openapi/ci-workflows/.github/workflows/go-test-monorepo.yml@69ea5ee4c72ab9ceb97db3dabbe2c0f0a148ef8a # v0.6.0
     with:
       # From v0.5.0 the shared workflow skips the matrix when nothing relevant changed, and
       # what it watches is go sources. Ours are not the whole input: the integration tests
