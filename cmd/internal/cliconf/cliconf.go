@@ -50,8 +50,8 @@ func (s Schema) Sections() []string {
 
 // Result reports what a configuration file did.
 type Result struct {
-	// Set names the flags the file decided, in order. What is not here was either typed on the
-	// command line or left at its default.
+	// Set names the flags the file decided, in order. A flag absent from it was either typed on
+	// the command line or left at its default.
 	Set []string
 
 	// Ignored names the keys in sections this command does not know - another command's half of a
