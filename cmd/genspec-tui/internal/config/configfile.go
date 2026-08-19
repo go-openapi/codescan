@@ -13,17 +13,17 @@ import (
 	"github.com/go-openapi/codescan/cmd/internal/cliopts"
 )
 
-// sectionProfile is where this command's own flags are addressed.
+// sectionProfile is the configuration section addressing this command's own flags.
 //
 // The library's flags bring their own sections (scan, go, load, emit).
-// What the TUI adds specifically is about observing a run: it reads as profile.* rather than tui.*.
+// The TUI adds only settings that observe a run, so they read as profile.* rather than tui.*.
 const sectionProfile = "profile"
 
 // commandSections says where each of this command's flags is addressed.
 //
 //nolint:gochecknoglobals // the schema, read once at startup
 var commandSections = cliconf.Schema{
-	// NOTE: TestEveryFlagIsAddressableInAConfigFile is what keeps this list in step.
+	// NOTE: TestEveryFlagIsAddressableInAConfigFile keeps this list in step.
 	"profile":          sectionProfile,
 	"mem-profile-rate": sectionProfile,
 }
@@ -33,7 +33,8 @@ var commandSections = cliconf.Schema{
 //nolint:gochecknoglobals // table for the drift guard
 var notConfigurable = excusedFlags()
 
-// excusedFlags is what a configuration file may not set here, on top of what every command excuses.
+// excusedFlags lists the flags a configuration file may not set here, on top of what every command
+// excuses.
 //
 // profile-dir joins the shared path options: it decides which directory profile files are created
 // in, and a file found by searching upwards belongs to the tree being scanned rather than to the
@@ -68,8 +69,8 @@ func configSchema() (cliconf.Schema, error) {
 // Called after parsing and before anything reads a flag, so that everything downstream sees one settled command line
 // and needs to know nothing about where a value came from.
 //
-// What the file decides is what the session STARTS with.
-// The options overlay owns everything after that, which is why nothing here is consulted a second time.
+// The file decides only what the session STARTS with.
+// The options overlay owns everything after that, so nothing here is consulted a second time.
 func configured(fs *flag.FlagSet, which *cliconf.Flags) (cliconf.Result, string, error) {
 	var applied cliconf.Result
 

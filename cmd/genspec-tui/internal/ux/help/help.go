@@ -199,7 +199,7 @@ func (o *Overlay) View() string {
 //
 // It is the widest line the overlay can EVER show, not the widest one currently on screen.
 //
-// Sizing to the visible window is what makes the box change width as the keymap scrolls under it - the frame appears
+// Sizing to the visible window makes the box change width as the keymap scrolls under it - the frame appears
 // to twitch while the content moves, which reads as a rendering fault rather than as scrolling.
 //
 // Deliberately not capped to the terminal. A cap makes lipgloss WRAP the rows that overflow,

@@ -15,15 +15,15 @@ import (
 	"github.com/go-openapi/codescan/cmd/internal/cliconf"
 )
 
-// Reporter is where everything the scan observed goes.
+// Reporter receives everything the scan observed.
 //
 // codescan never writes to standard error itself - every observation arrives through a callback - so
-// this is the only thing standing between a scan and a silent one. It is also what decides the exit
-// status: a caller running this in a pipeline wants to be told, and a summary a human reads is not
-// something a pipeline can act on.
+// this is the only thing standing between a scan and a silent one. It also decides the exit status:
+// a caller running this in a pipeline wants to be told, and a summary a human reads is not something
+// a pipeline can act on.
 type Reporter struct {
-	// Root is what positions are reported relative to, so that a diagnostic names the file the way
-	// the caller would.
+	// Root is the directory positions are reported relative to, so that a diagnostic names the file
+	// the way the caller would.
 	Root string
 
 	logger *slog.Logger
@@ -132,7 +132,7 @@ func (r *Reporter) OnDiagnostic(diag codescan.Diagnostic) {
 	r.log(diag.Severity, diag.Message, r.attrs(diag)...)
 }
 
-// attrs is what is worth saying about a diagnostic besides its message.
+// attrs collects what is worth reporting about a diagnostic besides its message.
 //
 // A diagnostic with no position - a whole route omitted by a tag rule, a definition pruned - is
 // reported without one, rather than with the zero value dressed up as a location. "file= line=0" is
@@ -184,9 +184,9 @@ func (r *Reporter) log(sev codescan.Severity, msg string, attrs ...any) {
 
 // relative renders a position's file the way the caller named it.
 //
-// An absolute path is what the scanner records, and what it means is right - but it is not what
-// somebody standing in their own module wants to read, nor what an editor can be handed. Where the
-// two cannot be related, the absolute path is still better than nothing.
+// The scanner records an absolute path, correctly, but somebody standing in their own module does
+// not want to read one, and an editor cannot be handed one. Where the two cannot be related, the
+// absolute path is still better than nothing.
 func (r *Reporter) relative(filename string) string {
 	if filename == "" || r.Root == "" {
 		return filename

@@ -63,8 +63,8 @@ Three properties hold it together:
   that `JSONify` is one word where `HTTPServer` is two, so coverage is decided by
   writing through a setter and seeing what moved — never by mangling a name.
 
-The package sits under `cmd/` rather than under the root `internal/`, which is
-what lets the commands that are modules of their own import it.
+The package sits under `cmd/` rather than under the root `internal/`, so the
+commands that are modules of their own can import it.
 
 Options that are not values — a filesystem, a document to merge into, the
 callbacks — are deliberately absent from the table. Those are the command's
@@ -88,7 +88,7 @@ cross-compile to WebAssembly: `cliconf.YAML` satisfies koanf's parser interface
 *structurally*, so the package owes koanf no import.
 
 Sections come from `cliopts.ConfigSchema()` merged with each command's own, which
-is why a section one command does not know is skipped rather than refused, and a
+is why a section one command does not recognize is skipped rather than rejected, and a
 key inside a section it *does* know must name one of its flags.
 
 Everything a file sets lands through `flag.FlagSet.Set` — the same path the

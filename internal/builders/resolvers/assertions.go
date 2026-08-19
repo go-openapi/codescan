@@ -212,7 +212,7 @@ var opaqueStreamTypes = map[string]map[string]struct{}{ //nolint:gochecknoglobal
 // IsOpaqueStream reports whether o is one of the known byte-stream carriers.
 //
 // Identity-based, so it answers from the object alone and can run ahead of any declaration lookup —
-// which matters, because the drilling these types used to reach is what invented a `close` property
+// which matters, because the drilling these types used to reach invented a `close` property
 // of type string out of `Close() error`.
 func IsOpaqueStream(o *types.TypeName) bool {
 	if o == nil || o.Pkg() == nil {

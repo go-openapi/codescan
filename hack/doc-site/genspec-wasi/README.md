@@ -77,8 +77,8 @@ compatible with the line in the status bar.
 Swagger UI is a light interface with no dark mode, so in a dark theme it is pulled towards ours by
 inverting and rotating the hue back — the pair is chosen because `hue-rotate(180deg)` undoes what
 `invert()` does to hue, which keeps the method badges the colours that carry their meaning. It is a
-heuristic, so the strip above the preview offers **show as published**: the untouched rendering, which
-is what the document looks like to whoever reads it. A light theme is left alone; there is nothing to
+heuristic, so the strip above the preview offers **show as published**: the untouched rendering, as a
+reader of the document sees it. A light theme is left alone; there is nothing to
 reconcile.
 
 A document with no paths gets an explanation rather than an empty page: a package of annotated
@@ -184,7 +184,7 @@ artifact dominates by more than two orders of magnitude, which is worth remember
 anything on the JavaScript side.
 
 Most of that is the standard library's types: the artifact alone is 3.7 MB, and carrying its own copy
-of the export data is what takes it to 8.4 MB. Mounting the archive into the guest filesystem instead
+of the export data takes it to 8.4 MB. Mounting the archive into the guest filesystem instead
 would keep the two independently cacheable — `argvFor(..., 'mounted')` and the reserved
 `public/exportdata.zip` are that variant, unused for now.
 
@@ -201,7 +201,7 @@ survive, and a scan with nothing mounted but the module raises no `scan.synthesi
 still reachable (`argvFor(..., 'stub')`) and is the degraded mode rather than a choice: a synthesized
 type has no fields and no method set.
 
-What export data cannot cover is a package whose meaning lives in **comments** — `strfmt` declares its
+Export data cannot cover a package whose meaning lives in **comments** — `strfmt` declares its
 formats with `swagger:strfmt`, and export data holds types, not comments — or any third-party import
 that is neither vendored nor cached. Both resolve by reaching the guest as source; closing that gap is
 the loader's job, not the front-end's.

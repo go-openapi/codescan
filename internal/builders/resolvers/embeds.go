@@ -10,8 +10,8 @@ import (
 
 // Embed pairs an anonymous entry of a declaration's member list with the type go/types gave it.
 //
-// The AST half is what carries the annotation — an embed's `swagger:allOf` / `swagger:ignore` lives
-// in its doc comment and nowhere else — and the type half is what the embed denotes.
+// The AST half carries the annotation — an embed's `swagger:allOf` / `swagger:ignore` lives in its
+// doc comment and nowhere else — and the type half gives what the embed denotes.
 type Embed struct {
 	Field *ast.Field
 	Type  types.Type
@@ -31,7 +31,7 @@ type Embed struct {
 // Entries the two halves do not agree on are dropped rather than guessed at. Anything that is
 // neither a struct nor an interface has no embeds and yields nothing.
 //
-// Reading the underlying type instead of types.Info.Types is what lets an embed be resolved for a
+// Reading the underlying type instead of types.Info.Types resolves an embed for a
 // package whose types were not checked from its source — export data carries the struct and its
 // field types, and carries no expression records at all.
 func Embeds(members []*ast.Field, under types.Type) []Embed {

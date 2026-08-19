@@ -32,7 +32,7 @@ const (
 )
 
 type Filter struct {
-	// enum: asc, desc       ← keyword: members are what you wrote
+	// enum: asc, desc       ← keyword: members are taken verbatim
 	Order string `json:"order"`
 }
 ```

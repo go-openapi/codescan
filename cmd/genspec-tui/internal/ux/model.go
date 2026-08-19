@@ -122,7 +122,7 @@ const (
 
 // The split geometry: where the dividers start, how far a keypress moves them, and how far they may travel.
 //
-// The bounds are what stop a divider being driven onto a pane's edge - a pane you cannot see is a pane you cannot
+// The bounds stop a divider being driven onto a pane's edge - a pane you cannot see is a pane you cannot
 // drag back, since the keys that would restore it are advertised in a status line the collapsed pane no longer has
 // room to explain. They are asymmetric because the panes are: the diagnostics strip is a list you glance at, so it
 // earns less of the screen than the two it sits under.
@@ -152,7 +152,7 @@ const (
 // configuration file presets the flags, the flags fill the options, and the options overlay takes over from there. A
 // caller that only wants a scan leaves the rest zero.
 type Startup struct {
-	// Options is what the first scan runs with. Everything in it is a live setting afterwards: the options overlay
+	// Options holds the settings the first scan runs with. Everything in it is live afterwards: the options overlay
 	// writes to this very struct, so it decides the session's starting point, not its limits - and the caller hands it
 	// over rather than keeping a hand on it.
 	//
@@ -407,7 +407,7 @@ func clampPct(pct, lo, hi int) int { return min(max(pct, lo), hi) }
 // The two dividers are placed by PERCENTAGE rather than by cell count, so resizing the terminal keeps the proportions
 // the user chose instead of leaving one pane fixed while the other absorbs everything.
 //
-// The absolute floors below the percentages are what keeps a small terminal usable: a pane whose share rounds to
+// The absolute floors below the percentages keep a small terminal usable: a pane whose share rounds to
 // nothing is still given the few rows or columns it needs to render its border and a line of content.
 //
 // The regions are stored for mouse hit-testing.

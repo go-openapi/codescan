@@ -25,8 +25,8 @@ Names are **Go field names**, never JSON aliases: the annotation acts before
 names are computed, so it is indifferent to `json` tags and to
 [`NameFromTags`]({{% relref "naming-from-tags" %}}).
 
-It is a *pre-filter*, not an edit of the finished schema. That is what makes it
-read the same whether the embed is inlined or composed into an `allOf` member
+It is a *pre-filter*, not an edit of the finished schema, so it reads the same
+whether the embed is inlined or composed into an `allOf` member
 (see [Composing embeds with allOf]({{% relref "composing-embeds-with-allof" %}})):
 the field is simply never written.
 
@@ -94,8 +94,8 @@ All three are **Hints** — informational, never blocking:
 
 `swagger:omit` is the only annotation whose output depends on a name the Go
 compiler never checks; everything else codescan emits is derived from types.
-`scan.omit-unresolved` is what stops it rotting silently when a field is renamed
-upstream, so wire
+`scan.omit-unresolved` reports it when a field is renamed upstream, instead of
+letting the annotation rot silently, so wire
 [`OnDiagnostic`](https://pkg.go.dev/github.com/go-openapi/codescan#Options) if
 you rely on the annotation.
 

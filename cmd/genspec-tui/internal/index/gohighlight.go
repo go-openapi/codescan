@@ -15,7 +15,7 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
-// annotationPrefix is what makes a comment payload rather than prose in this app.
+// annotationPrefix marks a comment as payload rather than prose in this app.
 //
 // Comments carrying it are the ONLY reason the source pane exists.
 const annotationPrefix = "swagger:"
@@ -94,7 +94,7 @@ func scanGo(src []byte) []goToken {
 	return out
 }
 
-// hasAnnotation reports whether the file carries any annotation at all, which is what scopes keyword highlighting.
+// hasAnnotation reports whether the file carries any annotation at all, which scopes keyword highlighting.
 //
 // The FILE is the right unit, and the comment group is not.
 // A field's doc comment holds the validation keywords while the swagger:model that makes them meaningful sits on the
@@ -104,7 +104,7 @@ func scanGo(src []byte) []goToken {
 // Scoping per file follows the convention instead: name, in and example are ordinary English words, but in a file
 // that already declares annotations a comment leading with one is the keyword far more often than not.
 //
-// What this cannot know is which declarations the scanner actually visits, so a keyword-shaped line in an unrelated
+// This cannot know which declarations the scanner actually visits, so a keyword-shaped line in an unrelated
 // comment of an annotated file still lights up.
 // That needs the AST, and the AST needs a file that parses - which the buffer being edited may not.
 func hasAnnotation(tokens []goToken) bool {
@@ -234,7 +234,7 @@ func goSyntaxKind(tok gotoken.Token, lit string) theme.SyntaxKind {
 
 // isPredeclaredConst reports whether an identifier is one Go treats as a constant rather than a keyword.
 //
-// Colouring them as keywords is what every editor does, and nil is far too common to read as an ordinary name.
+// Every editor colours them as keywords, and nil is far too common to read as an ordinary name.
 func isPredeclaredConst(lit string) bool {
 	switch lit {
 	case "nil", "true", "false", "iota":

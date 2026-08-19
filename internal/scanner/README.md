@@ -133,9 +133,8 @@ Three things, and only three:
    nowhere but in source.
 2. **The written right-hand side** — `Stamp` in `type StampResp Stamp`.
    `go/types` keeps no record of it on a defined type: `Underlying` peels
-   every named layer at once, and the named layer is what a stdlib
-   recognizer keys on and what a `swagger:strfmt` one declaration to the
-   right sits on. `WrittenRHS` reads it through `TypeExpr()`.
+   every named layer at once, and a stdlib recognizer keys on that named
+   layer, as does a `swagger:strfmt` one declaration to the right. `WrittenRHS` reads it through `TypeExpr()`.
 3. **A file's imports**, for resolving a godoc doc-link.
 
 ### Why `WrittenRHS`'s two refusals are not the same refusal
@@ -151,8 +150,8 @@ that cannot tell them apart is one silent wrong answer away from trouble:
 for the first: it peels exactly the named layer the stdlib recognizers key
 on, so `type Stamp time.Time` in a syntax-less package would render as a
 struct instead of `format: date-time`. The schema builder therefore checks
-`HasSource()` before falling back, and refuses rather than guesses when
-there is no source. That branch is unreachable today — every `EntityDecl`
+`HasSource()` before falling back, and reports an error rather than guessing
+when there is no source. That branch is unreachable today — every `EntityDecl`
 is built from an AST walk — and it is written out so it cannot start
 springing quietly the day one is not.
 
@@ -294,7 +293,7 @@ belongs to the family or not.
 **Reverse index.** `spec/subtypes.go` builds, once per scan, a
 `base Go type identity → subtype declarations` map from the model index
 (`TypeIndex.Models`, which classification populates whether or not
-`ScanModels` is set — that independence is what makes the pull possible).
+`ScanModels` is set — the pull depends on that independence).
 A subtype relation is an *embedded member carrying `swagger:allOf`* — a
 struct's anonymous field **or an interface's anonymous interface**, which
 is how a mid-level type in a multi-level hierarchy is written:
@@ -652,7 +651,7 @@ reach it was to hand it a virtual filesystem.
 Two consequences of that override are worth stating, because both have bitten:
 
 - an option only one strategy can honour is **dropped, not refused**, when the other
-  one runs. Compiled dependencies are the case — the go command is what takes
+  one runs. Compiled dependencies are the case — only the go command takes
   dependency types from export data, so under `FS` nothing does. This is why the
   announcement is driven by `Loader.Strategy()` and not by the request: announcing it
   from the request is how a toolchain-free scan came to be told its types were
@@ -781,7 +780,7 @@ what the go command would do.
   cache, missed, and **synthesized**, so the sibling arrives with no fields and
   no method set.
 - `GOEXPERIMENT` — each enabled experiment contributes a `goexperiment.<name>`
-  build tag. The baseline is what the codescan binary was itself built with,
+  build tag. The baseline is the configuration the codescan binary was built with,
   since `go/build` computes `ToolTags` at init from its own configuration and
   cannot be asked about another toolchain — exact when both come from the same
   Go release, approximate otherwise.
@@ -922,8 +921,8 @@ not share one. The `*types.Var` comes from export data; `decl.File()` is the AST
 parsed. Both reach one `FileSet` and get a `token.File` each for the same filename,
 so no position of one indexes the other and every field is skipped in silence.
 
-What export data does preserve is the filename and the **line** — never the column,
-which its fabricated line table pins at 1. Line plus the object's own name
+Export data preserves the filename and the **line**, never the column, which its
+fabricated line table pins at 1. Line plus the object's own name
 identifies the field, since a struct cannot declare a name twice and the file is
 already known; embedded fields match on the last identifier of their type
 expression, which is what go/types names them after. That is
@@ -938,8 +937,8 @@ the shortcut changes anything must not have it on both sides.
 
 #### Code that does not build
 
-Closing the fidelity gap is what makes this option safe to reach for at all, and it
-left one thing to handle that has nothing to do with fidelity.
+Closing the fidelity gap made this option usable at all, and it left one
+thing to handle that has nothing to do with fidelity.
 
 `go list -export` **builds** the packages it is asked about. So a scanned package
 that does not compile comes back as a package that could not be loaded at all — a

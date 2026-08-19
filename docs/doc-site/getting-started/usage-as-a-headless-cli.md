@@ -48,8 +48,8 @@ genspec | jq '.definitions | keys'
 
 This is the command's doing, not the library's: codescan itself never writes to
 either stream. Every observation it makes — a dropped construct, a rename, a
-prune — is handed to the command through a callback, and `genspec` is what turns
-those into lines you can read.
+prune — is passed to the command through a callback, and `genspec` renders those
+callbacks as lines you can read.
 
 ## Choosing the output
 
@@ -97,8 +97,8 @@ and a command that failed the build over one would mostly teach people to stop r
 
 A scan that reports nothing is not a promise that the document it produced is
 valid. The scanner diagnoses what is wrong with your *annotations*; whether the
-result is a legal Swagger 2.0 document is a separate question, and `-validate`
-is what asks it:
+result is a legal Swagger 2.0 document is a separate question. Pass `-validate`
+to answer it:
 
 ```cmd
 genspec -validate -output swagger.yaml ./internal/api/...
@@ -207,9 +207,9 @@ field, its default and what it does.
 ## Without a Go toolchain
 
 `genspec-wasi` is the same scan with nothing behind it: it depends on nothing
-beyond the library, runs no subprocess, and cross-compiles to `wasip1/wasm`. It
-is what you reach for where `genspec` cannot go — a sandbox, a CI image with no
-Go in it, a WebAssembly runtime — and it is the engine behind the
+beyond the library, runs no subprocess, and cross-compiles to `wasip1/wasm`.
+Use it where `genspec` cannot go — a sandbox, a CI image with no Go in it, a
+WebAssembly runtime — and it is the engine behind the
 [Playground]({{% relref "/playground" %}}).
 
 ```cmd
@@ -217,16 +217,16 @@ go install github.com/go-openapi/codescan/cmd/genspec-wasi@latest
 genspec-wasi -workdir ../my-api ./internal/api/...
 ```
 
-It carries the same scan flags. What it does not carry is `genspec`'s document
-and diagnostics surface: no `-validate`, no `-fail-on`, no `-color`. In their
-place it offers an envelope.
+It carries the same scan flags, but drops `genspec`'s document and diagnostics
+surface: no `-validate`, no `-fail-on`, no `-color`. In their place it offers an
+envelope.
 
 ### An envelope for a program
 
-Document on stdout and prose on stderr is what a person or a pipeline wants. It
-is not enough for a program: prose carries a position only in the sense that one
-is printed in it, and provenance — which Go construct produced this spec node —
-has nowhere to go at all. `-format=json` writes one object instead:
+Document on stdout and prose on stderr suits a person or a pipeline. It is not
+enough for a program: prose carries a position only in the sense that one is
+printed in it, and provenance — which Go construct produced this spec node — has
+nowhere to go at all. `-format=json` writes one object instead:
 
 ```json
 {
@@ -248,7 +248,7 @@ not know what the guest called it; a position *outside* the module stays
 absolute, which is how a consumer tells the two apart. Provenance covers anchors
 — type declarations, fields, values, route and meta blocks — sorted by pointer,
 so the same scan produces the same bytes. Under `-format=json` standard error
-stays clean, which is what makes the envelope safe to read from a pipe.
+stays clean, so the envelope is safe to read from a pipe.
 
 Experimental, inheriting the status of `Options.OnProvenance`.
 
@@ -276,8 +276,8 @@ Two things a guest cannot work out for itself:
 
 ### How much of the host to expose
 
-The real choice is what the guest may see. Measured on the petstore fixture
-under wasmtime:
+The real choice is how much of the host the guest may see. Measured on the
+petstore fixture under wasmtime:
 
 | mounted | mode | time | peak RSS | result |
 |---------|------|------|----------|--------|

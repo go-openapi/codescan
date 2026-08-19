@@ -28,7 +28,7 @@
 //
 // No GOPATH mode, no module-graph walk (versions are read already-selected out of the main go.mod), no `internal/`
 // visibility enforcement, and no query syntax (`all`, `std`, `pattern=`).
-// Two of those omissions are what let codescan read a tree the go command refuses; the rest are documented limits.
+// Two of those omissions let codescan read a tree the go command refuses; the rest are documented limits.
 //
 // Some extra tooling in hack/go-loader is available to help maintainers verify the behavior against changes in the
 // go toolchain.

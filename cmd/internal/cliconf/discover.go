@@ -32,7 +32,7 @@ func SampleConfigName() string {
 
 // Names are the file names looked for, in order, when -config says nothing.
 //
-// One name for every command rather than one per command: the sections are what tell them apart, and
+// One name for every command rather than one per command: the sections tell them apart, and
 // a project configuring a scan has configured it for all of them. JSON is in the list because the
 // parser reads it anyway, and a generated file is as likely to be JSON as YAML.
 var Names = []string{ //nolint:gochecknoglobals // the search list, read once at startup
@@ -41,7 +41,7 @@ var Names = []string{ //nolint:gochecknoglobals // the search list, read once at
 	".codescan.json",
 }
 
-// Flags is where the configuration-file flags land.
+// Flags holds the configuration-file flags after parsing.
 //
 // A type rather than a pair of pointers, because the two questions can be answered in ways that
 // contradict each other, and something has to hold the answer to "then what".

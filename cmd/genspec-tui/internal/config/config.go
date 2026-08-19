@@ -150,8 +150,8 @@ func (c *Config) patterns(args []string) []string {
 // The heap sampling rate is a property of the process, not of a scan: the runtime expects it constant for the
 // program's lifetime, and the profiles record the rate they were taken under.
 //
-// Setting it here, once, is what makes two runs in the same session comparable.
-// This is why this is a CLI flag rather than a row in the options overlay.
+// Setting it here, once, keeps two runs in the same session comparable.
+// That is why this is a CLI flag rather than a row in the options overlay.
 func (c *Config) profiling() (*scan.Profiling, error) {
 	if rate := conv.Value(c.memProfileRate); rate > 0 {
 		runtime.MemProfileRate = rate

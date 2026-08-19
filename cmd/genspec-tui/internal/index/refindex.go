@@ -57,7 +57,7 @@ type RefIndex struct {
 // A local ref is a bare fragment ("#/definitions/User").
 // The fragment is percent-DECODED, because go-openapi/spec marshals refs through net/url and will escape a definition
 // name containing e.g. a space - while the SpecIndex keys on the document's own key text, which is not escaped.
-// Decoding here is what makes the two sides comparable.
+// Decoding here makes the two sides comparable.
 //
 // A malformed escape falls back to the verbatim fragment rather than dropping the ref.
 func ParseRefTarget(raw string) RefTarget {

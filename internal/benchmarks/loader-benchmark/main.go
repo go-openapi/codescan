@@ -48,7 +48,7 @@ var (
 // measurement is one cell of the matrix: one version, one configuration, one corpus, one cache state.
 //
 // The shape fields are not decoration. A configuration that got faster by scanning less is not an
-// improvement, and comparing definition and path counts across a row is what catches it.
+// improvement, and comparing definition and path counts across a row catches it.
 type measurement struct {
 	Label        string  `json:"label"`
 	Corpus       string  `json:"corpus"`
@@ -131,7 +131,7 @@ func measure(dir, pattern, label, corpus, cache string, scanModels bool, extra e
 	spec, err := codescan.Run(opts)
 	wall := time.Since(start)
 
-	// The spec is still referenced here, so what survives this GC is what a caller ends up holding —
+	// The spec is still referenced here, so whatever survives this GC is the memory a caller ends up holding —
 	// not what the loader held at its peak. Peak RSS is the figure for that.
 	runtime.GC()
 

@@ -47,7 +47,7 @@ type Resolver struct {
 	//
 	// A second vendor root, because std is the second module loaded from its own tree: everything else arrives
 	// pre-flattened, either from the module cache or from the main module's vendor directory, and `go mod vendor`
-	// is what flattens it. A dependency's own vendor directory is never consulted - see modload/import.go, "everything
+	// flattens it. A dependency's own vendor directory is never consulted - see modload/import.go, "everything
 	// must be in the main modules or the main module's or workspace's vendor directory".
 	//
 	// std is the exception because std never goes through modload at all. cmd/go resolves its imports with the older
@@ -88,7 +88,7 @@ type Target struct {
 	PkgPath string
 }
 
-// Config is what a Resolver needs to know before it can place anything.
+// Config holds what a Resolver needs to know before it can place anything.
 type Config struct {
 	// FS is the filesystem every read goes through.
 	FS *vfs.FS
@@ -403,7 +403,7 @@ func (r *Resolver) readRequirements(gomod string, blob []byte) error {
 	// — and that failure is loud and fixed by a bump.
 	f, err := modfile.Parse(gomod, blob, nil)
 	if err != nil {
-		// Degrading here is what makes this worth failing over: with no requirements placed, every dependency falls through
+		// Degrading here is why this is worth failing over: with no requirements placed, every dependency falls through
 		// to synthesis, and the scan reports a wall of synthesized-import warnings that say nothing about the actual fault.
 		return fmt.Errorf("%w: %w", ErrInvalidGoMod, err)
 	}

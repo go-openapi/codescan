@@ -20,8 +20,8 @@ type Options = scanner.Options
 // for itself, and where it lands.
 //
 // The setter is the entry's identity. Naming the field in a string instead would let a rename pass
-// the compiler and leave the flag writing nowhere, and it is what lets the coverage guard ask which
-// field an entry actually touches rather than deriving a name from a name.
+// the compiler and leave the flag writing nowhere, and it lets the coverage guard ask which field an
+// entry actually touches rather than deriving a name from a name.
 type option[T any] struct {
 	section string
 	name    string
@@ -177,7 +177,7 @@ var floatOptions = []option[float64]{ //nolint:gochecknoglobals // the flag tabl
 // listOption is a flag taking a comma-separated list.
 //
 // threeWay says the field distinguishes "not given" from "given as empty". Where it is false the two
-// collapse onto nil, which is what the scanner reads as "no filter" - so passing -include= is the
+// collapse onto nil, which the scanner reads as "no filter" - so passing -include= is the
 // same as not passing it at all, and means what it looks like it means.
 type listOption struct {
 	section  string
@@ -223,10 +223,10 @@ var listOptions = []listOption{ //nolint:gochecknoglobals // the flag table, rea
 	},
 }
 
-// Values is where a parsed command line lands, before [Values.Apply] copies it onto the options.
+// Values holds a parsed command line, before [Values.Apply] copies it onto the options.
 //
-// Lists are held as the raw string the caller typed: splitting at Apply time is what leaves the
-// three-way cases able to tell an empty list from an absent one.
+// Lists are held as the raw string the caller typed: splitting at Apply time keeps the three-way
+// cases able to tell an empty list from an absent one.
 type Values struct {
 	set *flag.FlagSet
 

@@ -19,8 +19,8 @@ import (
 
 // The sections this command's own flags are addressed in.
 //
-// The library's flags bring their own (scan, go, load, emit); these are what genspec adds on top:
-// the document it reads and writes, and how loud it is about what it saw.
+// The library's flags bring their own (scan, go, load, emit). genspec adds these on top: the
+// document it reads and writes, and how loud it is about what it saw.
 const (
 	sectionDocument    = "document"
 	sectionDiagnostics = "diagnostics"
@@ -29,7 +29,7 @@ const (
 // commandSections says where each of this command's flags is addressed.
 //
 // A literal rather than something derived, because these flags are registered inline: there is no
-// table to read a section off. TestEveryFlagIsAddressableInAConfigFile is what keeps it in step.
+// table to read a section off. TestEveryFlagIsAddressableInAConfigFile keeps it in step.
 var commandSections = cliconf.Schema{ //nolint:gochecknoglobals // the schema, read once at startup
 	"input":   sectionDocument,
 	"format":  sectionDocument,
@@ -45,7 +45,8 @@ var commandSections = cliconf.Schema{ //nolint:gochecknoglobals // the schema, r
 // notConfigurable are the flags a file deliberately cannot set, with the reason.
 var notConfigurable = excusedFlags() //nolint:gochecknoglobals // table for the drift guard
 
-// excusedFlags is what a configuration file may not set here, on top of what every command excuses.
+// excusedFlags lists the flags a configuration file may not set here, on top of what every command
+// excuses.
 //
 // output joins the shared path options: a file found by searching upwards belongs to the tree being
 // scanned, and letting that tree pick where the document is written is an arbitrary file write with

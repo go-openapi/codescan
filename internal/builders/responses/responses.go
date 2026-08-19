@@ -283,7 +283,7 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 	// builder uses, and for its reason: these answer from the object alone, so subordinating them to a lookup or to a
 	// shape test makes a rule that needs nothing depend on one that can fail.
 	//
-	// The shape test is what fails here. `time.Time` is a STRUCT underneath, so dispatching on the underlying sends it to
+	// The shape test fails here. `time.Time` is a STRUCT underneath, so dispatching on the underlying sends it to
 	// the struct arm to have its fields read as response headers — it has none exported, and the response came out with
 	// no schema whatsoever. `type Stamp time.Time` escaped that only because the written-RHS redirect below catches it
 	// first; the alias spelling `type Stamp = time.Time` arrives here AS time.Time and had nothing to catch it.
@@ -347,7 +347,7 @@ func (r *Builder) buildNamedType(tpe *types.Named, resp *oaispec.Response, seen 
 			//
 			// A hand-rolled `IsStdTime` used to sit in front of this, reached through the same declaration lookup. It could
 			// never fire: time.Time is a struct underneath, so it takes the struct arm above and never arrives here. The
-			// canonical set at the top of this function is what actually answers for it now, and for every other recognized
+			// canonical set at the top of this function answers for it now, and for every other recognized
 			// type this arm never covered.
 			if sfnm, isf := strfmtFromDoc(r.ParseBlocks(decl.Comments())); isf {
 				applyDeclFormat(sfnm, tpe.Underlying(), typable)

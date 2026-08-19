@@ -57,7 +57,7 @@ type config struct {
 	set *flag.FlagSet
 
 	// scan is every knob the library takes, declared once in cmd/internal/cliopts and shared with the
-	// other commands. What follows is this command's own: where the document goes, and in what shape.
+	// other commands. The rest is this command's own: where the document goes, and in what shape.
 	scan *cliopts.Values
 
 	exportData *string

@@ -908,9 +908,9 @@ elements of an interface's underlying. Three shapes:
 - **`*types.Alias`** — same non-empty guard, builds via
   `buildAlias` so alias modes are honoured.
 
-The non-empty guard is what makes `interface{}` and other
-zero-content interfaces invisible at the allOf seam — they don't
-contribute an `{}` entry to the outer schema.
+The non-empty guard hides `interface{}` and other zero-content
+interfaces at the allOf seam — they don't contribute an `{}` entry
+to the outer schema.
 
 ---
 
@@ -1017,8 +1017,8 @@ reported as unresolved — reaching through one would edit either another type's
 | `scan.shadowed-embed-field` | a field re-declared with `json:"-"` carries the Go name of a promoted field (see below) |
 
 `swagger:omit` is the only construct whose output depends on a hand-written name the compiler never
-checks — everything else is derived from types. `scan.omit-unresolved` is what stops it rotting
-silently when a field is renamed upstream.
+checks — everything else is derived from types. `scan.omit-unresolved` reports it when a field is
+renamed upstream, instead of letting the annotation rot silently.
 
 ### The `json:"-"` shadow is not what authors think
 
@@ -1653,7 +1653,7 @@ violation, by intent.
 
 #### Array element shapes (go-swagger#1088)
 
-`ItemsTypable` implementing the probe is what extends the catch-at-exit
+`ItemsTypable` implements the probe, which extends the catch-at-exit
 contract **one level down**, to array element shapes. An array IS legal
 under SimpleSchema, but its `items` are themselves a SimpleSchema and so
 may not be a `$ref`. A named object element (`[]Ele` under `in: query`,

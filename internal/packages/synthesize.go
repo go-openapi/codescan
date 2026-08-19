@@ -147,7 +147,7 @@ const cgoPseudoPackage = "C"
 // lower case, so the rule above discards every single one — C.int, C.size_t, a struct tag.
 //
 // A cgo file would then parse, and any C type it used in a declaration would resolve to nothing.
-// Keeping the C names is what lets a program that merely BUILDS with cgo be scanned imprecisely
+// Keeping the C names lets a program that merely BUILDS with cgo be scanned imprecisely
 // rather than not at all: a C type is opaque either way, but the Go declarations around it still resolve.
 func (ld *loadState) addSynthesizedName(path, name string) {
 	if !ast.IsExported(name) && path != cgoPseudoPackage {

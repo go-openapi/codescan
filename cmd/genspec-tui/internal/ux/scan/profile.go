@@ -19,7 +19,7 @@ import (
 	"github.com/google/pprof/profile"
 )
 
-// Profiling is what a run was asked to capture, and where the artifacts go.
+// Profiling records what a run was asked to capture, and the directory the artifacts go to.
 //
 // Off by default, and switched at launch rather than from the options overlay: [runtime.MemProfileRate] is meant to be
 // set once and held constant for the life of the process, so a mid-session toggle would make consecutive readings
@@ -27,11 +27,11 @@ import (
 type Profiling struct {
 	Enabled bool
 
-	// Dir is where the .pprof artifacts are written, so the same run can be opened in go tool pprof.
+	// Dir is the directory the .pprof artifacts are written to, so the same run can be opened in go tool pprof.
 	Dir string
 }
 
-// ProfileReport is what a profiled run observed, already reduced to what a reader is shown.
+// ProfileReport holds what a profiled run observed, already reduced to what a reader is shown.
 //
 // This is the account that the [Cost] figures cannot give. Cost is a process-wide scalar: while a scan runs, the
 // redraw loop and the file watcher allocate on other goroutines, and no arithmetic separates them out afterwards. A
@@ -56,7 +56,7 @@ type ProfileReport struct {
 	Notes []string
 }
 
-// PhaseProfile is what the profiler saw during one phase of a run.
+// PhaseProfile holds what the profiler saw during one phase of a run.
 type PhaseProfile struct {
 	// Label names the phase in the report, and in the note when it could not be sampled.
 	Label string
@@ -68,7 +68,7 @@ type PhaseProfile struct {
 	// ran, and counts nothing while they were all blocked.
 	CPUTotal time.Duration
 	// CPUSamples is how many samples that time is made of. The sampler runs at 100 Hz, so a phase shorter than its
-	// interval yields none at all, and a handful ranks nothing: the count is what says how much to believe the table.
+	// interval yields none at all, and a handful ranks nothing: the count sets how much to believe the table.
 	CPUSamples int64
 	CPU        []Func
 
@@ -85,7 +85,7 @@ type Func struct {
 	// goroutine that has none. Empty when Runtime is set.
 	Name string
 
-	// Callee is what Name called: the boundary where our code hands the work to somebody else's. Empty when the
+	// Callee is the function Name called: the boundary where our code passes the work to somebody else's. Empty when the
 	// sample was taken in our own code, or on a goroutine with no frame of ours at all.
 	Callee string
 
@@ -116,9 +116,10 @@ const MemSnapshots = 3
 // artifacts are on disk for anyone who wants all of it.
 const topN = 8
 
-// What a frame is, by the only thing a profile knows about it: its name.
+// A frame is identified by the only thing a profile records about it: its name.
 const (
-	// ourModule is what marks a frame as this project's own - the library, the loader, this command. Everything under
+	// ourModule is the import-path prefix marking a frame as this project's own - the library, the loader, this
+	// command. Everything under
 	// it is code that can be changed here; everything else is somebody else's, and the boundary between the two is
 	// what the CPU table is about.
 	ourModule = "github.com/go-openapi/codescan"
@@ -489,7 +490,7 @@ func frameName(stack []uintptr) (name string, ours bool) {
 		}
 	}
 
-	// The walk continues past the caller rather than returning at it, because a pprof frame further out is what marks
+	// The walk continues past the caller rather than returning at it, because a pprof frame further out marks
 	// the whole stack as the profiler's own.
 	switch {
 	case caller != "":
@@ -555,7 +556,7 @@ func cpuFuncs(prof *profile.Profile) ([]Func, time.Duration, int64) {
 	return out[:min(len(out), topN)], time.Duration(total), samples
 }
 
-// charged is what a sample is counted against, before any numbers are attached to it.
+// charged is the frame a sample is counted against, before any numbers are attached to it.
 type charged struct {
 	name, callee string
 	machinery    bool

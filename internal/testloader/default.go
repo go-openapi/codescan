@@ -5,7 +5,7 @@
 
 package testloader
 
-// defaultLoader is what the suites run under when nothing selects otherwise.
+// defaultLoader is the loader the suites run under when nothing selects otherwise.
 //
 // The shipped default, so an ordinary `go test ./...` exercises the configuration a caller gets.
 // Anything else has to be asked for, by the environment or by a build tag.

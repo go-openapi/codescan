@@ -28,7 +28,7 @@ const RootLabel = "(the whole document)"
 type Finding struct {
 	Severity grammar.Severity
 
-	// Pointer is where the validator says the offending value is, as an RFC 6901 JSON pointer.
+	// Pointer locates the offending value, as an RFC 6901 JSON pointer reported by the validator.
 	//
 	// Taken from the result rather than recovered from the message: the validator records the location as it walks, so
 	// it is the authority on it, and a sentence is a poor place to keep a machine-readable path.

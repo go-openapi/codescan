@@ -94,7 +94,7 @@ func plainRow(f Finding) string {
 	return fmt.Sprintf("%s %s: %s", location(f), f.Severity, message(f))
 }
 
-// location is where the finding says the offending value is.
+// location is the position the finding gives for the offending value.
 //
 // The row shows the POINTER, which is also where enter will take you - so what is printed and what navigating does
 // cannot disagree. The validator's own wording of the path survives inside the message.

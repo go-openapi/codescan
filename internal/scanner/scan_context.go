@@ -234,8 +234,8 @@ func loaderStrategy(opts *Options) ownpackages.Strategy {
 // Only a caller who asked for this hears anything. The pair says whether the request was met: a Hint
 // when the load took the shortcut, a Warning when it could not.
 //
-// This does not announce a loss. Dependency source going unread wholesale is what it used to mean —
-// strfmt being the case that mattered, since its `swagger:strfmt` marks are what turn a
+// This does not announce a loss. It used to mean dependency source going unread wholesale —
+// strfmt being the case that mattered, since its `swagger:strfmt` marks turn a
 // strfmt.DateTime field into a date-time. A dependency whose source carries annotations is now read
 // back after the load, and one that is merely asked for a declaration is read back at the lookup.
 //
@@ -1220,7 +1220,7 @@ func (s *ScanCtx) SourcelessPackage(pkgPath string) (reason string, sourceless b
 //
 // Asking here rather than widening the marker scan is the difference between paying per declaration wanted and
 // paying per dependency loaded. On a generated client that is single digits against several hundred; measured, it
-// is what keeps compiled dependencies worth choosing. A lookup that misses is the whole of the cost, and a
+// keeps compiled dependencies worth choosing. A lookup that misses is the whole of the cost, and a
 // dependency nothing reaches into is never parsed.
 //
 // A package that comes back is no longer sourceless, so it leaves the export-only set and stops answering the
@@ -1261,7 +1261,7 @@ func (s *ScanCtx) readBackOnDemand(pkgPath string, pkg *packages.Package) {
 // and the rest of the auto-detected canonical set) is resolved from its identity alone,
 // ahead of any declaration lookup, so nothing was lost and nothing is said.
 //
-// What reaches here is the complement: the types codescan consumes and does not recognize,
+// The complement reaches here: the types codescan consumes and does not recognize,
 // where the author has to decide what they meant.
 //
 // For instance, for time.Duration this is precisely why go-openapi offers strfmt.Duration.

@@ -295,7 +295,7 @@ func (p *FileView) viewerBody(focused, navActive bool) string {
 	return b.String()
 }
 
-// prefixWidth is what the row prefix costs before a line's text.
+// prefixWidth is the width the row prefix costs before a line's text.
 //
 // The line-number column, plus the link gutter when there is anything to mark in it.
 //

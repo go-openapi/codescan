@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Cost is what one scan cost to run: how long each half took, and what the process's memory did across it.
+// Cost records what one scan cost to run: how long each half took, and what the process's memory did across it.
 //
 // Two things it is NOT, both of which the overlay showing it has to say out loud:
 //
@@ -29,11 +29,11 @@ type Cost struct {
 	ScanFor   time.Duration
 	RenderFor time.Duration
 
-	// AllocScan / AllocRender are what was allocated in each half, garbage included: the churn, not the retention.
+	// AllocScan / AllocRender count what each half allocated, garbage included: the churn, not the retention.
 	AllocScan   uint64
 	AllocRender uint64
 
-	// RetainScan / RetainRender are what each half left live behind it. Signed, because a half that triggers a
+	// RetainScan / RetainRender count what each half left live behind it. Signed, because a half that triggers a
 	// collection can finish with less live than it started with.
 	RetainScan   int64
 	RetainRender int64
@@ -56,7 +56,7 @@ type Cost struct {
 // Allocated is the whole run's churn.
 func (c Cost) Allocated() uint64 { return c.AllocScan + c.AllocRender }
 
-// Retained is what the whole run left live. The two halves sum to it by construction.
+// Retained reports what the whole run left live. The two halves sum to it by construction.
 func (c Cost) Retained() int64 { return c.RetainScan + c.RetainRender }
 
 // memFence is one reading of the process's memory, taken at one of the three points [Do] measures.

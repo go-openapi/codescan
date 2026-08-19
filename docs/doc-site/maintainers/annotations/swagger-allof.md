@@ -54,8 +54,8 @@ type Wrong struct {
 ```
 
 The reason is that an embed contributes the shape of the type it embeds, and
-what that shape is comes from **that type's own declaration** — never from the
-site that embeds it. So the annotation belongs one level down:
+**that type's own declaration** fixes the shape — never the site that embeds
+it. So the annotation belongs one level down:
 
 ```go
 // Token is rendered as a formatted string wherever it appears.

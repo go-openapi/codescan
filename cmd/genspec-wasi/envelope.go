@@ -17,8 +17,8 @@ import (
 // envelope is the machine-readable result: the document, everything the scanner observed about the
 // source that produced it, and where each anchored spec node came from.
 //
-// The command's own shape - a document on stdout, diagnostics as prose on stderr - is what a person
-// or a shell pipeline wants, and is what -format=spec keeps. It is not enough for a program: prose
+// The command's own shape - a document on stdout, diagnostics as prose on stderr - suits a person
+// or a shell pipeline, and -format=spec keeps it. It is not enough for a program: prose
 // carries positions only in the sense that they are printed in it, and provenance has nowhere to go
 // at all. Rather than have every consumer grow a parser for our stderr, say it once in JSON.
 //
@@ -34,7 +34,7 @@ type envelope struct {
 	Runtime     *jsonRuntime `json:"runtime,omitempty"`
 }
 
-// jsonRuntime is what the scan cost to run, read from the Go runtime just after it finished.
+// jsonRuntime holds what the scan cost to run, read from the Go runtime just after it finished.
 //
 // Carried, where the definition and path counts deliberately are not, because it cannot be derived
 // from anything else here: it is a measurement of the process, and once the process has exited
@@ -44,7 +44,7 @@ type jsonRuntime struct {
 	// Sys is memory obtained from the host. Under wasm the linear memory never shrinks, so this is
 	// effectively the high-water mark rather than a reading at one moment.
 	Sys uint64 `json:"sys"`
-	// HeapAlloc is what is still live now the scan is done - the spec, the index, the type graph.
+	// HeapAlloc counts what is still live now the scan is done - the spec, the index, the type graph.
 	HeapAlloc uint64 `json:"heapAlloc"`
 	// TotalAlloc is everything ever allocated, garbage included. The ratio against Sys says whether a
 	// scan is holding memory or churning through it.

@@ -283,7 +283,7 @@ func flatten(n *node, out *[]*node) {
 
 // fit truncates s to width with an ellipsis, or right-pads it with spaces.
 //
-// Padding is what makes the cursor highlight span the full inner width.
+// Padding makes the cursor highlight span the full inner width.
 //
 // It is also where the panes' text is made safe to draw, because it is the last thing every row of scanned material
 // passes through - a tree entry, a line of the open file, a run handed on to [renderSpans]. Sanitizing costs no

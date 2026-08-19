@@ -17,11 +17,11 @@ import (
 const (
 	// sectionScan is which code is looked at.
 	sectionScan = "scan"
-	// sectionGo is what it is built as: the go environment that decides what compiles.
+	// sectionGo covers how it is built: the go environment that decides what compiles.
 	sectionGo = "go"
 	// sectionLoad is how the packages are read.
 	sectionLoad = "load"
-	// sectionEmit is what the specification ends up saying.
+	// sectionEmit covers what the specification ends up saying.
 	sectionEmit = "emit"
 )
 
@@ -33,7 +33,7 @@ const (
 // notConfigurable are the shared options a configuration file may not address, with the reason.
 //
 // A configuration file is found by searching upwards, so running a command inside a repository reads
-// THAT repository's file. Most of what a file sets shapes the document, which is what one is for.
+// THAT repository's file. Most of what a file sets shapes the document, which is a file's purpose.
 // An option that decides a PATH is different: it would let the tree being scanned choose where the
 // command reads or writes, and the tree is somebody else's.
 //
@@ -47,7 +47,7 @@ var notConfigurable = map[string]string{ //nolint:gochecknoglobals // the table,
 // the guard that checks every flag is either addressable or deliberately not.
 func NotConfigurable() map[string]string { return maps.Clone(notConfigurable) }
 
-// ConfigSchema is where each shared option is addressed in a configuration file.
+// ConfigSchema maps each shared option to its address in a configuration file.
 func ConfigSchema() cliconf.Schema {
 	schema := make(cliconf.Schema, len(boolOptions)+len(stringOptions)+len(floatOptions)+len(listOptions)+1)
 

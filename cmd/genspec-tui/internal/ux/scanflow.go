@@ -19,11 +19,11 @@ import (
 	"github.com/go-openapi/codescan/internal/parsers/grammar"
 )
 
-// ScanState is what the last scan produced, plus whether another is in flight.
+// ScanState holds what the last scan produced, plus whether another is in flight.
 //
 // It has exactly two writers - startScan, when one begins, and absorbScan, when its result lands. Everything else
 // only reads it: the header and status line are projections of it, and the cross-ref layer renders from its JSON or
-// YAML. Keeping it in one struct is what makes that one-way traffic visible.
+// YAML. Keeping it in one struct makes that one-way traffic visible.
 type ScanState struct {
 	Running bool
 	Spin    spinner.Model
@@ -165,7 +165,7 @@ func (m *Model) absorbScan(msg scan.ResultMsg) {
 	m.scan.Running = false
 	m.scan.JSON = msg.JSON
 	// The YAML view is of the document this run has just replaced, so it goes with it - and a conversion still in
-	// flight is now for the wrong document, which Gen is what tells absorbYAML.
+	// flight is now for the wrong document, which Gen signals to absorbYAML.
 	m.scan.YAML, m.scan.YAMLPending = "", false
 	m.scan.Gen++
 	m.scan.NumPaths, m.scan.NumDefs = msg.Paths, msg.Defs
@@ -193,7 +193,7 @@ type specYAMLMsg struct {
 // ensureYAML starts the YAML conversion when the view needs a body it does not have yet.
 //
 // A command rather than a call, because the conversion is the expensive half of rendering a large specification and
-// the event loop is what draws the frame that says so. Nothing is started when the view is not showing YAML, when
+// the event loop draws the frame that says so. Nothing is started when the view is not showing YAML, when
 // there is no document yet, or when one is already in flight or done.
 func (m *Model) ensureYAML() tea.Cmd {
 	if m.spec.Format() != "YAML" || m.scan.JSON == "" || m.scan.YAML != "" || m.scan.YAMLPending {

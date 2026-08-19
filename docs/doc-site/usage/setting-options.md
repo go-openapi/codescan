@@ -181,7 +181,7 @@ There is one file name for the whole family, not one per command: a project
 configuring a scan has configured it for all of them. What tells them apart is
 the sections.
 
-- A section a command does not know is **skipped**, not refused — that is how
+- A section a command does not recognize is **skipped**, not rejected — that is how
   `genspec-tui`'s `profile:` settings sit beside `genspec`'s `document:` in the
   same file.
 - A key inside a section it *does* know must name one of its flags. That is what

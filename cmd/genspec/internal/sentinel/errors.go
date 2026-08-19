@@ -3,7 +3,7 @@
 
 package sentinel
 
-// Error is what this command refuses over, as a constant: comparable, so errors.Is answers on identity, and
+// Error is a constant error this command fails on: comparable, so errors.Is answers on identity, and
 // declarable in a const block, so no package variable is mutable in the meantime.
 type Error string
 

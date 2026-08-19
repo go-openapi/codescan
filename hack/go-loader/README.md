@@ -133,7 +133,7 @@ how a harness quietly stops testing anything.
 
 ### The ledger diff is the review artifact
 
-`-write-ledger` is what makes a run reviewable. Commit it with whatever prompted
+`-write-ledger` makes a run reviewable. Commit it with whatever prompted
 the run, so the diff shows what a new Go release changed: a script that moved
 families, a skip reason that no longer applies, a tree that started disagreeing.
 

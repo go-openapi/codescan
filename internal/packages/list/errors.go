@@ -7,7 +7,7 @@ import "errors"
 
 // Sentinels for the conditions a caller might reasonably branch on.
 //
-// The detail — which pattern, which file — goes in the wrapping message; the sentinel is what errors.Is can match.
+// The detail — which pattern, which file — goes in the wrapping message; errors.Is matches the sentinel.
 var (
 	// ErrUnresolvedPattern reports a scan pattern that names no directory the resolver can reach — most often a virtual
 	// filesystem mounted narrower than the pattern reaches.

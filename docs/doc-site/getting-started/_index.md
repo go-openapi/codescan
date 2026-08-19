@@ -48,7 +48,7 @@ the easiest way is to try our [Playground]({{% relref "/playground" %}}) in your
 {{< children type="card" description="true" >}}
 
 > All three drive the same scanner over the same annotations, and every knob is
-> spelled the same way in each — so what you see in the terminal UI is what your
-> build will produce.
+> spelled the same way in each, so the terminal UI shows exactly the document
+> your build will produce.
 >
 > See [Setting an option]({{% relref "setting-options" %}}).

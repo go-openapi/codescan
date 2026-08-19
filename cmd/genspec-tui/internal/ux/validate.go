@@ -41,7 +41,7 @@ type validationMsg struct {
 
 // startValidation validates the rendered spec off the event loop.
 //
-// It judges the JSON body as rendered rather than the *spec.Swagger behind it, so what is reported is what is on
+// It checks the JSON body as rendered rather than the *spec.Swagger behind it, so a finding reports what is on
 // screen - and what a consumer would actually be handed.
 func (m *Model) startValidation() tea.Cmd {
 	body := m.scan.JSON

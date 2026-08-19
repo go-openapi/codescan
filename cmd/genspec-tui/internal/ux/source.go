@@ -22,7 +22,7 @@ import (
 // Not a preference of ours - a property of the widget that every file coordinate has to be translated through.
 const bufferTabWidth = 4
 
-// leftMode is what the left pane shows: the source tree or a file's content.
+// leftMode selects what the left pane shows: the source tree or a file's content.
 type leftMode int
 
 const (
@@ -79,7 +79,7 @@ func normalizeNewlines(s string) string {
 // That is its lexical runs, the diagnostics landing in it, and the provenance anchors in its gutter.
 //
 // It runs on load, on leaving the editor, and after every rescan.
-// The last is what this function exists for - a rescan replaces both the anchors and the diagnostics, and before it
+// The last case is this function's purpose - a rescan replaces both the anchors and the diagnostics, and before it
 // was wired the open file kept showing the previous scan's marks while the pane below it listed the new ones.
 func (m *Model) refreshSource() {
 	if m.currentFile == "" {
@@ -94,7 +94,7 @@ func (m *Model) refreshSource() {
 
 // bufferColumn converts a 1-based BYTE column in a file line into a 1-based RUNE column.
 //
-// A byte column is what go/token reports; a rune column is where the character is displayed.
+// go/token reports a byte column; a rune column counts displayed characters.
 //
 // Two conversions in one, and both are needed: multi-byte runes make a byte column drift from a rune column, and
 // textarea substitutes four spaces for every tab, so leading indentation is wider on screen than in the file.
@@ -176,7 +176,7 @@ func (m *Model) openFile(path string) tea.Cmd {
 //
 // The auto-reload this replaces fired on every watcher event and silently clobbered whatever was in the buffer. A
 // manual reload is the useful half of that - the file changed underneath you, or you want your edits gone - and the
-// guard is what makes it safe to offer.
+// guard makes it safe to offer.
 func (m *Model) requestReload() tea.Cmd {
 	if m.currentFile == "" {
 		return m.notify("%s", noFileDesc)
@@ -231,7 +231,7 @@ func (m *Model) saveFile() tea.Cmd {
 
 // annotationSite is a swagger: directive found on a line, and where its header token sits.
 //
-// The columns are what let a CLICK require the token itself rather than merely its line.
+// The columns let a CLICK require the token itself rather than merely its line.
 type annotationSite struct {
 	Kind  grammar.AnnotationKind
 	Start int // 1-based rune column of the `s` in `swagger:`
@@ -243,7 +243,7 @@ func (s annotationSite) covers(col int) bool { return col >= s.Start && col < s.
 
 // showAnnotationReference opens the reference popup for the annotation on the viewer's current line.
 //
-// Reading the BUFFER rather than the file on disk is what makes this work while you are still typing the annotation
+// Reading the BUFFER rather than the file on disk makes this work while you are still typing the annotation
 // - which is when you want it.
 func (m *Model) showAnnotationReference() tea.Cmd {
 	site, ok := annotationOnLine(m.currentLineText())

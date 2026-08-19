@@ -44,7 +44,7 @@ func (l *Loader) loadViaGoPackages(cfg *Config, patterns ...string) ([]*Package,
 //
 // The go command reads GOOS, GOARCH, GOFLAGS, GOWORK and GOEXPERIMENT from the environment and nowhere else,
 // so anything the caller pinned has to be pushed there.
-// Leaving it inherited is what made a pinned target apply to one strategy and not the other.
+// Leaving it inherited made a pinned target apply to one strategy and not the other.
 //
 // A nil base means the current environment, as it does for [golang.org/x/tools/go/packages.Load].
 // Assignments are appended, and the last one wins, so a pinned value overrides whatever was inherited.
