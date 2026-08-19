@@ -565,7 +565,7 @@ type charged struct {
 // charge says what a sample should be counted against.
 //
 // A CPU profile's leaf frame answers "what was executing", which for this program is mostly the allocator and the
-// collector: true, and nothing anyone can act on. What a reader can act on is the call of ours that led there, so a
+// collector: true, and nothing anyone can act on. A reader can act on the call of ours that led there, so a
 // sample is charged to the DEEPEST frame under ourModule, together with what that frame called - the boundary where
 // our code hands the work to somebody else's.
 //

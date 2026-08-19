@@ -71,13 +71,13 @@ command's half of a shared file) and an unknown key inside a known section is an
 Owns **both** ways of resolving a package graph, behind one `Loader`: delegate to
 `golang.org/x/tools/go/packages` (default), or do the same job in pure Go with no `go list` and no
 `exec`. The scanner states a preference and the loader reconciles it — see
-`internal/scanner/README.md#loader`. Keeping the switch here is what makes options like `WithTarget`
+`internal/scanner/README.md#loader`. Keeping the switch here makes options like `WithTarget`
 mean the same thing under both. Types (`Config`, `Package`, `Error`, `LoadMode`) are aliases of the
 upstream ones, so the two are interchangeable at the call site.
 
 Split three ways, because the halves are inherited from different places and age differently: the
 loader is a simplified `go/packages` (a shape we own), while `list/` is `cmd/go` (behaviour we must
-reproduce exactly). Quarantining the quirks is what makes them checkable against upstream.
+reproduce exactly). Quarantining the quirks makes them checkable against upstream.
 
 | File | Contents |
 |------|----------|
