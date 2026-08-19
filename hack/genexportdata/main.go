@@ -4,7 +4,7 @@
 // Command genexportdata extracts the compiler's export data for a set of packages into a directory
 // tree keyed by import path.
 //
-// The result is what internal/packages reads through WithExportData (codescan.Options.ExportData):
+// internal/packages reads the result through WithExportData (codescan.Options.ExportData):
 // pre-digested types, so a scan never has to parse or type-check those packages. It is generated
 // here, natively, because producing it needs the toolchain — which is precisely what the consumer
 // does not have.
@@ -56,7 +56,7 @@ func main() {
 
 	write := run
 	if strings.HasSuffix(*out, ".zip") {
-		// A zip is what an embedded build wants: archive/zip's Reader is already an fs.FS, so the
+		// A zip suits an embedded build: archive/zip's Reader is already an fs.FS, so the
 		// artifact carries one file and still serves per-package reads lazily.
 		write = runZip
 	}

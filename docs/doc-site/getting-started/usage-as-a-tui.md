@@ -50,8 +50,8 @@ The selected packages are a positional argument, resolved against `-workdir`; na
 The TUI registers the **same flags as the other commands** — one per field of
 [`codescan.Options`]({{% relref "options-reference" %}}) — and reads the same
 [`.codescan.yaml`]({{% relref "setting-options" %}}), so a session starts where
-your build leaves off. What the flags decide is the *first* scan; almost all of
-them are also live toggles, below.
+your build leaves off. The flags decide the *first* scan; almost all of them are
+also live toggles, below.
 
 The ones worth knowing at the point of starting a session:
 
@@ -78,7 +78,7 @@ A second group settles what gets built, and how it is loaded — the environment
 | `-goflags` | — | default go command flags, as `GOFLAGS` — `-build-tags` wins over a `-tags` given here |
 | `-gowork` | search upwards | workspace selection, as `GOWORK`: `off` to ignore a `go.work`, or the path to one |
 | `-goexperiment` | — | toolchain experiments, as `GOEXPERIMENT` |
-| `-loader` | `auto` | `auto` runs `go list`, which is what every native build does, and picks `own` only where no subprocess can be started; `go` always runs `go list`; `own` always uses codescan's own loader, which needs no toolchain (experimental) |
+| `-loader` | `auto` | `auto` runs `go list`, as every native build does, and picks `own` only where no subprocess can be started; `go` always runs `go list`; `own` always uses codescan's own loader, which needs no toolchain (experimental) |
 | `-stub-stdlib` | `false` | synthesize the standard library instead of reading GOROOT (needs `-loader=own`) |
 | `-compiled-dependencies` | `false` | take dependency types from the compiler's export data instead of reading every dependency from source (needs `-loader=go`). Worth having here more than anywhere: a session rescans on every save, so the build cache is warm after the first one |
 
@@ -183,8 +183,8 @@ This is the second of the two questions above, and answering both is why they ar
 tabs rather than one list: a scan can be perfectly clean and still produce
 something a consumer rejects.
 
-They also track different things. A scan diagnostic knows a source position, so
-it drives the source pane. A validation finding knows only a JSON pointer, so
+They also track different things. A scan diagnostic carries a source position, so
+it drives the source pane. A validation finding carries only a JSON pointer, so
 `Enter` and `f` there drive the **spec** pane and nothing else.
 
 The tab exists only once you have pressed `v`, and a rescan retires it: those
@@ -217,8 +217,8 @@ and recapped as ratios on the `split` line, because the question a reader
 arrives with is usually *which phase is this?* The two can disagree sharply,
 which is why both are there.
 
-**Allocated** is what the run churned through, garbage included; **retained** is
-what it left behind. A scan that allocates half a gigabyte and retains a few
+**Allocated** counts everything the run churned through, garbage included;
+**retained** counts what it left behind. A scan that allocates half a gigabyte and retains a few
 megabytes is not the same problem as one that keeps what it takes, and one
 number could not tell you which you have.
 

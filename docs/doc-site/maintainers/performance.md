@@ -67,8 +67,8 @@ The two charts do not tell the same story, and the difference is the interesting
 part. The step from v0.33.3 to v0.35.1 removes 3.3 GB of *allocation* but only
 346 MB of *peak* — the old regexp-based parser allocated and discarded, so the
 high-water mark stayed near the floor that the loaded package graph sets. Nothing
-since has moved that floor by default (−56 MB); moving it is what asking for a
-different loader does, and it is worth −395 to −501 MB.
+since has moved that floor by default (−56 MB). Asking for a different loader
+moves it, and is worth −395 to −501 MB.
 
 ### What each step changed
 
@@ -89,8 +89,8 @@ memory is all in the asking. That is the next section.
 
 ## How each loader option fares
 
-Three ways to get the package graph, all producing the same document. What they
-disagree about is what they read and what they hold.
+Three ways to get the package graph, all producing the same document. They
+differ in what they read and what they hold.
 
 Note the axes: the two charts below are the *same* three configurations, timed on
 a warm build cache and on an empty one. Only the scale differs — and it differs

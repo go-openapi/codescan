@@ -45,7 +45,7 @@ func (s *SearchBox) Close() {
 	s.input.Blur()
 }
 
-// Query is what the user has typed.
+// Query holds the text the user has typed.
 func (s *SearchBox) Query() string { return s.input.Value() }
 
 // Update forwards a key to the input.

@@ -275,7 +275,7 @@ func baseIdentities(t types.Type) []string {
 
 // typeIdentity is the index key for a base: "<pkgpath>.<Name>", the compiler's identity for the declared type.
 //
-// The Go type — not the swagger definition name — is what both ends of the relation can compute without knowing the
+// Both ends of the relation can compute the Go type — not the swagger definition name — without knowing the
 // other's annotations: the embed site resolves a type, the base declaration owns one, while either may carry a
 // `swagger:model <name>` override.
 // A package-less (universe) type falls back to its bare name.

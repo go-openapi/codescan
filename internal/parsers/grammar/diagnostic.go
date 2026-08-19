@@ -247,8 +247,8 @@ const (
 	// types has to be consumed in the emitted surface, and no identity recognizer may claim it first.
 	// In practice that is a standard-library type with no obvious wire form — time.Duration,
 	// reflect.Type — which is why the answer is neither to guess at one nor to widen the recognizer set
-	// until it covers the standard library. What is lost is a doc comment the author usually did not
-	// want in their API anyway, and the remedy is local: say it with swagger:description.
+	// until it covers the standard library. The author loses a doc comment they usually did not want in
+	// their API anyway, and the remedy is local: say it with swagger:description.
 	//
 	// Warning; emitted per consumed type.
 	CodeSourcelessType Code = "scan.sourceless-type"
@@ -359,8 +359,8 @@ const (
 	// does not consult it — so it is accepted, validated, and discarded.
 	//
 	// Currently: `swagger:strfmt` / `swagger:type` in the doc comment of an EMBEDDED field.
-	// On a regular field both are honoured, which is what makes the silence misleading; an embed contributes its type's
-	// shape, and what that shape is comes from the embedded type's own declaration, never from the embedding site.
+	// On a regular field both are honoured, which makes the silence misleading; an embed contributes its type's
+	// shape, and the embedded type's own declaration fixes that shape, never the embedding site.
 	//
 	// Warning.
 	CodeIneffectiveAnnotation Code = "scan.ineffective-annotation"

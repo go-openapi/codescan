@@ -7,7 +7,7 @@ import "errors"
 
 // Sentinels for the conditions a caller might reasonably branch on.
 //
-// The detail (which package, which pattern) goes in the wrapping message; the sentinel is what errors.Is can match.
+// The detail (which package, which pattern) goes in the wrapping message; errors.Is matches the sentinel.
 var (
 	// ErrImportCycle reports that the package graph loops back on itself.
 	//

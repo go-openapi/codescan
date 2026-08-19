@@ -53,7 +53,7 @@ func (o *Overlay) Ask(prompt string) {
 //
 // It reports ok=false while the question is unanswered, or when the answer has already been collected.
 //
-// Consuming rather than merely reading is what keeps a single "yes" from firing an action on every subsequent keypress
+// Consuming rather than merely reading stops a single "yes" firing an action on every subsequent keypress
 // - the same reason the options overlay records that it has been applied.
 func (o *Overlay) TakeAnswer() (accepted, ok bool) {
 	if !o.answered {

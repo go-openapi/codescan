@@ -162,7 +162,7 @@ func UnsupportedBasic(tpe *types.Basic) bool {
 // Without the fallback every field of such a type is silently skipped,
 // which renders the type as an empty object rather than failing.
 //
-// What export data does preserve is the filename and the LINE, not the column. The importer fabricates a line table
+// Export data preserves the filename and the LINE, not the column. The importer fabricates a line table
 // in which every position sits in column 1, so a column comparison is always wrong.
 //
 // Line plus the object's own name identifies the field, since a struct cannot declare a name twice and the file is

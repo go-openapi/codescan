@@ -505,7 +505,7 @@ identifier (`string`, `integer`, `int64`, `[]string`, `[][]int64`,
 `Custom`, `pkg.Type`, `inline`, …) — as `TokenTypeRef`. The grammar no
 longer owns a closed type vocabulary: semantic validity (known keyword /
 scanned type, format compatibility, `[]T` element resolution) is the
-builder's job, since only it knows the scanned definitions and the
+builder's job, since only it holds the scanned definitions and the
 annotated Go type (the F3 reconciliation). A **structurally malformed**
 token (embedded spaces, bare `[]`, illegal chars, leading digit) falls
 back to `TokenIdentName`, and the parser flags it `CodeInvalidTypeRef`

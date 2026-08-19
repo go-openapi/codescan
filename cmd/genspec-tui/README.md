@@ -52,7 +52,7 @@ shared with [`genspec`](../genspec) and `genspec-wasi` — so a flag means the s
 thing whichever command you reach for, and `-h` lists the current set rather than
 this README going stale. They fall in four groups: `scan` (which code), `go`
 (what it is built as), `load` (how it is read) and `emit` (what the document
-says). `-loader` (`go`, `own` or `auto`) is where the toolchain-free loader lives.
+says). `-loader` (`go`, `own` or `auto`) selects the toolchain-free loader.
 
 A fifth group is this command's own, and observes the run rather than configuring
 it — see [What a scan cost](#what-a-scan-cost-m):
@@ -85,9 +85,9 @@ session reads or writes. They are typed:
 genspec-tui -workdir ./api -profile -profile-dir ./profiles
 ```
 
-`-c` / `-config` pins a file, `-no-config` refuses one. A section this command
-does not know — `document:`, which is genspec's — is skipped rather than refused,
-which is what lets one file serve both; a *key* that no flag matches inside a
+`-c` / `-config` pins a file, `-no-config` rejects one. A section this command
+does not recognize — `document:`, which is genspec's — is skipped rather than
+rejected, so one file can serve both; a *key* that no flag matches inside a
 known section is an error, since a misspelling would otherwise read as a setting
 that quietly never applied. When a file is read, the status line says so and what
 it decided.
@@ -415,8 +415,8 @@ The two tabs answer different questions. The scan tab says whether your
 and still emit something a consumer rejects.
 
 They also track different things, which is why they are tabs rather than one
-list. A scan diagnostic knows a source position, so it drives the source pane
-(and the spec). A validation finding knows only a JSON pointer, so `Enter` and
+list. A scan diagnostic carries a source position, so it drives the source pane
+(and the spec). A validation finding carries only a JSON pointer, so `Enter` and
 `f` there drive the **spec** pane and nothing else.
 
 The tab exists only once you have pressed `v`, and a rescan retires it: the
@@ -501,8 +501,8 @@ comment is not uniformly commentary:
 Only the keyword itself is lifted out, so `// required: true` reads as dim `//`,
 coloured `required`, dim `: true` — the way `"required": true` reads on the spec
 side. Recognition uses the parser's own keyword table, so aliases (`min` →
-`minimum`, `min length` → `minLength`) and letter case come for free, and what
-lights up is what the parser will act on.
+`minimum`, `min length` → `minLength`) and letter case come for free. The parser
+acts on exactly what lights up.
 
 ### Diagnostics at the site
 
@@ -514,9 +514,9 @@ token*, without leaving the line you are reading.
 Marks come from the last scan and are re-derived on every rescan, so they never
 outlive the finding that produced them. Where codescan reports a position is
 where the mark goes: a keyword-level diagnostic lands on the keyword, while
-`swagger:type: "array" is deprecated` lands on the **declaration**, because that
-is where the builder reports it. The mark says "there is a finding about this",
-not "this is deprecated".
+`swagger:type: "array" is deprecated` lands on the **declaration**, because the
+builder reports it there. The mark means "there is a finding about this", not
+"this is deprecated".
 
 ### Keyword scope
 

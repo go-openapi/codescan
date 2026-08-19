@@ -530,7 +530,7 @@ func inAnyFile(pos string, files []string) bool {
 type importer struct {
 	ld   *loadState
 	from *Package
-	// fromDir is where the importing package's source lives.
+	// fromDir is the directory holding the importing package's source.
 	//
 	// Carried because it decides whether the standard library's own vendor tree is in scope: a package inside GOROOT/src
 	// resolves golang.org/x/crypto/... to the copy vendored beside it, and a package anywhere else must not.

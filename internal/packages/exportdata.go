@@ -16,7 +16,7 @@ import (
 
 // Reading a package from the compiler's export data.
 //
-// Type-checking the standard library from source is what a full scan spends nearly all its time on:
+// Type-checking the standard library from source takes nearly all the time of a full scan:
 // ~190 packages and ~1195 files for a fixture as small as the petstore, and a WebAssembly guest pays
 // a five to six-fold compute tax on top.
 //
@@ -32,7 +32,7 @@ import (
 // carriesAnnotations — so the load has no reason to read it.
 //
 // It is told WHERE its source is even so. Saying nothing about its own types is not the same as declaring nothing:
-// the scanned code can name a type from here and want the declaration for it, and the file list is what lets
+// the scanned code can name a type from here and want the declaration for it, and the file list lets
 // [Loader.ReadBackSource] answer that later without resolving the import a second time. The marker scan has just
 // resolved it, so this costs a slice.
 func (ld *loadState) exportedPackage(importPath string, tpkg *types.Package) *Package {
@@ -80,7 +80,7 @@ func (ld *loadState) carriesAnnotations(importPath string) bool {
 	return found
 }
 
-// annotationMarker is what every codescan annotation begins with.
+// annotationMarker is the prefix every codescan annotation begins with.
 const annotationMarker = "swagger:"
 
 // annotationChunk is how much of a file the marker scan reads at a time.

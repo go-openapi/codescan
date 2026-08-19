@@ -12,8 +12,8 @@ is the single configuration struct passed to [`codescan.Run`](https://pkg.go.dev
 every numeric tunable to its built-in default. You set only what you need.
 
 This page is the field-by-field catalogue, and serves the commands as much as the
-library: **Flag** is what to type, and **Section** is where a `.codescan.yaml`
-addresses it — the key inside that section is the flag without its dash. See
+library: **Flag** gives the text to type, and **Section** gives the `.codescan.yaml`
+section addressing it — the key inside that section is the flag without its dash. See
 [Setting an option]({{% relref "setting-options" %}}) for the rules those two
 columns follow, and for the handful of options that are nobody's flag.
 
@@ -29,8 +29,8 @@ and handed a package of annotated models should produce their definitions.
 {{% /notice %}}
 
 {{% notice style="note" %}}
-**Config Section** is where a `.codescan.yaml` addresses the option. A dash means
-it has none: either the option is not a value a file can carry (a callback, a
+**Config Section** names the `.codescan.yaml` section addressing the option. A dash
+means it has none: either the option is not a value a file can carry (a callback, a
 positional argument), or it names a **path**, which is settable on the command
 line only. See [what a file may not set]({{% relref "setting-options" %}}#what-a-file-may-not-set).
 {{% /notice %}}
@@ -98,7 +98,7 @@ It must *compile* the dependency closure rather than type-check it, so on a cold
 cache it is an order of magnitude slower and writes a large build cache. Reach for
 it where the cache is warm by construction — your own machine, a watch loop, a
 pipeline that restores its cache — and leave it off where a clean checkout is the
-norm, which is what a CI runner usually is. Code that does not compile is **not** a
+norm, as a CI runner usually is. Code that does not compile is **not** a
 reason to avoid it: such a load is retried from source automatically.
 
 Two further options drop the `GOROOT` requirement altogether, for environments with
@@ -131,7 +131,7 @@ whose harness also takes an extra corpus of your own to measure alongside them.
 
 {{% notice style="note" %}}
 The virtual-filesystem and export-data options exist to make a scan possible
-where no Go toolchain is: they are what lets codescan run compiled to
+where no Go toolchain is present: they let codescan run compiled to
 WebAssembly. See the [Playground]({{% relref "playground" %}}).
 {{% /notice %}}
 

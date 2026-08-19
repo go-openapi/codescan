@@ -39,7 +39,7 @@ type ParsedPathContent struct {
 	//
 	// Nothing downstream can recover this: a `swagger:route` that fails its regex leaves no trace and reads as ordinary
 	// prose, so the route goes missing with no diagnostic anywhere.
-	// Capturing it here is what lets the caller say so — but only when the group produced no route at all, since a group
+	// Capturing it here lets the caller report it — but only when the group produced no route at all, since a group
 	// may legitimately hold both a good annotation and prose that resembles one.
 	UnparsedPos  token.Pos
 	UnparsedLine string

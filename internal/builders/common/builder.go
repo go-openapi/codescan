@@ -56,8 +56,8 @@ type Builder struct {
 //
 // The remedy offered is deliberately not "recognize more standard-library types". A recognizer
 // asserts a wire form for every use of a type, and these are precisely the ones where no such form
-// exists to assert — which is what strfmt.Duration is for. What the author loses is a doc comment
-// they rarely wanted in their API, and swagger:description puts it back where they can see it.
+// exists to assert, which is why strfmt.Duration exists. The author loses a doc comment they rarely
+// wanted in their API, and swagger:description puts it back where they can see it.
 func (s *Builder) SourcelessFallback(obj *types.TypeName) bool {
 	if obj == nil || obj.Pkg() == nil {
 		return false

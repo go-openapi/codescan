@@ -5,7 +5,7 @@ package cliopts
 
 import "strings"
 
-// DefaultPatterns is what a command scans when the caller names nothing.
+// DefaultPatterns is the pattern a command scans when the caller names nothing.
 const DefaultPatterns = "./..."
 
 // SplitList parses a comma-separated flag into trimmed, non-empty entries.

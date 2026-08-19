@@ -22,14 +22,15 @@ func Petstore(t *testing.T) string {
 }
 
 // Unannotated is a fixture with no swagger:meta block, so the document it produces has no info
-// section - which is what makes it invalid on its own, and what makes an -input overlay visible.
+// section, so it is invalid on its own, and an -input overlay shows up against it.
 func Unannotated(t *testing.T) string {
 	t.Helper()
 
 	return filepath.Join(fixtures(t), "enhancements", "additional-properties")
 }
 
-// configFileMode is what a configuration file is written with: the command reads it and nobody else needs to.
+// configFileMode is the permission a configuration file is written with: the command reads it and
+// nobody else needs to.
 const configFileMode = 0o600
 
 // ConfigFile writes a configuration file in a fresh directory and reports its path.

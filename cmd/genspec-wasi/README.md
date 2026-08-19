@@ -157,8 +157,8 @@ several times faster on this workload. Both produce identical output.
 
 ## How much of the host to expose
 
-The real choice is what the guest is allowed to see. Measured on the petstore
-fixture under wasmtime:
+The real choice is how much of the host the guest may see. Measured on the
+petstore fixture under wasmtime:
 
 | mounted | mode | time | peak RSS | result |
 |---|---|---|---|---|

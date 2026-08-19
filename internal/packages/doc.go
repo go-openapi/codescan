@@ -10,7 +10,7 @@
 //   - [StrategyToolchainFree] does the same job in pure Go, for the environments the first cannot
 //     reach.
 //
-// Owning the choice here rather than at the call site is what keeps the two honest: options such as [WithGoEnv] mean
+// Owning the choice here rather than at the call site keeps the two honest: options such as [WithGoEnv] mean
 // the same thing under both, and a caller swaps strategies without rewriting how it asks for anything.
 //
 // The motivation for the second strategy is that packages.Load shells out to `go list`, so it cannot run where there is
@@ -38,7 +38,7 @@
 // rather than diffused.
 // [vfs] holds the filesystem seam both halves read through.
 //
-// What stays here is the loading itself: choosing a strategy, parsing, type-checking, and the two ways of standing in
+// The loading itself stays here: choosing a strategy, parsing, type-checking, and the two ways of standing in
 // for a dependency that cannot be read from source — export data, and synthesis.
 //
 // # What the toolchain-free strategy does not implement

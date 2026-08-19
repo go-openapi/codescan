@@ -111,7 +111,7 @@ type Options struct {
 	//	ExportData alongside it                       the standard library
 	//
 	// ExportData is itself an fs.FS, so it embeds too, and the two halves ship as one binary. Vendoring
-	// is what keeps a dependency's own annotations — a vendored go-openapi/strfmt is read from inside
+	// preserves a dependency's own annotations — a vendored go-openapi/strfmt is read from inside
 	// the tree, marks and all. StubStdlib substitutes for the second line where no blob can be
 	// produced, at the fidelity cost documented there.
 	//
@@ -132,9 +132,9 @@ type Options struct {
 	// array, time.Duration no longer as an integer, and a type is no longer seen to implement
 	// encoding.TextMarshaler.
 	//
-	// What it buys is not needing GOROOT at all, and a far smaller graph — which is what makes a scan
-	// viable in a WASI guest or a browser, where the standard library source would otherwise have to be
-	// shipped or mounted.
+	// It removes the need for GOROOT entirely, and shrinks the graph, which makes a scan viable in a
+	// WASI guest or a browser, where the standard library source would otherwise have to be shipped or
+	// mounted.
 	//
 	// It is not failsafe, and the failure mode is quiet: a spec comes out subtly thinner rather than
 	// erroring. Across codescan's own fixture corpus 133 of 138 scans are byte-identical; the rest lose
@@ -154,9 +154,9 @@ type Options struct {
 	//
 	// Setting it costs no meaning. Export data carries the full exported type surface — fields,
 	// method sets, interface identity — but no syntax and no comments, and a scan wants two different
-	// things out of a dependency's source. What a dependency SAYS about its own types is found by
-	// scanning its files for the annotation marker after the load, which is what keeps go-openapi's own
-	// strfmt marks giving a strfmt.DateTime field its date-time format. What a dependency DECLARES
+	// things out of a dependency's source. Scanning its files for the annotation marker after the load
+	// recovers what a dependency says about its own types, so go-openapi's own strfmt marks keep giving
+	// a strfmt.DateTime field its date-time format. What a dependency DECLARES
 	// cannot be anticipated that way, since any package may declare a type the scanned code names as a
 	// model, so its declaration is fetched at the lookup that wants it. A dependency nothing reaches
 	// into is never read at all, and the document is the one the ordinary loader produces —

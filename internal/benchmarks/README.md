@@ -218,8 +218,8 @@ Per phase, warm, with compiled dependencies — the configuration the loader wor
 | kubeapi | 802 ms · 390 MB | 156 ms · 56.9 MB | 16% of time, 13% of allocation |
 
 Load is resolving and type-checking the package graph; Build is reading annotations and emitting the
-document. Loading still dominates, which is why the loader is where the remaining leverage is — and
-why a parser micro-optimisation is worth at most a tenth of a scan.
+document. Loading still dominates, so the loader holds the remaining leverage, and a parser
+micro-optimisation is worth at most a tenth of a scan.
 
 ## Running it
 
@@ -302,7 +302,7 @@ with the commands above.
   list them, and a version probe built inside the workspace would link the working tree instead of
   the release it claims to measure. Both are handled; anything reimplementing this must handle them
   too.
-- **A version probe refuses options younger than itself.** `options_baseline.go` accepts the same
+- **A version probe rejects options younger than itself.** `options_baseline.go` accepts the same
   flags as the current build and *exits* rather than ignoring them — a probe that silently accepted
   `-compiled-deps` would report a source-dependency measurement under a label saying otherwise, the
   one measurement error that cannot be spotted in the output.

@@ -84,7 +84,7 @@ reproducible. Asking for both at once is an error rather than a coin toss.
 `.codescan.yml` and `.codescan.json` are searched for too — JSON is a subset of
 YAML, so it needs no parser of its own.
 
-One file serves the whole family: a section a command does not know is skipped
+One file serves the whole family: a section a command does not recognize is skipped
 rather than refused, so `genspec-tui`'s settings can sit beside `genspec`'s. A
 key inside a section it *does* know must name one of its flags — which is what
 makes a typo an error rather than a setting that quietly never applied. Run

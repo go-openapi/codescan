@@ -177,7 +177,7 @@ func (o *Overlay) footer(top, total int) string {
 }
 
 // contentWidth pins the frame to the widest line it can EVER show, not the widest one currently on screen - sizing to
-// the window is what makes a box appear to twitch as its content scrolls under it.
+// the window makes a box appear to twitch as its content scrolls under it.
 func (o *Overlay) contentWidth(lines []string) int {
 	return max(
 		lipgloss.Width(strings.Join(lines, "\n")),

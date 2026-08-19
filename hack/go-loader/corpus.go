@@ -23,7 +23,7 @@ import (
 // nested modules, workspaces, vendor directories, `...` in awkward places. That corpus is the
 // expensive half of testing pattern resolution, and it already exists.
 //
-// What is NOT reused is the assertions. Running the scripts as written would mean implementing their
+// The assertions are NOT reused. Running the scripts as written would mean implementing their
 // shell DSL, and there is no need: a real go command is available, so the second strategy IS the
 // oracle. We take the trees and compare the two strategies against each other.
 //
@@ -47,7 +47,7 @@ const (
 	filePerm = 0o600
 )
 
-// outcome is what happened to one script's tree.
+// outcome records what happened to one script's tree.
 type outcome struct {
 	script string
 	status string // agree, differ, skip, error

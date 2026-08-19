@@ -27,7 +27,7 @@ const (
 	notRenderedSuffix = " · not rendered in this view"
 )
 
-// specTarget is where a coordinate resolves to in the rendered spec.
+// specTarget locates the node a coordinate resolves to in the rendered spec.
 //
 // Miss is empty when Found, and otherwise says which of the legitimate "nothing here" answers this is.
 type specTarget struct {
@@ -37,7 +37,7 @@ type specTarget struct {
 	Miss    string
 }
 
-// sourceTarget is where a spec node resolves to in the Go source.
+// sourceTarget locates the position a spec node resolves to in the Go source.
 type sourceTarget struct {
 	Pointer string
 	Pos     token.Position

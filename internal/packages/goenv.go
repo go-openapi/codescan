@@ -54,7 +54,7 @@ type GoEnv struct {
 // WithGoEnv pins the parts of the go environment that decide what gets built.
 //
 // It replaces the older WithTarget: GOOS and GOARCH were never the only environment variables that change the answer,
-// and having one of them explicit while the rest stayed ambient is what let the two strategies build for different
+// and having one of them explicit while the rest stayed ambient let the two strategies build for different
 // platforms without anyone noticing.
 func WithGoEnv(env GoEnv) Option {
 	return func(o *options) { o.goEnv = env }

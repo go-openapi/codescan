@@ -23,10 +23,10 @@ import (
 // so a package that says nothing about its own types has nothing to say.
 //
 // Both are asking the wrong question the moment some scanned code names one of its types as a model.
-// What a package SAYS is in its comments, and what it DECLARES is its source,
+// A package says things in its comments and declares them in its source,
 // and a definition renders from that declaration or not at all.
 //
-// Asking here rather than reading every dependency up front is what makes it affordable: the cost is one parse per
+// Asking here rather than reading every dependency up front keeps it affordable: the cost is one parse per
 // declaration wanted, against one per dependency loaded, typically single digits against several hundred.
 //
 // This is a method on the [Loader] because reading is: [WithFS] means a scan's whole world can be a virtual tree,
@@ -156,7 +156,7 @@ func bridgeDefs(syntax []*ast.File, tpkg *types.Package) *types.Info {
 // So the choice cannot be made during the load and is made after it: take every dependency from export data,
 // then hand back the source of the few that were worth reading.
 //
-// What makes this possible is that the cheap load still says where the source IS.
+// This works because the cheap load still records where the source IS.
 // compiledDepsMode keeps packages.NeedFiles, so a dependency comes back with its GoFiles populated,
 // its types complete and no syntax — locatable, just unread.
 // Parsing those files is the whole of the work; nothing is type-checked twice, because every declaration the source

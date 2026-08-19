@@ -39,8 +39,8 @@ func (v *FS) Virtual() bool { return v.fsys != nil }
 // the rooted POSIX form lands, which is the convention the option documents.
 //
 // Both steps read the path rather than the host. A virtual filesystem need not have been built on the machine that is
-// scanning it — an embedded or recorded tree carries the shape it was captured with — so deferring to the host (which
-// is what filepath.ToSlash and filepath.VolumeName do) would normalise a Windows-shaped tree only when Windows was
+// scanning it — an embedded or recorded tree carries the shape it was captured with — so deferring to the host (as
+// filepath.ToSlash and filepath.VolumeName do) would normalise a Windows-shaped tree only when Windows was
 // reading it. The cost is that a backslash cannot be part of a name here, which is already true wherever such a tree
 // came from.
 func (v *FS) Clean(p string) string {

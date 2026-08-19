@@ -5,7 +5,7 @@
 //
 // A scan that cannot reach GOROOT or a module cache - a WASI guest with only the project mounted, a
 // browser - still needs its dependencies' types, and reading them from precomputed export data costs
-// a fraction of type-checking them from source. Carrying that data in the binary is what makes such
+// a fraction of type-checking them from source. Carrying that data in the binary enables such
 // a build self-contained.
 //
 // It is opt-in, because it is several megabytes that most builds have no use for:

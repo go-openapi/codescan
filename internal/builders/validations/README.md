@@ -38,7 +38,7 @@ items/headers code paths. Its two halves are:
 ## <a id="contract"></a>§contract — why these helpers live in the builder layer
 
 The grammar parser produces a typed annotation block but does not
-know the resolved Swagger `type` / `format` of the field, parameter,
+resolve the Swagger `type` / `format` of the field, parameter,
 or header the block is decorating — that resolution is the
 builder's job, and it depends on the surrounding Go type system.
 
@@ -46,7 +46,7 @@ Two consequences:
 
 1. **Coercion of `default:` / `example:` / `enum:` payloads** cannot
    happen at parse time. The grammar lexes `default: 3` as the raw
-   string `"3"`; only the builder knows whether the target is
+   string `"3"`; only the builder has resolved whether the target is
    `integer` (so the value should be `int(3)`), `string`
    (so the value stays `"3"`), or `array` (so the value should
    `json.Unmarshal` into `[]any`).
@@ -138,7 +138,7 @@ uniformly across the three keywords.
 
 `swagger:enum` members do not come from annotation text: the
 scanner reads them off a Go const block. It has two readings of
-that block, and `CoerceConstant` is what keeps them agreeing.
+that block, and `CoerceConstant` reconciles them.
 
 The **primary reading** takes the values from the type-checker
 (`go/types` constants). There, a constant's kind already follows

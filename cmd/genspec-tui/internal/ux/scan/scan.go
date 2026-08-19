@@ -38,7 +38,7 @@ type ResultMsg struct {
 // It runs in a tea.Cmd goroutine so packages.Load latency never blocks the event loop, which is why cfg is snapshotted
 // HERE rather than inside the command: the caller hands over the model's live configuration, and the options overlay
 // writes to it from the event loop while the scan reads it. Taking the copy on the caller's goroutine, before the
-// command exists, is what keeps the two apart - a copy taken inside the command would be the race it is meant to avoid.
+// command exists, keeps the two apart - a copy taken inside the command would be the race it avoids.
 func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
 	snapshot := *cfg
 
@@ -53,7 +53,7 @@ func Run(cfg *codescan.Options, prof *Profiling) tea.Cmd {
 // Do performs the scan and rendering, returning the result without timing (runScan stamps the elapsed time around it).
 //
 // It fences the work three times - before the scan, after it, and once the document has been rendered - so the result
-// carries what the run cost as well as what it produced. The inner split is what makes the reading actionable: it
+// carries what the run cost as well as what it produced. The inner split makes the reading actionable: it
 // separates what codescan spent from what serializing the document spent on top.
 //
 // A profiled run brackets the same two phases with the profiler as well, so what the sampler says and what the fences

@@ -182,7 +182,7 @@ func (d *EntityDecl) Name() string { return d.Obj().Name() }
 // Obj().Pos() is the position the type-checker recorded, which compiled export data carries too —
 // so this is the position accessor to reach for, never Ident.Pos() / Spec.Pos(). For a package
 // loaded from source the three are the same token: ast.TypeSpec.Pos() is its Name.Pos(), and that
-// identifier is what Defs maps to the object.
+// identifier is the key Defs maps to the object.
 func (d *EntityDecl) Pos() token.Pos { return d.Obj().Pos() }
 
 // PkgPath returns the import path of the package declaring the type, or "" for a package-less

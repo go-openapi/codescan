@@ -208,7 +208,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 				return nil
 			}
 		case *types.Basic:
-			// EnumSourcePkg is where a swagger:enum's const values are read from. A miss means the
+			// EnumSourcePkg names the package a swagger:enum's const values are read from. A miss means the
 			// declaration has no source — so it carries no annotation for this cascade to honour
 			// either, and falling through is the same answer applyNamedShapeClassifier gives when
 			// PkgForType misses.
@@ -231,7 +231,7 @@ func (s *Builder) buildFromDecl(schema *oaispec.Schema) error {
 			}
 		}
 		// Build over what the declaration was WRITTEN over, not over the peeled underlying: the named
-		// layer in `type Stamp time.Time` is what the stdlib recognizers key on, and peeling discards
+		// layer in `type Stamp time.Time` is the one the stdlib recognizers key on, and peeling discards
 		// it.
 		//
 		// WrittenRHS declines for two unrelated reasons and only one of them has a fallback:

@@ -82,7 +82,7 @@ type Synthesized struct {
 //
 // Without it, the loss is invisible: a package that only mentions a synthesized type in a field position type-checks
 // cleanly and simply produces a thinner spec.
-// What surfaces otherwise is the downstream wreckage: a value-position use of a fabricated type reads as an error in
+// Otherwise only the downstream wreckage surfaces: a value-position use of a fabricated type reads as an error in
 // the scanned code rather than as a missing dependency.
 func WithOnSynthesized(fn func(Synthesized)) Option {
 	return func(o *options) { o.onSynthesize = fn }
@@ -115,14 +115,14 @@ func WithOnExportOnly(fn func(ExportOnly)) Option {
 // right package path and name — instead of being parsed and type-checked out of GOROOT.
 //
 // The trade is fidelity for reach.
-// What survives is everything keyed on a type's identity: codescan recognizes time.Time, json.RawMessage and friends by
+// Everything keyed on a type's identity survives: codescan recognizes time.Time, json.RawMessage and friends by
 // (package, name), never by shape.
-// What is lost is everything structural: a synthesized type has no fields to drill into and no method set, so a spec
+// Everything structural is lost: a synthesized type has no fields to drill into and no method set, so a spec
 // that renders json.RawMessage as a byte array, time.Duration as an integer, or that depends on a type implementing
 // encoding.TextMarshaler, comes out different.
 //
 // The reach bought is a small footprint and no Go installation: GOROOT no longer has to exist and no module cache has
-// to be populated, which for a WASI guest or a browser is what makes a scan possible at all.
+// to be populated, which for a WASI guest or a browser is the difference between scanning and not.
 //
 // It is not failsafe, and the failure mode is quiet — the spec comes out subtly thinner rather than erroring.
 // Across codescan's own fixture corpus 133 of 138 scans are byte-identical; the rest lose a byte-array rendering, an
@@ -152,19 +152,19 @@ func WithStubbedStdlib() Option {
 // this removes nearly all of it.
 // On a cold one it is markedly slower, because the dependencies have to be compiled before their export data exists.
 //
-// What it costs is dependency SOURCE.
+// It costs dependency SOURCE.
 // Export data carries the exported type surface — fields, method sets and interface identity are all real — but no
 // syntax and no comments, so anything a dependency says ABOUT its types is out of reach until something reads it.
 //
 // For codescan that is load-bearing rather than incidental: for example go-openapi's strfmt annotates its own types,
-// and those annotations are what give a strfmt.DateTime field its date-time format.
+// and those annotations give a strfmt.DateTime field its date-time format.
 //
 // So the source comes back twice over: [attachAnnotatedDependencies] for the packages carrying the marker,
-// and [Loader.ReadBackSource] for a declaration the spec turns out to want. What this option skips is the parsing
+// and [Loader.ReadBackSource] for a declaration the spec turns out to want. This option skips the parsing
 // and type-checking of everything neither of those reaches.
 //
 // It stays an option here while being the default above, because the loader is the mechanism and the policy is the
-// scanner's. What the scanner adds on top is a retry: `go list -export` BUILDS what it is asked about, so a scanned
+// scanner's. The scanner adds a retry on top: `go list -export` BUILDS what it is asked about, so a scanned
 // package that does not compile fails the load outright, and it is reloaded without this option rather than allowed
 // to abort. See Options.CompiledDependencies.
 func WithCompiledDependencies() Option {

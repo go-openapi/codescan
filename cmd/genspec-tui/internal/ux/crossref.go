@@ -60,7 +60,7 @@ const followSep = "  ·  "
 // Focus does not move: the diag pane stays the driver.
 //
 // The diag driver feeds two followers where the others feed one. A diagnostic is *about* a place in the source, but
-// what you generally want to see next is what that place turned into - and for a diagnostic that reports a shape rather
+// you generally want to see what that place turned into next - and for a diagnostic that reports a shape rather
 // than a syntax error, the spec side is the whole question.
 //
 // Returns the composed target for the status badge.
@@ -174,9 +174,9 @@ func (m *Model) restoreCursorTo(ptr string) {
 	}
 }
 
-// emptySpec is what the spec pane shows when it has no body to render.
+// emptySpec is the placeholder the spec pane shows when it has no body to render.
 //
-// A view waiting for its own conversion is not an empty document, and saying so is what keeps the first switch to YAML
+// A view waiting for its own conversion is not an empty document, and saying so keeps the first switch to YAML
 // on a large specification from reading as "the scan produced nothing".
 func (m *Model) emptySpec() string {
 	if m.scan.YAMLPending {

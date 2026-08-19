@@ -19,7 +19,7 @@ import (
 //
 // Spans record only where a run STARTS.
 //
-// The renderer takes each run to the next span's column, which is what lets it slice RAW text at known boundaries and
+// The renderer takes each run to the next span's column, so it can slice RAW text at known boundaries and
 // apply styling last - the only ordering in which a truncated line cannot cut through an escape sequence.
 type HighlightIndex struct {
 	byLine map[int][]theme.Span
@@ -57,7 +57,7 @@ func (x *HighlightIndex) Len() int {
 // syntaxKind maps a lexer token to the renderer's neutral classes.
 //
 // Delimiters carry no value and are the structural punctuation; keys are distinguished from strings because in a spec
-// the key is what you scan for.
+// the key is the thing to scan for.
 func syntaxKind(k token.Kind) theme.SyntaxKind {
 	switch k {
 	case token.Key:

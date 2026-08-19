@@ -89,7 +89,7 @@ func (m *Model) shortCircuitKeyBindings(msg tea.KeyMsg) (tea.Cmd, bool) {
 
 	// Modal overlays capture all keys until they dismiss themselves.
 	//
-	// An overlay only ever RECORDS what it wants; the apply steps below are where the model decides what that means, in
+	// An overlay only ever RECORDS what it wants; the model interprets that in the apply steps below, in
 	// the same order overlays() ranks them.
 	if o := m.activeOverlay(); o != nil {
 		cmd := o.HandleKey(msg)
@@ -186,7 +186,7 @@ func (m *Model) handleSplitKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 // routePaneKey offers a key to the focused pane's own handler before the global bindings see it.
 //
 // Each handler reports handled=false for keys it does not own, so a pane shadows only what it genuinely needs - the
-// alternative, swallowing everything, is what used to make /, o and r dead while a file was open.
+// alternative, swallowing everything, used to leave /, o and r dead while a file was open.
 func (m *Model) routePaneKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	if m.leftMode == modeView && m.focused == paneTree {
 		return m.handleViewerKey(msg)
