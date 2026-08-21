@@ -105,29 +105,28 @@ func TestStdlibUUID(t *testing.T) {
 		assertUUID(t, tagged.Properties["alias"])
 	})
 
-	t.Run("an EMBEDDED uuid.UUID is dropped, with a warning — quirks-open.md Q33", func(t *testing.T) {
-		// Current behaviour, not desired behaviour. uuid.UUID has an array underlying type, so
-		// buildNamedEmbedded's switch falls to its default arm (only the *interface* arm consults
-		// applyStdlibSpecials) and skips the embed. Go itself renders the whole struct as a bare
-		// string via the promoted MarshalText, so "name" is not on the wire either.
+	t.Run("an EMBEDDED uuid.UUID becomes a property named after the type", func(t *testing.T) {
+		// uuid.UUID is an array underneath, so embedding it promotes no member and Go keeps the value
+		// as an ordinary key named UUID — which is what the schema says, built through the identity
+		// recognizer like any other member. See embed-basic-underlying for the general rule.
 		//
-		// This is a pre-existing, uuid-agnostic quirk shared with every strfmt.UUID / time.Time
-		// embed; the identity recognizer deliberately does not change it. When Q33 is decided, this
-		// sub-test and the golden move together.
+		// The promoted MarshalText makes the DEFAULT marshaller render the whole struct as a bare
+		// string, dropping "name" from the wire. codescan does not model that, by decision: an embed
+		// means composition, and a composed model round-trips through a hand-written marshaller. See
+		// schema/README.md#embed-marshaller.
 		embedder, ok := sp.Definitions["Embedder"]
 		require.TrueT(t, ok)
 		assert.TrueT(t, embedder.Type.Contains("object"))
-		assert.Len(t, embedder.Properties, 1)
+		assert.Len(t, embedder.Properties, 2)
 		assert.Contains(t, embedder.Properties, "name")
+		require.Contains(t, embedder.Properties, "UUID")
+		assertUUID(t, embedder.Properties["UUID"])
 
-		var warned bool
+		// The embed is emitted, so nothing about it is skipped or reported.
 		for _, d := range diagnostics {
-			if d.Severity == codescan.SeverityWarning && strings.Contains(d.Message, "buildNamedEmbedded") {
-				warned = true
-				break
-			}
+			assert.FalseT(t, d.Severity == codescan.SeverityWarning && strings.Contains(d.Message, "buildNamedEmbedded"),
+				"an embed that is emitted must raise no unsupported-type warning: %s", d.Message)
 		}
-		assert.TrueT(t, warned, "the dropped embed must not be silent")
 	})
 
 	scantest.CompareOrDumpJSON(t, sp, "go127_uuid_spec.json")

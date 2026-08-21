@@ -214,15 +214,27 @@ distinction is the whole reason both exist:
 Neither beats an explicit `swagger:strfmt` / `swagger:type` — the
 classifier runs first, see [§textmarshal-order](#textmarshal-order).
 
-**Not reached by either: a struct embed.** `uuid.UUID` has an array
-underlying type, so `buildNamedEmbedded` falls to its `default` arm
-(only the *interface* arm consults `applyStdlibSpecials`) and skips
-the embed with a `CodeUnsupportedGoType` warning. That asymmetry is
-long-standing and uuid-agnostic — any `strfmt.UUID` / `time.Time`
-embed behaves the same, and Go itself renders such a struct as a bare
-string via the promoted `MarshalText`. Tracked as Q33; the identity
-recognizer deliberately does not change it. Witnessed by
+**A struct embed reaches them through the property path.**
+`uuid.UUID` has an array underlying type, so embedding it promotes no
+member: `embedPromotes` sends it to `applyFieldCarrier` as an ordinary
+property named after the type, and the recognizers run there like on
+any other field — `Embedder` carries `UUID: {string, uuid}`. Go's
+default marshaller renders the whole struct as a bare string instead,
+via the promoted `MarshalText`, which codescan does not model; see
+[§embed-marshaller](#embed-marshaller) and Q33. Witnessed by
 `TestStdlibUUID`'s embed sub-test.
+
+**`recognizeRawMessage` answers to two names.** go1.27 turned
+`encoding/json.RawMessage` into an alias of
+`encoding/json/jsontext.Value`, so unaliasing a field written as
+`json.RawMessage` now lands on `jsontext.Value`.
+`resolvers.IsStdJSONRawMessage` matches both — a predicate reading
+only `(encoding/json, RawMessage)` let the type fall through to its
+`[]byte` underlying and render as an array of `uint8`. The same
+change makes an alias the ordinary shape of a written right-hand side
+(`type DefinedRaw json.RawMessage`), which is why the responses
+builder's `namedWrittenRHS` unaliases before testing for a declared
+type.
 
 The seven call sites of `applyStdlibSpecials` (`buildFromDecl`,
 `buildDeclAlias` RHS, `buildAlias`, `buildNamedType`,

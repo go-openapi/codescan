@@ -228,8 +228,27 @@ func IsOpaqueStream(o *types.TypeName) bool {
 	return found
 }
 
+// IsStdJSONRawMessage reports whether o is [encoding/json.RawMessage], in either of the two shapes a
+// toolchain gives it.
+//
+// go1.27 turned RawMessage into an alias of [encoding/json/jsontext.Value], so unaliasing a field
+// written as json.RawMessage now lands on jsontext.Value, and a predicate that reads only
+// (encoding/json, RawMessage) stopped matching there: the type fell through to its []byte underlying
+// and rendered as an array of uint8 instead of "any JSON". Both names mean raw JSON text, so both
+// answer yes.
 func IsStdJSONRawMessage(o *types.TypeName) bool {
-	return o.Pkg() != nil && o.Pkg().Path() == "encoding/json" && o.Name() == "RawMessage"
+	if o == nil || o.Pkg() == nil {
+		return false
+	}
+
+	switch o.Pkg().Path() {
+	case "encoding/json":
+		return o.Name() == "RawMessage"
+	case "encoding/json/jsontext":
+		return o.Name() == "Value"
+	default:
+		return false
+	}
 }
 
 func IsAny(o *types.TypeName) bool {

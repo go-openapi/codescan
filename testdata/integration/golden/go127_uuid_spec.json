@@ -3,10 +3,14 @@
   "paths": {},
   "definitions": {
     "Embedder": {
-      "description": "Witness for the embedded arm, which the fuzzy name heuristic never reached (it is caller-gated to\nbuildFromTextMarshal). Note the promoted MarshalText makes encoding/json render the WHOLE struct\nas a bare string, dropping Name from the wire — see quirks-open.md Q33.",
+      "description": "Witness for the embedded arm, which the fuzzy name heuristic never reached (it is caller-gated to\nbuildFromTextMarshal). uuid.UUID is an array underneath, so the embed promotes nothing and Go\nkeeps it as an ordinary key named after the type: the schema carries a UUID property, built\nthrough the identity recognizer like any other member.\n\nThe promoted MarshalText makes the DEFAULT marshaller render the whole struct as a bare string,\ndropping Name from the wire. codescan does not model that — an embed means composition here — see\nthe schema builder README, section embed-marshaller.",
       "type": "object",
       "title": "Embedder embeds the stdlib uuid.UUID.",
       "properties": {
+        "UUID": {
+          "type": "string",
+          "format": "uuid"
+        },
         "name": {
           "description": "Name is NOT on the wire, whatever the emitted schema says.",
           "type": "string",

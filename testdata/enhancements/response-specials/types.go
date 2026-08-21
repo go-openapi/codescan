@@ -55,3 +55,19 @@ type AliasedWhole = big.Int
 
 // swagger:response aliasedFraction
 type AliasedFraction = big.Rat
+
+// Local-alias spelling — the declaration is written over an alias, which is what go1.27 made of
+// json.RawMessage: `type DefinedRaw json.RawMessage` now has an ALIAS on its right-hand side. The
+// redirect that carries the named layer to the recognizers has to follow that too.
+
+// Stamped is a local alias of time.Time.
+type Stamped = time.Time
+
+// Rawish is a local alias of json.RawMessage.
+type Rawish = json.RawMessage
+
+// swagger:response viaAliasStamp
+type ViaAliasStamp Stamped
+
+// swagger:response viaAliasRaw
+type ViaAliasRaw Rawish
