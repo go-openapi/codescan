@@ -55,8 +55,13 @@ type Tagged struct {
 // Embedder embeds the stdlib uuid.UUID.
 //
 // Witness for the embedded arm, which the fuzzy name heuristic never reached (it is caller-gated to
-// buildFromTextMarshal). Note the promoted MarshalText makes encoding/json render the WHOLE struct
-// as a bare string, dropping Name from the wire — see quirks-open.md Q33.
+// buildFromTextMarshal). uuid.UUID is an array underneath, so the embed promotes nothing and Go
+// keeps it as an ordinary key named after the type: the schema carries a UUID property, built
+// through the identity recognizer like any other member.
+//
+// The promoted MarshalText makes the DEFAULT marshaller render the whole struct as a bare string,
+// dropping Name from the wire. codescan does not model that — an embed means composition here — see
+// the schema builder README, section embed-marshaller.
 //
 // swagger:model Embedder
 type Embedder struct {
