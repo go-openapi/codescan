@@ -35,6 +35,12 @@
           },
           "214": {
             "$ref": "#/responses/aliasedFraction"
+          },
+          "220": {
+            "$ref": "#/responses/viaAliasStamp"
+          },
+          "221": {
+            "$ref": "#/responses/viaAliasRaw"
           }
         }
       }
@@ -98,6 +104,17 @@
       "schema": {
         "type": "integer",
         "x-go-type": "math/big.Int"
+      }
+    },
+    "viaAliasRaw": {
+      "description": "",
+      "schema": {}
+    },
+    "viaAliasStamp": {
+      "description": "",
+      "schema": {
+        "type": "string",
+        "format": "date-time"
       }
     }
   }

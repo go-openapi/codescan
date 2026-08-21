@@ -34,12 +34,14 @@ func TestResponseSpecials(t *testing.T) {
 		}
 	})
 
-	t.Run("the two spellings agree", func(t *testing.T) {
+	t.Run("the three spellings agree", func(t *testing.T) {
 		for defined, aliased := range map[string]string{
 			"definedStamp":  "aliasedStamp",
 			"definedRaw":    "aliasedRaw",
 			"definedStream": "aliasedStream",
 			"definedWhole":  "aliasedWhole",
+			"viaAliasStamp": "aliasedStamp",
+			"viaAliasRaw":   "aliasedRaw",
 		} {
 			d, a := doc.Responses[defined].Schema, doc.Responses[aliased].Schema
 			require.NotNil(t, d)
@@ -67,6 +69,22 @@ func TestResponseSpecials(t *testing.T) {
 
 		// json.RawMessage is "any JSON", so an empty schema is the answer, not a missing one.
 		raw := doc.Responses["aliasedRaw"].Schema
+		require.NotNil(t, raw)
+		assert.Empty(t, raw.Type)
+	})
+
+	t.Run("a declaration written over an ALIAS reaches the recognizers", func(t *testing.T) {
+		// `type ViaAliasStamp Stamped` writes an alias on the right, and the redirect that carries the
+		// named layer to the recognizers used to demand a *types.Named there. go1.27 makes this the
+		// ordinary case rather than a curiosity: encoding/json.RawMessage became an alias of
+		// jsontext.Value, so `type DefinedRaw json.RawMessage` takes this path too.
+		stamp := doc.Responses["viaAliasStamp"].Schema
+		require.NotNil(t, stamp)
+		require.Len(t, stamp.Type, 1)
+		assert.Equal(t, "string", stamp.Type[0])
+		assert.Equal(t, "date-time", stamp.Format)
+
+		raw := doc.Responses["viaAliasRaw"].Schema
 		require.NotNil(t, raw)
 		assert.Empty(t, raw.Type)
 	})

@@ -239,10 +239,16 @@ func (r *Builder) buildFromType(otpe types.Type, resp *oaispec.Response, seen ma
 	}
 }
 
-// namedWrittenRHS reports a declaration whose written right-hand side is itself a NAMED type, together with that type.
+// namedWrittenRHS reports a declaration whose written right-hand side names a DECLARED type, together with that type.
 //
-// Only a named right-hand side redirects the build: a struct literal, a slice or a basic type is already the shape the
-// response arm should build, and sending those through the sub-builder would publish the response type as a definition.
+// Only a declared right-hand side redirects the build: a struct literal, a slice or a basic type is already the shape
+// the response arm should build, and sending those through the sub-builder would publish the response type as a
+// definition.
+//
+// An alias counts, since it too names a declared type: go1.27 made `encoding/json.RawMessage` an alias of
+// jsontext.Value, so `type DefinedRaw json.RawMessage` writes an alias on the right and a gate reading only
+// *types.Named stopped redirecting it — the response fell through to the []byte underlying and came out as an array of
+// uint8. The alias itself is handed on, so the schema builder applies the alias policy the declaration asks for.
 func namedWrittenRHS(ctx *scanner.ScanCtx, o *types.TypeName) (*scanner.EntityDecl, types.Type, bool) {
 	decl, found := ctx.DeclForType(o.Type())
 	if !found {
@@ -252,7 +258,7 @@ func namedWrittenRHS(ctx *scanner.ScanCtx, o *types.TypeName) (*scanner.EntityDe
 	if !ok {
 		return nil, nil, false
 	}
-	if _, isNamed := rhs.(*types.Named); !isNamed {
+	if _, isNamed := types.Unalias(rhs).(*types.Named); !isNamed {
 		return nil, nil, false
 	}
 

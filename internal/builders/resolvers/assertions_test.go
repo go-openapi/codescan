@@ -11,6 +11,45 @@ import (
 	"github.com/go-openapi/testify/v2/assert"
 )
 
+// TestIsStdJSONRawMessage covers both spellings of raw JSON the standard library has had.
+//
+// Synthesized rather than scanned, for the reason given on [TestIsStdUUID]: the predicate must
+// answer for a toolchain other than the one this test is built with. go1.27 turned
+// encoding/json.RawMessage into an alias of encoding/json/jsontext.Value, so a scan under go1.26
+// reaches the predicate with the named RawMessage and a scan under go1.27 reaches it with
+// jsontext.Value — through the same binary.
+func TestIsStdJSONRawMessage(t *testing.T) {
+	byteSlice := types.NewSlice(types.Typ[types.Byte])
+
+	named := func(path, name, typeName string) *types.TypeName {
+		pkg := types.NewPackage(path, name)
+		return types.NewTypeName(token.NoPos, pkg, typeName, byteSlice)
+	}
+
+	t.Run("encoding/json.RawMessage is recognized", func(t *testing.T) {
+		assert.TrueT(t, IsStdJSONRawMessage(named("encoding/json", "json", "RawMessage")))
+	})
+
+	t.Run("the jsontext.Value it aliases in go1.27 is recognized", func(t *testing.T) {
+		assert.TrueT(t, IsStdJSONRawMessage(named("encoding/json/jsontext", "jsontext", "Value")))
+	})
+
+	t.Run("another type in either package is NOT recognized", func(t *testing.T) {
+		assert.FalseT(t, IsStdJSONRawMessage(named("encoding/json", "json", "Number")))
+		assert.FalseT(t, IsStdJSONRawMessage(named("encoding/json/jsontext", "jsontext", "Pointer")))
+	})
+
+	t.Run("a third-party type of either name is NOT recognized", func(t *testing.T) {
+		assert.FalseT(t, IsStdJSONRawMessage(named("github.com/goccy/go-json", "json", "RawMessage")))
+		assert.FalseT(t, IsStdJSONRawMessage(named("example.com/mymod/jsontext", "jsontext", "Value")))
+	})
+
+	t.Run("a builtin (no package) does not panic", func(t *testing.T) {
+		builtin := types.NewTypeName(token.NoPos, nil, "error", nil)
+		assert.FalseT(t, IsStdJSONRawMessage(builtin))
+	})
+}
+
 // TestIsStdUUID covers the go1.27 stdlib uuid.UUID predicate.
 //
 // Deliberately synthesizes the *types.TypeName instead of scanning a fixture, so the predicate stays

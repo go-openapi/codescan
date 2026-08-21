@@ -18,4 +18,6 @@ package response_specials
 //	212: aliasedStream
 //	213: aliasedWhole
 //	214: aliasedFraction
+//	220: viaAliasStamp
+//	221: viaAliasRaw
 func getSpecial() {}
