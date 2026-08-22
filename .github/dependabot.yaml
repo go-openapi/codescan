@@ -35,15 +35,12 @@ updates:
     # hack/genexportdata/bundle have never shown up in a pull request at all.
     # A group spans the directories, so this stays one pull request per group.
     directories:
-      - "/"
-      - "/cmd/genspec-tui"
-      - "/docs/examples"
-      - "/testdata"
-      - "/hack/genexportdata/bundle"
+      - "**/*"
     schedule:
-      interval: "weekly"
-      day: "friday"
-    open-pull-requests-limit: 4
+      interval: "cron"
+      cronjob: "35 8 * * 2,5"    # => update twice a week
+      timezone: CEST
+    open-pull-requests-limit: 24 # => {# modules} x {# groups}
     groups:
       development-dependencies:
         patterns:
