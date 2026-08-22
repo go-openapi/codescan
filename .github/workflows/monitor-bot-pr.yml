@@ -3,7 +3,8 @@ name: Monitor bot PRs
 on:
   workflow_dispatch:
   schedule:
-    - cron: '18 6 * * *'
+    - cron: '18 9,12,19 * * *'
+      timezone: CEST
 
 permissions:
   contents: read
