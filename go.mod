@@ -1,11 +1,11 @@
 module github.com/go-openapi/codescan
 
-go 1.25.0
+go 1.26.0
 
-toolchain go1.26.6
+toolchain go1.27.1
 
 require (
-	github.com/go-openapi/spec v0.22.11
+	github.com/go-openapi/spec v1.0.1
 	github.com/go-openapi/swag/mangling v0.29.1
 	github.com/go-openapi/swag/yamlutils v0.29.1
 	github.com/go-openapi/testify/v2 v2.7.0
