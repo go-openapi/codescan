@@ -4,18 +4,18 @@ module github.com/go-openapi/codescan/cmd/genspec
 // its flag surface from. Until codescan releases it, this module builds through the workspace at the
 // repository root - which is how CI tests it - and `go install .../cmd/genspec@latest` will resolve
 // once that release is out.
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/SladkyCitron/slogcolor v1.9.0
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/go-openapi/codescan v0.36.4
-	github.com/go-openapi/loads v0.25.1
-	github.com/go-openapi/spec v0.22.11
-	github.com/go-openapi/strfmt v0.27.0
+	github.com/go-openapi/loads v0.25.2
+	github.com/go-openapi/spec v1.0.1
+	github.com/go-openapi/strfmt v0.27.2
 	github.com/go-openapi/swag/conv v0.29.1
 	github.com/go-openapi/testify/v2 v2.7.0
-	github.com/go-openapi/validate v0.26.4
+	github.com/go-openapi/validate v1.0.0
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
 	github.com/knadh/koanf/v2 v2.3.6
 	go.yaml.in/yaml/v3 v3.0.5
@@ -25,7 +25,7 @@ replace github.com/go-openapi/codescan => ../..
 
 require (
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/go-openapi/analysis v0.26.1 // indirect
+	github.com/go-openapi/analysis v1.0.0 // indirect
 	github.com/go-openapi/errors v0.22.8 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
 	github.com/go-openapi/jsonreference v1.0.1 // indirect
