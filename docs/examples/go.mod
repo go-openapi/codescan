@@ -7,7 +7,7 @@ module github.com/go-openapi/codescan/docs/examples
 go 1.26.0
 
 require (
-	github.com/go-openapi/codescan v0.36.4
+	github.com/go-openapi/codescan v0.36.5
 	github.com/go-openapi/spec v1.0.1
 	github.com/go-openapi/strfmt v0.27.2
 	github.com/go-openapi/testify/v2 v2.8.0

@@ -9,7 +9,7 @@ go 1.26.0
 require (
 	github.com/SladkyCitron/slogcolor v1.9.0
 	github.com/charmbracelet/x/term v0.2.2
-	github.com/go-openapi/codescan v0.36.4
+	github.com/go-openapi/codescan v0.36.5
 	github.com/go-openapi/loads v0.25.3
 	github.com/go-openapi/spec v1.0.1
 	github.com/go-openapi/strfmt v0.27.2
