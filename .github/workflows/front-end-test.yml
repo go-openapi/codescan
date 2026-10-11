@@ -40,7 +40,7 @@ jobs:
       # A called workflow cannot hold more than its caller grants, and an omitted scope
       # is 'none': without this the run is rejected before it starts.
       pull-requests: read
-    uses: go-openapi/ci-workflows/.github/workflows/changed-paths.yml@cba06a2e6390abfedda6bf1067f44741cbe93650 # v0.6.2
+    uses: go-openapi/ci-workflows/.github/workflows/changed-paths.yml@69a76bc5d13145693ca13d24a418942b59fce727 # v0.6.3
     with:
       preset: front-end
       # The producer of the -format=json envelope the app consumes. A change here can
@@ -76,7 +76,7 @@ jobs:
           sparse-checkout: hack/doc-site/genspec-wasi/
       -
         name: Set up node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
