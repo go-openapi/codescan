@@ -11,7 +11,7 @@ require (
 	github.com/go-openapi/core/json v0.0.3
 	github.com/go-openapi/core/json/lexers/yaml-lexer v0.0.3
 	github.com/go-openapi/loads v0.25.3
-	github.com/go-openapi/strfmt v0.27.3
+	github.com/go-openapi/strfmt v0.27.4
 	github.com/go-openapi/swag/conv v0.29.2
 	github.com/go-openapi/testify/v2 v2.8.0
 	github.com/go-openapi/validate v1.0.0
@@ -57,10 +57,11 @@ require (
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v1.0.0 // indirect
-	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/net v0.59.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 )

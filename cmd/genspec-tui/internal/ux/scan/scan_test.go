@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
 // SPDX-License-Identifier: Apache-2.0
 
-// Tests for what a scan may do to the configuration it was handed.
+// Tests the scan for a given configuration
 
 package scan
 
@@ -30,7 +30,7 @@ func TestDoLeavesTheCallersOptionsAlone(t *testing.T) {
 
 // The command returned by Run executes on a goroutine of its own, so the copy has to be taken before it exists: one
 // taken inside would be reading the options at the same time as the event loop writes them.
-func TestRunSnapshotsTheOptionsBeforeItRuns(t *testing.T) {
+func TestRunSnapshotsOptionsBeforeItRuns(t *testing.T) {
 	t.Parallel()
 
 	cfg := testutils.ApplyLoader(&codescan.Options{WorkDir: "/nonexistent-at-launch", Packages: []string{"./..."}})
@@ -44,6 +44,8 @@ func TestRunSnapshotsTheOptionsBeforeItRuns(t *testing.T) {
 	require.True(t, ok)
 	require.Error(t, res.Err)
 
-	assert.Contains(t, res.Err.Error(), "/nonexistent-at-launch",
-		"a scan runs on the options it was started with, not on whatever they became meanwhile")
+	assert.ErrorContainsf(t, res.Err, "codescan error", // "/nonexistent-at-launch",
+		"a scan runs only on the options it was started with.\n"+
+			"expected non-existent but got %v", res.Err,
+	)
 }
