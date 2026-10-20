@@ -136,9 +136,14 @@ func TestRun(t *testing.T) {
 		require.NoError(t, err)
 
 		if loaderHasSomethingToSay() {
-			assert.Contains(t, stderr, "finished hints=1")
+			assert.Containsf(t, stderr,
+				"finished hints=1",
+				`expected stderr to contain hints "finished hints=1", but got: %s`, stderr,
+			)
 		} else {
-			assert.Empty(t, stderr)
+			assert.Emptyf(t, stderr,
+				`expected stderr to be empty, but got: %s`, stderr,
+			)
 		}
 	})
 
@@ -349,9 +354,13 @@ tui:
 
 		require.NoError(t, err)
 		if loaderHasSomethingToSay() {
-			assert.Contains(t, stderr, "finished hints=1")
+			assert.Containsf(t, stderr, "finished hints=1",
+				`expected stderr to contain hints "finished hints=1", but got: %s`, stderr,
+			)
 		} else {
-			assert.Empty(t, stderr, "reading a configuration file is not news")
+			assert.Emptyf(t, stderr,
+				`expected stderr to be empty, but got: %s`, stderr,
+			)
 		}
 	})
 
@@ -446,8 +455,8 @@ func TestConfigFileWalkUp(t *testing.T) {
 /* exec helpers */
 /********************************/
 
-// loaderHasSomethingToSay reports whether the loader this run uses reports a hint of its own on a
-// clean scan, which the silence assertions have to allow for.
+// loaderHasSomethingToSay reports whether the loader used in this run reports a hint of its own on a
+// clean scan. This is verified by the silence assertions in tests.
 //
 // Both non-default loaders do, for unrelated reasons: compiled dependencies announce that the
 // request was met, and the toolchain-free loader says it did not run the cgo tool. Neither is a

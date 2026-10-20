@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/go-openapi/runtime v0.33.3
-	github.com/go-openapi/strfmt v0.27.3
+	github.com/go-openapi/strfmt v0.27.4
 	github.com/go-swagger/scan-repo-boundary v0.0.0-20180623220736-973b3573c013
 )
 
@@ -21,7 +21,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
-	golang.org/x/net v0.59.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )
