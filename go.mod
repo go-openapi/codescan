@@ -10,8 +10,8 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.29.2
 	github.com/go-openapi/testify/v2 v2.8.0
 	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/mod v0.41.0
-	golang.org/x/tools v0.51.0
+	golang.org/x/mod v0.42.0
+	golang.org/x/tools v0.52.0
 )
 
 require (
@@ -25,5 +25,5 @@ require (
 	github.com/go-openapi/swag/typeutils v0.29.2 // indirect
 	github.com/go-openapi/testify/enable/yaml/v2 v2.8.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 )
