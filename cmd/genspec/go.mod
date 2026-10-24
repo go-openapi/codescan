@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/testify/v2 v2.8.0
 	github.com/go-openapi/validate v1.0.0
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
-	github.com/knadh/koanf/v2 v2.3.8
+	github.com/knadh/koanf/v2 v2.4.1
 	go.yaml.in/yaml/v3 v3.0.5
 )
 
