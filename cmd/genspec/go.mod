@@ -18,7 +18,7 @@ require (
 	github.com/go-openapi/validate v1.0.1
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
 	github.com/knadh/koanf/v2 v2.4.1
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 )
 
 replace github.com/go-openapi/codescan => ../..
