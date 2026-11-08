@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/validate v1.0.1
 	github.com/google/pprof v0.0.0-20260903180319-d6c3cb2f37ec
 	github.com/muesli/termenv v0.16.0
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 )
 
 replace github.com/go-openapi/codescan => ../..
