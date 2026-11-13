@@ -14,7 +14,7 @@ require (
 	github.com/go-openapi/spec v1.0.1
 	github.com/go-openapi/strfmt v0.27.4
 	github.com/go-openapi/swag/conv v0.29.2
-	github.com/go-openapi/testify/v2 v2.8.0
+	github.com/go-openapi/testify/v2 v2.8.1
 	github.com/go-openapi/validate v1.0.1
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
 	github.com/knadh/koanf/v2 v2.4.1
