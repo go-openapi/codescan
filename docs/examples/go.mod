@@ -10,7 +10,7 @@ require (
 	github.com/go-openapi/codescan v0.36.6
 	github.com/go-openapi/spec v1.0.1
 	github.com/go-openapi/strfmt v0.27.4
-	github.com/go-openapi/testify/v2 v2.8.0
+	github.com/go-openapi/testify/v2 v2.8.1
 )
 
 require (
