@@ -37,7 +37,7 @@ jobs:
       # A called workflow cannot hold more than its caller grants, and an omitted scope
       # is 'none': without this the run is rejected before it starts.
       pull-requests: read
-    uses: go-openapi/ci-workflows/.github/workflows/changed-paths.yml@1c2020082c9b8a77fde4090b0b7fe46315b31d2e # v0.6.4
+    uses: go-openapi/ci-workflows/.github/workflows/changed-paths.yml@692da2dae8f16666dea2392b18ad73130fbf738e # v0.6.5
     with:
       preset: doc
       # The preset knows the go-openapi layout — markdown anywhere, the hugo tree under
@@ -120,7 +120,7 @@ jobs:
             themes/codescan-static/js/mermaid11/mermaid.min.js "${MERMAID_SHA256}"
       -
         name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
